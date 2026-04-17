@@ -29,6 +29,18 @@
 - Keep dependency flow unidirectional and ownership obvious.
 - Treat this package as a library first: public API should be deliberate, documented, and tested.
 
+## Codex App-Server Wire Workflow
+
+- Treat the bundled Codex app-server v2 schema as the primary generated-wire source of truth.
+- Use `scripts/generate-wire-types.sh` as the maintainer entrypoint for schema derivation, quicktype generation, dynamic-JSON patching, and staged Swift validation.
+- Keep dumped local schema artifacts under `codex-schemas/` untracked unless Gale explicitly asks to commit them.
+- Keep temporary derived schemas and raw or patched quicktype staging output under `tmp/` untracked.
+- Promote only the generated v2 wire snapshot into `Sources/SwiftASB/Generated/CodexWire/Latest/` unless Gale explicitly asks for a different promotion shape.
+- The current generated promoted file is `CodexLifecycleV2Batch+JSONValue.swift`.
+- Keep `CodexWireInitializeResponse` hand-owned in its own dedicated Swift file next to the promoted generated v2 snapshot until the upstream v2 schema exposes that type directly.
+- Do not reintroduce a promoted generated v1 batch unless Gale explicitly asks for that compatibility surface again.
+- Treat the generated wire layer as an internal scaffolding surface, not the final public Swift API.
+
 ## Testing and Tooling
 
 - Use Swift Testing as the default test framework.
