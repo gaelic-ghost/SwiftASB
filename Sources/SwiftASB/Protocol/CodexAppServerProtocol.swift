@@ -354,12 +354,14 @@ internal struct CodexAppServerProtocol {
 }
 
 private struct JSONRPCRequestEnvelope<Params: Encodable>: Encodable {
+    let jsonrpc = "2.0"
     let id: CodexRPCRequestID
     let method: CodexAppServerProtocol.Method
     let params: Params
 }
 
 private struct JSONRPCNotificationEnvelope: Encodable {
+    let jsonrpc = "2.0"
     let method: CodexAppServerProtocol.Method
 }
 

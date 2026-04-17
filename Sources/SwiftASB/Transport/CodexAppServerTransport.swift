@@ -163,10 +163,26 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
     private func startStandardOutputLoop(fileHandle: FileHandle) {
         standardOutputTask = Task {
+            var bufferedLine = Data()
             do {
-                for try await line in fileHandle.bytes.lines {
-                    handleStandardOutputLine(line)
+                for try await byte in fileHandle.bytes {
+                    if byte == 0x0A {
+                        handleStandardOutputDataLine(bufferedLine)
+                        bufferedLine.removeAll(keepingCapacity: true)
+                        continue
+                    }
+
+                    if byte == 0x0D {
+                        continue
+                    }
+
+                    bufferedLine.append(byte)
                 }
+
+                if !bufferedLine.isEmpty {
+                    handleStandardOutputDataLine(bufferedLine)
+                }
+
                 handleStandardOutputEOF()
             } catch {
                 await finishTransport(
@@ -182,9 +198,24 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
     private func startStandardErrorLoop(fileHandle: FileHandle) {
         standardErrorTask = Task {
+            var bufferedLine = Data()
             do {
-                for try await line in fileHandle.bytes.lines {
-                    appendStandardErrorLine(line)
+                for try await byte in fileHandle.bytes {
+                    if byte == 0x0A {
+                        appendStandardErrorDataLine(bufferedLine)
+                        bufferedLine.removeAll(keepingCapacity: true)
+                        continue
+                    }
+
+                    if byte == 0x0D {
+                        continue
+                    }
+
+                    bufferedLine.append(byte)
+                }
+
+                if !bufferedLine.isEmpty {
+                    appendStandardErrorDataLine(bufferedLine)
                 }
             } catch {
                 appendStandardErrorLine(
@@ -216,6 +247,11 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         }
     }
 
+    private func handleStandardOutputDataLine(_ lineData: Data) {
+        let line = String(decoding: lineData, as: UTF8.self)
+        handleStandardOutputLine(line)
+    }
+
     private func handleStandardOutputEOF() {
         guard !hasFinished else { return }
         finishTransport(with: .unexpectedEndOfStream(recentStandardError: recentStandardErrorLines))
@@ -226,6 +262,11 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         if recentStandardErrorLines.count > 20 {
             recentStandardErrorLines.removeFirst(recentStandardErrorLines.count - 20)
         }
+    }
+
+    private func appendStandardErrorDataLine(_ lineData: Data) {
+        let line = String(decoding: lineData, as: UTF8.self)
+        appendStandardErrorLine(line)
     }
 
     private func writeFramedPayload(_ payload: Data, to handle: FileHandle) throws {
