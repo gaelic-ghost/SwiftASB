@@ -3,6 +3,9 @@ import Foundation
 internal enum CodexAppServerProtocolEvent: Equatable, Sendable {
     case threadStarted(CodexWireThreadStartedNotification)
     case threadStatusChanged(CodexWireThreadStatusChangedNotification)
+    case threadArchived(CodexWireThreadArchivedNotification)
+    case threadUnarchived(CodexWireThreadUnarchivedNotification)
+    case threadClosed(CodexWireThreadClosedNotification)
     case threadNameUpdated(CodexWireThreadNameUpdatedNotification)
     case threadTokenUsageUpdated(CodexWireThreadTokenUsageUpdatedNotification)
     case turnStarted(CodexWireTurnStartedNotification)
@@ -132,6 +135,30 @@ internal struct CodexAppServerProtocol {
                         payload,
                         method: method,
                         resultType: CodexWireThreadStatusChangedNotification.self
+                    )
+                )
+            case "thread/archived":
+                return .threadArchived(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireThreadArchivedNotification.self
+                    )
+                )
+            case "thread/unarchived":
+                return .threadUnarchived(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireThreadUnarchivedNotification.self
+                    )
+                )
+            case "thread/closed":
+                return .threadClosed(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireThreadClosedNotification.self
                     )
                 )
             case "thread/name/updated":

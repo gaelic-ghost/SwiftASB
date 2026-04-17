@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "SwiftASB",
     platforms: [
-        .macOS(.v12),
+        .macOS(.v15),
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
@@ -14,6 +14,9 @@ let package = Package(
             name: "SwiftASB",
             targets: ["SwiftASB"]
         ),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-async-algorithms", from: "1.1.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.

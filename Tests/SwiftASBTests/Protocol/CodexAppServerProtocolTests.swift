@@ -272,6 +272,42 @@ struct CodexAppServerProtocolTests {
             Issue.record("Expected thread/status/changed to decode into .threadStatusChanged.")
         }
 
+        let archivedPayload = Data(#"{"threadId":"thread-123"}"#.utf8)
+        let archivedEvent = try #require(
+            try decodeEvent(method: "thread/archived", payload: archivedPayload)
+        )
+
+        switch archivedEvent {
+        case let .threadArchived(notification):
+            #expect(notification.threadID == "thread-123")
+        default:
+            Issue.record("Expected thread/archived to decode into .threadArchived.")
+        }
+
+        let unarchivedPayload = Data(#"{"threadId":"thread-123"}"#.utf8)
+        let unarchivedEvent = try #require(
+            try decodeEvent(method: "thread/unarchived", payload: unarchivedPayload)
+        )
+
+        switch unarchivedEvent {
+        case let .threadUnarchived(notification):
+            #expect(notification.threadID == "thread-123")
+        default:
+            Issue.record("Expected thread/unarchived to decode into .threadUnarchived.")
+        }
+
+        let closedPayload = Data(#"{"threadId":"thread-123"}"#.utf8)
+        let closedEvent = try #require(
+            try decodeEvent(method: "thread/closed", payload: closedPayload)
+        )
+
+        switch closedEvent {
+        case let .threadClosed(notification):
+            #expect(notification.threadID == "thread-123")
+        default:
+            Issue.record("Expected thread/closed to decode into .threadClosed.")
+        }
+
         let nameUpdatedPayload = Data(
             #"{"threadId":"thread-123","threadName":"Planning Thread"}"#.utf8
         )

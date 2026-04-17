@@ -78,27 +78,444 @@ struct CodexAppServerTests {
         #expect(turnHandle.turn.startedAt == 1713350002)
 
         let firstEventTask = Task {
-            try await firstTurnEvent(from: turnHandle.events)
+            try await turnEvents(from: turnHandle.events, count: 9)
         }
 
+        await transport.emitTurnStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id
+        )
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-plan-1"
+        )
+        await transport.emitTurnPlanUpdated(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id
+        )
+        await transport.emitPlanDelta(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-plan-1"
+        )
+        await transport.emitAgentMessageDelta(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-agent-1"
+        )
+        await transport.emitReasoningTextDelta(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-reasoning-1"
+        )
+        await transport.emitReasoningSummaryTextDelta(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-reasoning-1"
+        )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-agent-1"
+        )
         await transport.emitTurnCompleted(
             threadID: thread.id,
             turnID: turnHandle.turn.id
         )
 
-        let firstEventResult = try await firstEventTask.value
-        let turnEvent = try #require(firstEventResult)
+        let receivedEvents = try await firstEventTask.value
+        #expect(receivedEvents.count == 9)
 
-        switch turnEvent {
+        switch receivedEvents[0] {
+        case let .started(started):
+            #expect(started.threadID == thread.id)
+            #expect(started.turn.id == turnHandle.turn.id)
+            #expect(started.turn.status == .inProgress)
+        default:
+            Issue.record("Expected the first streamed event to be .started.")
+        }
+
+        switch receivedEvents[1] {
+        case let .itemStarted(itemStarted):
+            #expect(itemStarted.threadID == thread.id)
+            #expect(itemStarted.turnID == turnHandle.turn.id)
+            #expect(itemStarted.item.id == "item-plan-1")
+            #expect(itemStarted.item.kind == .plan)
+            #expect(itemStarted.item.text == nil)
+        default:
+            Issue.record("Expected the second streamed event to be .itemStarted.")
+        }
+
+        switch receivedEvents[2] {
+        case let .planUpdated(update):
+            #expect(update.threadID == thread.id)
+            #expect(update.turnID == turnHandle.turn.id)
+            #expect(update.explanation == "Map richer progress notifications.")
+            #expect(update.plan.count == 2)
+            #expect(update.plan.first?.status == .inProgress)
+            #expect(update.plan.last?.status == .pending)
+        default:
+            Issue.record("Expected the third streamed event to be .planUpdated.")
+        }
+
+        switch receivedEvents[3] {
+        case let .planDelta(delta):
+            #expect(delta.threadID == thread.id)
+            #expect(delta.turnID == turnHandle.turn.id)
+            #expect(delta.itemID == "item-plan-1")
+            #expect(delta.delta == "Stream partial plan text")
+        default:
+            Issue.record("Expected the fourth streamed event to be .planDelta.")
+        }
+
+        switch receivedEvents[4] {
+        case let .agentMessageDelta(delta):
+            #expect(delta.threadID == thread.id)
+            #expect(delta.turnID == turnHandle.turn.id)
+            #expect(delta.itemID == "item-agent-1")
+            #expect(delta.delta == "Working on it")
+        default:
+            Issue.record("Expected the fifth streamed event to be .agentMessageDelta.")
+        }
+
+        switch receivedEvents[5] {
+        case let .reasoningTextDelta(delta):
+            #expect(delta.threadID == thread.id)
+            #expect(delta.turnID == turnHandle.turn.id)
+            #expect(delta.itemID == "item-reasoning-1")
+            #expect(delta.contentIndex == 0)
+            #expect(delta.delta == "thinking...")
+        default:
+            Issue.record("Expected the sixth streamed event to be .reasoningTextDelta.")
+        }
+
+        switch receivedEvents[6] {
+        case let .reasoningSummaryTextDelta(delta):
+            #expect(delta.threadID == thread.id)
+            #expect(delta.turnID == turnHandle.turn.id)
+            #expect(delta.itemID == "item-reasoning-1")
+            #expect(delta.summaryIndex == 0)
+            #expect(delta.delta == "Summarizing the approach.")
+        default:
+            Issue.record("Expected the seventh streamed event to be .reasoningSummaryTextDelta.")
+        }
+
+        switch receivedEvents[7] {
+        case let .itemCompleted(itemCompleted):
+            #expect(itemCompleted.threadID == thread.id)
+            #expect(itemCompleted.turnID == turnHandle.turn.id)
+            #expect(itemCompleted.item.id == "item-agent-1")
+            #expect(itemCompleted.item.kind == .agentMessage)
+            #expect(itemCompleted.item.text == "Done.")
+            #expect(itemCompleted.item.status == "completed")
+        default:
+            Issue.record("Expected the eighth streamed event to be .itemCompleted.")
+        }
+
+        switch receivedEvents[8] {
         case let .completed(completion):
             #expect(completion.threadID == thread.id)
             #expect(completion.turn.id == turnHandle.turn.id)
             #expect(completion.turn.status == CodexAppServer.TurnStatus.completed)
             #expect(completion.turn.completedAt == 1713350005)
+        default:
+            Issue.record("Expected the ninth streamed event to be .completed.")
         }
 
         let recordedMethods = await transport.recordedMethods
         #expect(recordedMethods == ["initialize", "initialized", "thread/start", "turn/start"])
+
+        await client.stop()
+    }
+
+    @Test("streams thread lifecycle notifications through CodexThread.events")
+    func streamsThreadLifecycleNotifications() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        let threadEventsTask = Task {
+            try await threadEvents(from: thread.events, count: 7)
+        }
+
+        await transport.emitThreadStarted(threadID: thread.id)
+        await transport.emitThreadStatusChanged(threadID: thread.id)
+        await transport.emitThreadArchived(threadID: thread.id)
+        await transport.emitThreadUnarchived(threadID: thread.id)
+        await transport.emitThreadNameUpdated(threadID: thread.id)
+        await transport.emitThreadTokenUsageUpdated(threadID: thread.id, turnID: "turn-123")
+        await transport.emitThreadClosed(threadID: thread.id)
+
+        let receivedEvents = try await threadEventsTask.value
+        #expect(receivedEvents.count == 7)
+
+        switch receivedEvents[0] {
+        case let .started(started):
+            #expect(started.thread.id == thread.id)
+            #expect(started.thread.preview == "Hello from thread/started")
+        default:
+            Issue.record("Expected the first thread event to be .started.")
+        }
+
+        switch receivedEvents[1] {
+        case let .statusChanged(change):
+            #expect(change.threadID == thread.id)
+            #expect(change.status.type == .active)
+            #expect(change.status.activeFlags == [.waitingOnApproval])
+        default:
+            Issue.record("Expected the second thread event to be .statusChanged.")
+        }
+
+        switch receivedEvents[2] {
+        case let .archived(event):
+            #expect(event.threadID == thread.id)
+        default:
+            Issue.record("Expected the third thread event to be .archived.")
+        }
+
+        switch receivedEvents[3] {
+        case let .unarchived(event):
+            #expect(event.threadID == thread.id)
+        default:
+            Issue.record("Expected the fourth thread event to be .unarchived.")
+        }
+
+        switch receivedEvents[4] {
+        case let .nameUpdated(update):
+            #expect(update.threadID == thread.id)
+            #expect(update.threadName == "Planning Thread")
+        default:
+            Issue.record("Expected the fifth thread event to be .nameUpdated.")
+        }
+
+        switch receivedEvents[5] {
+        case let .tokenUsageUpdated(update):
+            #expect(update.threadID == thread.id)
+            #expect(update.turnID == "turn-123")
+            #expect(update.last.totalTokens == 65)
+            #expect(update.total.totalTokens == 650)
+            #expect(update.modelContextWindow == 200000)
+        default:
+            Issue.record("Expected the sixth thread event to be .tokenUsageUpdated.")
+        }
+
+        switch receivedEvents[6] {
+        case let .closed(event):
+            #expect(event.threadID == thread.id)
+        default:
+            Issue.record("Expected the seventh thread event to be .closed.")
+        }
+
+        await client.stop()
+    }
+
+    @Test("provides thread convenience properties and wait helpers")
+    func providesThreadConvenienceHelpers() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        let statusTask = Task {
+            try await thread.waitForNextStatusChange()
+        }
+        let nameTask = Task {
+            try await thread.waitForNextNameUpdate()
+        }
+        let archivedTask = Task {
+            try await thread.waitUntilArchived()
+        }
+        let closedTask = Task {
+            try await thread.waitUntilClosed()
+        }
+
+        await Task.yield()
+
+        await transport.emitThreadStatusChanged(threadID: thread.id)
+        await transport.emitThreadNameUpdated(threadID: thread.id)
+        await transport.emitThreadArchived(threadID: thread.id)
+        await transport.emitThreadClosed(threadID: thread.id)
+
+        let statusChange = try await statusTask.value
+        #expect(statusChange.threadID == thread.id)
+        #expect(statusChange.status.type == .active)
+        #expect(statusChange.status.activeFlags == [.waitingOnApproval])
+
+        let nameUpdate = try await nameTask.value
+        #expect(nameUpdate.threadID == thread.id)
+        #expect(nameUpdate.threadName == "Planning Thread")
+
+        let archived = try await archivedTask.value
+        #expect(archived.threadID == thread.id)
+
+        let closed = try await closedTask.value
+        #expect(closed.threadID == thread.id)
+
+        await client.stop()
+    }
+
+    @Test("waits for thread readiness and idle transitions")
+    func waitsForThreadReadinessAndIdleTransitions() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        await transport.emitThreadStatusChangedWaitingOnApproval(threadID: thread.id)
+        await Task.yield()
+
+        let idleTask = Task {
+            try await thread.waitUntilIdle()
+        }
+        let readyTask = Task {
+            try await thread.waitUntilReady()
+        }
+
+        await Task.yield()
+        await transport.emitThreadStatusChangedIdle(threadID: thread.id)
+
+        let idleStatus = try await idleTask.value
+        #expect(idleStatus.type == .idle)
+        #expect(idleStatus.activeFlags.isEmpty)
+
+        let readyStatus = try await readyTask.value
+        #expect(readyStatus.type == .idle)
+        #expect(readyStatus.activeFlags.isEmpty)
+
+        await client.stop()
+    }
+
+    @Test("provides turn convenience wait helpers")
+    func providesTurnConvenienceHelpers() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        let turnHandle = try await thread.startTextTurn("Hello from SwiftASB")
+
+        let planUpdateTask = Task {
+            try await turnHandle.waitForNextPlanUpdate()
+        }
+        let messageDeltaTask = Task {
+            try await turnHandle.waitForNextAgentMessageDelta()
+        }
+        let reasoningDeltaTask = Task {
+            try await turnHandle.waitForNextReasoningTextDelta()
+        }
+        let completionTask = Task {
+            try await turnHandle.waitForCompletion()
+        }
+
+        await Task.yield()
+
+        await transport.emitTurnPlanUpdated(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id
+        )
+        await transport.emitAgentMessageDelta(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-agent-1"
+        )
+        await transport.emitReasoningTextDelta(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-reasoning-1"
+        )
+        await transport.emitTurnCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id
+        )
+
+        let planUpdate = try await planUpdateTask.value
+        #expect(planUpdate.turnID == turnHandle.turn.id)
+        #expect(planUpdate.plan.count == 2)
+
+        let messageDelta = try await messageDeltaTask.value
+        #expect(messageDelta.turnID == turnHandle.turn.id)
+        #expect(messageDelta.itemID == "item-agent-1")
+        #expect(messageDelta.delta == "Working on it")
+
+        let reasoningDelta = try await reasoningDeltaTask.value
+        #expect(reasoningDelta.turnID == turnHandle.turn.id)
+        #expect(reasoningDelta.itemID == "item-reasoning-1")
+        #expect(reasoningDelta.delta == "thinking...")
+
+        let completion = try await completionTask.value
+        #expect(completion.threadID == thread.id)
+        #expect(completion.turn.id == turnHandle.turn.id)
+        #expect(completion.turn.status == .completed)
 
         await client.stop()
     }
@@ -246,6 +663,266 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
     }
 
+    func emitThreadStarted(threadID: String) {
+        let payload = payloadObject([
+            "thread": [
+                "cliVersion": "0.121.0",
+                "createdAt": 1713350000,
+                "cwd": "/tmp/project",
+                "ephemeral": false,
+                "id": threadID,
+                "modelProvider": "openai",
+                "preview": "Hello from thread/started",
+                "source": "cli",
+                "status": ["type": "active"],
+                "turns": [],
+                "updatedAt": 1713350001,
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/started", payload: payload)
+        )
+    }
+
+    func emitThreadStatusChanged(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "status": [
+                "type": "active",
+                "activeFlags": ["waitingOnApproval"],
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/status/changed", payload: payload)
+        )
+    }
+
+    func emitThreadStatusChangedWaitingOnApproval(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "status": [
+                "type": "active",
+                "activeFlags": ["waitingOnApproval"],
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/status/changed", payload: payload)
+        )
+    }
+
+    func emitThreadStatusChangedIdle(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "status": [
+                "type": "idle",
+                "activeFlags": [],
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/status/changed", payload: payload)
+        )
+    }
+
+    func emitThreadNameUpdated(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "threadName": "Planning Thread",
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/name/updated", payload: payload)
+        )
+    }
+
+    func emitThreadArchived(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/archived", payload: payload)
+        )
+    }
+
+    func emitThreadUnarchived(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/unarchived", payload: payload)
+        )
+    }
+
+    func emitThreadTokenUsageUpdated(threadID: String, turnID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "turnId": turnID,
+            "tokenUsage": [
+                "last": [
+                    "cachedInputTokens": 10,
+                    "inputTokens": 20,
+                    "outputTokens": 30,
+                    "reasoningOutputTokens": 5,
+                    "totalTokens": 65,
+                ],
+                "modelContextWindow": 200000,
+                "total": [
+                    "cachedInputTokens": 100,
+                    "inputTokens": 200,
+                    "outputTokens": 300,
+                    "reasoningOutputTokens": 50,
+                    "totalTokens": 650,
+                ],
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/tokenUsage/updated", payload: payload)
+        )
+    }
+
+    func emitThreadClosed(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/closed", payload: payload)
+        )
+    }
+
+    func emitTurnStarted(threadID: String, turnID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "turn": [
+                "completedAt": NSNull(),
+                "durationMs": NSNull(),
+                "error": NSNull(),
+                "id": turnID,
+                "items": [],
+                "startedAt": 1713350002,
+                "status": "inProgress",
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "turn/started", payload: payload)
+        )
+    }
+
+    func emitTurnPlanUpdated(threadID: String, turnID: String) {
+        let payload = payloadObject([
+            "explanation": "Map richer progress notifications.",
+            "plan": [
+                [
+                    "status": "inProgress",
+                    "step": "Promote protocol events into CodexTurnEvent",
+                ],
+                [
+                    "status": "pending",
+                    "step": "Add consumer-facing stream tests",
+                ],
+            ],
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "turn/plan/updated", payload: payload)
+        )
+    }
+
+    func emitItemStarted(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "item": [
+                "id": itemID,
+                "type": "plan",
+            ],
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/started", payload: payload)
+        )
+    }
+
+    func emitAgentMessageDelta(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "delta": "Working on it",
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/agentMessage/delta", payload: payload)
+        )
+    }
+
+    func emitPlanDelta(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "delta": "Stream partial plan text",
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/plan/delta", payload: payload)
+        )
+    }
+
+    func emitReasoningTextDelta(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "contentIndex": 0,
+            "delta": "thinking...",
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/reasoning/textDelta", payload: payload)
+        )
+    }
+
+    func emitReasoningSummaryTextDelta(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "delta": "Summarizing the approach.",
+            "itemId": itemID,
+            "summaryIndex": 0,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/reasoning/summaryTextDelta", payload: payload)
+        )
+    }
+
+    func emitItemCompleted(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "item": [
+                "id": itemID,
+                "status": "completed",
+                "text": "Done.",
+                "type": "agentMessage",
+            ],
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/completed", payload: payload)
+        )
+    }
+
     private func requestMethod(from payload: Data) throws -> String {
         let object = try #require(
             try JSONSerialization.jsonObject(with: payload) as? [String: Any]
@@ -279,11 +956,32 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     }
 }
 
-private func firstTurnEvent(
-    from stream: AsyncThrowingStream<CodexTurnEvent, Error>
-) async throws -> CodexTurnEvent? {
+private func turnEvents(
+    from stream: AsyncThrowingStream<CodexTurnEvent, Error>,
+    count: Int
+) async throws -> [CodexTurnEvent] {
     var iterator = stream.makeAsyncIterator()
-    return try await iterator.next()
+    var events: [CodexTurnEvent] = []
+
+    while events.count < count, let event = try await iterator.next() {
+        events.append(event)
+    }
+
+    return events
+}
+
+private func threadEvents(
+    from stream: AsyncThrowingStream<CodexThreadEvent, Error>,
+    count: Int
+) async throws -> [CodexThreadEvent] {
+    var iterator = stream.makeAsyncIterator()
+    var events: [CodexThreadEvent] = []
+
+    while events.count < count, let event = try await iterator.next() {
+        events.append(event)
+    }
+
+    return events
 }
 
 private extension CodexRPCRequestID {

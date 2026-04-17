@@ -27,11 +27,12 @@
 | Public value-typed request and result models | `Shipped` | Public API uses hand-owned Swift value types rather than exposing `CodexWire...` directly. |
 | Initialize handshake | `Shipped` | `initialize(...)` automatically sends the follow-up `initialized` notification. |
 | Thread start flow | `Shipped` | `startThread(...)` returns `CodexThread`, which carries thread metadata plus a back-reference to the shared app-server owner. |
+| Typed async thread event stream | `Partially shipped` | `CodexThread.events` now streams `thread/started`, `thread/status/changed`, `thread/archived`, `thread/unarchived`, `thread/name/updated`, `thread/tokenUsage/updated`, and `thread/closed`, but broader thread lifecycle coverage is still pending. |
 | Turn start flow | `Shipped` | `startTurn(...)` returns `CodexTurnHandle`. |
-| Typed async turn event stream | `Partially shipped` | `CodexTurnHandle.events` exists and currently streams `turn/completed`. |
+| Typed async turn event stream | `Partially shipped` | `CodexTurnHandle.events` now streams `turn/started`, `turn/plan/updated`, `turn/diff/updated`, `item/agentMessage/delta`, several reasoning deltas, and `turn/completed`, but broader item and thread events still remain internal. |
 | Multiple active threads per app-server | `Targeted` | One `CodexAppServer` should support many concurrently held `CodexThread` handles and turns across different threads. |
 | Multiple simultaneous turns on one thread | `Open question` | We need to verify actual app-server semantics before promising allow, queue, or reject behavior on the same thread. |
-| `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, and now includes a `startTextTurn(...)` happy-path helper, but richer thread-centric APIs are still pending. |
+| `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, includes a `startTextTurn(...)` happy-path helper, and now exposes a typed thread event stream, but richer thread-centric APIs are still pending. |
 | Additional turn event mapping | `Partially started` | The generated wire layer now includes many relevant notification types, but most are not yet promoted into protocol/public event enums. |
 | Server request / approval handling | `Not started` | Approval prompts, elicitation requests, and other server-initiated request flows are not surfaced yet. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
@@ -179,7 +180,8 @@ Exit criteria:
 - [ ] Add `CodexThread` as a first-class public wrapper and move turn creation onto it.
 - [ ] Document and enforce the intended behavior for multiple active threads on one `CodexAppServer`.
 - [ ] Investigate same-thread concurrent turn behavior against the real app-server and codify the result.
-- [ ] Map more notifications into `CodexTurnEvent` so the stream covers non-terminal progress, not just completion.
+- [x] Map an initial progress-oriented notification batch into `CodexTurnEvent` so the stream covers more than completion.
+- [ ] Decide whether additional item lifecycle and thread-scoped notifications should join the public stream surface or live on a separate thread-facing event API.
 - [ ] Decide whether the public stream should surface protocol failures directly or always wrap them as `CodexAppServerError`.
 - [ ] Add a typed surface for approval requests and other server-originated request messages.
 - [ ] Add a one-shot `run(...)` convenience API once the handle model feels stable.

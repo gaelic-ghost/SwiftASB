@@ -375,6 +375,10 @@ public actor CodexAppServer {
     private let transport: any CodexAppServerTransporting
     private let protocolLayer: CodexAppServerProtocol
     private var serverEventTask: Task<Void, Never>?
+    private var threadStatuses: [String: ThreadStatus] = [:]
+    private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
+    private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
+    private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var turnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
     private var bufferedTerminalTurnEvents: [String: CodexTurnEvent] = [:]
     private var hasStarted = false
@@ -417,10 +421,14 @@ public actor CodexAppServer {
         isStopping = true
         serverEventTask?.cancel()
         serverEventTask = nil
+        finishAllThreadEventStreams(throwing: nil)
         finishAllTurnEventStreams(throwing: nil)
         await transport.stop()
         hasStarted = false
         hasCompletedInitializeHandshake = false
+        threadStatuses.removeAll()
+        bufferedThreadEvents.removeAll()
+        bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
     }
 
@@ -465,10 +473,12 @@ public actor CodexAppServer {
                 responsePayload,
                 expectedID: requestID
             )
+            threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
 
             return CodexThread(
                 appServer: self,
-                session: ThreadSession(wireValue: response)
+                session: ThreadSession(wireValue: response),
+                events: makeThreadEventStream(threadID: response.thread.id)
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/start")
@@ -493,6 +503,7 @@ public actor CodexAppServer {
 
             let turn = TurnInfo(wireValue: response.turn)
             return CodexTurnHandle(
+                appServer: self,
                 threadID: request.threadID,
                 turn: turn,
                 events: makeTurnEventStream(turnID: turn.id)
@@ -500,6 +511,22 @@ public actor CodexAppServer {
         } catch {
             throw CodexAppServerError.wrap(error, operation: "turn/start")
         }
+    }
+
+    internal func threadEventStream(
+        threadID: String
+    ) -> AsyncThrowingStream<CodexThreadEvent, Error> {
+        makeThreadEventStream(threadID: threadID)
+    }
+
+    internal func threadStatus(threadID: String) -> ThreadStatus? {
+        threadStatuses[threadID]
+    }
+
+    internal func turnEventStream(
+        turnID: String
+    ) -> AsyncThrowingStream<CodexTurnEvent, Error> {
+        makeTurnEventStream(turnID: turnID)
     }
 
     private func requireStarted(for operation: String) throws {
@@ -537,6 +564,9 @@ public actor CodexAppServer {
 
                 await self.handleServerEventStreamEnded()
             } catch {
+                await self.finishAllThreadEventStreams(
+                    throwing: CodexAppServerError.wrap(error, operation: "server events")
+                )
                 await self.finishAllTurnEventStreams(
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
                 )
@@ -546,21 +576,127 @@ public actor CodexAppServer {
 
     private func handleProtocolEvent(_ event: CodexAppServerProtocolEvent) {
         switch event {
-        case .threadStarted,
-             .threadStatusChanged,
-             .threadNameUpdated,
-             .threadTokenUsageUpdated,
-             .turnStarted,
-             .turnDiffUpdated,
-             .turnPlanUpdated,
-             .itemStarted,
-             .itemCompleted,
-             .agentMessageDelta,
-             .planDelta,
-             .reasoningSummaryPartAdded,
-             .reasoningSummaryTextDelta,
-             .reasoningTextDelta:
-            return
+        case let .threadStarted(notification):
+            threadStatuses[notification.thread.id] = .init(wireValue: notification.thread.status)
+            let threadEvent = CodexThreadEvent.started(
+                .init(thread: .init(wireValue: notification.thread))
+            )
+            publishThreadEvent(threadEvent, for: notification.thread.id, isTerminal: false)
+        case let .threadStatusChanged(notification):
+            threadStatuses[notification.threadID] = .init(wireValue: notification.status)
+            let threadEvent = CodexThreadEvent.statusChanged(
+                .init(
+                    threadID: notification.threadID,
+                    status: .init(wireValue: notification.status)
+                )
+            )
+            publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+        case let .threadArchived(notification):
+            let threadEvent = CodexThreadEvent.archived(.init(threadID: notification.threadID))
+            publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+        case let .threadUnarchived(notification):
+            let threadEvent = CodexThreadEvent.unarchived(.init(threadID: notification.threadID))
+            publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+        case let .threadClosed(notification):
+            threadStatuses.removeValue(forKey: notification.threadID)
+            let threadEvent = CodexThreadEvent.closed(.init(threadID: notification.threadID))
+            publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: true)
+        case let .threadNameUpdated(notification):
+            let threadEvent = CodexThreadEvent.nameUpdated(
+                .init(
+                    threadID: notification.threadID,
+                    threadName: notification.threadName
+                )
+            )
+            publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+        case let .threadTokenUsageUpdated(notification):
+            let threadEvent = CodexThreadEvent.tokenUsageUpdated(
+                .init(
+                    threadID: notification.threadID,
+                    turnID: notification.turnID,
+                    last: .init(wireValue: notification.tokenUsage.last),
+                    modelContextWindow: notification.tokenUsage.modelContextWindow,
+                    total: .init(wireValue: notification.tokenUsage.total)
+                )
+            )
+            publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+        case let .turnStarted(notification):
+            let started = CodexTurnStarted(
+                threadID: notification.threadID,
+                turn: TurnInfo(wireValue: notification.turn)
+            )
+            publishTurnEvent(.started(started), for: notification.turn.id, isTerminal: false)
+        case let .turnDiffUpdated(notification):
+            let diffUpdate = CodexTurnDiffUpdate(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                diff: notification.diff
+            )
+            publishTurnEvent(.diffUpdated(diffUpdate), for: notification.turnID, isTerminal: false)
+        case let .itemStarted(notification):
+            let itemStarted = CodexTurnItemStarted(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                item: .init(wireValue: notification.item)
+            )
+            publishTurnEvent(.itemStarted(itemStarted), for: notification.turnID, isTerminal: false)
+        case let .itemCompleted(notification):
+            let itemCompleted = CodexTurnItemCompleted(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                item: .init(wireValue: notification.item)
+            )
+            publishTurnEvent(.itemCompleted(itemCompleted), for: notification.turnID, isTerminal: false)
+        case let .planDelta(notification):
+            let planDelta = CodexTurnPlanDelta(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
+            publishTurnEvent(.planDelta(planDelta), for: notification.turnID, isTerminal: false)
+        case let .turnPlanUpdated(notification):
+            let planUpdate = CodexTurnPlanUpdate(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                explanation: notification.explanation,
+                plan: notification.plan.map(CodexTurnPlanUpdate.Step.init(wireValue:))
+            )
+            publishTurnEvent(.planUpdated(planUpdate), for: notification.turnID, isTerminal: false)
+        case let .agentMessageDelta(notification):
+            let delta = CodexTurnAgentMessageDelta(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
+            publishTurnEvent(.agentMessageDelta(delta), for: notification.turnID, isTerminal: false)
+        case let .reasoningSummaryPartAdded(notification):
+            let partAdded = CodexTurnReasoningSummaryPartAdded(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                summaryIndex: notification.summaryIndex
+            )
+            publishTurnEvent(.reasoningSummaryPartAdded(partAdded), for: notification.turnID, isTerminal: false)
+        case let .reasoningSummaryTextDelta(notification):
+            let delta = CodexTurnReasoningSummaryTextDelta(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                summaryIndex: notification.summaryIndex,
+                delta: notification.delta
+            )
+            publishTurnEvent(.reasoningSummaryTextDelta(delta), for: notification.turnID, isTerminal: false)
+        case let .reasoningTextDelta(notification):
+            let delta = CodexTurnReasoningTextDelta(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                contentIndex: notification.contentIndex,
+                delta: notification.delta
+            )
+            publishTurnEvent(.reasoningTextDelta(delta), for: notification.turnID, isTerminal: false)
         case let .turnCompleted(notification):
             let completion = CodexTurnCompletion(
                 threadID: notification.threadID,
@@ -575,16 +711,52 @@ public actor CodexAppServer {
         serverEventTask = nil
 
         guard hasStarted, !isStopping else {
+            finishAllThreadEventStreams(throwing: nil)
             finishAllTurnEventStreams(throwing: nil)
             return
         }
 
+        finishAllThreadEventStreams(
+            throwing: CodexAppServerError.transportFailure(
+                operation: "server events",
+                reason: "Codex app-server stopped delivering thread notifications before pending thread streams finished."
+            )
+        )
         finishAllTurnEventStreams(
             throwing: CodexAppServerError.transportFailure(
                 operation: "server events",
                 reason: "Codex app-server stopped delivering notifications before pending turn streams finished."
             )
         )
+    }
+
+    private func makeThreadEventStream(
+        threadID: String
+    ) -> AsyncThrowingStream<CodexThreadEvent, Error> {
+        let streamID = UUID()
+
+        return AsyncThrowingStream { continuation in
+            registerThreadEventContinuation(continuation, streamID: streamID, threadID: threadID)
+
+            if let bufferedEvents = bufferedThreadEvents.removeValue(forKey: threadID) {
+                for event in bufferedEvents {
+                    continuation.yield(event)
+                }
+            }
+
+            if let bufferedEvent = bufferedTerminalThreadEvents.removeValue(forKey: threadID) {
+                continuation.yield(bufferedEvent)
+                continuation.finish()
+                removeThreadEventContinuation(streamID: streamID, threadID: threadID)
+                return
+            }
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeThreadEventContinuation(streamID: streamID, threadID: threadID)
+                }
+            }
+        }
     }
 
     private func makeTurnEventStream(
@@ -630,16 +802,66 @@ public actor CodexAppServer {
         }
     }
 
+    private func registerThreadEventContinuation(
+        _ continuation: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation,
+        streamID: UUID,
+        threadID: String
+    ) {
+        var continuations = threadEventContinuations[threadID] ?? [:]
+        continuations[streamID] = continuation
+        threadEventContinuations[threadID] = continuations
+    }
+
+    private func removeThreadEventContinuation(streamID: UUID, threadID: String) {
+        guard var continuations = threadEventContinuations[threadID] else { return }
+        continuations.removeValue(forKey: streamID)
+        if continuations.isEmpty {
+            threadEventContinuations.removeValue(forKey: threadID)
+        } else {
+            threadEventContinuations[threadID] = continuations
+        }
+    }
+
+    private func publishThreadEvent(
+        _ event: CodexThreadEvent,
+        for threadID: String,
+        isTerminal: Bool
+    ) {
+        guard let continuations = threadEventContinuations[threadID], !continuations.isEmpty else {
+            if isTerminal {
+                bufferedTerminalThreadEvents[threadID] = event
+            } else {
+                bufferedThreadEvents[threadID, default: []].append(event)
+            }
+            return
+        }
+
+        if isTerminal {
+            threadEventContinuations.removeValue(forKey: threadID)
+        }
+
+        for continuation in continuations.values {
+            continuation.yield(event)
+            if isTerminal {
+                continuation.finish()
+            }
+        }
+    }
+
     private func publishTurnEvent(
         _ event: CodexTurnEvent,
         for turnID: String,
         isTerminal: Bool
     ) {
-        guard let continuations = turnEventContinuations.removeValue(forKey: turnID), !continuations.isEmpty else {
+        guard let continuations = turnEventContinuations[turnID], !continuations.isEmpty else {
             if isTerminal {
                 bufferedTerminalTurnEvents[turnID] = event
             }
             return
+        }
+
+        if isTerminal {
+            turnEventContinuations.removeValue(forKey: turnID)
         }
 
         for continuation in continuations.values {
@@ -661,6 +883,103 @@ public actor CodexAppServer {
                 continuation.finish()
             }
         }
+    }
+
+    private func finishAllThreadEventStreams(throwing error: CodexAppServerError?) {
+        let activeContinuations = threadEventContinuations.values.flatMap(\.values)
+        threadEventContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            if let error {
+                continuation.finish(throwing: error)
+            } else {
+                continuation.finish()
+            }
+        }
+    }
+}
+
+private extension CodexTurnPlanUpdate.Step {
+    init(wireValue: CodexWireTurnPlanStep) {
+        self.init(
+            status: .init(wireValue: wireValue.status),
+            step: wireValue.step
+        )
+    }
+}
+
+private extension CodexTurnPlanUpdate.Step.Status {
+    init(wireValue: CodexWireTurnPlanStepStatus) {
+        switch wireValue {
+        case .completed:
+            self = .completed
+        case .inProgress:
+            self = .inProgress
+        case .pending:
+            self = .pending
+        }
+    }
+}
+
+private extension CodexTurnItem {
+    init(wireValue: CodexWireThreadItem) {
+        self.init(
+            id: wireValue.id,
+            kind: .init(wireValue: wireValue.type),
+            text: wireValue.text,
+            status: wireValue.status
+        )
+    }
+}
+
+private extension CodexTurnItem.Kind {
+    init(wireValue: CodexWireThreadItemType) {
+        switch wireValue {
+        case .agentMessage:
+            self = .agentMessage
+        case .collabAgentToolCall:
+            self = .collabAgentToolCall
+        case .commandExecution:
+            self = .commandExecution
+        case .contextCompaction:
+            self = .contextCompaction
+        case .dynamicToolCall:
+            self = .dynamicToolCall
+        case .enteredReviewMode:
+            self = .enteredReviewMode
+        case .exitedReviewMode:
+            self = .exitedReviewMode
+        case .fileChange:
+            self = .fileChange
+        case .hookPrompt:
+            self = .hookPrompt
+        case .imageGeneration:
+            self = .imageGeneration
+        case .imageView:
+            self = .imageView
+        case .mcpToolCall:
+            self = .mcpToolCall
+        case .plan:
+            self = .plan
+        case .reasoning:
+            self = .reasoning
+        case .userMessage:
+            self = .userMessage
+        case .webSearch:
+            self = .webSearch
+        }
+    }
+}
+
+private extension CodexThreadTokenUsageUpdated.Usage {
+    init(wireValue: CodexWireTokenUsageBreakdown) {
+        self.init(
+            cachedInputTokens: wireValue.cachedInputTokens,
+            inputTokens: wireValue.inputTokens,
+            outputTokens: wireValue.outputTokens,
+            reasoningOutputTokens: wireValue.reasoningOutputTokens,
+            totalTokens: wireValue.totalTokens
+        )
     }
 }
 
