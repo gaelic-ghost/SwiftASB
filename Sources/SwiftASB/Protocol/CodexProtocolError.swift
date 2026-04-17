@@ -3,6 +3,7 @@ import Foundation
 internal enum CodexProtocolError: Error, Sendable, LocalizedError, Equatable {
     case requestEncodingFailed(method: String, reason: String)
     case responseDecodingFailed(context: String, reason: String)
+    case eventDecodingFailed(method: String, reason: String)
     case responseIDMismatch(expected: CodexRPCRequestID, actual: CodexRPCRequestID)
     case rpcError(id: CodexRPCRequestID, code: Int, message: String, data: CodexWireJSONValue?)
 
@@ -12,6 +13,8 @@ internal enum CodexProtocolError: Error, Sendable, LocalizedError, Equatable {
             return "Failed to encode Codex app-server request for \(method): \(reason)"
         case let .responseDecodingFailed(context, reason):
             return "Failed to decode Codex app-server response for \(context): \(reason)"
+        case let .eventDecodingFailed(method, reason):
+            return "Failed to decode Codex app-server notification for \(method): \(reason)"
         case let .responseIDMismatch(expected, actual):
             return """
             Received a Codex app-server response for request ID \(actual.description), \

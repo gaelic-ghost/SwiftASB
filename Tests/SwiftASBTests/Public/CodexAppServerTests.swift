@@ -44,7 +44,7 @@ struct CodexAppServerTests {
         #expect(initializeSession.platformOS == "macos")
         #expect(initializeSession.userAgent == "codex-cli/0.121.0")
 
-        let threadSession = try await client.startThread(
+        let thread = try await client.startThread(
             .init(
                 approvalPolicy: .onRequest,
                 currentDirectoryPath: "/tmp/project",
@@ -57,27 +57,45 @@ struct CodexAppServerTests {
             )
         )
 
-        #expect(threadSession.model == "gpt-5.4")
-        #expect(threadSession.modelProvider == "openai")
-        #expect(threadSession.currentDirectoryPath == "/tmp/project")
-        #expect(threadSession.serviceTier == .fast)
-        #expect(threadSession.thread.id == "thread-123")
-        #expect(threadSession.thread.status.type == .active)
-        #expect(threadSession.thread.preview == "Hello from the fake app-server")
+        #expect(thread.model == "gpt-5.4")
+        #expect(thread.modelProvider == "openai")
+        #expect(thread.currentDirectoryPath == "/tmp/project")
+        #expect(thread.serviceTier == .fast)
+        #expect(thread.id == "thread-123")
+        #expect(thread.info.status.type == .active)
+        #expect(thread.info.preview == "Hello from the fake app-server")
 
-        let turnSession = try await client.startTurn(
-            .init(
-                threadID: threadSession.thread.id,
-                input: [.text("Hello from SwiftASB")],
-                effort: .medium,
-                model: "gpt-5.4",
-                summary: .concise
-            )
+        let turnHandle = try await thread.startTextTurn(
+            "Hello from SwiftASB",
+            effort: .medium,
+            model: "gpt-5.4",
+            summary: .concise
         )
 
-        #expect(turnSession.turn.id == "turn-123")
-        #expect(turnSession.turn.status == .inProgress)
-        #expect(turnSession.turn.startedAt == 1713350002)
+        #expect(turnHandle.threadID == thread.id)
+        #expect(turnHandle.turn.id == "turn-123")
+        #expect(turnHandle.turn.status == .inProgress)
+        #expect(turnHandle.turn.startedAt == 1713350002)
+
+        let firstEventTask = Task {
+            try await firstTurnEvent(from: turnHandle.events)
+        }
+
+        await transport.emitTurnCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id
+        )
+
+        let firstEventResult = try await firstEventTask.value
+        let turnEvent = try #require(firstEventResult)
+
+        switch turnEvent {
+        case let .completed(completion):
+            #expect(completion.threadID == thread.id)
+            #expect(completion.turn.id == turnHandle.turn.id)
+            #expect(completion.turn.status == CodexAppServer.TurnStatus.completed)
+            #expect(completion.turn.completedAt == 1713350005)
+        }
 
         let recordedMethods = await transport.recordedMethods
         #expect(recordedMethods == ["initialize", "initialized", "thread/start", "turn/start"])
@@ -90,6 +108,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private(set) var recordedMethods: [String] = []
     private var started = false
     private var initializedSeen = false
+    private var serverEventContinuation: AsyncStream<CodexRPCServerEvent>.Continuation?
 
     func start() throws {
         started = true
@@ -98,6 +117,8 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
     func stop() {
         started = false
+        serverEventContinuation?.finish()
+        serverEventContinuation = nil
     }
 
     func send(_ requestPayload: Data, id: CodexRPCRequestID) async throws -> Data {
@@ -195,6 +216,36 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         }
     }
 
+    func serverEvents() -> AsyncStream<CodexRPCServerEvent> {
+        AsyncStream { continuation in
+            serverEventContinuation = continuation
+            continuation.onTermination = { _ in
+                Task {
+                    await self.clearServerEventContinuation()
+                }
+            }
+        }
+    }
+
+    func emitTurnCompleted(threadID: String, turnID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "turn": [
+                "completedAt": 1713350005,
+                "durationMs": 3000,
+                "error": NSNull(),
+                "id": turnID,
+                "items": [],
+                "startedAt": 1713350002,
+                "status": "completed",
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "turn/completed", payload: payload)
+        )
+    }
+
     private func requestMethod(from payload: Data) throws -> String {
         let object = try #require(
             try JSONSerialization.jsonObject(with: payload) as? [String: Any]
@@ -222,6 +273,17 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private func payloadObject(_ object: [String: Any]) -> Data {
         try! JSONSerialization.data(withJSONObject: object)
     }
+
+    private func clearServerEventContinuation() {
+        serverEventContinuation = nil
+    }
+}
+
+private func firstTurnEvent(
+    from stream: AsyncThrowingStream<CodexTurnEvent, Error>
+) async throws -> CodexTurnEvent? {
+    var iterator = stream.makeAsyncIterator()
+    return try await iterator.next()
 }
 
 private extension CodexRPCRequestID {

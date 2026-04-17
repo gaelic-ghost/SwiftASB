@@ -72,14 +72,50 @@ inspecting upstream schema changes or quicktype regressions.
 
 ### V2 lifecycle batch
 
-The thread and turn bootstrap slice is derived from the v2 bundle:
+The current v2 lifecycle batch is no longer just the minimal bootstrap slice.
+It now includes:
 
-- `InitializeParams`
-- `ThreadStartParams`
-- `ThreadStartResponse`
-- `TurnStartParams`
-- `TurnStartResponse`
-- `TurnCompletedNotification`
+- bootstrap requests and responses:
+  - `InitializeParams`
+  - `ThreadStartParams`
+  - `ThreadStartResponse`
+  - `TurnStartParams`
+  - `TurnStartResponse`
+- thread lifecycle notifications:
+  - `ThreadStartedNotification`
+  - `ThreadStatusChangedNotification`
+  - `ThreadNameUpdatedNotification`
+  - `ThreadTokenUsageUpdatedNotification`
+  - `ThreadArchivedNotification`
+  - `ThreadUnarchivedNotification`
+  - `ThreadClosedNotification`
+- turn lifecycle notifications:
+  - `TurnStartedNotification`
+  - `TurnPlanUpdatedNotification`
+  - `TurnDiffUpdatedNotification`
+  - `TurnCompletedNotification`
+- item and reasoning notifications:
+  - `ItemStartedNotification`
+  - `ItemCompletedNotification`
+  - `ItemGuardianApprovalReviewStartedNotification`
+  - `ItemGuardianApprovalReviewCompletedNotification`
+  - `PlanDeltaNotification`
+  - `ReasoningTextDeltaNotification`
+  - `ReasoningSummaryPartAddedNotification`
+  - `ReasoningSummaryTextDeltaNotification`
+  - `AgentMessageDeltaNotification`
+- tooling and auxiliary lifecycle notifications:
+  - `CommandExecutionOutputDeltaNotification`
+  - `CommandExecOutputDeltaNotification`
+  - `FileChangeOutputDeltaNotification`
+  - `McpToolCallProgressNotification`
+  - `ModelReroutedNotification`
+  - `ServerRequestResolvedNotification`
+  - `HookStartedNotification`
+  - `HookCompletedNotification`
+  - `RawResponseItemCompletedNotification`
+  - `ContextCompactedNotification`
+  - `ErrorNotification`
 
 `InitializeParams` is included here because it exists in the v2 bundle and is
 still useful as part of the consolidated lifecycle graph.
@@ -101,10 +137,12 @@ The remaining problem was not that `quicktype` was unusable. It was that a
 small number of intentionally loose schema surfaces generated as `Any`, which
 breaks `Equatable` synthesis and Swift 6 `Sendable`.
 
-For the current lifecycle batch, the meaningful dynamic surfaces were:
+For the current widened lifecycle batch, the meaningful dynamic surfaces are
+still concentrated in a small number of fields:
 
 - `config`
 - tool-call `arguments`
+- plan-update `tools`
 - MCP result `meta`
 - MCP result `content`
 - MCP result `structuredContent`

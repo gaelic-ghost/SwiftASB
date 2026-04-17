@@ -5,4 +5,5 @@ internal protocol CodexAppServerTransporting: Actor {
     func stop()
     func send(_ requestPayload: Data, id: CodexRPCRequestID) async throws -> Data
     func sendNotification(_ notificationPayload: Data, method: String) throws
+    func serverEvents() -> AsyncStream<CodexRPCServerEvent>
 }

@@ -96,9 +96,39 @@ build_batch \
   InitializeParams \
   ThreadStartParams \
   ThreadStartResponse \
+  ThreadStartedNotification \
+  ThreadStatusChangedNotification \
+  ThreadNameUpdatedNotification \
+  ThreadTokenUsageUpdatedNotification \
+  ThreadArchivedNotification \
+  ThreadUnarchivedNotification \
+  ThreadClosedNotification \
   TurnStartParams \
   TurnStartResponse \
-  TurnCompletedNotification
+  TurnStartedNotification \
+  TurnPlanUpdatedNotification \
+  TurnDiffUpdatedNotification \
+  TurnCompletedNotification \
+  ItemStartedNotification \
+  ItemCompletedNotification \
+  ItemGuardianApprovalReviewStartedNotification \
+  ItemGuardianApprovalReviewCompletedNotification \
+  PlanDeltaNotification \
+  ReasoningTextDeltaNotification \
+  ReasoningSummaryPartAddedNotification \
+  ReasoningSummaryTextDeltaNotification \
+  AgentMessageDeltaNotification \
+  CommandExecutionOutputDeltaNotification \
+  CommandExecOutputDeltaNotification \
+  FileChangeOutputDeltaNotification \
+  McpToolCallProgressNotification \
+  ModelReroutedNotification \
+  ServerRequestResolvedNotification \
+  HookStartedNotification \
+  HookCompletedNotification \
+  RawResponseItemCompletedNotification \
+  ContextCompactedNotification \
+  ErrorNotification
 
 printf '\nDerived schemas: %s\n' "$DERIVED_DIR"
 printf 'Raw quicktype output: %s\n' "$RAW_DIR"

@@ -196,6 +196,16 @@ Likely Swift-native shape:
 - one high-level `run(...)` convenience path for the common case.
 - one lower-level turn path for streaming, steering, and interrupt support.
 
+Current direction:
+
+- one `CodexAppServer` actor should own one shared app-server subprocess
+- that shared owner should support many logical threads at once
+- consumers should hold onto `CodexThread` values for each active thread they care about
+- concurrent turns across different threads are an intended supported model
+- concurrent turns on the same thread are still an open behavior question that
+  must be verified against the real app-server before the public API promises a
+  policy
+
 ## Packaging Recommendation
 
 ### Runtime

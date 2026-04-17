@@ -15,10 +15,40 @@ import Foundation
 /// Each top-level property references one selected definition from the original bundle.
 // MARK: - CodexWireCodexLifecycleV2Batch
 struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
+    let agentMessageDeltaNotification: CodexWireAgentMessageDeltaNotification?
+    let commandExecOutputDeltaNotification: CodexWireCommandExecOutputDeltaNotification?
+    let commandExecutionOutputDeltaNotification: CodexWireCommandExecutionOutputDeltaNotification?
+    let contextCompactedNotification: CodexWireContextCompactedNotification?
+    let errorNotification: CodexWireErrorNotification?
+    let fileChangeOutputDeltaNotification: CodexWireFileChangeOutputDeltaNotification?
+    let hookCompletedNotification: CodexWireHookCompletedNotification?
+    let hookStartedNotification: CodexWireHookStartedNotification?
     let initializeParams: CodexWireInitializeParams?
+    let itemCompletedNotification: CodexWireItemCompletedNotification?
+    let itemGuardianApprovalReviewCompletedNotification: CodexWireItemGuardianApprovalReviewCompletedNotification?
+    let itemGuardianApprovalReviewStartedNotification: CodexWireItemGuardianApprovalReviewStartedNotification?
+    let itemStartedNotification: CodexWireItemStartedNotification?
+    let mcpToolCallProgressNotification: CodexWireMCPToolCallProgressNotification?
+    let modelReroutedNotification: CodexWireModelReroutedNotification?
+    let planDeltaNotification: CodexWirePlanDeltaNotification?
+    let rawResponseItemCompletedNotification: CodexWireRawResponseItemCompletedNotification?
+    let reasoningSummaryPartAddedNotification: CodexWireReasoningSummaryPartAddedNotification?
+    let reasoningSummaryTextDeltaNotification: CodexWireReasoningSummaryTextDeltaNotification?
+    let reasoningTextDeltaNotification: CodexWireReasoningTextDeltaNotification?
+    let serverRequestResolvedNotification: CodexWireServerRequestResolvedNotification?
+    let threadArchivedNotification: CodexWireThreadArchivedNotification?
+    let threadClosedNotification: CodexWireThreadClosedNotification?
+    let threadNameUpdatedNotification: CodexWireThreadNameUpdatedNotification?
+    let threadStartedNotification: CodexWireThreadStartedNotification?
     let threadStartParams: CodexWireThreadStartParams?
     let threadStartResponse: CodexWireThreadStartResponse?
+    let threadStatusChangedNotification: CodexWireThreadStatusChangedNotification?
+    let threadTokenUsageUpdatedNotification: CodexWireThreadTokenUsageUpdatedNotification?
+    let threadUnarchivedNotification: CodexWireThreadUnarchivedNotification?
     let turnCompletedNotification: CodexWireTurnCompletedNotification?
+    let turnDiffUpdatedNotification: CodexWireTurnDiffUpdatedNotification?
+    let turnPlanUpdatedNotification: CodexWireTurnPlanUpdatedNotification?
+    let turnStartedNotification: CodexWireTurnStartedNotification?
     let turnStartParams: CodexWireTurnStartParams?
     let turnStartResponse: CodexWireTurnStartResponse?
 }
@@ -29,30 +59,15 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
-// MARK: - CodexWireInitializeParams
-struct CodexWireInitializeParams: Codable, Equatable, Sendable {
-    let capabilities: CodexWireInitializeCapabilities?
-    let clientInfo: CodexWireClientInfo
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-/// Client-declared capabilities negotiated during initialize.
-// MARK: - CodexWireInitializeCapabilities
-struct CodexWireInitializeCapabilities: Codable, Equatable, Sendable {
-    /// Opt into receiving experimental API methods and fields.
-    let experimentalAPI: Bool?
-    /// Exact notification method names that should be suppressed for this connection (for
-    /// example `thread/started`).
-    let optOutNotificationMethods: [String]?
+// MARK: - CodexWireAgentMessageDeltaNotification
+struct CodexWireAgentMessageDeltaNotification: Codable, Equatable, Sendable {
+    let delta, itemID, threadID, turnID: String
 
     enum CodingKeys: String, CodingKey {
-        case experimentalAPI = "experimentalApi"
-        case optOutNotificationMethods
+        case delta
+        case itemID = "itemId"
+        case threadID = "threadId"
+        case turnID = "turnId"
     }
 }
 
@@ -62,328 +77,39 @@ struct CodexWireInitializeCapabilities: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
-// MARK: - CodexWireClientInfo
-struct CodexWireClientInfo: Codable, Equatable, Sendable {
-    let name: String
-    let title: String?
-    let version: String
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireThreadStartParams
-struct CodexWireThreadStartParams: Codable, Equatable, Sendable {
-    let approvalPolicy: CodexWireApprovalPolicyUnion?
-    /// Override where approval requests are routed for review on this thread and subsequent
-    /// turns.
-    let approvalsReviewer: CodexWireApprovalsReviewer?
-    let baseInstructions: String?
-    let config: [String: CodexWireJSONValue]?
-    let cwd, developerInstructions: String?
-    let ephemeral: Bool?
-    let model, modelProvider: String?
-    let personality: CodexWirePersonality?
-    let sandbox: CodexWireSandboxMode?
-    let serviceName: String?
-    let serviceTier: CodexWireServiceTier?
-    let sessionStartSource: CodexWireThreadStartSource?
-}
-
-enum CodexWireApprovalPolicyUnion: Codable, Equatable, Sendable {
-    case codexWireGranularAskForApproval(CodexWireGranularAskForApproval)
-    case enumeration(CodexWireApprovalPolicyEnum)
-    case null
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let x = try? container.decode(CodexWireApprovalPolicyEnum.self) {
-            self = .enumeration(x)
-            return
-        }
-        if let x = try? container.decode(CodexWireGranularAskForApproval.self) {
-            self = .codexWireGranularAskForApproval(x)
-            return
-        }
-        if container.decodeNil() {
-            self = .null
-            return
-        }
-        throw DecodingError.typeMismatch(CodexWireApprovalPolicyUnion.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireApprovalPolicyUnion"))
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .codexWireGranularAskForApproval(let x):
-            try container.encode(x)
-        case .enumeration(let x):
-            try container.encode(x)
-        case .null:
-            try container.encodeNil()
-        }
-    }
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireGranularAskForApproval
-struct CodexWireGranularAskForApproval: Codable, Equatable, Sendable {
-    let granular: CodexWireGranular
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireGranular
-struct CodexWireGranular: Codable, Equatable, Sendable {
-    let mcpElicitations: Bool
-    let requestPermissions: Bool?
-    let rules, sandboxApproval: Bool
-    let skillApproval: Bool?
-
-    enum CodingKeys: String, CodingKey {
-        case mcpElicitations = "mcp_elicitations"
-        case requestPermissions = "request_permissions"
-        case rules
-        case sandboxApproval = "sandbox_approval"
-        case skillApproval = "skill_approval"
-    }
-}
-
-enum CodexWireApprovalPolicyEnum: String, Codable, Equatable, Sendable {
-    case never = "never"
-    case onFailure = "on-failure"
-    case onRequest = "on-request"
-    case untrusted = "untrusted"
-}
-
-/// Configures who approval requests are routed to for review. Examples include sandbox
-/// escapes, blocked network access, MCP approval prompts, and ARC escalations. Defaults to
-/// `user`. `guardian_subagent` uses a carefully prompted subagent to gather relevant context
-/// and apply a risk-based decision framework before approving or denying the request.
+/// Base64-encoded output chunk emitted for a streaming `command/exec` request.
 ///
-/// Reviewer currently used for approval requests on this thread.
-enum CodexWireApprovalsReviewer: String, Codable, Equatable, Sendable {
-    case guardianSubagent = "guardian_subagent"
-    case user = "user"
-}
-
-enum CodexWirePersonality: String, Codable, Equatable, Sendable {
-    case friendly = "friendly"
-    case none = "none"
-    case pragmatic = "pragmatic"
-}
-
-enum CodexWireSandboxMode: String, Codable, Equatable, Sendable {
-    case dangerFullAccess = "danger-full-access"
-    case readOnly = "read-only"
-    case workspaceWrite = "workspace-write"
-}
-
-enum CodexWireServiceTier: String, Codable, Equatable, Sendable {
-    case fast = "fast"
-    case flex = "flex"
-}
-
-enum CodexWireThreadStartSource: String, Codable, Equatable, Sendable {
-    case clear = "clear"
-    case startup = "startup"
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireThreadStartResponse
-struct CodexWireThreadStartResponse: Codable, Equatable, Sendable {
-    let approvalPolicy: CodexWireAskForApproval
-    /// Reviewer currently used for approval requests on this thread.
-    let approvalsReviewer: CodexWireApprovalsReviewer
-    let cwd: String
-    /// Instruction source files currently loaded for this thread.
-    let instructionSources: [String]?
-    let model, modelProvider: String
-    let reasoningEffort: CodexWireReasoningEffort?
-    let sandbox: CodexWireSandboxPolicy
-    let serviceTier: CodexWireServiceTier?
-    let thread: CodexWireThread
-}
-
-enum CodexWireAskForApproval: Codable, Equatable, Sendable {
-    case codexWireGranularAskForApproval(CodexWireGranularAskForApproval)
-    case enumeration(CodexWireApprovalPolicyEnum)
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let x = try? container.decode(CodexWireApprovalPolicyEnum.self) {
-            self = .enumeration(x)
-            return
-        }
-        if let x = try? container.decode(CodexWireGranularAskForApproval.self) {
-            self = .codexWireGranularAskForApproval(x)
-            return
-        }
-        throw DecodingError.typeMismatch(CodexWireAskForApproval.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireAskForApproval"))
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .codexWireGranularAskForApproval(let x):
-            try container.encode(x)
-        case .enumeration(let x):
-            try container.encode(x)
-        }
-    }
-}
-
-/// See
-/// https://platform.openai.com/docs/guides/reasoning?api-mode=responses#get-started-with-reasoning
-enum CodexWireReasoningEffort: String, Codable, Equatable, Sendable {
-    case high = "high"
-    case low = "low"
-    case medium = "medium"
-    case minimal = "minimal"
-    case none = "none"
-    case xhigh = "xhigh"
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireSandboxPolicy
-struct CodexWireSandboxPolicy: Codable, Equatable, Sendable {
-    let type: CodexWireSandboxPolicyType
-    let access: CodexWireReadOnlyAccess?
-    let networkAccess: CodexWireNetworkAccessUnion?
-    let excludeSlashTmp, excludeTmpdirEnvVar: Bool?
-    let readOnlyAccess: CodexWireReadOnlyAccess?
-    let writableRoots: [String]?
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireReadOnlyAccess
-struct CodexWireReadOnlyAccess: Codable, Equatable, Sendable {
-    let includePlatformDefaults: Bool?
-    let readableRoots: [String]?
-    let type: CodexWireReadOnlyAccessType
-}
-
-enum CodexWireReadOnlyAccessType: String, Codable, Equatable, Sendable {
-    case fullAccess = "fullAccess"
-    case restricted = "restricted"
-}
-
-enum CodexWireNetworkAccessUnion: Codable, Equatable, Sendable {
-    case bool(Bool)
-    case enumeration(CodexWireNetworkAccess)
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let x = try? container.decode(Bool.self) {
-            self = .bool(x)
-            return
-        }
-        if let x = try? container.decode(CodexWireNetworkAccess.self) {
-            self = .enumeration(x)
-            return
-        }
-        throw DecodingError.typeMismatch(CodexWireNetworkAccessUnion.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireNetworkAccessUnion"))
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .bool(let x):
-            try container.encode(x)
-        case .enumeration(let x):
-            try container.encode(x)
-        }
-    }
-}
-
-enum CodexWireNetworkAccess: String, Codable, Equatable, Sendable {
-    case enabled = "enabled"
-    case restricted = "restricted"
-}
-
-enum CodexWireSandboxPolicyType: String, Codable, Equatable, Sendable {
-    case dangerFullAccess = "dangerFullAccess"
-    case externalSandbox = "externalSandbox"
-    case readOnly = "readOnly"
-    case workspaceWrite = "workspaceWrite"
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireThread
-struct CodexWireThread: Codable, Equatable, Sendable {
-    /// Optional random unique nickname assigned to an AgentControl-spawned sub-agent.
-    let agentNickname: String?
-    /// Optional role (agent_role) assigned to an AgentControl-spawned sub-agent.
-    let agentRole: String?
-    /// Version of the CLI that created the thread.
-    let cliVersion: String
-    /// Unix timestamp (in seconds) when the thread was created.
-    let createdAt: Int
-    /// Working directory captured for the thread.
-    let cwd: String
-    /// Whether the thread is ephemeral and should not be materialized on disk.
-    let ephemeral: Bool
-    /// Source thread id when this thread was created by forking another thread.
-    let forkedFromID: String?
-    /// Optional Git metadata captured when the thread was created.
-    let gitInfo: CodexWireGitInfo?
-    let id: String
-    /// Model provider used for this thread (for example, 'openai').
-    let modelProvider: String
-    /// Optional user-facing thread title.
-    let name: String?
-    /// [UNSTABLE] Path to the thread on disk.
-    let path: String?
-    /// Usually the first user message in the thread, if available.
-    let preview: String
-    /// Origin of the thread (CLI, VSCode, codex exec, codex app-server, etc.).
-    let source: CodexWireSessionSourceUnion
-    /// Current runtime status for the thread.
-    let status: CodexWireThreadStatus
-    /// Only populated on `thread/resume`, `thread/rollback`, `thread/fork`, and `thread/read`
-    /// (when `includeTurns` is true) responses. For all other responses and notifications
-    /// returning a Thread, the turns field will be an empty list.
-    let turns: [CodexWireTurn]
-    /// Unix timestamp (in seconds) when the thread was last updated.
-    let updatedAt: Int
+/// These notifications are connection-scoped. If the originating connection closes, the
+/// server terminates the process.
+// MARK: - CodexWireCommandExecOutputDeltaNotification
+struct CodexWireCommandExecOutputDeltaNotification: Codable, Equatable, Sendable {
+    /// `true` on the final streamed chunk for a stream when `outputBytesCap` truncated later
+    /// output on that stream.
+    let capReached: Bool
+    /// Base64-encoded output bytes.
+    let deltaBase64: String
+    /// Client-supplied, connection-scoped `processId` from the original `command/exec` request.
+    let processID: String
+    /// Output stream for this chunk.
+    let stream: CodexWireCommandExecOutputStream
 
     enum CodingKeys: String, CodingKey {
-        case agentNickname, agentRole, cliVersion, createdAt, cwd, ephemeral
-        case forkedFromID = "forkedFromId"
-        case gitInfo, id, modelProvider, name, path, preview, source, status, turns, updatedAt
+        case capReached, deltaBase64
+        case processID = "processId"
+        case stream
     }
+}
+
+/// Output stream for this chunk.
+///
+/// Stream label for `command/exec/outputDelta` notifications.
+///
+/// stdout stream. PTY mode multiplexes terminal output here.
+///
+/// stderr stream.
+enum CodexWireCommandExecOutputStream: String, Codable, Equatable, Sendable {
+    case stderr = "stderr"
+    case stdout = "stdout"
 }
 
 //
@@ -392,43 +118,15 @@ struct CodexWireThread: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
-// MARK: - CodexWireGitInfo
-struct CodexWireGitInfo: Codable, Equatable, Sendable {
-    let branch, originURL, sha: String?
+// MARK: - CodexWireCommandExecutionOutputDeltaNotification
+struct CodexWireCommandExecutionOutputDeltaNotification: Codable, Equatable, Sendable {
+    let delta, itemID, threadID, turnID: String
 
     enum CodingKeys: String, CodingKey {
-        case branch
-        case originURL = "originUrl"
-        case sha
-    }
-}
-
-/// Origin of the thread (CLI, VSCode, codex exec, codex app-server, etc.).
-enum CodexWireSessionSourceUnion: Codable, Equatable, Sendable {
-    case codexWireSessionSource(CodexWireSessionSource)
-    case enumeration(CodexWireSessionSourceEnum)
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let x = try? container.decode(CodexWireSessionSourceEnum.self) {
-            self = .enumeration(x)
-            return
-        }
-        if let x = try? container.decode(CodexWireSessionSource.self) {
-            self = .codexWireSessionSource(x)
-            return
-        }
-        throw DecodingError.typeMismatch(CodexWireSessionSourceUnion.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireSessionSourceUnion"))
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .codexWireSessionSource(let x):
-            try container.encode(x)
-        case .enumeration(let x):
-            try container.encode(x)
-        }
+        case delta
+        case itemID = "itemId"
+        case threadID = "threadId"
+        case turnID = "turnId"
     }
 }
 
@@ -438,54 +136,14 @@ enum CodexWireSessionSourceUnion: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
-// MARK: - CodexWireSessionSource
-struct CodexWireSessionSource: Codable, Equatable, Sendable {
-    let custom: String?
-    let subAgent: CodexWireSubAgentSourceUnion?
-}
-
-enum CodexWireSubAgentSourceUnion: Codable, Equatable, Sendable {
-    case codexWireSubAgentSource(CodexWireSubAgentSource)
-    case enumeration(CodexWireSubAgentSourceEnum)
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let x = try? container.decode(CodexWireSubAgentSourceEnum.self) {
-            self = .enumeration(x)
-            return
-        }
-        if let x = try? container.decode(CodexWireSubAgentSource.self) {
-            self = .codexWireSubAgentSource(x)
-            return
-        }
-        throw DecodingError.typeMismatch(CodexWireSubAgentSourceUnion.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireSubAgentSourceUnion"))
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .codexWireSubAgentSource(let x):
-            try container.encode(x)
-        case .enumeration(let x):
-            try container.encode(x)
-        }
-    }
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireSubAgentSource
-struct CodexWireSubAgentSource: Codable, Equatable, Sendable {
-    let threadSpawn: CodexWireThreadSpawn?
-    let other: String?
+/// Deprecated: Use `ContextCompaction` item type instead.
+// MARK: - CodexWireContextCompactedNotification
+struct CodexWireContextCompactedNotification: Codable, Equatable, Sendable {
+    let threadID, turnID: String
 
     enum CodingKeys: String, CodingKey {
-        case threadSpawn = "thread_spawn"
-        case other
+        case threadID = "threadId"
+        case turnID = "turnId"
     }
 }
 
@@ -495,86 +153,17 @@ struct CodexWireSubAgentSource: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
-// MARK: - CodexWireThreadSpawn
-struct CodexWireThreadSpawn: Codable, Equatable, Sendable {
-    let agentNickname, agentPath, agentRole: String?
-    let depth: Int
-    let parentThreadID: String
+// MARK: - CodexWireErrorNotification
+struct CodexWireErrorNotification: Codable, Equatable, Sendable {
+    let error: CodexWireTurnError
+    let threadID, turnID: String
+    let willRetry: Bool
 
     enum CodingKeys: String, CodingKey {
-        case agentNickname = "agent_nickname"
-        case agentPath = "agent_path"
-        case agentRole = "agent_role"
-        case depth
-        case parentThreadID = "parent_thread_id"
-    }
-}
-
-enum CodexWireSubAgentSourceEnum: String, Codable, Equatable, Sendable {
-    case compact = "compact"
-    case memoryConsolidation = "memory_consolidation"
-    case review = "review"
-}
-
-enum CodexWireSessionSourceEnum: String, Codable, Equatable, Sendable {
-    case appServer = "appServer"
-    case cli = "cli"
-    case exec = "exec"
-    case unknown = "unknown"
-    case vscode = "vscode"
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-/// Current runtime status for the thread.
-// MARK: - CodexWireThreadStatus
-struct CodexWireThreadStatus: Codable, Equatable, Sendable {
-    let type: CodexWireThreadStatusType
-    let activeFlags: [CodexWireThreadActiveFlag]?
-}
-
-enum CodexWireThreadActiveFlag: String, Codable, Equatable, Sendable {
-    case waitingOnApproval = "waitingOnApproval"
-    case waitingOnUserInput = "waitingOnUserInput"
-}
-
-enum CodexWireThreadStatusType: String, Codable, Equatable, Sendable {
-    case active = "active"
-    case idle = "idle"
-    case notLoaded = "notLoaded"
-    case systemError = "systemError"
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireTurn
-struct CodexWireTurn: Codable, Equatable, Sendable {
-    /// Unix timestamp (in seconds) when the turn completed.
-    let completedAt: Int?
-    /// Duration between turn start and completion in milliseconds, if known.
-    let durationMS: Int?
-    /// Only populated when the Turn's status is failed.
-    let error: CodexWireTurnError?
-    let id: String
-    /// Only populated on a `thread/resume` or `thread/fork` response. For all other responses
-    /// and notifications returning a Turn, the items field will be an empty list.
-    let items: [CodexWireThreadItem]
-    /// Unix timestamp (in seconds) when the turn started.
-    let startedAt: Int?
-    let status: CodexWireTurnStatus
-
-    enum CodingKeys: String, CodingKey {
-        case completedAt
-        case durationMS = "durationMs"
-        case error, id, items, startedAt, status
+        case error
+        case threadID = "threadId"
+        case turnID = "turnId"
+        case willRetry
     }
 }
 
@@ -719,6 +308,207 @@ enum CodexWireCodexErrorInfoEnum: String, Codable, Equatable, Sendable {
     case threadRollbackFailed = "threadRollbackFailed"
     case unauthorized = "unauthorized"
     case usageLimitExceeded = "usageLimitExceeded"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireFileChangeOutputDeltaNotification
+struct CodexWireFileChangeOutputDeltaNotification: Codable, Equatable, Sendable {
+    let delta, itemID, threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case delta
+        case itemID = "itemId"
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireHookCompletedNotification
+struct CodexWireHookCompletedNotification: Codable, Equatable, Sendable {
+    let run: CodexWireHookRunSummary
+    let threadID: String
+    let turnID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case run
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireHookRunSummary
+struct CodexWireHookRunSummary: Codable, Equatable, Sendable {
+    let completedAt: Int?
+    let displayOrder: Int
+    let durationMS: Int?
+    let entries: [CodexWireHookOutputEntry]
+    let eventName: CodexWireHookEventName
+    let executionMode: CodexWireHookExecutionMode
+    let handlerType: CodexWireHookHandlerType
+    let id: String
+    let scope: CodexWireHookScope
+    let sourcePath: String
+    let startedAt: Int
+    let status: CodexWireHookRunStatus
+    let statusMessage: String?
+
+    enum CodingKeys: String, CodingKey {
+        case completedAt, displayOrder
+        case durationMS = "durationMs"
+        case entries, eventName, executionMode, handlerType, id, scope, sourcePath, startedAt, status, statusMessage
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireHookOutputEntry
+struct CodexWireHookOutputEntry: Codable, Equatable, Sendable {
+    let kind: CodexWireHookOutputEntryKind
+    let text: String
+}
+
+enum CodexWireHookOutputEntryKind: String, Codable, Equatable, Sendable {
+    case context = "context"
+    case error = "error"
+    case feedback = "feedback"
+    case stop = "stop"
+    case warning = "warning"
+}
+
+enum CodexWireHookEventName: String, Codable, Equatable, Sendable {
+    case postToolUse = "postToolUse"
+    case preToolUse = "preToolUse"
+    case sessionStart = "sessionStart"
+    case stop = "stop"
+    case userPromptSubmit = "userPromptSubmit"
+}
+
+enum CodexWireHookExecutionMode: String, Codable, Equatable, Sendable {
+    case async = "async"
+    case sync = "sync"
+}
+
+enum CodexWireHookHandlerType: String, Codable, Equatable, Sendable {
+    case agent = "agent"
+    case command = "command"
+    case prompt = "prompt"
+}
+
+enum CodexWireHookScope: String, Codable, Equatable, Sendable {
+    case thread = "thread"
+    case turn = "turn"
+}
+
+enum CodexWireHookRunStatus: String, Codable, Equatable, Sendable {
+    case blocked = "blocked"
+    case completed = "completed"
+    case failed = "failed"
+    case running = "running"
+    case stopped = "stopped"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireHookStartedNotification
+struct CodexWireHookStartedNotification: Codable, Equatable, Sendable {
+    let run: CodexWireHookRunSummary
+    let threadID: String
+    let turnID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case run
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireInitializeParams
+struct CodexWireInitializeParams: Codable, Equatable, Sendable {
+    let capabilities: CodexWireInitializeCapabilities?
+    let clientInfo: CodexWireClientInfo
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Client-declared capabilities negotiated during initialize.
+// MARK: - CodexWireInitializeCapabilities
+struct CodexWireInitializeCapabilities: Codable, Equatable, Sendable {
+    /// Opt into receiving experimental API methods and fields.
+    let experimentalAPI: Bool?
+    /// Exact notification method names that should be suppressed for this connection (for
+    /// example `thread/started`).
+    let optOutNotificationMethods: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case experimentalAPI = "experimentalApi"
+        case optOutNotificationMethods
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireClientInfo
+struct CodexWireClientInfo: Codable, Equatable, Sendable {
+    let name: String
+    let title: String?
+    let version: String
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireItemCompletedNotification
+struct CodexWireItemCompletedNotification: Codable, Equatable, Sendable {
+    let item: CodexWireThreadItem
+    let threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case item
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
 }
 
 //
@@ -1075,6 +865,17 @@ enum CodexWireMessagePhase: String, Codable, Equatable, Sendable {
     case finalAnswer = "final_answer"
 }
 
+/// See
+/// https://platform.openai.com/docs/guides/reasoning?api-mode=responses#get-started-with-reasoning
+enum CodexWireReasoningEffort: String, Codable, Equatable, Sendable {
+    case high = "high"
+    case low = "low"
+    case medium = "medium"
+    case minimal = "minimal"
+    case none = "none"
+    case xhigh = "xhigh"
+}
+
 enum CodexWireResult: Codable, Equatable, Sendable {
     case codexWireMCPToolCallResult(CodexWireMCPToolCallResult)
     case string(String)
@@ -1154,11 +955,1235 @@ enum CodexWireThreadItemType: String, Codable, Equatable, Sendable {
     case webSearch = "webSearch"
 }
 
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// [UNSTABLE] Temporary notification payload for guardian automatic approval review. This
+/// shape is expected to change soon.
+// MARK: - CodexWireItemGuardianApprovalReviewCompletedNotification
+struct CodexWireItemGuardianApprovalReviewCompletedNotification: Codable, Equatable, Sendable {
+    let action: CodexWireGuardianApprovalReviewAction
+    let decisionSource: CodexWireAutoReviewDecisionSource
+    let review: CodexWireGuardianApprovalReview
+    /// Stable identifier for this review.
+    let reviewID: String
+    /// Identifier for the reviewed item or tool call when one exists.
+    ///
+    /// In most cases, one review maps to one target item. The exceptions are - execve reviews,
+    /// where a single command may contain multiple execve calls to review (only possible when
+    /// using the shell_zsh_fork feature) - network policy reviews, where there is no target
+    /// item
+    ///
+    /// A network call is triggered by a CommandExecution item, so having a target_item_id set to
+    /// the CommandExecution item would be misleading because the review is about the network
+    /// call, not the command execution. Therefore, target_item_id is set to None for network
+    /// policy reviews.
+    let targetItemID: String?
+    let threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case action, decisionSource, review
+        case reviewID = "reviewId"
+        case targetItemID = "targetItemId"
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireGuardianApprovalReviewAction
+struct CodexWireGuardianApprovalReviewAction: Codable, Equatable, Sendable {
+    let command, cwd: String?
+    let source: CodexWireGuardianCommandSource?
+    let type: CodexWireGuardianApprovalReviewActionType
+    let argv: [String]?
+    let program: String?
+    let files: [String]?
+    let host: String?
+    let port: Int?
+    let guardianApprovalReviewActionProtocol: CodexWireNetworkApprovalProtocol?
+    let target: String?
+    let connectorID, connectorName: String?
+    let server, toolName: String?
+    let toolTitle: String?
+
+    enum CodingKeys: String, CodingKey {
+        case command, cwd, source, type, argv, program, files, host, port
+        case guardianApprovalReviewActionProtocol = "protocol"
+        case target
+        case connectorID = "connectorId"
+        case connectorName, server, toolName, toolTitle
+    }
+}
+
+enum CodexWireNetworkApprovalProtocol: String, Codable, Equatable, Sendable {
+    case http = "http"
+    case https = "https"
+    case socks5TCP = "socks5Tcp"
+    case socks5UDP = "socks5Udp"
+}
+
+enum CodexWireGuardianCommandSource: String, Codable, Equatable, Sendable {
+    case shell = "shell"
+    case unifiedExec = "unifiedExec"
+}
+
+enum CodexWireGuardianApprovalReviewActionType: String, Codable, Equatable, Sendable {
+    case applyPatch = "applyPatch"
+    case command = "command"
+    case execve = "execve"
+    case mcpToolCall = "mcpToolCall"
+    case networkAccess = "networkAccess"
+}
+
+/// [UNSTABLE] Source that produced a terminal guardian approval review decision.
+enum CodexWireAutoReviewDecisionSource: String, Codable, Equatable, Sendable {
+    case agent = "agent"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// [UNSTABLE] Temporary guardian approval review payload used by `item/autoApprovalReview/*`
+/// notifications. This shape is expected to change soon.
+// MARK: - CodexWireGuardianApprovalReview
+struct CodexWireGuardianApprovalReview: Codable, Equatable, Sendable {
+    let rationale: String?
+    let riskLevel: CodexWireGuardianRiskLevel?
+    let status: CodexWireGuardianApprovalReviewStatus
+    let userAuthorization: CodexWireGuardianUserAuthorization?
+}
+
+/// [UNSTABLE] Risk level assigned by guardian approval review.
+enum CodexWireGuardianRiskLevel: String, Codable, Equatable, Sendable {
+    case critical = "critical"
+    case high = "high"
+    case low = "low"
+    case medium = "medium"
+}
+
+/// [UNSTABLE] Lifecycle state for a guardian approval review.
+enum CodexWireGuardianApprovalReviewStatus: String, Codable, Equatable, Sendable {
+    case aborted = "aborted"
+    case approved = "approved"
+    case denied = "denied"
+    case inProgress = "inProgress"
+    case timedOut = "timedOut"
+}
+
+/// [UNSTABLE] Authorization level assigned by guardian approval review.
+enum CodexWireGuardianUserAuthorization: String, Codable, Equatable, Sendable {
+    case high = "high"
+    case low = "low"
+    case medium = "medium"
+    case unknown = "unknown"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// [UNSTABLE] Temporary notification payload for guardian automatic approval review. This
+/// shape is expected to change soon.
+// MARK: - CodexWireItemGuardianApprovalReviewStartedNotification
+struct CodexWireItemGuardianApprovalReviewStartedNotification: Codable, Equatable, Sendable {
+    let action: CodexWireGuardianApprovalReviewAction
+    let review: CodexWireGuardianApprovalReview
+    /// Stable identifier for this review.
+    let reviewID: String
+    /// Identifier for the reviewed item or tool call when one exists.
+    ///
+    /// In most cases, one review maps to one target item. The exceptions are - execve reviews,
+    /// where a single command may contain multiple execve calls to review (only possible when
+    /// using the shell_zsh_fork feature) - network policy reviews, where there is no target
+    /// item
+    ///
+    /// A network call is triggered by a CommandExecution item, so having a target_item_id set to
+    /// the CommandExecution item would be misleading because the review is about the network
+    /// call, not the command execution. Therefore, target_item_id is set to None for network
+    /// policy reviews.
+    let targetItemID: String?
+    let threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case action, review
+        case reviewID = "reviewId"
+        case targetItemID = "targetItemId"
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireItemStartedNotification
+struct CodexWireItemStartedNotification: Codable, Equatable, Sendable {
+    let item: CodexWireThreadItem
+    let threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case item
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireMCPToolCallProgressNotification
+struct CodexWireMCPToolCallProgressNotification: Codable, Equatable, Sendable {
+    let itemID, message, threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case itemID = "itemId"
+        case message
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireModelReroutedNotification
+struct CodexWireModelReroutedNotification: Codable, Equatable, Sendable {
+    let fromModel: String
+    let reason: CodexWireModelRerouteReason
+    let threadID, toModel, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case fromModel, reason
+        case threadID = "threadId"
+        case toModel
+        case turnID = "turnId"
+    }
+}
+
+enum CodexWireModelRerouteReason: String, Codable, Equatable, Sendable {
+    case highRiskCyberActivity = "highRiskCyberActivity"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// EXPERIMENTAL - proposed plan streaming deltas for plan items. Clients should not assume
+/// concatenated deltas match the completed plan item content.
+// MARK: - CodexWirePlanDeltaNotification
+struct CodexWirePlanDeltaNotification: Codable, Equatable, Sendable {
+    let delta, itemID, threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case delta
+        case itemID = "itemId"
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireRawResponseItemCompletedNotification
+struct CodexWireRawResponseItemCompletedNotification: Codable, Equatable, Sendable {
+    let item: CodexWireResponseItem
+    let threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case item
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireResponseItem
+struct CodexWireResponseItem: Codable, Equatable, Sendable {
+    let content: [CodexWireContentItem]?
+    let endTurn: Bool?
+    /// Legacy id field retained for compatibility with older payloads.
+    let id: String?
+    let phase: CodexWireMessagePhase?
+    let role: String?
+    let type: CodexWireResponseItemType
+    let encryptedContent: String?
+    let summary: [CodexWireReasoningItemReasoningSummary]?
+    let action: CodexWireResponsesAPIWebSearchAction?
+    /// Set when using the Responses API.
+    let callID: String?
+    let status: String?
+    let arguments: CodexWireJSONValue?
+    let name, namespace: String?
+    let execution: String?
+    let output: CodexWireFunctionCallOutputBody?
+    let input: String?
+    let tools: [CodexWireJSONValue]?
+    let result: String?
+    let revisedPrompt: String?
+    let ghostCommit: CodexWireGhostCommit?
+
+    enum CodingKeys: String, CodingKey {
+        case content
+        case endTurn = "end_turn"
+        case id, phase, role, type
+        case encryptedContent = "encrypted_content"
+        case summary, action
+        case callID = "call_id"
+        case status, arguments, name, namespace, execution, output, input, tools, result
+        case revisedPrompt = "revised_prompt"
+        case ghostCommit = "ghost_commit"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireResponsesAPIWebSearchAction
+struct CodexWireResponsesAPIWebSearchAction: Codable, Equatable, Sendable {
+    let command: [String]?
+    let env: [String: String]?
+    let timeoutMS: Int?
+    let type: CodexWireExecLocalShellActionType
+    let user, workingDirectory: String?
+    let queries: [String]?
+    let query, url, pattern: String?
+
+    enum CodingKeys: String, CodingKey {
+        case command, env
+        case timeoutMS = "timeout_ms"
+        case type, user
+        case workingDirectory = "working_directory"
+        case queries, query, url, pattern
+    }
+}
+
+enum CodexWireExecLocalShellActionType: String, Codable, Equatable, Sendable {
+    case exec = "exec"
+    case findInPage = "find_in_page"
+    case openPage = "open_page"
+    case other = "other"
+    case search = "search"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireContentItem
+struct CodexWireContentItem: Codable, Equatable, Sendable {
+    let text: String?
+    let type: CodexWireType
+    let imageURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case text, type
+        case imageURL = "image_url"
+    }
+}
+
+enum CodexWireType: String, Codable, Equatable, Sendable {
+    case inputImage = "input_image"
+    case inputText = "input_text"
+    case outputText = "output_text"
+    case reasoningText = "reasoning_text"
+    case text = "text"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Details of a ghost commit created from a repository state.
+// MARK: - CodexWireGhostCommit
+struct CodexWireGhostCommit: Codable, Equatable, Sendable {
+    let id: String
+    let parent: String?
+    let preexistingUntrackedDirs, preexistingUntrackedFiles: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case id, parent
+        case preexistingUntrackedDirs = "preexisting_untracked_dirs"
+        case preexistingUntrackedFiles = "preexisting_untracked_files"
+    }
+}
+
+enum CodexWireFunctionCallOutputBody: Codable, Equatable, Sendable {
+    case codexWireFunctionCallOutputContentItemArray([CodexWireFunctionCallOutputContentItem])
+    case string(String)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let x = try? container.decode([CodexWireFunctionCallOutputContentItem].self) {
+            self = .codexWireFunctionCallOutputContentItemArray(x)
+            return
+        }
+        if let x = try? container.decode(String.self) {
+            self = .string(x)
+            return
+        }
+        throw DecodingError.typeMismatch(CodexWireFunctionCallOutputBody.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireFunctionCallOutputBody"))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .codexWireFunctionCallOutputContentItemArray(let x):
+            try container.encode(x)
+        case .string(let x):
+            try container.encode(x)
+        }
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Responses API compatible content items that can be returned by a tool call. This is a
+/// subset of ContentItem with the types we support as function call outputs.
+// MARK: - CodexWireFunctionCallOutputContentItem
+struct CodexWireFunctionCallOutputContentItem: Codable, Equatable, Sendable {
+    let text: String?
+    let type: CodexWireInputFunctionCallOutputContentItemType
+    let detail: CodexWireImageDetail?
+    let imageURL: String?
+
+    enum CodingKeys: String, CodingKey {
+        case text, type, detail
+        case imageURL = "image_url"
+    }
+}
+
+enum CodexWireImageDetail: String, Codable, Equatable, Sendable {
+    case auto = "auto"
+    case high = "high"
+    case low = "low"
+    case original = "original"
+}
+
+enum CodexWireInputFunctionCallOutputContentItemType: String, Codable, Equatable, Sendable {
+    case inputImage = "input_image"
+    case inputText = "input_text"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireReasoningItemReasoningSummary
+struct CodexWireReasoningItemReasoningSummary: Codable, Equatable, Sendable {
+    let text: String
+    let type: CodexWireSummaryTextReasoningItemReasoningSummaryType
+}
+
+enum CodexWireSummaryTextReasoningItemReasoningSummaryType: String, Codable, Equatable, Sendable {
+    case summaryText = "summary_text"
+}
+
+enum CodexWireResponseItemType: String, Codable, Equatable, Sendable {
+    case compaction = "compaction"
+    case customToolCall = "custom_tool_call"
+    case customToolCallOutput = "custom_tool_call_output"
+    case functionCall = "function_call"
+    case functionCallOutput = "function_call_output"
+    case ghostSnapshot = "ghost_snapshot"
+    case imageGenerationCall = "image_generation_call"
+    case localShellCall = "local_shell_call"
+    case message = "message"
+    case other = "other"
+    case reasoning = "reasoning"
+    case toolSearchCall = "tool_search_call"
+    case toolSearchOutput = "tool_search_output"
+    case webSearchCall = "web_search_call"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireReasoningSummaryPartAddedNotification
+struct CodexWireReasoningSummaryPartAddedNotification: Codable, Equatable, Sendable {
+    let itemID: String
+    let summaryIndex: Int
+    let threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case itemID = "itemId"
+        case summaryIndex
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireReasoningSummaryTextDeltaNotification
+struct CodexWireReasoningSummaryTextDeltaNotification: Codable, Equatable, Sendable {
+    let delta, itemID: String
+    let summaryIndex: Int
+    let threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case delta
+        case itemID = "itemId"
+        case summaryIndex
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireReasoningTextDeltaNotification
+struct CodexWireReasoningTextDeltaNotification: Codable, Equatable, Sendable {
+    let contentIndex: Int
+    let delta, itemID, threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case contentIndex, delta
+        case itemID = "itemId"
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireServerRequestResolvedNotification
+struct CodexWireServerRequestResolvedNotification: Codable, Equatable, Sendable {
+    let requestID: CodexWireRequestID
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case requestID = "requestId"
+        case threadID = "threadId"
+    }
+}
+
+enum CodexWireRequestID: Codable, Equatable, Sendable {
+    case integer(Int)
+    case string(String)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let x = try? container.decode(Int.self) {
+            self = .integer(x)
+            return
+        }
+        if let x = try? container.decode(String.self) {
+            self = .string(x)
+            return
+        }
+        throw DecodingError.typeMismatch(CodexWireRequestID.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireRequestID"))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .integer(let x):
+            try container.encode(x)
+        case .string(let x):
+            try container.encode(x)
+        }
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadArchivedNotification
+struct CodexWireThreadArchivedNotification: Codable, Equatable, Sendable {
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case threadID = "threadId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadClosedNotification
+struct CodexWireThreadClosedNotification: Codable, Equatable, Sendable {
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case threadID = "threadId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadNameUpdatedNotification
+struct CodexWireThreadNameUpdatedNotification: Codable, Equatable, Sendable {
+    let threadID: String
+    let threadName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case threadID = "threadId"
+        case threadName
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadStartParams
+struct CodexWireThreadStartParams: Codable, Equatable, Sendable {
+    let approvalPolicy: CodexWireApprovalPolicyUnion?
+    /// Override where approval requests are routed for review on this thread and subsequent
+    /// turns.
+    let approvalsReviewer: CodexWireApprovalsReviewer?
+    let baseInstructions: String?
+    let config: [String: CodexWireJSONValue]?
+    let cwd, developerInstructions: String?
+    let ephemeral: Bool?
+    let model, modelProvider: String?
+    let personality: CodexWirePersonality?
+    let sandbox: CodexWireSandboxMode?
+    let serviceName: String?
+    let serviceTier: CodexWireServiceTier?
+    let sessionStartSource: CodexWireThreadStartSource?
+}
+
+enum CodexWireApprovalPolicyUnion: Codable, Equatable, Sendable {
+    case codexWireGranularAskForApproval(CodexWireGranularAskForApproval)
+    case enumeration(CodexWireApprovalPolicyEnum)
+    case null
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let x = try? container.decode(CodexWireApprovalPolicyEnum.self) {
+            self = .enumeration(x)
+            return
+        }
+        if let x = try? container.decode(CodexWireGranularAskForApproval.self) {
+            self = .codexWireGranularAskForApproval(x)
+            return
+        }
+        if container.decodeNil() {
+            self = .null
+            return
+        }
+        throw DecodingError.typeMismatch(CodexWireApprovalPolicyUnion.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireApprovalPolicyUnion"))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .codexWireGranularAskForApproval(let x):
+            try container.encode(x)
+        case .enumeration(let x):
+            try container.encode(x)
+        case .null:
+            try container.encodeNil()
+        }
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireGranularAskForApproval
+struct CodexWireGranularAskForApproval: Codable, Equatable, Sendable {
+    let granular: CodexWireGranular
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireGranular
+struct CodexWireGranular: Codable, Equatable, Sendable {
+    let mcpElicitations: Bool
+    let requestPermissions: Bool?
+    let rules, sandboxApproval: Bool
+    let skillApproval: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case mcpElicitations = "mcp_elicitations"
+        case requestPermissions = "request_permissions"
+        case rules
+        case sandboxApproval = "sandbox_approval"
+        case skillApproval = "skill_approval"
+    }
+}
+
+enum CodexWireApprovalPolicyEnum: String, Codable, Equatable, Sendable {
+    case never = "never"
+    case onFailure = "on-failure"
+    case onRequest = "on-request"
+    case untrusted = "untrusted"
+}
+
+/// Configures who approval requests are routed to for review. Examples include sandbox
+/// escapes, blocked network access, MCP approval prompts, and ARC escalations. Defaults to
+/// `user`. `guardian_subagent` uses a carefully prompted subagent to gather relevant context
+/// and apply a risk-based decision framework before approving or denying the request.
+///
+/// Reviewer currently used for approval requests on this thread.
+enum CodexWireApprovalsReviewer: String, Codable, Equatable, Sendable {
+    case guardianSubagent = "guardian_subagent"
+    case user = "user"
+}
+
+enum CodexWirePersonality: String, Codable, Equatable, Sendable {
+    case friendly = "friendly"
+    case none = "none"
+    case pragmatic = "pragmatic"
+}
+
+enum CodexWireSandboxMode: String, Codable, Equatable, Sendable {
+    case dangerFullAccess = "danger-full-access"
+    case readOnly = "read-only"
+    case workspaceWrite = "workspace-write"
+}
+
+enum CodexWireServiceTier: String, Codable, Equatable, Sendable {
+    case fast = "fast"
+    case flex = "flex"
+}
+
+enum CodexWireThreadStartSource: String, Codable, Equatable, Sendable {
+    case clear = "clear"
+    case startup = "startup"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadStartResponse
+struct CodexWireThreadStartResponse: Codable, Equatable, Sendable {
+    let approvalPolicy: CodexWireAskForApproval
+    /// Reviewer currently used for approval requests on this thread.
+    let approvalsReviewer: CodexWireApprovalsReviewer
+    let cwd: String
+    /// Instruction source files currently loaded for this thread.
+    let instructionSources: [String]?
+    let model, modelProvider: String
+    let reasoningEffort: CodexWireReasoningEffort?
+    let sandbox: CodexWireSandboxPolicy
+    let serviceTier: CodexWireServiceTier?
+    let thread: CodexWireThread
+}
+
+enum CodexWireAskForApproval: Codable, Equatable, Sendable {
+    case codexWireGranularAskForApproval(CodexWireGranularAskForApproval)
+    case enumeration(CodexWireApprovalPolicyEnum)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let x = try? container.decode(CodexWireApprovalPolicyEnum.self) {
+            self = .enumeration(x)
+            return
+        }
+        if let x = try? container.decode(CodexWireGranularAskForApproval.self) {
+            self = .codexWireGranularAskForApproval(x)
+            return
+        }
+        throw DecodingError.typeMismatch(CodexWireAskForApproval.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireAskForApproval"))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .codexWireGranularAskForApproval(let x):
+            try container.encode(x)
+        case .enumeration(let x):
+            try container.encode(x)
+        }
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireSandboxPolicy
+struct CodexWireSandboxPolicy: Codable, Equatable, Sendable {
+    let type: CodexWireSandboxPolicyType
+    let access: CodexWireReadOnlyAccess?
+    let networkAccess: CodexWireNetworkAccessUnion?
+    let excludeSlashTmp, excludeTmpdirEnvVar: Bool?
+    let readOnlyAccess: CodexWireReadOnlyAccess?
+    let writableRoots: [String]?
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireReadOnlyAccess
+struct CodexWireReadOnlyAccess: Codable, Equatable, Sendable {
+    let includePlatformDefaults: Bool?
+    let readableRoots: [String]?
+    let type: CodexWireReadOnlyAccessType
+}
+
+enum CodexWireReadOnlyAccessType: String, Codable, Equatable, Sendable {
+    case fullAccess = "fullAccess"
+    case restricted = "restricted"
+}
+
+enum CodexWireNetworkAccessUnion: Codable, Equatable, Sendable {
+    case bool(Bool)
+    case enumeration(CodexWireNetworkAccess)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let x = try? container.decode(Bool.self) {
+            self = .bool(x)
+            return
+        }
+        if let x = try? container.decode(CodexWireNetworkAccess.self) {
+            self = .enumeration(x)
+            return
+        }
+        throw DecodingError.typeMismatch(CodexWireNetworkAccessUnion.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireNetworkAccessUnion"))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .bool(let x):
+            try container.encode(x)
+        case .enumeration(let x):
+            try container.encode(x)
+        }
+    }
+}
+
+enum CodexWireNetworkAccess: String, Codable, Equatable, Sendable {
+    case enabled = "enabled"
+    case restricted = "restricted"
+}
+
+enum CodexWireSandboxPolicyType: String, Codable, Equatable, Sendable {
+    case dangerFullAccess = "dangerFullAccess"
+    case externalSandbox = "externalSandbox"
+    case readOnly = "readOnly"
+    case workspaceWrite = "workspaceWrite"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThread
+struct CodexWireThread: Codable, Equatable, Sendable {
+    /// Optional random unique nickname assigned to an AgentControl-spawned sub-agent.
+    let agentNickname: String?
+    /// Optional role (agent_role) assigned to an AgentControl-spawned sub-agent.
+    let agentRole: String?
+    /// Version of the CLI that created the thread.
+    let cliVersion: String
+    /// Unix timestamp (in seconds) when the thread was created.
+    let createdAt: Int
+    /// Working directory captured for the thread.
+    let cwd: String
+    /// Whether the thread is ephemeral and should not be materialized on disk.
+    let ephemeral: Bool
+    /// Source thread id when this thread was created by forking another thread.
+    let forkedFromID: String?
+    /// Optional Git metadata captured when the thread was created.
+    let gitInfo: CodexWireGitInfo?
+    let id: String
+    /// Model provider used for this thread (for example, 'openai').
+    let modelProvider: String
+    /// Optional user-facing thread title.
+    let name: String?
+    /// [UNSTABLE] Path to the thread on disk.
+    let path: String?
+    /// Usually the first user message in the thread, if available.
+    let preview: String
+    /// Origin of the thread (CLI, VSCode, codex exec, codex app-server, etc.).
+    let source: CodexWireSessionSourceUnion
+    /// Current runtime status for the thread.
+    let status: CodexWireThreadStatus
+    /// Only populated on `thread/resume`, `thread/rollback`, `thread/fork`, and `thread/read`
+    /// (when `includeTurns` is true) responses. For all other responses and notifications
+    /// returning a Thread, the turns field will be an empty list.
+    let turns: [CodexWireTurn]
+    /// Unix timestamp (in seconds) when the thread was last updated.
+    let updatedAt: Int
+
+    enum CodingKeys: String, CodingKey {
+        case agentNickname, agentRole, cliVersion, createdAt, cwd, ephemeral
+        case forkedFromID = "forkedFromId"
+        case gitInfo, id, modelProvider, name, path, preview, source, status, turns, updatedAt
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireGitInfo
+struct CodexWireGitInfo: Codable, Equatable, Sendable {
+    let branch, originURL, sha: String?
+
+    enum CodingKeys: String, CodingKey {
+        case branch
+        case originURL = "originUrl"
+        case sha
+    }
+}
+
+/// Origin of the thread (CLI, VSCode, codex exec, codex app-server, etc.).
+enum CodexWireSessionSourceUnion: Codable, Equatable, Sendable {
+    case codexWireSessionSource(CodexWireSessionSource)
+    case enumeration(CodexWireSessionSourceEnum)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let x = try? container.decode(CodexWireSessionSourceEnum.self) {
+            self = .enumeration(x)
+            return
+        }
+        if let x = try? container.decode(CodexWireSessionSource.self) {
+            self = .codexWireSessionSource(x)
+            return
+        }
+        throw DecodingError.typeMismatch(CodexWireSessionSourceUnion.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireSessionSourceUnion"))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .codexWireSessionSource(let x):
+            try container.encode(x)
+        case .enumeration(let x):
+            try container.encode(x)
+        }
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireSessionSource
+struct CodexWireSessionSource: Codable, Equatable, Sendable {
+    let custom: String?
+    let subAgent: CodexWireSubAgentSourceUnion?
+}
+
+enum CodexWireSubAgentSourceUnion: Codable, Equatable, Sendable {
+    case codexWireSubAgentSource(CodexWireSubAgentSource)
+    case enumeration(CodexWireSubAgentSourceEnum)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let x = try? container.decode(CodexWireSubAgentSourceEnum.self) {
+            self = .enumeration(x)
+            return
+        }
+        if let x = try? container.decode(CodexWireSubAgentSource.self) {
+            self = .codexWireSubAgentSource(x)
+            return
+        }
+        throw DecodingError.typeMismatch(CodexWireSubAgentSourceUnion.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireSubAgentSourceUnion"))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .codexWireSubAgentSource(let x):
+            try container.encode(x)
+        case .enumeration(let x):
+            try container.encode(x)
+        }
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireSubAgentSource
+struct CodexWireSubAgentSource: Codable, Equatable, Sendable {
+    let threadSpawn: CodexWireThreadSpawn?
+    let other: String?
+
+    enum CodingKeys: String, CodingKey {
+        case threadSpawn = "thread_spawn"
+        case other
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadSpawn
+struct CodexWireThreadSpawn: Codable, Equatable, Sendable {
+    let agentNickname, agentPath, agentRole: String?
+    let depth: Int
+    let parentThreadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case agentNickname = "agent_nickname"
+        case agentPath = "agent_path"
+        case agentRole = "agent_role"
+        case depth
+        case parentThreadID = "parent_thread_id"
+    }
+}
+
+enum CodexWireSubAgentSourceEnum: String, Codable, Equatable, Sendable {
+    case compact = "compact"
+    case memoryConsolidation = "memory_consolidation"
+    case review = "review"
+}
+
+enum CodexWireSessionSourceEnum: String, Codable, Equatable, Sendable {
+    case appServer = "appServer"
+    case cli = "cli"
+    case exec = "exec"
+    case unknown = "unknown"
+    case vscode = "vscode"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Current runtime status for the thread.
+// MARK: - CodexWireThreadStatus
+struct CodexWireThreadStatus: Codable, Equatable, Sendable {
+    let type: CodexWireThreadStatusType
+    let activeFlags: [CodexWireThreadActiveFlag]?
+}
+
+enum CodexWireThreadActiveFlag: String, Codable, Equatable, Sendable {
+    case waitingOnApproval = "waitingOnApproval"
+    case waitingOnUserInput = "waitingOnUserInput"
+}
+
+enum CodexWireThreadStatusType: String, Codable, Equatable, Sendable {
+    case active = "active"
+    case idle = "idle"
+    case notLoaded = "notLoaded"
+    case systemError = "systemError"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireTurn
+struct CodexWireTurn: Codable, Equatable, Sendable {
+    /// Unix timestamp (in seconds) when the turn completed.
+    let completedAt: Int?
+    /// Duration between turn start and completion in milliseconds, if known.
+    let durationMS: Int?
+    /// Only populated when the Turn's status is failed.
+    let error: CodexWireTurnError?
+    let id: String
+    /// Only populated on a `thread/resume` or `thread/fork` response. For all other responses
+    /// and notifications returning a Turn, the items field will be an empty list.
+    let items: [CodexWireThreadItem]
+    /// Unix timestamp (in seconds) when the turn started.
+    let startedAt: Int?
+    let status: CodexWireTurnStatus
+
+    enum CodingKeys: String, CodingKey {
+        case completedAt
+        case durationMS = "durationMs"
+        case error, id, items, startedAt, status
+    }
+}
+
 enum CodexWireTurnStatus: String, Codable, Equatable, Sendable {
     case completed = "completed"
     case failed = "failed"
     case inProgress = "inProgress"
     case interrupted = "interrupted"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadStartedNotification
+struct CodexWireThreadStartedNotification: Codable, Equatable, Sendable {
+    let thread: CodexWireThread
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadStatusChangedNotification
+struct CodexWireThreadStatusChangedNotification: Codable, Equatable, Sendable {
+    let status: CodexWireThreadStatus
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case threadID = "threadId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadTokenUsageUpdatedNotification
+struct CodexWireThreadTokenUsageUpdatedNotification: Codable, Equatable, Sendable {
+    let threadID: String
+    let tokenUsage: CodexWireThreadTokenUsage
+    let turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case threadID = "threadId"
+        case tokenUsage
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadTokenUsage
+struct CodexWireThreadTokenUsage: Codable, Equatable, Sendable {
+    let last: CodexWireTokenUsageBreakdown
+    let modelContextWindow: Int?
+    let total: CodexWireTokenUsageBreakdown
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireTokenUsageBreakdown
+struct CodexWireTokenUsageBreakdown: Codable, Equatable, Sendable {
+    let cachedInputTokens, inputTokens, outputTokens, reasoningOutputTokens: Int
+    let totalTokens: Int
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadUnarchivedNotification
+struct CodexWireThreadUnarchivedNotification: Codable, Equatable, Sendable {
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case threadID = "threadId"
+    }
 }
 
 //
@@ -1176,6 +2201,62 @@ struct CodexWireTurnCompletedNotification: Codable, Equatable, Sendable {
         case threadID = "threadId"
         case turn
     }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Notification that the turn-level unified diff has changed. Contains the latest aggregated
+/// diff across all file changes in the turn.
+// MARK: - CodexWireTurnDiffUpdatedNotification
+struct CodexWireTurnDiffUpdatedNotification: Codable, Equatable, Sendable {
+    let diff, threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case diff
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireTurnPlanUpdatedNotification
+struct CodexWireTurnPlanUpdatedNotification: Codable, Equatable, Sendable {
+    let explanation: String?
+    let plan: [CodexWireTurnPlanStep]
+    let threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case explanation, plan
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireTurnPlanStep
+struct CodexWireTurnPlanStep: Codable, Equatable, Sendable {
+    let status: CodexWireTurnPlanStepStatus
+    let step: String
+}
+
+enum CodexWireTurnPlanStepStatus: String, Codable, Equatable, Sendable {
+    case completed = "completed"
+    case inProgress = "inProgress"
+    case pending = "pending"
 }
 
 //
@@ -1248,6 +2329,23 @@ enum CodexWireReasoningSummary: String, Codable, Equatable, Sendable {
 // MARK: - CodexWireTurnStartResponse
 struct CodexWireTurnStartResponse: Codable, Equatable, Sendable {
     let turn: CodexWireTurn
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireTurnStartedNotification
+struct CodexWireTurnStartedNotification: Codable, Equatable, Sendable {
+    let threadID: String
+    let turn: CodexWireTurn
+
+    enum CodingKeys: String, CodingKey {
+        case threadID = "threadId"
+        case turn
+    }
 }
 
 indirect enum CodexWireJSONValue: Codable, Equatable, Sendable {

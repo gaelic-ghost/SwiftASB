@@ -1,5 +1,23 @@
 import Foundation
 
+internal enum CodexAppServerProtocolEvent: Equatable, Sendable {
+    case threadStarted(CodexWireThreadStartedNotification)
+    case threadStatusChanged(CodexWireThreadStatusChangedNotification)
+    case threadNameUpdated(CodexWireThreadNameUpdatedNotification)
+    case threadTokenUsageUpdated(CodexWireThreadTokenUsageUpdatedNotification)
+    case turnStarted(CodexWireTurnStartedNotification)
+    case turnDiffUpdated(CodexWireTurnDiffUpdatedNotification)
+    case turnPlanUpdated(CodexWireTurnPlanUpdatedNotification)
+    case turnCompleted(CodexWireTurnCompletedNotification)
+    case itemStarted(CodexWireItemStartedNotification)
+    case itemCompleted(CodexWireItemCompletedNotification)
+    case agentMessageDelta(CodexWireAgentMessageDeltaNotification)
+    case planDelta(CodexWirePlanDeltaNotification)
+    case reasoningSummaryPartAdded(CodexWireReasoningSummaryPartAddedNotification)
+    case reasoningSummaryTextDelta(CodexWireReasoningSummaryTextDeltaNotification)
+    case reasoningTextDelta(CodexWireReasoningTextDeltaNotification)
+}
+
 internal struct CodexAppServerProtocol {
     internal enum Method: String, Sendable, Codable {
         case initialize = "initialize"
@@ -92,6 +110,140 @@ internal struct CodexAppServerProtocol {
         )
     }
 
+    internal func decodeServerEvent(
+        _ serverEvent: CodexRPCServerEvent
+    ) throws -> CodexAppServerProtocolEvent? {
+        switch serverEvent {
+        case .request:
+            return nil
+        case let .notification(method, payload):
+            switch method {
+            case "thread/started":
+                return .threadStarted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireThreadStartedNotification.self
+                    )
+                )
+            case "thread/status/changed":
+                return .threadStatusChanged(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireThreadStatusChangedNotification.self
+                    )
+                )
+            case "thread/name/updated":
+                return .threadNameUpdated(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireThreadNameUpdatedNotification.self
+                    )
+                )
+            case "thread/tokenUsage/updated":
+                return .threadTokenUsageUpdated(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireThreadTokenUsageUpdatedNotification.self
+                    )
+                )
+            case "turn/started":
+                return .turnStarted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireTurnStartedNotification.self
+                    )
+                )
+            case "turn/diff/updated":
+                return .turnDiffUpdated(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireTurnDiffUpdatedNotification.self
+                    )
+                )
+            case "turn/plan/updated":
+                return .turnPlanUpdated(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireTurnPlanUpdatedNotification.self
+                    )
+                )
+            case "turn/completed":
+                return .turnCompleted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireTurnCompletedNotification.self
+                    )
+                )
+            case "item/started":
+                return .itemStarted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireItemStartedNotification.self
+                    )
+                )
+            case "item/completed":
+                return .itemCompleted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireItemCompletedNotification.self
+                    )
+                )
+            case "item/agentMessage/delta":
+                return .agentMessageDelta(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireAgentMessageDeltaNotification.self
+                    )
+                )
+            case "item/plan/delta":
+                return .planDelta(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWirePlanDeltaNotification.self
+                    )
+                )
+            case "item/reasoning/summaryPartAdded":
+                return .reasoningSummaryPartAdded(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireReasoningSummaryPartAddedNotification.self
+                    )
+                )
+            case "item/reasoning/summaryTextDelta":
+                return .reasoningSummaryTextDelta(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireReasoningSummaryTextDeltaNotification.self
+                    )
+                )
+            case "item/reasoning/textDelta":
+                return .reasoningTextDelta(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireReasoningTextDeltaNotification.self
+                    )
+                )
+            default:
+                return nil
+            }
+        }
+    }
+
     private func encodeRequest<Params: Encodable>(
         _ request: JSONRPCRequestEnvelope<Params>,
         method: Method
@@ -156,6 +308,21 @@ internal struct CodexAppServerProtocol {
         }
 
         return successfulResponse.result
+    }
+
+    private func decodeNotification<Result: Decodable>(
+        _ payload: Data,
+        method: String,
+        resultType: Result.Type
+    ) throws -> Result {
+        do {
+            return try decoder.decode(resultType, from: payload)
+        } catch {
+            throw CodexProtocolError.eventDecodingFailed(
+                method: method,
+                reason: String(describing: error)
+            )
+        }
     }
 }
 

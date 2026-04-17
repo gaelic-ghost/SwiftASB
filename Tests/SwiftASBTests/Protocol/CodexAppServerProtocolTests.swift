@@ -208,4 +208,304 @@ struct CodexAppServerProtocolTests {
         #expect(response.turn.completedAt == nil)
         #expect(response.turn.items.isEmpty)
     }
+
+    @Test("decodes turn/completed notifications into typed protocol events")
+    func decodesTurnCompletedNotification() throws {
+        let payload = Data(
+            #"""
+            {"threadId":"thread-123","turn":{"completedAt":1713350005,"durationMs":3000,"error":null,"id":"turn-123","items":[],"startedAt":1713350002,"status":"completed"}}
+            """#.utf8
+        )
+
+        let event = try protocolLayer.decodeServerEvent(
+            .notification(method: "turn/completed", payload: payload)
+        )
+
+        let decodedEvent = try #require(event)
+
+        switch decodedEvent {
+        case let .turnCompleted(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turn.id == "turn-123")
+            #expect(notification.turn.status == .completed)
+            #expect(notification.turn.completedAt == 1713350005)
+        default:
+            Issue.record("Expected turn/completed to decode into .turnCompleted.")
+        }
+    }
+
+    @Test("decodes thread lifecycle notifications into typed protocol events")
+    func decodesThreadLifecycleNotifications() throws {
+        let threadStartedPayload = Data(
+            #"""
+            {"thread":{"cliVersion":"0.121.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","preview":"Hello","source":"cli","status":{"type":"active"},"turns":[],"updatedAt":1713350001}}
+            """#.utf8
+        )
+
+        let threadStartedEvent = try #require(
+            try decodeEvent(method: "thread/started", payload: threadStartedPayload)
+        )
+
+        switch threadStartedEvent {
+        case let .threadStarted(notification):
+            #expect(notification.thread.id == "thread-123")
+            #expect(notification.thread.preview == "Hello")
+            #expect(notification.thread.status.type == .active)
+        default:
+            Issue.record("Expected thread/started to decode into .threadStarted.")
+        }
+
+        let statusChangedPayload = Data(
+            #"{"threadId":"thread-123","status":{"type":"active","activeFlags":["waitingOnApproval"]}}"#.utf8
+        )
+
+        let statusChangedEvent = try #require(
+            try decodeEvent(method: "thread/status/changed", payload: statusChangedPayload)
+        )
+
+        switch statusChangedEvent {
+        case let .threadStatusChanged(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.status.type == .active)
+            #expect(notification.status.activeFlags == [.waitingOnApproval])
+        default:
+            Issue.record("Expected thread/status/changed to decode into .threadStatusChanged.")
+        }
+
+        let nameUpdatedPayload = Data(
+            #"{"threadId":"thread-123","threadName":"Planning Thread"}"#.utf8
+        )
+
+        let nameUpdatedEvent = try #require(
+            try decodeEvent(method: "thread/name/updated", payload: nameUpdatedPayload)
+        )
+
+        switch nameUpdatedEvent {
+        case let .threadNameUpdated(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.threadName == "Planning Thread")
+        default:
+            Issue.record("Expected thread/name/updated to decode into .threadNameUpdated.")
+        }
+
+        let tokenUsageUpdatedPayload = Data(
+            #"""
+            {"threadId":"thread-123","turnId":"turn-123","tokenUsage":{"last":{"cachedInputTokens":10,"inputTokens":20,"outputTokens":30,"reasoningOutputTokens":5,"totalTokens":65},"modelContextWindow":200000,"total":{"cachedInputTokens":100,"inputTokens":200,"outputTokens":300,"reasoningOutputTokens":50,"totalTokens":650}}}
+            """#.utf8
+        )
+
+        let tokenUsageUpdatedEvent = try #require(
+            try decodeEvent(method: "thread/tokenUsage/updated", payload: tokenUsageUpdatedPayload)
+        )
+
+        switch tokenUsageUpdatedEvent {
+        case let .threadTokenUsageUpdated(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.tokenUsage.last.totalTokens == 65)
+            #expect(notification.tokenUsage.total.totalTokens == 650)
+        default:
+            Issue.record("Expected thread/tokenUsage/updated to decode into .threadTokenUsageUpdated.")
+        }
+    }
+
+    @Test("decodes turn progress notifications into typed protocol events")
+    func decodesTurnProgressNotifications() throws {
+        let turnStartedPayload = Data(
+            #"""
+            {"threadId":"thread-123","turn":{"completedAt":null,"durationMs":null,"error":null,"id":"turn-123","items":[],"startedAt":1713350002,"status":"inProgress"}}
+            """#.utf8
+        )
+
+        let turnStartedEvent = try #require(
+            try decodeEvent(method: "turn/started", payload: turnStartedPayload)
+        )
+
+        switch turnStartedEvent {
+        case let .turnStarted(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turn.id == "turn-123")
+            #expect(notification.turn.status == .inProgress)
+        default:
+            Issue.record("Expected turn/started to decode into .turnStarted.")
+        }
+
+        let turnDiffUpdatedPayload = Data(
+            #"{"diff":"diff --git a/file.txt b/file.txt","threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let turnDiffUpdatedEvent = try #require(
+            try decodeEvent(method: "turn/diff/updated", payload: turnDiffUpdatedPayload)
+        )
+
+        switch turnDiffUpdatedEvent {
+        case let .turnDiffUpdated(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.diff == "diff --git a/file.txt b/file.txt")
+        default:
+            Issue.record("Expected turn/diff/updated to decode into .turnDiffUpdated.")
+        }
+
+        let turnPlanUpdatedPayload = Data(
+            #"""
+            {"explanation":"Investigating protocol mapping.","plan":[{"status":"inProgress","step":"Decode additional notifications"},{"status":"pending","step":"Promote them publicly"}],"threadId":"thread-123","turnId":"turn-123"}
+            """#.utf8
+        )
+
+        let turnPlanUpdatedEvent = try #require(
+            try decodeEvent(method: "turn/plan/updated", payload: turnPlanUpdatedPayload)
+        )
+
+        switch turnPlanUpdatedEvent {
+        case let .turnPlanUpdated(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.explanation == "Investigating protocol mapping.")
+            #expect(notification.plan.count == 2)
+            #expect(notification.plan.first?.status == .inProgress)
+            #expect(notification.plan.last?.status == .pending)
+        default:
+            Issue.record("Expected turn/plan/updated to decode into .turnPlanUpdated.")
+        }
+    }
+
+    @Test("decodes item lifecycle and delta notifications into typed protocol events")
+    func decodesItemNotifications() throws {
+        let itemStartedPayload = Data(
+            #"{"item":{"id":"item-123","type":"plan"},"threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let itemStartedEvent = try #require(
+            try decodeEvent(method: "item/started", payload: itemStartedPayload)
+        )
+
+        switch itemStartedEvent {
+        case let .itemStarted(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.item.id == "item-123")
+            #expect(notification.item.type == .plan)
+        default:
+            Issue.record("Expected item/started to decode into .itemStarted.")
+        }
+
+        let itemCompletedPayload = Data(
+            #"{"item":{"id":"item-123","type":"agentMessage","text":"Done."},"threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let itemCompletedEvent = try #require(
+            try decodeEvent(method: "item/completed", payload: itemCompletedPayload)
+        )
+
+        switch itemCompletedEvent {
+        case let .itemCompleted(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.item.type == .agentMessage)
+            #expect(notification.item.text == "Done.")
+        default:
+            Issue.record("Expected item/completed to decode into .itemCompleted.")
+        }
+
+        let agentMessageDeltaPayload = Data(
+            #"{"delta":"Hello there","itemId":"item-123","threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let agentMessageDeltaEvent = try #require(
+            try decodeEvent(method: "item/agentMessage/delta", payload: agentMessageDeltaPayload)
+        )
+
+        switch agentMessageDeltaEvent {
+        case let .agentMessageDelta(notification):
+            #expect(notification.delta == "Hello there")
+            #expect(notification.itemID == "item-123")
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+        default:
+            Issue.record("Expected item/agentMessage/delta to decode into .agentMessageDelta.")
+        }
+
+        let planDeltaPayload = Data(
+            #"{"delta":"Decode protocol events","itemId":"item-456","threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let planDeltaEvent = try #require(
+            try decodeEvent(method: "item/plan/delta", payload: planDeltaPayload)
+        )
+
+        switch planDeltaEvent {
+        case let .planDelta(notification):
+            #expect(notification.delta == "Decode protocol events")
+            #expect(notification.itemID == "item-456")
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+        default:
+            Issue.record("Expected item/plan/delta to decode into .planDelta.")
+        }
+    }
+
+    @Test("decodes reasoning notifications into typed protocol events")
+    func decodesReasoningNotifications() throws {
+        let summaryPartAddedPayload = Data(
+            #"{"itemId":"item-123","summaryIndex":1,"threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let summaryPartAddedEvent = try #require(
+            try decodeEvent(method: "item/reasoning/summaryPartAdded", payload: summaryPartAddedPayload)
+        )
+
+        switch summaryPartAddedEvent {
+        case let .reasoningSummaryPartAdded(notification):
+            #expect(notification.itemID == "item-123")
+            #expect(notification.summaryIndex == 1)
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+        default:
+            Issue.record("Expected item/reasoning/summaryPartAdded to decode into .reasoningSummaryPartAdded.")
+        }
+
+        let summaryTextDeltaPayload = Data(
+            #"{"delta":"refining the plan","itemId":"item-123","summaryIndex":1,"threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let summaryTextDeltaEvent = try #require(
+            try decodeEvent(method: "item/reasoning/summaryTextDelta", payload: summaryTextDeltaPayload)
+        )
+
+        switch summaryTextDeltaEvent {
+        case let .reasoningSummaryTextDelta(notification):
+            #expect(notification.delta == "refining the plan")
+            #expect(notification.itemID == "item-123")
+            #expect(notification.summaryIndex == 1)
+        default:
+            Issue.record("Expected item/reasoning/summaryTextDelta to decode into .reasoningSummaryTextDelta.")
+        }
+
+        let reasoningTextDeltaPayload = Data(
+            #"{"contentIndex":0,"delta":"thinking...","itemId":"item-123","threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let reasoningTextDeltaEvent = try #require(
+            try decodeEvent(method: "item/reasoning/textDelta", payload: reasoningTextDeltaPayload)
+        )
+
+        switch reasoningTextDeltaEvent {
+        case let .reasoningTextDelta(notification):
+            #expect(notification.contentIndex == 0)
+            #expect(notification.delta == "thinking...")
+            #expect(notification.itemID == "item-123")
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+        default:
+            Issue.record("Expected item/reasoning/textDelta to decode into .reasoningTextDelta.")
+        }
+    }
+
+    private func decodeEvent(
+        method: String,
+        payload: Data
+    ) throws -> CodexAppServerProtocolEvent? {
+        try protocolLayer.decodeServerEvent(.notification(method: method, payload: payload))
+    }
 }

@@ -88,6 +88,16 @@ Responsibilities:
 - present ergonomic async APIs
 - hide raw protocol details behind Swift-native handles
 
+Concurrency note:
+
+- one `CodexAppServer` actor is expected to own one app-server subprocess and
+  support multiple logical threads at once
+- consumers should be able to hold many `CodexThread` handles against that
+  shared owner
+- concurrent turns across different threads are a target use case
+- multiple simultaneous turns on the same thread remain an explicit open
+  question until real app-server behavior is verified
+
 ## Planned Implementation Passes
 
 ### Pass 1
@@ -137,8 +147,14 @@ Current status:
 - successful `initialize(...)` sends the follow-up `initialized` notification as
   part of the same handshake path
 - thread and turn start paths are gated on a completed initialize handshake
+- `startThread(...)` now returns a lightweight `CodexThread` wrapper rather than
+  only a session value snapshot
 - tests use a tiny internal transport protocol seam for deterministic public
   client coverage without subprocess buffering or shell-fixture flakiness
+- the client now owns per-turn `AsyncThrowingStream` fanout and the protocol
+  layer performs typed notification decoding before public stream delivery
+- the first typed streamed notification is `turn/completed`, with the public
+  surface exposed through `CodexTurnHandle.events`
 
 ### Pass 4
 
@@ -150,6 +166,12 @@ First wrapper goals:
 - `CodexTurnHandle`
 - turn event streaming
 - typed notification mapping
+
+Open concurrency decision:
+
+- verify whether same-thread concurrent turn starts are allowed, queued, or
+  rejected by the real app-server
+- make that behavior explicit in the public API instead of leaving it implicit
 
 ## Current Pass 1 boundary
 

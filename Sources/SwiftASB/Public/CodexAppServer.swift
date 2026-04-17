@@ -374,8 +374,12 @@ public actor CodexAppServer {
 
     private let transport: any CodexAppServerTransporting
     private let protocolLayer: CodexAppServerProtocol
+    private var serverEventTask: Task<Void, Never>?
+    private var turnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
+    private var bufferedTerminalTurnEvents: [String: CodexTurnEvent] = [:]
     private var hasStarted = false
     private var hasCompletedInitializeHandshake = false
+    private var isStopping = false
 
     public init(configuration: Configuration = .init()) {
         self.transport = CodexAppServerTransport(
@@ -402,15 +406,22 @@ public actor CodexAppServer {
             try await transport.start()
             hasStarted = true
             hasCompletedInitializeHandshake = false
+            isStopping = false
+            startServerEventLoop()
         } catch {
             throw CodexAppServerError.wrap(error, operation: "start")
         }
     }
 
     public func stop() async {
+        isStopping = true
+        serverEventTask?.cancel()
+        serverEventTask = nil
+        finishAllTurnEventStreams(throwing: nil)
         await transport.stop()
         hasStarted = false
         hasCompletedInitializeHandshake = false
+        bufferedTerminalTurnEvents.removeAll()
     }
 
     public func initialize(_ request: InitializeRequest) async throws -> InitializeSession {
@@ -439,7 +450,7 @@ public actor CodexAppServer {
         }
     }
 
-    public func startThread(_ request: ThreadStartRequest = .init()) async throws -> ThreadSession {
+    public func startThread(_ request: ThreadStartRequest = .init()) async throws -> CodexThread {
         try requireInitialized(for: "thread/start")
 
         let requestID = CodexRPCRequestID.generated()
@@ -455,13 +466,16 @@ public actor CodexAppServer {
                 expectedID: requestID
             )
 
-            return ThreadSession(wireValue: response)
+            return CodexThread(
+                appServer: self,
+                session: ThreadSession(wireValue: response)
+            )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/start")
         }
     }
 
-    public func startTurn(_ request: TurnStartRequest) async throws -> TurnSession {
+    public func startTurn(_ request: TurnStartRequest) async throws -> CodexTurnHandle {
         try requireInitialized(for: "turn/start")
 
         let requestID = CodexRPCRequestID.generated()
@@ -477,7 +491,12 @@ public actor CodexAppServer {
                 expectedID: requestID
             )
 
-            return TurnSession(wireValue: response)
+            let turn = TurnInfo(wireValue: response.turn)
+            return CodexTurnHandle(
+                threadID: request.threadID,
+                turn: turn,
+                events: makeTurnEventStream(turnID: turn.id)
+            )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "turn/start")
         }
@@ -497,6 +516,150 @@ public actor CodexAppServer {
             throw CodexAppServerError.invalidState(
                 reason: "Codex app-server must complete initialize(...) before \(operation) can run."
             )
+        }
+    }
+
+    private func startServerEventLoop() {
+        serverEventTask?.cancel()
+        let transport = self.transport
+        let protocolLayer = self.protocolLayer
+
+        serverEventTask = Task { [weak self] in
+            guard let self else { return }
+
+            let stream = await transport.serverEvents()
+            do {
+                for await serverEvent in stream {
+                    if let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) {
+                        await self.handleProtocolEvent(decodedEvent)
+                    }
+                }
+
+                await self.handleServerEventStreamEnded()
+            } catch {
+                await self.finishAllTurnEventStreams(
+                    throwing: CodexAppServerError.wrap(error, operation: "server events")
+                )
+            }
+        }
+    }
+
+    private func handleProtocolEvent(_ event: CodexAppServerProtocolEvent) {
+        switch event {
+        case .threadStarted,
+             .threadStatusChanged,
+             .threadNameUpdated,
+             .threadTokenUsageUpdated,
+             .turnStarted,
+             .turnDiffUpdated,
+             .turnPlanUpdated,
+             .itemStarted,
+             .itemCompleted,
+             .agentMessageDelta,
+             .planDelta,
+             .reasoningSummaryPartAdded,
+             .reasoningSummaryTextDelta,
+             .reasoningTextDelta:
+            return
+        case let .turnCompleted(notification):
+            let completion = CodexTurnCompletion(
+                threadID: notification.threadID,
+                turn: TurnInfo(wireValue: notification.turn)
+            )
+            let turnEvent = CodexTurnEvent.completed(completion)
+            publishTurnEvent(turnEvent, for: notification.turn.id, isTerminal: true)
+        }
+    }
+
+    private func handleServerEventStreamEnded() {
+        serverEventTask = nil
+
+        guard hasStarted, !isStopping else {
+            finishAllTurnEventStreams(throwing: nil)
+            return
+        }
+
+        finishAllTurnEventStreams(
+            throwing: CodexAppServerError.transportFailure(
+                operation: "server events",
+                reason: "Codex app-server stopped delivering notifications before pending turn streams finished."
+            )
+        )
+    }
+
+    private func makeTurnEventStream(
+        turnID: String
+    ) -> AsyncThrowingStream<CodexTurnEvent, Error> {
+        let streamID = UUID()
+
+        return AsyncThrowingStream { continuation in
+            registerTurnEventContinuation(continuation, streamID: streamID, turnID: turnID)
+
+            if let bufferedEvent = bufferedTerminalTurnEvents.removeValue(forKey: turnID) {
+                continuation.yield(bufferedEvent)
+                continuation.finish()
+                removeTurnEventContinuation(streamID: streamID, turnID: turnID)
+                return
+            }
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeTurnEventContinuation(streamID: streamID, turnID: turnID)
+                }
+            }
+        }
+    }
+
+    private func registerTurnEventContinuation(
+        _ continuation: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation,
+        streamID: UUID,
+        turnID: String
+    ) {
+        var continuations = turnEventContinuations[turnID] ?? [:]
+        continuations[streamID] = continuation
+        turnEventContinuations[turnID] = continuations
+    }
+
+    private func removeTurnEventContinuation(streamID: UUID, turnID: String) {
+        guard var continuations = turnEventContinuations[turnID] else { return }
+        continuations.removeValue(forKey: streamID)
+        if continuations.isEmpty {
+            turnEventContinuations.removeValue(forKey: turnID)
+        } else {
+            turnEventContinuations[turnID] = continuations
+        }
+    }
+
+    private func publishTurnEvent(
+        _ event: CodexTurnEvent,
+        for turnID: String,
+        isTerminal: Bool
+    ) {
+        guard let continuations = turnEventContinuations.removeValue(forKey: turnID), !continuations.isEmpty else {
+            if isTerminal {
+                bufferedTerminalTurnEvents[turnID] = event
+            }
+            return
+        }
+
+        for continuation in continuations.values {
+            continuation.yield(event)
+            if isTerminal {
+                continuation.finish()
+            }
+        }
+    }
+
+    private func finishAllTurnEventStreams(throwing error: CodexAppServerError?) {
+        let activeContinuations = turnEventContinuations.values.flatMap(\.values)
+        turnEventContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            if let error {
+                continuation.finish(throwing: error)
+            } else {
+                continuation.finish()
+            }
         }
     }
 }
