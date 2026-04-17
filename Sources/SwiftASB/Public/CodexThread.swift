@@ -1,6 +1,75 @@
 import Foundation
+import Observation
 
 public struct CodexThread: Sendable {
+    @MainActor
+    @Observable
+    public final class Dashboard {
+        public let threadID: String
+        public private(set) var isArchived: Bool
+        public private(set) var isClosed: Bool
+        public private(set) var latestTokenUsage: CodexThreadTokenUsageUpdated?
+        public private(set) var name: String?
+        public private(set) var preview: String
+        public private(set) var status: CodexAppServer.ThreadStatus
+
+        @ObservationIgnored
+        private var eventTask: Task<Void, Never>?
+
+        internal init(
+            threadID: String,
+            initialInfo: CodexAppServer.ThreadInfo,
+            events: AsyncThrowingStream<CodexThreadEvent, Error>
+        ) {
+            self.threadID = threadID
+            self.isArchived = false
+            self.isClosed = false
+            self.latestTokenUsage = nil
+            self.name = initialInfo.name
+            self.preview = initialInfo.preview
+            self.status = initialInfo.status
+
+            eventTask = Task { [weak self] in
+                guard let self else { return }
+
+                do {
+                    for try await event in events {
+                        self.apply(event)
+                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    return
+                }
+            }
+        }
+
+        deinit {
+            eventTask?.cancel()
+        }
+
+        private func apply(_ event: CodexThreadEvent) {
+            switch event {
+            case let .started(started):
+                name = started.thread.name
+                preview = started.thread.preview
+                status = started.thread.status
+            case let .statusChanged(change):
+                status = change.status
+            case .archived:
+                isArchived = true
+            case .unarchived:
+                isArchived = false
+            case .closed:
+                isClosed = true
+            case let .nameUpdated(update):
+                name = update.threadName
+            case let .tokenUsageUpdated(update):
+                latestTokenUsage = update
+            }
+        }
+    }
+
     public struct TurnRequest: Sendable, Equatable {
         public var approvalPolicy: CodexAppServer.ApprovalPolicy?
         public var approvalsReviewer: CodexAppServer.ApprovalsReviewer?
@@ -119,101 +188,16 @@ public struct CodexThread: Sendable {
         )
     }
 
-    public func waitForNextStatusChange() async throws -> CodexThreadStatusChanged {
-        try await waitForEvent(named: "status change") { event in
-            guard case let .statusChanged(change) = event else { return nil }
-            return change
-        }
-    }
-
-    public func waitForNextNameUpdate() async throws -> CodexThreadNameUpdated {
-        try await waitForEvent(named: "name update") { event in
-            guard case let .nameUpdated(update) = event else { return nil }
-            return update
-        }
-    }
-
-    public func waitUntilArchived() async throws -> CodexThreadArchived {
-        try await waitForEvent(named: "archive event") { event in
-            guard case let .archived(archived) = event else { return nil }
-            return archived
-        }
-    }
-
-    public func waitUntilClosed() async throws -> CodexThreadClosed {
-        try await waitForEvent(named: "close event") { event in
-            guard case let .closed(closed) = event else { return nil }
-            return closed
-        }
-    }
-
-    public func waitUntilIdle() async throws -> CodexAppServer.ThreadStatus {
-        let currentStatus = await appServer.threadStatus(threadID: id) ?? info.status
-
-        if currentStatus.type == .idle {
-            return currentStatus
-        }
-
-        return try await waitForEvent(named: "idle state") { event in
-            switch event {
-            case let .started(started) where started.thread.status.type == .idle:
-                return started.thread.status
-            case let .statusChanged(change) where change.status.type == .idle:
-                return change.status
-            default:
-                return nil
-            }
-        }
-    }
-
-    public func waitUntilReady() async throws -> CodexAppServer.ThreadStatus {
-        let currentStatus = await appServer.threadStatus(threadID: id) ?? info.status
-
-        if currentStatus.isReady {
-            return currentStatus
-        }
-
-        return try await waitForEvent(named: "ready state") { event in
-            switch event {
-            case let .started(started) where started.thread.status.isReady:
-                return started.thread.status
-            case let .statusChanged(change) where change.status.isReady:
-                return change.status
-            default:
-                return nil
-            }
-        }
-    }
-
-    private func waitForEvent<Event>(
-        named eventName: String,
-        matching transform: @Sendable (CodexThreadEvent) -> Event?
-    ) async throws -> Event {
-        let stream = await appServer.threadEventStream(threadID: id)
-        var iterator = stream.makeAsyncIterator()
-
-        while let event = try await iterator.next() {
-            if let transformed = transform(event) {
-                return transformed
-            }
-        }
-
-        throw CodexAppServerError.transportFailure(
-            operation: "thread event wait",
-            reason: "Codex app-server stopped delivering thread events before the next \(eventName) for thread \(id) arrived."
+    @MainActor
+    public func makeDashboard() async -> Dashboard {
+        let events = await appServer.threadEventStream(threadID: id)
+        return Dashboard(
+            threadID: id,
+            initialInfo: info,
+            events: events
         )
     }
-}
 
-private extension CodexAppServer.ThreadStatus {
-    var isReady: Bool {
-        switch type {
-        case .active, .idle:
-            return activeFlags.isEmpty
-        case .notLoaded, .systemError:
-            return false
-        }
-    }
 }
 
 public enum CodexThreadEvent: Sendable, Equatable {

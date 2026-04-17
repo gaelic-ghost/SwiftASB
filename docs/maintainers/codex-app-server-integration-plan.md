@@ -170,9 +170,9 @@ The Python SDK surface is a good starting point for the conceptual model, but th
 - `CodexAppServer`
 - `CodexAppServer.Configuration`
 - `CodexThread`
-- `CodexTurn`
 - `CodexTurnHandle`
-- `CodexRunResult`
+- `CodexThread.Dashboard`
+- `CodexTurnHandle.Minimap`
 - `CodexInputItem`
 - `CodexNotification`
 - `CodexRPCError`
@@ -193,7 +193,10 @@ Likely Swift-native shape:
 
 - `CodexAppServer` as an owning actor or reference type with explicit startup/shutdown.
 - `CodexTurnHandle.events` as `AsyncThrowingStream<CodexNotification, Error>`.
-- one high-level `run(...)` convenience path for the common case.
+- `CodexThread.events` as the thread-scoped typed event stream.
+- `CodexThread.Dashboard` as a main-actor observable live mirror of thread state.
+- `CodexTurnHandle.Minimap` as a main-actor observable live mirror of turn progress.
+- one high-level `run(...)` convenience path for the common case if it still feels earned after the handle + observable model settles.
 - one lower-level turn path for streaming, steering, and interrupt support.
 
 Current direction:
@@ -235,6 +238,8 @@ Current repo direction:
 - generate consolidated Swift wire files from the derived schemas
 - patch dynamic JSON holes to a typed `CodexWireJSONValue`
 - keep the resulting generated layer staged and internal-first
+- expose live consumer-facing current state through observable companions fed by
+  dedicated event streams rather than one-shot async wait helpers
 
 That gives maintainers a repeatable codegen path without turning Python into an
 end-user runtime dependency.

@@ -328,8 +328,9 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
-    @Test("provides thread convenience properties and wait helpers")
-    func providesThreadConvenienceHelpers() async throws {
+    @MainActor
+    @Test("builds a dashboard that stays live with thread events")
+    func buildsThreadDashboard() async throws {
         let transport = FakeCodexAppServerTransport()
         let client = CodexAppServer(transport: transport)
 
@@ -352,94 +353,48 @@ struct CodexAppServerTests {
             )
         )
 
-        let statusTask = Task {
-            try await thread.waitForNextStatusChange()
-        }
-        let nameTask = Task {
-            try await thread.waitForNextNameUpdate()
-        }
-        let archivedTask = Task {
-            try await thread.waitUntilArchived()
-        }
-        let closedTask = Task {
-            try await thread.waitUntilClosed()
-        }
+        let dashboard = await thread.makeDashboard()
 
-        await Task.yield()
+        #expect(dashboard.threadID == thread.id)
+        #expect(dashboard.name == nil)
+        #expect(dashboard.preview == "Hello from the fake app-server")
+        #expect(dashboard.status.type == .active)
+        #expect(dashboard.isArchived == false)
+        #expect(dashboard.isClosed == false)
+        #expect(dashboard.latestTokenUsage == nil)
 
+        await transport.emitThreadStarted(threadID: thread.id)
         await transport.emitThreadStatusChanged(threadID: thread.id)
         await transport.emitThreadNameUpdated(threadID: thread.id)
         await transport.emitThreadArchived(threadID: thread.id)
+        await transport.emitThreadTokenUsageUpdated(threadID: thread.id, turnID: "turn-123")
         await transport.emitThreadClosed(threadID: thread.id)
 
-        let statusChange = try await statusTask.value
-        #expect(statusChange.threadID == thread.id)
-        #expect(statusChange.status.type == .active)
-        #expect(statusChange.status.activeFlags == [.waitingOnApproval])
+        for _ in 0..<20 {
+            if dashboard.name == "Planning Thread",
+               dashboard.isArchived,
+               dashboard.isClosed,
+               dashboard.latestTokenUsage?.turnID == "turn-123" {
+                break
+            }
+            await Task.yield()
+        }
 
-        let nameUpdate = try await nameTask.value
-        #expect(nameUpdate.threadID == thread.id)
-        #expect(nameUpdate.threadName == "Planning Thread")
-
-        let archived = try await archivedTask.value
-        #expect(archived.threadID == thread.id)
-
-        let closed = try await closedTask.value
-        #expect(closed.threadID == thread.id)
+        #expect(dashboard.name == "Planning Thread")
+        #expect(dashboard.preview == "Hello from thread/started")
+        #expect(dashboard.status.type == .active)
+        #expect(dashboard.status.activeFlags == [.waitingOnApproval])
+        #expect(dashboard.isArchived == true)
+        #expect(dashboard.isClosed == true)
+        #expect(dashboard.latestTokenUsage?.turnID == "turn-123")
+        #expect(dashboard.latestTokenUsage?.total.totalTokens == 650)
 
         await client.stop()
     }
 
-    @Test("waits for thread readiness and idle transitions")
-    func waitsForThreadReadinessAndIdleTransitions() async throws {
-        let transport = FakeCodexAppServerTransport()
-        let client = CodexAppServer(transport: transport)
-
-        try await client.start()
-        _ = try await client.initialize(
-            .init(
-                clientInfo: .init(
-                    name: "SwiftASBTests",
-                    title: "SwiftASB Tests",
-                    version: "0.1.0"
-                )
-            )
-        )
-
-        let thread = try await client.startThread(
-            .init(
-                currentDirectoryPath: "/tmp/project",
-                model: "gpt-5.4",
-                modelProvider: "openai"
-            )
-        )
-
-        await transport.emitThreadStatusChangedWaitingOnApproval(threadID: thread.id)
-        await Task.yield()
-
-        let idleTask = Task {
-            try await thread.waitUntilIdle()
-        }
-        let readyTask = Task {
-            try await thread.waitUntilReady()
-        }
-
-        await Task.yield()
-        await transport.emitThreadStatusChangedIdle(threadID: thread.id)
-
-        let idleStatus = try await idleTask.value
-        #expect(idleStatus.type == .idle)
-        #expect(idleStatus.activeFlags.isEmpty)
-
-        let readyStatus = try await readyTask.value
-        #expect(readyStatus.type == .idle)
-        #expect(readyStatus.activeFlags.isEmpty)
-
-        await client.stop()
-    }
-
-    @Test("provides turn convenience wait helpers")
-    func providesTurnConvenienceHelpers() async throws {
+    @MainActor
+    @Test("builds a minimap that stays live with turn events")
+    func buildsTurnMinimap() async throws {
         let transport = FakeCodexAppServerTransport()
         let client = CodexAppServer(transport: transport)
 
@@ -463,25 +418,28 @@ struct CodexAppServerTests {
         )
 
         let turnHandle = try await thread.startTextTurn("Hello from SwiftASB")
+        let minimap = await turnHandle.makeMinimap()
 
-        let planUpdateTask = Task {
-            try await turnHandle.waitForNextPlanUpdate()
-        }
-        let messageDeltaTask = Task {
-            try await turnHandle.waitForNextAgentMessageDelta()
-        }
-        let reasoningDeltaTask = Task {
-            try await turnHandle.waitForNextReasoningTextDelta()
-        }
-        let completionTask = Task {
-            try await turnHandle.waitForCompletion()
-        }
+        #expect(minimap.threadID == thread.id)
+        #expect(minimap.turnID == turnHandle.turn.id)
+        #expect(minimap.currentTurn.id == turnHandle.turn.id)
+        #expect(minimap.currentTurn.status == .inProgress)
+        #expect(minimap.latestPlanUpdate == nil)
+        #expect(minimap.latestAgentMessageDelta == nil)
+        #expect(minimap.latestCompletion == nil)
 
-        await Task.yield()
-
+        await transport.emitTurnStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id
+        )
         await transport.emitTurnPlanUpdated(
             threadID: thread.id,
             turnID: turnHandle.turn.id
+        )
+        await transport.emitPlanDelta(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-plan-1"
         )
         await transport.emitAgentMessageDelta(
             threadID: thread.id,
@@ -498,27 +456,27 @@ struct CodexAppServerTests {
             turnID: turnHandle.turn.id
         )
 
-        let planUpdate = try await planUpdateTask.value
-        #expect(planUpdate.turnID == turnHandle.turn.id)
-        #expect(planUpdate.plan.count == 2)
+        for _ in 0..<20 {
+            if minimap.latestPlanUpdate != nil,
+               minimap.latestAgentMessageDelta != nil,
+               minimap.latestReasoningTextDelta != nil,
+               minimap.latestCompletion != nil {
+                break
+            }
+            await Task.yield()
+        }
 
-        let messageDelta = try await messageDeltaTask.value
-        #expect(messageDelta.turnID == turnHandle.turn.id)
-        #expect(messageDelta.itemID == "item-agent-1")
-        #expect(messageDelta.delta == "Working on it")
-
-        let reasoningDelta = try await reasoningDeltaTask.value
-        #expect(reasoningDelta.turnID == turnHandle.turn.id)
-        #expect(reasoningDelta.itemID == "item-reasoning-1")
-        #expect(reasoningDelta.delta == "thinking...")
-
-        let completion = try await completionTask.value
-        #expect(completion.threadID == thread.id)
-        #expect(completion.turn.id == turnHandle.turn.id)
-        #expect(completion.turn.status == .completed)
+        #expect(minimap.latestStartedTurn?.turn.id == turnHandle.turn.id)
+        #expect(minimap.latestPlanUpdate?.turnID == turnHandle.turn.id)
+        #expect(minimap.latestPlanDelta?.itemID == "item-plan-1")
+        #expect(minimap.latestAgentMessageDelta?.itemID == "item-agent-1")
+        #expect(minimap.latestReasoningTextDelta?.itemID == "item-reasoning-1")
+        #expect(minimap.latestCompletion?.turn.id == turnHandle.turn.id)
+        #expect(minimap.currentTurn.status == .completed)
 
         await client.stop()
     }
+
 }
 
 private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
@@ -691,34 +649,6 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
             "status": [
                 "type": "active",
                 "activeFlags": ["waitingOnApproval"],
-            ],
-        ])
-
-        serverEventContinuation?.yield(
-            .notification(method: "thread/status/changed", payload: payload)
-        )
-    }
-
-    func emitThreadStatusChangedWaitingOnApproval(threadID: String) {
-        let payload = payloadObject([
-            "threadId": threadID,
-            "status": [
-                "type": "active",
-                "activeFlags": ["waitingOnApproval"],
-            ],
-        ])
-
-        serverEventContinuation?.yield(
-            .notification(method: "thread/status/changed", payload: payload)
-        )
-    }
-
-    func emitThreadStatusChangedIdle(threadID: String) {
-        let payload = payloadObject([
-            "threadId": threadID,
-            "status": [
-                "type": "idle",
-                "activeFlags": [],
             ],
         ])
 

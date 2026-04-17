@@ -22,17 +22,18 @@
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
 | Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, and `turn/start` are encoded through the protocol layer. |
 | Typed protocol response decoding | `Shipped internally` | `initialize`, `thread/start`, and `turn/start` responses are decoded and validated against request IDs. |
-| Typed protocol notification decoding | `Partially shipped` | The protocol layer now maps a first broader batch of thread, turn, item, and reasoning notifications, but the public client still only promotes `turn/completed` into `CodexTurnEvent`. |
+| Typed protocol notification decoding | `Partially shipped` | The protocol layer now maps a broader batch of thread, turn, item, and reasoning notifications that feed both public event streams and live observable companions. |
 | Public owning client actor | `Shipped` | `CodexAppServer` owns transport plus protocol and exposes startup, shutdown, initialize, thread start, and turn start. |
 | Public value-typed request and result models | `Shipped` | Public API uses hand-owned Swift value types rather than exposing `CodexWire...` directly. |
 | Initialize handshake | `Shipped` | `initialize(...)` automatically sends the follow-up `initialized` notification. |
 | Thread start flow | `Shipped` | `startThread(...)` returns `CodexThread`, which carries thread metadata plus a back-reference to the shared app-server owner. |
 | Typed async thread event stream | `Partially shipped` | `CodexThread.events` now streams `thread/started`, `thread/status/changed`, `thread/archived`, `thread/unarchived`, `thread/name/updated`, `thread/tokenUsage/updated`, and `thread/closed`, but broader thread lifecycle coverage is still pending. |
 | Turn start flow | `Shipped` | `startTurn(...)` returns `CodexTurnHandle`. |
-| Typed async turn event stream | `Partially shipped` | `CodexTurnHandle.events` now streams `turn/started`, `turn/plan/updated`, `turn/diff/updated`, `item/agentMessage/delta`, several reasoning deltas, and `turn/completed`, but broader item and thread events still remain internal. |
+| Typed async turn event stream | `Partially shipped` | `CodexTurnHandle.events` now streams `turn/started`, `turn/plan/updated`, `turn/diff/updated`, item lifecycle updates, message deltas, reasoning deltas, and `turn/completed`, but broader item and thread events still remain internal. |
 | Multiple active threads per app-server | `Targeted` | One `CodexAppServer` should support many concurrently held `CodexThread` handles and turns across different threads. |
 | Multiple simultaneous turns on one thread | `Open question` | We need to verify actual app-server semantics before promising allow, queue, or reject behavior on the same thread. |
-| `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, includes a `startTextTurn(...)` happy-path helper, and now exposes a typed thread event stream, but richer thread-centric APIs are still pending. |
+| `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, includes a `startTextTurn(...)` happy-path helper, exposes a typed thread event stream, and can now vend a live `Dashboard` observable mirror via `makeDashboard()`. |
+| `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` can now vend a live `Minimap` observable mirror via `makeMinimap()`, seeded from the initial turn snapshot and updated from the turn event stream. |
 | Additional turn event mapping | `Partially started` | The generated wire layer now includes many relevant notification types, but most are not yet promoted into protocol/public event enums. |
 | Server request / approval handling | `Not started` | Approval prompts, elicitation requests, and other server-initiated request flows are not surfaced yet. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
@@ -130,7 +131,9 @@ Scope:
 - [ ] Decide whether same-thread concurrent turns should be allowed, queued, or rejected in the public API.
 - [x] Add a thread-scoped turn start API so normal consumers do not carry raw thread IDs around.
 - [x] Add a simple text-only turn convenience on `CodexThread` for the common case.
-- [ ] Add richer `CodexThread` convenience APIs beyond basic turn creation.
+- [x] Add live observable thread state via `CodexThread.Dashboard` and `makeDashboard()`.
+- [x] Add live observable turn state via `CodexTurnHandle.Minimap` and `makeMinimap()`.
+- [ ] Decide whether additional convenience APIs belong as observable companions, async helpers, or neither.
 - [ ] Decide how much terminal-event buffering should remain implicit versus explicit in the public API.
 
 Exit criteria:
@@ -138,7 +141,7 @@ Exit criteria:
 - [x] A started turn can emit at least one typed async event through a handle-owned stream.
 - [x] `CodexThread` exists as a public ergonomic wrapper with a clear ownership model.
 - [ ] The documented concurrency model is explicit for both cross-thread and same-thread turn starts.
-- [ ] Thread and turn handles feel like the real public surface rather than transitional value wrappers.
+- [ ] Thread and turn handles plus their observable companions feel like the real public surface rather than transitional wrappers.
 
 ## Milestone 5: Approvals, Richer Notifications, And Broader Protocol Coverage
 
@@ -177,11 +180,11 @@ Exit criteria:
 
 ## Open Tickets
 
-- [ ] Add `CodexThread` as a first-class public wrapper and move turn creation onto it.
+- [x] Add `CodexThread` as a first-class public wrapper and move turn creation onto it.
 - [ ] Document and enforce the intended behavior for multiple active threads on one `CodexAppServer`.
 - [ ] Investigate same-thread concurrent turn behavior against the real app-server and codify the result.
 - [x] Map an initial progress-oriented notification batch into `CodexTurnEvent` so the stream covers more than completion.
-- [ ] Decide whether additional item lifecycle and thread-scoped notifications should join the public stream surface or live on a separate thread-facing event API.
+- [ ] Decide whether additional item lifecycle and thread-scoped notifications should join the public stream surface or instead only feed observable companions like `Dashboard` and `Minimap`.
 - [ ] Decide whether the public stream should surface protocol failures directly or always wrap them as `CodexAppServerError`.
 - [ ] Add a typed surface for approval requests and other server-originated request messages.
 - [ ] Add a one-shot `run(...)` convenience API once the handle model feels stable.

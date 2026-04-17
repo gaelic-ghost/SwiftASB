@@ -1,6 +1,97 @@
 import Foundation
+import Observation
 
 public struct CodexTurnHandle: Sendable {
+    @MainActor
+    @Observable
+    public final class Minimap {
+        public let threadID: String
+        public let turnID: String
+        public private(set) var currentTurn: CodexAppServer.TurnInfo
+        public private(set) var latestAgentMessageDelta: CodexTurnAgentMessageDelta?
+        public private(set) var latestCompletedItem: CodexTurnItemCompleted?
+        public private(set) var latestCompletion: CodexTurnCompletion?
+        public private(set) var latestDiffUpdate: CodexTurnDiffUpdate?
+        public private(set) var latestPlanDelta: CodexTurnPlanDelta?
+        public private(set) var latestPlanUpdate: CodexTurnPlanUpdate?
+        public private(set) var latestReasoningSummaryPartAdded: CodexTurnReasoningSummaryPartAdded?
+        public private(set) var latestReasoningSummaryTextDelta: CodexTurnReasoningSummaryTextDelta?
+        public private(set) var latestReasoningTextDelta: CodexTurnReasoningTextDelta?
+        public private(set) var latestStartedItem: CodexTurnItemStarted?
+        public private(set) var latestStartedTurn: CodexTurnStarted?
+
+        @ObservationIgnored
+        private var eventTask: Task<Void, Never>?
+
+        internal init(
+            threadID: String,
+            initialTurn: CodexAppServer.TurnInfo,
+            events: AsyncThrowingStream<CodexTurnEvent, Error>
+        ) {
+            self.threadID = threadID
+            self.turnID = initialTurn.id
+            self.currentTurn = initialTurn
+            self.latestAgentMessageDelta = nil
+            self.latestCompletedItem = nil
+            self.latestCompletion = nil
+            self.latestDiffUpdate = nil
+            self.latestPlanDelta = nil
+            self.latestPlanUpdate = nil
+            self.latestReasoningSummaryPartAdded = nil
+            self.latestReasoningSummaryTextDelta = nil
+            self.latestReasoningTextDelta = nil
+            self.latestStartedItem = nil
+            self.latestStartedTurn = nil
+
+            eventTask = Task { [weak self] in
+                guard let self else { return }
+
+                do {
+                    for try await event in events {
+                        self.apply(event)
+                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    return
+                }
+            }
+        }
+
+        deinit {
+            eventTask?.cancel()
+        }
+
+        private func apply(_ event: CodexTurnEvent) {
+            switch event {
+            case let .started(started):
+                latestStartedTurn = started
+                currentTurn = started.turn
+            case let .planUpdated(update):
+                latestPlanUpdate = update
+            case let .planDelta(delta):
+                latestPlanDelta = delta
+            case let .diffUpdated(update):
+                latestDiffUpdate = update
+            case let .itemStarted(itemStarted):
+                latestStartedItem = itemStarted
+            case let .itemCompleted(itemCompleted):
+                latestCompletedItem = itemCompleted
+            case let .agentMessageDelta(delta):
+                latestAgentMessageDelta = delta
+            case let .reasoningSummaryPartAdded(partAdded):
+                latestReasoningSummaryPartAdded = partAdded
+            case let .reasoningSummaryTextDelta(delta):
+                latestReasoningSummaryTextDelta = delta
+            case let .reasoningTextDelta(delta):
+                latestReasoningTextDelta = delta
+            case let .completed(completion):
+                latestCompletion = completion
+                currentTurn = completion.turn
+            }
+        }
+    }
+
     private let appServer: CodexAppServer
     public let threadID: String
     public let turn: CodexAppServer.TurnInfo
@@ -18,50 +109,13 @@ public struct CodexTurnHandle: Sendable {
         self.events = events
     }
 
-    public func waitForCompletion() async throws -> CodexTurnCompletion {
-        try await waitForEvent(named: "completion event") { event in
-            guard case let .completed(completion) = event else { return nil }
-            return completion
-        }
-    }
-
-    public func waitForNextAgentMessageDelta() async throws -> CodexTurnAgentMessageDelta {
-        try await waitForEvent(named: "agent message delta") { event in
-            guard case let .agentMessageDelta(delta) = event else { return nil }
-            return delta
-        }
-    }
-
-    public func waitForNextPlanUpdate() async throws -> CodexTurnPlanUpdate {
-        try await waitForEvent(named: "plan update") { event in
-            guard case let .planUpdated(update) = event else { return nil }
-            return update
-        }
-    }
-
-    public func waitForNextReasoningTextDelta() async throws -> CodexTurnReasoningTextDelta {
-        try await waitForEvent(named: "reasoning text delta") { event in
-            guard case let .reasoningTextDelta(delta) = event else { return nil }
-            return delta
-        }
-    }
-
-    private func waitForEvent<Event>(
-        named eventName: String,
-        matching transform: @Sendable (CodexTurnEvent) -> Event?
-    ) async throws -> Event {
-        let stream = await appServer.turnEventStream(turnID: turn.id)
-        var iterator = stream.makeAsyncIterator()
-
-        while let event = try await iterator.next() {
-            if let transformed = transform(event) {
-                return transformed
-            }
-        }
-
-        throw CodexAppServerError.transportFailure(
-            operation: "turn event wait",
-            reason: "Codex app-server stopped delivering turn events before the next \(eventName) for turn \(turn.id) arrived."
+    @MainActor
+    public func makeMinimap() async -> Minimap {
+        let events = await appServer.turnEventStream(turnID: turn.id)
+        return Minimap(
+            threadID: threadID,
+            initialTurn: turn,
+            events: events
         )
     }
 }

@@ -87,6 +87,7 @@ Responsibilities:
 - wrap thread and turn identity
 - present ergonomic async APIs
 - hide raw protocol details behind Swift-native handles
+- vend live observable companions for UI-facing current-state mirrors
 
 Concurrency note:
 
@@ -153,8 +154,12 @@ Current status:
   client coverage without subprocess buffering or shell-fixture flakiness
 - the client now owns per-turn `AsyncThrowingStream` fanout and the protocol
   layer performs typed notification decoding before public stream delivery
-- the first typed streamed notification is `turn/completed`, with the public
-  surface exposed through `CodexTurnHandle.events`
+- the public runtime now exposes both typed event streams and observable
+  companions:
+  - `CodexThread.events`
+  - `CodexThread.Dashboard` via `makeDashboard()`
+  - `CodexTurnHandle.events`
+  - `CodexTurnHandle.Minimap` via `makeMinimap()`
 
 ### Pass 4
 
@@ -166,6 +171,8 @@ First wrapper goals:
 - `CodexTurnHandle`
 - turn event streaming
 - typed notification mapping
+- UI-facing observable companions seeded from initial snapshots and kept live by
+  dedicated event-stream subscriptions
 
 Open concurrency decision:
 
