@@ -64,6 +64,281 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "starts a thread through the raw live transport and protocol stack",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TRANSPORT_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI."
+        ),
+        .timeLimit(.minutes(2))
+    )
+    func startsThreadThroughRawLiveTransport() async throws {
+        let harness = try LiveCodexHarness()
+        defer { harness.cleanup() }
+
+        let transport = CodexAppServerTransport(
+            configuration: .init(
+                codexExecutableURL: harness.codexExecutableURL,
+                currentDirectoryURL: harness.rootDirectoryURL,
+                environment: harness.configuration.environment
+            )
+        )
+        let protocolLayer = CodexAppServerProtocol()
+        let initializeRequestID = CodexRPCRequestID.string("live-initialize")
+        let threadRequestID = CodexRPCRequestID.string("live-thread-start")
+
+        do {
+            try await transport.start()
+
+            let initializePayload = try protocolLayer.makeInitializeRequest(
+                id: initializeRequestID,
+                params: CodexWireInitializeParams(
+                    capabilities: CodexWireInitializeCapabilities(
+                        experimentalAPI: nil,
+                        optOutNotificationMethods: [
+                            "account/rateLimits/updated",
+                            "hook/completed",
+                            "hook/started",
+                            "mcpServer/startupStatus/updated",
+                        ]
+                    ),
+                    clientInfo: .init(
+                        name: "SwiftASBLiveTests",
+                        title: "SwiftASB Live Integration Tests",
+                        version: "0.1.0"
+                    )
+                )
+            )
+            let initializeResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for the raw transport initialize response before thread/start"
+            ) {
+                try await transport.send(initializePayload, id: initializeRequestID)
+            }
+            _ = try protocolLayer.decodeInitializeResponse(
+                initializeResponsePayload,
+                expectedID: initializeRequestID
+            )
+
+            let initializedPayload = try protocolLayer.makeInitializedNotification()
+            try await transport.sendNotification(initializedPayload, method: "initialized")
+
+            let threadStartPayload = try protocolLayer.makeThreadStartRequest(
+                id: threadRequestID,
+                params: CodexWireThreadStartParams(
+                    approvalPolicy: .enumeration(.never),
+                    approvalsReviewer: nil,
+                    baseInstructions: nil,
+                    config: nil,
+                    cwd: harness.threadAWorkspace.path,
+                    developerInstructions: """
+                    You are running inside a SwiftASB live integration test.
+                    Do not call tools.
+                    Do not edit files.
+                    Do not ask follow-up questions.
+                    Reply only with the exact text requested by the user message.
+                    """,
+                    ephemeral: true,
+                    model: nil,
+                    modelProvider: nil,
+                    personality: nil,
+                    sandbox: .workspaceWrite,
+                    serviceName: nil,
+                    serviceTier: nil,
+                    sessionStartSource: nil
+                )
+            )
+            let threadResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for the raw transport thread/start response"
+            ) {
+                try await transport.send(threadStartPayload, id: threadRequestID)
+            }
+            let threadResponse = try protocolLayer.decodeThreadStartResponse(
+                threadResponsePayload,
+                expectedID: threadRequestID
+            )
+
+            #expect(threadResponse.thread.id.isEmpty == false)
+            #expect(threadResponse.cwd == harness.threadAWorkspace.path)
+            #expect(threadResponse.thread.status.type == .idle)
+
+            await transport.stop()
+        } catch {
+            await transport.stop()
+            throw error
+        }
+    }
+
+    @Test(
+        "completes a single live turn through the raw live transport and protocol stack",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TRANSPORT_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI."
+        ),
+        .timeLimit(.minutes(2))
+    )
+    func completesSingleLiveTurnThroughRawLiveTransport() async throws {
+        let harness = try LiveCodexHarness()
+        defer { harness.cleanup() }
+
+        let transport = CodexAppServerTransport(
+            configuration: .init(
+                codexExecutableURL: harness.codexExecutableURL,
+                currentDirectoryURL: harness.rootDirectoryURL,
+                environment: harness.configuration.environment
+            )
+        )
+        let protocolLayer = CodexAppServerProtocol()
+        let initializeRequestID = CodexRPCRequestID.string("live-initialize")
+        let threadRequestID = CodexRPCRequestID.string("live-thread-start")
+        let turnRequestID = CodexRPCRequestID.string("live-turn-start")
+
+        do {
+            try await transport.start()
+
+            let initializePayload = try protocolLayer.makeInitializeRequest(
+                id: initializeRequestID,
+                params: CodexWireInitializeParams(
+                    capabilities: CodexWireInitializeCapabilities(
+                        experimentalAPI: nil,
+                        optOutNotificationMethods: [
+                            "account/rateLimits/updated",
+                            "hook/completed",
+                            "hook/started",
+                            "mcpServer/startupStatus/updated",
+                        ]
+                    ),
+                    clientInfo: .init(
+                        name: "SwiftASBLiveTests",
+                        title: "SwiftASB Live Integration Tests",
+                        version: "0.1.0"
+                    )
+                )
+            )
+            let initializeResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for the raw transport initialize response before a live turn"
+            ) {
+                try await transport.send(initializePayload, id: initializeRequestID)
+            }
+            _ = try protocolLayer.decodeInitializeResponse(
+                initializeResponsePayload,
+                expectedID: initializeRequestID
+            )
+
+            let initializedPayload = try protocolLayer.makeInitializedNotification()
+            try await transport.sendNotification(initializedPayload, method: "initialized")
+
+            let threadStartPayload = try protocolLayer.makeThreadStartRequest(
+                id: threadRequestID,
+                params: CodexWireThreadStartParams(
+                    approvalPolicy: .enumeration(.never),
+                    approvalsReviewer: nil,
+                    baseInstructions: nil,
+                    config: nil,
+                    cwd: harness.threadAWorkspace.path,
+                    developerInstructions: """
+                    You are running inside a SwiftASB live integration test.
+                    Do not call tools.
+                    Do not edit files.
+                    Do not ask follow-up questions.
+                    Reply only with the exact text requested by the user message.
+                    """,
+                    ephemeral: true,
+                    model: nil,
+                    modelProvider: nil,
+                    personality: nil,
+                    sandbox: .workspaceWrite,
+                    serviceName: nil,
+                    serviceTier: nil,
+                    sessionStartSource: nil
+                )
+            )
+            let threadResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for the raw transport thread/start response before a live turn"
+            ) {
+                try await transport.send(threadStartPayload, id: threadRequestID)
+            }
+            let threadResponse = try protocolLayer.decodeThreadStartResponse(
+                threadResponsePayload,
+                expectedID: threadRequestID
+            )
+
+            let serverEvents = await transport.serverEvents()
+            let turnStartPayload = try protocolLayer.makeTurnStartRequest(
+                id: turnRequestID,
+                params: CodexWireTurnStartParams(
+                    approvalPolicy: .enumeration(.never),
+                    approvalsReviewer: nil,
+                    cwd: nil,
+                    effort: nil,
+                    input: [
+                        CodexWireUserInput(
+                            text: prompt(label: "RAW_SINGLE_TURN_DONE"),
+                            textElements: nil,
+                            type: .text,
+                            url: nil,
+                            path: nil,
+                            name: nil
+                        )
+                    ],
+                    model: nil,
+                    outputSchema: nil,
+                    personality: nil,
+                    sandboxPolicy: nil,
+                    serviceTier: nil,
+                    summary: CodexWireReasoningSummary.none,
+                    threadID: threadResponse.thread.id
+                )
+            )
+            let turnResponsePayload = try await withTimeout(
+                seconds: 20,
+                operation: "waiting for the raw transport turn/start response"
+            ) {
+                try await transport.send(turnStartPayload, id: turnRequestID)
+            }
+            let turnResponse = try protocolLayer.decodeTurnStartResponse(
+                turnResponsePayload,
+                expectedID: turnRequestID
+            )
+
+            let completion = try await withTimeout(
+                seconds: 45,
+                operation: "waiting for the raw transport live turn to complete"
+            ) {
+                for await serverEvent in serverEvents {
+                    guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
+                        continue
+                    }
+
+                    switch decodedEvent {
+                    case let .turnCompleted(notification) where notification.turn.id == turnResponse.turn.id:
+                        return notification
+                    default:
+                        continue
+                    }
+                }
+
+                throw LiveIntegrationError.eventStreamEnded(
+                    operation: "waiting for the raw transport live turn to complete"
+                )
+            }
+
+            #expect(completion.threadID == threadResponse.thread.id)
+            #expect(completion.turn.id == turnResponse.turn.id)
+            #expect(completion.turn.status == CodexWireTurnStatus.completed)
+
+            await transport.stop()
+        } catch {
+            await transport.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "completes a single live turn through the public client",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
@@ -196,26 +471,20 @@ struct CodexAppServerLiveIntegrationTests {
             )
 
             switch secondSameThreadOutcome {
-            case let .started(secondSameThreadTurn):
-                async let firstCompletion = awaitCompletion(
-                    of: firstSameThreadTurn,
-                    timeoutSeconds: 45,
-                    operation: "waiting for the first same-thread turn to complete"
+            case .started:
+                Issue.record(
+                    """
+                    SwiftASB should reject overlapping same-thread turns before they reach the live \
+                    Codex app-server because the live same-thread lifecycle is not independently \
+                    routable today.
+                    """
                 )
-                async let secondCompletion = awaitCompletion(
-                    of: secondSameThreadTurn,
-                    timeoutSeconds: 45,
-                    operation: "waiting for the second same-thread turn to complete"
-                )
-
-                let completedFirstTurn = try await firstCompletion
-                let completedSecondTurn = try await secondCompletion
-                let sameThreadStatuses = [
-                    completedFirstTurn.turn.status,
-                    completedSecondTurn.turn.status,
-                ]
-                #expect(sameThreadStatuses.allSatisfy { $0.isTerminal })
             case let .failed(errorDescription):
+                #expect(
+                    errorDescription.contains("overlapping same-thread turns")
+                        || errorDescription.contains("another turn start in flight")
+                        || errorDescription.contains("already has an active turn")
+                )
                 #expect(errorDescription.isEmpty == false)
 
                 let firstCompletion = try await awaitCompletion(
@@ -236,6 +505,7 @@ struct CodexAppServerLiveIntegrationTests {
 
 private final class LiveCodexHarness {
     let rootDirectoryURL: URL
+    let codexHomeURL: URL
     let threadAWorkspace: URL
     let threadBWorkspace: URL
     let sameThreadWorkspace: URL
@@ -247,22 +517,24 @@ private final class LiveCodexHarness {
         try fileManager.createDirectory(at: rootDirectoryURL, withIntermediateDirectories: true)
 
         self.rootDirectoryURL = rootDirectoryURL
+        self.codexHomeURL = rootDirectoryURL.appendingPathComponent(".codex", isDirectory: true)
         self.threadAWorkspace = rootDirectoryURL.appendingPathComponent("thread-a", isDirectory: true)
         self.threadBWorkspace = rootDirectoryURL.appendingPathComponent("thread-b", isDirectory: true)
         self.sameThreadWorkspace = rootDirectoryURL.appendingPathComponent("same-thread", isDirectory: true)
         self.codexExecutableURL = try Self.resolveCodexExecutableURL()
 
+        try fileManager.createDirectory(at: codexHomeURL, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: threadAWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: threadBWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: sameThreadWorkspace, withIntermediateDirectories: true)
+        try Self.seedIsolatedCodexHome(at: codexHomeURL, fileManager: fileManager)
     }
 
     var configuration: CodexAppServer.Configuration {
         .init(
             codexExecutableURL: codexExecutableURL,
-            arguments: ["app-server", "-c", "mcp_servers={}", "--listen", "stdio://"],
             currentDirectoryURL: rootDirectoryURL,
-            environment: Self.makeCodexEnvironment()
+            environment: Self.makeCodexEnvironment(codexHomeURL: codexHomeURL)
         )
     }
 
@@ -305,7 +577,7 @@ private final class LiveCodexHarness {
         return URL(fileURLWithPath: outputText)
     }
 
-    private static func makeCodexEnvironment() -> [String: String] {
+    private static func makeCodexEnvironment(codexHomeURL: URL) -> [String: String] {
         let environment = ProcessInfo.processInfo.environment
         let allowedKeys = [
             "HOME",
@@ -319,12 +591,38 @@ private final class LiveCodexHarness {
             "USER",
         ]
 
-        return environment.reduce(into: [:]) { partialResult, entry in
+        var isolatedEnvironment = environment.reduce(into: [String: String]()) { partialResult, entry in
             guard allowedKeys.contains(entry.key) else {
                 return
             }
             partialResult[entry.key] = entry.value
         }
+
+        isolatedEnvironment["CODEX_HOME"] = codexHomeURL.path
+        return isolatedEnvironment
+    }
+
+    private static func seedIsolatedCodexHome(at codexHomeURL: URL, fileManager: FileManager) throws {
+        let sourceCodexHomeURL = fileManager.homeDirectoryForCurrentUser
+            .appendingPathComponent(".codex", isDirectory: true)
+        let sourceAuthURL = sourceCodexHomeURL.appendingPathComponent("auth.json")
+        let destinationAuthURL = codexHomeURL.appendingPathComponent("auth.json")
+
+        if fileManager.fileExists(atPath: sourceAuthURL.path) {
+            try fileManager.copyItem(at: sourceAuthURL, to: destinationAuthURL)
+        }
+
+        let configURL = codexHomeURL.appendingPathComponent("config.toml")
+        let isolatedConfig = """
+        model = "gpt-5.4"
+
+        [features]
+        apps = false
+
+        [apps._default]
+        enabled = false
+        """
+        try Data(isolatedConfig.utf8).write(to: configURL)
     }
 }
 

@@ -24,8 +24,10 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
     private var process: Process?
     private var standardInputHandle: FileHandle?
-    private var standardOutputTask: Task<Void, Never>?
-    private var standardErrorTask: Task<Void, Never>?
+    private var standardOutputHandle: FileHandle?
+    private var standardErrorHandle: FileHandle?
+    private var standardOutputBuffer = Data()
+    private var standardErrorBuffer = Data()
     private var pendingResponses: [CodexRPCRequestID: CheckedContinuation<Data, Error>] = [:]
     private var serverEventContinuations: [UUID: AsyncStream<CodexRPCServerEvent>.Continuation] = [:]
     private var recentStandardErrorLines: [String] = []
@@ -75,8 +77,12 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
         self.process = process
         standardInputHandle = inputPipe.fileHandleForWriting
+        standardOutputHandle = outputPipe.fileHandleForReading
+        standardErrorHandle = errorPipe.fileHandleForReading
         hasFinished = false
         recentStandardErrorLines = []
+        standardOutputBuffer.removeAll(keepingCapacity: false)
+        standardErrorBuffer.removeAll(keepingCapacity: false)
         startStandardOutputLoop(fileHandle: outputPipe.fileHandleForReading)
         startStandardErrorLoop(fileHandle: errorPipe.fileHandleForReading)
     }
@@ -106,19 +112,25 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
             throw CodexTransportError.duplicatePendingRequest(id: id)
         }
 
-        return try await withCheckedThrowingContinuation { continuation in
-            pendingResponses[id] = continuation
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                pendingResponses[id] = continuation
 
-            do {
-                try writeFramedPayload(requestPayload, to: standardInputHandle)
-            } catch {
-                pendingResponses.removeValue(forKey: id)
-                continuation.resume(
-                    throwing: CodexTransportError.failedToWriteRequest(
-                        id: id,
-                        reason: String(describing: error)
+                do {
+                    try writeFramedPayload(requestPayload, to: standardInputHandle)
+                } catch {
+                    pendingResponses.removeValue(forKey: id)
+                    continuation.resume(
+                        throwing: CodexTransportError.failedToWriteRequest(
+                            id: id,
+                            reason: String(describing: error)
+                        )
                     )
-                )
+                }
+            }
+        } onCancel: {
+            Task {
+                await self.cancelPendingResponse(id: id)
             }
         }
     }
@@ -161,66 +173,28 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         serverEventContinuations.removeValue(forKey: id)
     }
 
+    private func cancelPendingResponse(id: CodexRPCRequestID) {
+        guard let continuation = pendingResponses.removeValue(forKey: id) else {
+            return
+        }
+
+        continuation.resume(throwing: CodexTransportError.requestCancelled(id: id))
+    }
+
     private func startStandardOutputLoop(fileHandle: FileHandle) {
-        standardOutputTask = Task {
-            var bufferedLine = Data()
-            do {
-                for try await byte in fileHandle.bytes {
-                    if byte == 0x0A {
-                        handleStandardOutputDataLine(bufferedLine)
-                        bufferedLine.removeAll(keepingCapacity: true)
-                        continue
-                    }
-
-                    if byte == 0x0D {
-                        continue
-                    }
-
-                    bufferedLine.append(byte)
-                }
-
-                if !bufferedLine.isEmpty {
-                    handleStandardOutputDataLine(bufferedLine)
-                }
-
-                handleStandardOutputEOF()
-            } catch {
-                await finishTransport(
-                    with: .processTerminated(
-                        reason: "Reading Codex app-server stdout failed: \(String(describing: error))",
-                        status: process?.terminationStatus,
-                        recentStandardError: recentStandardErrorLines
-                    )
-                )
+        fileHandle.readabilityHandler = { [weak self] handle in
+            let availableData = handle.availableData
+            Task {
+                await self?.handleStandardOutputChunk(availableData)
             }
         }
     }
 
     private func startStandardErrorLoop(fileHandle: FileHandle) {
-        standardErrorTask = Task {
-            var bufferedLine = Data()
-            do {
-                for try await byte in fileHandle.bytes {
-                    if byte == 0x0A {
-                        appendStandardErrorDataLine(bufferedLine)
-                        bufferedLine.removeAll(keepingCapacity: true)
-                        continue
-                    }
-
-                    if byte == 0x0D {
-                        continue
-                    }
-
-                    bufferedLine.append(byte)
-                }
-
-                if !bufferedLine.isEmpty {
-                    appendStandardErrorDataLine(bufferedLine)
-                }
-            } catch {
-                appendStandardErrorLine(
-                    "Reading Codex app-server stderr failed: \(String(describing: error))"
-                )
+        fileHandle.readabilityHandler = { [weak self] handle in
+            let availableData = handle.availableData
+            Task {
+                await self?.handleStandardErrorChunk(availableData)
             }
         }
     }
@@ -248,12 +222,16 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
     }
 
     private func handleStandardOutputDataLine(_ lineData: Data) {
-        let line = String(decoding: lineData, as: UTF8.self)
+        let line = String(decoding: normalizedLineData(lineData), as: UTF8.self)
         handleStandardOutputLine(line)
     }
 
     private func handleStandardOutputEOF() {
         guard !hasFinished else { return }
+        if !standardOutputBuffer.isEmpty {
+            handleStandardOutputDataLine(standardOutputBuffer)
+            standardOutputBuffer.removeAll(keepingCapacity: false)
+        }
         finishTransport(with: .unexpectedEndOfStream(recentStandardError: recentStandardErrorLines))
     }
 
@@ -265,8 +243,56 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
     }
 
     private func appendStandardErrorDataLine(_ lineData: Data) {
-        let line = String(decoding: lineData, as: UTF8.self)
+        let line = String(decoding: normalizedLineData(lineData), as: UTF8.self)
         appendStandardErrorLine(line)
+    }
+
+    private func normalizedLineData(_ lineData: Data) -> Data {
+        if lineData.last == 0x0D {
+            return lineData.dropLast()
+        }
+        return lineData
+    }
+
+    private func handleStandardOutputChunk(_ chunk: Data) {
+        guard !hasFinished else { return }
+        guard !chunk.isEmpty else {
+            handleStandardOutputEOF()
+            return
+        }
+
+        standardOutputBuffer.append(chunk)
+        drainStandardOutputBuffer()
+    }
+
+    private func handleStandardErrorChunk(_ chunk: Data) {
+        guard !hasFinished else { return }
+        guard !chunk.isEmpty else {
+            if !standardErrorBuffer.isEmpty {
+                appendStandardErrorDataLine(standardErrorBuffer)
+                standardErrorBuffer.removeAll(keepingCapacity: false)
+            }
+            return
+        }
+
+        standardErrorBuffer.append(chunk)
+        drainStandardErrorBuffer()
+    }
+
+    private func drainStandardOutputBuffer() {
+        while let newlineIndex = standardOutputBuffer.firstIndex(of: 0x0A) {
+            let lineData = standardOutputBuffer[..<newlineIndex]
+            handleStandardOutputDataLine(Data(lineData))
+            standardOutputBuffer.removeSubrange(...newlineIndex)
+        }
+    }
+
+    private func drainStandardErrorBuffer() {
+        while let newlineIndex = standardErrorBuffer.firstIndex(of: 0x0A) {
+            let lineData = standardErrorBuffer[..<newlineIndex]
+            appendStandardErrorDataLine(Data(lineData))
+            standardErrorBuffer.removeSubrange(...newlineIndex)
+        }
     }
 
     private func writeFramedPayload(_ payload: Data, to handle: FileHandle) throws {
@@ -305,13 +331,17 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         guard !hasFinished else { return }
         hasFinished = true
 
-        standardOutputTask?.cancel()
-        standardErrorTask?.cancel()
-        standardOutputTask = nil
-        standardErrorTask = nil
+        standardOutputHandle?.readabilityHandler = nil
+        standardErrorHandle?.readabilityHandler = nil
 
         try? standardInputHandle?.close()
         standardInputHandle = nil
+        try? standardOutputHandle?.close()
+        try? standardErrorHandle?.close()
+        standardOutputHandle = nil
+        standardErrorHandle = nil
+        standardOutputBuffer.removeAll(keepingCapacity: false)
+        standardErrorBuffer.removeAll(keepingCapacity: false)
 
         process = nil
 

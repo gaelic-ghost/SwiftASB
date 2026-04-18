@@ -19,9 +19,20 @@ internal enum CodexRPCEnvelope {
 
         switch (method, requestID) {
         case let (.some(method), .some(id)):
-            return .serverEvent(.request(id: id, method: method, payload: data))
+            return .serverEvent(
+                .request(
+                    id: id,
+                    method: method,
+                    payload: try extractParamsPayload(from: object)
+                )
+            )
         case let (.some(method), .none):
-            return .serverEvent(.notification(method: method, payload: data))
+            return .serverEvent(
+                .notification(
+                    method: method,
+                    payload: try extractParamsPayload(from: object)
+                )
+            )
         case let (.none, .some(id)):
             return .response(id: id, payload: data)
         case (.none, .none):
@@ -70,5 +81,17 @@ internal enum CodexRPCEnvelope {
         throw CodexTransportError.invalidJSONRPCEnvelope(
             reason: "Unsupported JSON-RPC request ID type \(String(describing: type(of: rawValue)))."
         )
+    }
+
+    private static func extractParamsPayload(from object: [String: Any]) throws -> Data {
+        let paramsObject = object["params"] ?? [:]
+
+        do {
+            return try JSONSerialization.data(withJSONObject: paramsObject)
+        } catch {
+            throw CodexTransportError.invalidJSONRPCEnvelope(
+                reason: "Expected inbound JSON-RPC params to be JSON-serializable: \(String(describing: error))."
+            )
+        }
     }
 }

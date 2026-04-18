@@ -328,6 +328,66 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("rejects overlapping same-thread turn starts until the active turn completes")
+    func rejectsOverlappingSameThreadTurns() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        let firstTurn = try await thread.startTextTurn("First live turn")
+        #expect(firstTurn.turn.id == "turn-123")
+
+        do {
+            _ = try await thread.startTextTurn("Second overlapping live turn")
+            Issue.record("Expected overlapping same-thread turn start to be rejected.")
+        } catch let error as CodexAppServerError {
+            switch error {
+            case let .invalidState(reason):
+                #expect(reason.contains("overlapping same-thread turns") || reason.contains("already has an active turn"))
+            default:
+                Issue.record("Expected overlapping same-thread turn start to throw an invalidState error.")
+            }
+        }
+
+        let recordedMethodsBeforeCompletion = await transport.recordedMethods
+        #expect(recordedMethodsBeforeCompletion == ["initialize", "initialized", "thread/start", "turn/start"])
+
+        await transport.emitTurnCompleted(
+            threadID: thread.id,
+            turnID: firstTurn.turn.id
+        )
+
+        for _ in 0..<20 {
+            await Task.yield()
+        }
+
+        let secondTurn = try await thread.startTextTurn("Second live turn after completion")
+        #expect(secondTurn.turn.id == "turn-123")
+
+        let recordedMethodsAfterCompletion = await transport.recordedMethods
+        #expect(recordedMethodsAfterCompletion == ["initialize", "initialized", "thread/start", "turn/start", "turn/start"])
+
+        await client.stop()
+    }
+
     @MainActor
     @Test("builds a dashboard that stays live with thread events")
     func buildsThreadDashboard() async throws {

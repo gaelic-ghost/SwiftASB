@@ -126,9 +126,9 @@ Scope:
 - [x] Keep per-turn stream fanout owned by the public client actor.
 - [x] Treat one `CodexAppServer` as the shared owner for many logical threads.
 - [x] Add a lightweight `CodexThread` wrapper around the shared owning app-server.
-- [ ] Make multiple active threads a first-class supported consumer model once `CodexThread` exists.
-- [ ] Verify real app-server behavior for multiple simultaneous turns on the same thread.
-- [ ] Decide whether same-thread concurrent turns should be allowed, queued, or rejected in the public API.
+- [x] Make multiple active threads a first-class supported consumer model once `CodexThread` exists.
+- [x] Verify real app-server behavior for multiple simultaneous turns on the same thread.
+- [x] Decide whether same-thread concurrent turns should be allowed, queued, or rejected in the public API.
 - [x] Add a thread-scoped turn start API so normal consumers do not carry raw thread IDs around.
 - [x] Add a simple text-only turn convenience on `CodexThread` for the common case.
 - [x] Add live observable thread state via `CodexThread.Dashboard` and `makeDashboard()`.
@@ -140,7 +140,7 @@ Exit criteria:
 
 - [x] A started turn can emit at least one typed async event through a handle-owned stream.
 - [x] `CodexThread` exists as a public ergonomic wrapper with a clear ownership model.
-- [ ] The documented concurrency model is explicit for both cross-thread and same-thread turn starts.
+- [x] The documented concurrency model is explicit for both cross-thread and same-thread turn starts.
 - [ ] Thread and turn handles plus their observable companions feel like the real public surface rather than transitional wrappers.
 
 ## Milestone 5: Approvals, Richer Notifications, And Broader Protocol Coverage
@@ -183,6 +183,7 @@ Exit criteria:
 - [x] Add `CodexThread` as a first-class public wrapper and move turn creation onto it.
 - [ ] Document and enforce the intended behavior for multiple active threads on one `CodexAppServer`.
 - [ ] Investigate same-thread concurrent turn behavior against the real app-server and codify the result.
+  Result: cross-thread concurrent turns complete successfully through the live client, but same-thread overlap is not independently routable at the live app-server layer today. `SwiftASB` now rejects overlapping same-thread `startTurn(...)` calls client-side with a descriptive `CodexAppServerError.invalidState` until the upstream lifecycle semantics become reliable.
 - [x] Map an initial progress-oriented notification batch into `CodexTurnEvent` so the stream covers more than completion.
 - [ ] Decide whether additional item lifecycle and thread-scoped notifications should join the public stream surface or instead only feed observable companions like `Dashboard` and `Minimap`.
 - [ ] Decide whether the public stream should surface protocol failures directly or always wrap them as `CodexAppServerError`.

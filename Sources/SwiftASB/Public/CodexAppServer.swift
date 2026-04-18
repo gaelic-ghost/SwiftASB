@@ -372,6 +372,11 @@ public actor CodexAppServer {
         case interrupted
     }
 
+    private enum ThreadTurnActivity: Sendable, Equatable {
+        case starting
+        case active(turnID: String)
+    }
+
     private let transport: any CodexAppServerTransporting
     private let protocolLayer: CodexAppServerProtocol
     private var serverEventTask: Task<Void, Never>?
@@ -381,6 +386,8 @@ public actor CodexAppServer {
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var turnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
     private var bufferedTerminalTurnEvents: [String: CodexTurnEvent] = [:]
+    private var threadTurnActivities: [String: ThreadTurnActivity] = [:]
+    private var turnThreadIDs: [String: String] = [:]
     private var hasStarted = false
     private var hasCompletedInitializeHandshake = false
     private var isStopping = false
@@ -427,6 +434,8 @@ public actor CodexAppServer {
         hasStarted = false
         hasCompletedInitializeHandshake = false
         threadStatuses.removeAll()
+        threadTurnActivities.removeAll()
+        turnThreadIDs.removeAll()
         bufferedThreadEvents.removeAll()
         bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
@@ -487,6 +496,7 @@ public actor CodexAppServer {
 
     public func startTurn(_ request: TurnStartRequest) async throws -> CodexTurnHandle {
         try requireInitialized(for: "turn/start")
+        try reserveThreadForTurnStart(threadID: request.threadID)
 
         let requestID = CodexRPCRequestID.generated()
 
@@ -502,6 +512,7 @@ public actor CodexAppServer {
             )
 
             let turn = TurnInfo(wireValue: response.turn)
+            markThreadTurnActive(threadID: request.threadID, turnID: turn.id)
             return CodexTurnHandle(
                 appServer: self,
                 threadID: request.threadID,
@@ -509,6 +520,7 @@ public actor CodexAppServer {
                 events: makeTurnEventStream(turnID: turn.id)
             )
         } catch {
+            clearThreadTurnReservation(threadID: request.threadID)
             throw CodexAppServerError.wrap(error, operation: "turn/start")
         }
     }
@@ -544,6 +556,55 @@ public actor CodexAppServer {
                 reason: "Codex app-server must complete initialize(...) before \(operation) can run."
             )
         }
+    }
+
+    private func reserveThreadForTurnStart(threadID: String) throws {
+        guard let existingActivity = threadTurnActivities[threadID] else {
+            threadTurnActivities[threadID] = .starting
+            return
+        }
+
+        let reason: String
+        switch existingActivity {
+        case .starting:
+            reason = """
+            Codex app-server already has another turn start in flight for thread \(threadID). \
+            SwiftASB rejects overlapping same-thread turns because the live app-server does not \
+            currently provide a reliable independent lifecycle for them.
+            """
+        case let .active(turnID):
+            reason = """
+            Codex app-server thread \(threadID) already has an active turn (\(turnID)). \
+            SwiftASB rejects overlapping same-thread turns because the live app-server does not \
+            currently provide a reliable independent lifecycle for them.
+            """
+        }
+
+        throw CodexAppServerError.invalidState(reason: reason)
+    }
+
+    private func markThreadTurnActive(threadID: String, turnID: String) {
+        threadTurnActivities[threadID] = .active(turnID: turnID)
+        turnThreadIDs[turnID] = threadID
+    }
+
+    private func clearThreadTurnReservation(threadID: String) {
+        threadTurnActivities.removeValue(forKey: threadID)
+    }
+
+    private func clearTurnActivity(turnID: String) {
+        guard let threadID = turnThreadIDs.removeValue(forKey: turnID) else {
+            return
+        }
+
+        if case let .active(activeTurnID)? = threadTurnActivities[threadID], activeTurnID == turnID {
+            threadTurnActivities.removeValue(forKey: threadID)
+        }
+    }
+
+    private func clearTurnActivities(threadID: String) {
+        threadTurnActivities.removeValue(forKey: threadID)
+        turnThreadIDs = turnThreadIDs.filter { $0.value != threadID }
     }
 
     private func startServerEventLoop() {
@@ -599,6 +660,7 @@ public actor CodexAppServer {
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
         case let .threadClosed(notification):
             threadStatuses.removeValue(forKey: notification.threadID)
+            clearTurnActivities(threadID: notification.threadID)
             let threadEvent = CodexThreadEvent.closed(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: true)
         case let .threadNameUpdated(notification):
@@ -621,6 +683,7 @@ public actor CodexAppServer {
             )
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
         case let .turnStarted(notification):
+            markThreadTurnActive(threadID: notification.threadID, turnID: notification.turn.id)
             let started = CodexTurnStarted(
                 threadID: notification.threadID,
                 turn: TurnInfo(wireValue: notification.turn)
@@ -698,6 +761,7 @@ public actor CodexAppServer {
             )
             publishTurnEvent(.reasoningTextDelta(delta), for: notification.turnID, isTerminal: false)
         case let .turnCompleted(notification):
+            clearTurnActivity(turnID: notification.turn.id)
             let completion = CodexTurnCompletion(
                 threadID: notification.threadID,
                 turn: TurnInfo(wireValue: notification.turn)

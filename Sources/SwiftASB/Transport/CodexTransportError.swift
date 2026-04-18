@@ -7,6 +7,7 @@ internal enum CodexTransportError: Error, Sendable, LocalizedError, Equatable {
     case failedToWriteRequest(id: CodexRPCRequestID, reason: String)
     case failedToWriteNotification(method: String, reason: String)
     case duplicatePendingRequest(id: CodexRPCRequestID)
+    case requestCancelled(id: CodexRPCRequestID)
     case invalidJSONRPCEnvelope(reason: String)
     case processTerminated(reason: String, status: Int32?, recentStandardError: [String])
     case unexpectedEndOfStream(recentStandardError: [String])
@@ -25,6 +26,8 @@ internal enum CodexTransportError: Error, Sendable, LocalizedError, Equatable {
             return "Failed to write JSON-RPC notification \(method) to Codex app-server stdin: \(reason)"
         case let .duplicatePendingRequest(id):
             return "Refused to register a duplicate in-flight JSON-RPC request with ID \(id.description)."
+        case let .requestCancelled(id):
+            return "The in-flight JSON-RPC request \(id.description) was cancelled before Codex app-server returned a response."
         case let .invalidJSONRPCEnvelope(reason):
             return "Received a malformed JSON-RPC envelope from Codex app-server: \(reason)"
         case let .processTerminated(reason, status, recentStandardError):
