@@ -30,16 +30,17 @@
 | Typed async thread event stream | `Partially shipped` | `CodexThread.events` now streams `thread/started`, `thread/status/changed`, `thread/archived`, `thread/unarchived`, `thread/name/updated`, `thread/tokenUsage/updated`, and `thread/closed`, but broader thread lifecycle coverage is still pending. |
 | Turn start flow | `Shipped` | `startTurn(...)` returns `CodexTurnHandle`. |
 | Typed async turn event stream | `Partially shipped` | `CodexTurnHandle.events` now streams `turn/started`, `turn/plan/updated`, `turn/diff/updated`, item lifecycle updates, message deltas, reasoning deltas, and `turn/completed`, but broader item and thread events still remain internal. |
-| Multiple active threads per app-server | `Targeted` | One `CodexAppServer` should support many concurrently held `CodexThread` handles and turns across different threads. |
-| Multiple simultaneous turns on one thread | `Open question` | We need to verify actual app-server semantics before promising allow, queue, or reject behavior on the same thread. |
+| Multiple active threads per app-server | `Shipped` | One `CodexAppServer` now supports many concurrently held `CodexThread` handles, and the package tests plus live probes treat cross-thread concurrency as a supported model. |
+| Multiple simultaneous turns on one thread | `Resolved for now` | Live probing showed that same-thread overlap is not independently routable at the app-server layer today, so `SwiftASB` rejects overlapping same-thread turns client-side with `CodexAppServerError.invalidState`. |
 | `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, includes a `startTextTurn(...)` happy-path helper, exposes a typed thread event stream, and can now vend a live `Dashboard` observable mirror via `makeDashboard()`. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` can now vend a live `Minimap` observable mirror via `makeMinimap()`, seeded from the initial turn snapshot and updated from the turn event stream. |
 | Additional turn event mapping | `Partially started` | The generated wire layer now includes many relevant notification types, but most are not yet promoted into protocol/public event enums. |
 | Server request / approval handling | `Not started` | Approval prompts, elicitation requests, and other server-initiated request flows are not surfaced yet. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partial` | Explicit binary override exists, but version compatibility policy and richer discovery diagnostics are still open. |
-| README-level consumer docs | `Not started` | Maintainer docs are ahead of user-facing documentation. |
-| End-to-end subprocess integration tests | `Not started` | Current public-client tests use a deterministic fake transport seam rather than a real subprocess test harness. |
+| README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, and the current concurrency contract, but richer examples plus compatibility guidance are still open. |
+| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, while the default test suite still relies on a deterministic fake transport seam. |
+| Apache 2.0 licensing | `Shipped` | The repo now carries an Apache 2.0 `LICENSE` file and README references the live license surface. |
 
 ## Milestone Progress
 
@@ -165,29 +166,32 @@ Exit criteria:
 
 Scope:
 
-- [ ] Expand `README.md` with installation, runtime assumptions, and a minimal working example.
-- [ ] Document the local Codex CLI dependency and explicit binary override path clearly.
+- [x] Expand `README.md` with installation, runtime assumptions, and a minimal working example.
+- [x] Document the local Codex CLI dependency and explicit binary override path clearly.
 - [ ] Add consumer-facing examples for initialize, thread start, turn start, and event streaming.
 - [ ] Decide on the first release boundary and what remains intentionally internal.
 - [ ] Add version-compatibility policy notes for the local Codex binary.
-- [ ] Decide whether real subprocess integration tests are required before the first release.
+- [x] Decide whether real subprocess integration tests are required before the first release.
+  Decision: yes, but as opt-in suites rather than as part of the default `swift test` path while the live Codex runtime remains an external local dependency.
+- [x] Add an explicit open-source license for the package.
 
 Exit criteria:
 
-- [ ] A new consumer can understand what `SwiftASB` is, what it depends on, and how to use the first supported lifecycle slice.
+- [x] A new consumer can understand what `SwiftASB` is, what it depends on, and how to use the first supported lifecycle slice.
 - [ ] The release boundary between public API, internal wire scaffolding, and unsupported protocol surfaces is explicit.
-- [ ] The roadmap can identify a credible `v0.x` release candidate instead of only an exploration phase.
+- [x] The roadmap can identify a credible `v0.x` release candidate instead of only an exploration phase.
 
 ## Open Tickets
 
 - [x] Add `CodexThread` as a first-class public wrapper and move turn creation onto it.
-- [ ] Document and enforce the intended behavior for multiple active threads on one `CodexAppServer`.
-- [ ] Investigate same-thread concurrent turn behavior against the real app-server and codify the result.
+- [x] Document and enforce the intended behavior for multiple active threads on one `CodexAppServer`.
+- [x] Investigate same-thread concurrent turn behavior against the real app-server and codify the result.
   Result: cross-thread concurrent turns complete successfully through the live client, but same-thread overlap is not independently routable at the live app-server layer today. `SwiftASB` now rejects overlapping same-thread `startTurn(...)` calls client-side with a descriptive `CodexAppServerError.invalidState` until the upstream lifecycle semantics become reliable.
 - [x] Map an initial progress-oriented notification batch into `CodexTurnEvent` so the stream covers more than completion.
 - [ ] Decide whether additional item lifecycle and thread-scoped notifications should join the public stream surface or instead only feed observable companions like `Dashboard` and `Minimap`.
 - [ ] Decide whether the public stream should surface protocol failures directly or always wrap them as `CodexAppServerError`.
 - [ ] Add a typed surface for approval requests and other server-originated request messages.
 - [ ] Add a one-shot `run(...)` convenience API once the handle model feels stable.
-- [ ] Add a real subprocess-backed integration test harness once the supported event set is less volatile.
-- [ ] Expand `README.md` with first-use examples and runtime expectations.
+- [x] Add a real subprocess-backed integration test harness once the supported event set is less volatile.
+  Current shape: the repo now has an opt-in live harness for raw transport/protocol checks plus public-client turn and concurrency probes; broader always-on subprocess coverage is still intentionally deferred.
+- [x] Expand `README.md` with first-use examples and runtime expectations.
