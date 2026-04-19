@@ -204,11 +204,7 @@ public actor CodexAppServer {
 
     public struct TurnInput: Sendable, Equatable {
         public enum Kind: String, Sendable, Equatable {
-            case image
-            case localImage
-            case mention
-            case skill
-            case text
+            case image, localImage, mention, skill, text
         }
 
         public var kind: Kind
@@ -277,30 +273,23 @@ public actor CodexAppServer {
     }
 
     public enum ApprovalsReviewer: String, Sendable, Equatable {
-        case guardianSubagent
-        case user
+        case guardianSubagent, user
     }
 
     public enum Personality: String, Sendable, Equatable {
-        case friendly
-        case none
-        case pragmatic
+        case friendly, none, pragmatic
     }
 
     public enum SandboxMode: String, Sendable, Equatable {
-        case dangerFullAccess
-        case readOnly
-        case workspaceWrite
+        case dangerFullAccess, readOnly, workspaceWrite
     }
 
     public enum ServiceTier: String, Sendable, Equatable {
-        case fast
-        case flex
+        case fast, flex
     }
 
     public enum SessionStartSource: String, Sendable, Equatable {
-        case clear
-        case startup
+        case clear, startup
     }
 
     public enum ReasoningEffort: String, Sendable, Equatable {
@@ -329,57 +318,39 @@ public actor CodexAppServer {
     }
 
     public enum ReadOnlyAccessType: String, Sendable, Equatable {
-        case fullAccess
-        case restricted
+        case fullAccess, restricted
     }
 
     public enum NetworkAccess: Sendable, Equatable {
-        case explicit(Bool)
-        case enabled
-        case restricted
+        case explicit(Bool), enabled, restricted
     }
 
     public enum SandboxPolicyType: String, Sendable, Equatable {
-        case dangerFullAccess
-        case externalSandbox
-        case readOnly
-        case workspaceWrite
+        case dangerFullAccess, externalSandbox, readOnly, workspaceWrite
     }
 
     public enum ReasoningSummary: String, Sendable, Equatable {
-        case auto
-        case concise
-        case detailed
-        case none
+        case auto, concise, detailed, none
     }
 
     public enum ThreadStatusType: String, Sendable, Equatable {
-        case active
-        case idle
-        case notLoaded
-        case systemError
+        case active, idle, notLoaded, systemError
     }
 
     public enum ThreadActiveFlag: String, Sendable, Equatable {
-        case waitingOnApproval
-        case waitingOnUserInput
+        case waitingOnApproval, waitingOnUserInput
     }
 
     public enum TurnStatus: String, Sendable, Equatable {
-        case completed
-        case failed
-        case inProgress
-        case interrupted
+        case completed, failed, inProgress, interrupted
     }
 
     private enum ThreadTurnActivity: Sendable, Equatable {
-        case starting
-        case active(turnID: String)
+        case starting, active(turnID: String)
     }
 
     private enum InteractiveRequestDestination: Sendable, Equatable {
-        case thread(threadID: String)
-        case turn(turnID: String)
+        case thread(threadID: String), turn(turnID: String)
     }
 
     private struct OutstandingInteractiveRequest: Sendable, Equatable {

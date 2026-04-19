@@ -441,17 +441,11 @@ public enum CodexCommandExecutionApprovalResponse: Sendable, Equatable {
 }
 
 public enum CodexFileChangeApprovalResponse: String, Sendable, Equatable {
-    case accept
-    case acceptForSession
-    case decline
-    case cancel
+    case accept, acceptForSession, decline, cancel
 }
 
 public struct CodexPermissionsApprovalResponse: Sendable, Equatable {
-    public enum Scope: String, Sendable, Equatable {
-        case turn
-        case session
-    }
+    public enum Scope: String, Sendable, Equatable {case turn, session}
 
     public let permissions: CodexPermissionProfile
     public let scope: Scope
@@ -487,11 +481,9 @@ public struct CodexToolUserInputResponse: Sendable, Equatable {
 }
 
 public struct CodexMcpServerElicitationResponse: Sendable, Equatable {
-    public enum Action: String, Sendable, Equatable {
-        case accept
-        case decline
-        case cancel
-    }
+	public enum Action: String, Sendable, Equatable {
+		case accept, decline, cancel
+	}
 
     public let action: Action
     public let content: CodexAppServer.JSONValue?
