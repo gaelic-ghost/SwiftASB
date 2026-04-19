@@ -46,14 +46,14 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         let outputPipe = Pipe()
         let errorPipe = Pipe()
         let process = Process()
+        let executableResolution = try CodexCLIExecutableResolver(
+            explicitExecutableURL: configuration.codexExecutableURL,
+            environment: configuration.environment,
+            currentDirectoryURL: configuration.currentDirectoryURL
+        ).resolve()
 
-        if let explicitExecutableURL = configuration.codexExecutableURL {
-            process.executableURL = explicitExecutableURL
-            process.arguments = configuration.arguments
-        } else {
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = ["codex"] + configuration.arguments
-        }
+        process.executableURL = executableResolution.launchExecutableURL
+        process.arguments = executableResolution.launchArgumentsPrefix + configuration.arguments
 
         process.currentDirectoryURL = configuration.currentDirectoryURL
         process.environment = configuration.environment

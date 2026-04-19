@@ -82,6 +82,29 @@ Current non-goals and intentionally deferred areas are also explicit:
   deterministic release gate, because the current Codex runtime does not
   reliably force an approval request on command.
 
+Current Codex CLI compatibility policy is intentionally rolling:
+
+- `SwiftASB` aims to support the latest public Codex CLI release plus the prior
+  two minor versions.
+- When newer Codex CLI releases add protocol features without breaking existing
+  behavior, `SwiftASB` may adopt those additions later or gate them behind
+  newer-version-aware promotion work rather than treating every new upstream
+  feature as an immediate public-surface requirement.
+- If Codex reaches a future major-version release with a materially different
+  compatibility story, this policy should be reassessed rather than assumed to
+  carry forward unchanged.
+
+Current executable discovery on macOS follows this order when you do not pass
+an explicit `CodexAppServer.Configuration.codexExecutableURL`:
+
+- probe `codex --version` through the current `PATH`
+- check the common Homebrew install locations
+  `/opt/homebrew/bin/codex` and `/usr/local/bin/codex`
+- check the npm global prefix reported by `npm prefix -g`, then look for
+  `<prefix>/bin/codex`
+
+If you want to bypass discovery entirely, pass an explicit executable URL.
+
 A minimal flow looks like this:
 
 ```swift

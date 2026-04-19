@@ -154,6 +154,36 @@ pass unless a concrete protocol constraint forces a revisit.
   outstanding-request tracking must key off the JSON-RPC server request id even
   when the public API presents a turn-scoped model.
 
+### 11. Keep "session" out of this layer
+
+- Do not introduce a `CodexSession` type for the current public lifecycle.
+- In this package, "session" is too ambiguous because it could mean the
+  initialized transport connection, a thread-scoped conversation, or a bundle
+  of reusable execution defaults.
+- `CodexAppServer` already owns the connection-level lifecycle, and
+  `CodexThread` already owns the conversation-level lifecycle, so adding
+  `CodexSession` here would blur responsibilities rather than clarify them.
+
+### 12. Treat reusable execution knobs as thread defaults, not as a new owner
+
+- If the package later needs a shared value type for reusable execution knobs,
+  prefer a narrow shape such as `CodexThreadDefaults` rather than a new
+  top-level owner like `CodexAgent` or a vague catch-all like `CodexConfig`.
+- The intended model is:
+  - app-level defaults apply when starting a new thread unless the caller
+    overrides them before `thread/start`
+  - after a thread exists, user changes should become thread-scoped persisted
+    overrides that affect future turns for that thread only
+  - changes made in one thread must not silently affect unrelated threads
+- This keeps the ownership model stable:
+  - `CodexAppServer` owns connection and process concerns
+  - `CodexThread` owns conversation-scoped defaults and turn creation
+  - `CodexTurnHandle` owns active-turn control
+- A broader name such as `CodexExecutionContext` may still make sense later for
+  side-channel or operator-triggered surfaces that are not cleanly modeled as
+  thread defaults, but that is a later design pass rather than part of the
+  first interactive lifecycle release boundary.
+
 ## Phase 1: Lock The Public Ownership Model
 
 Objective:

@@ -37,8 +37,8 @@
 | Additional turn event mapping | `Partially started` | The generated wire layer now includes many relevant notification types, but most are not yet promoted into protocol/public event enums. |
 | Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, and request resolution is tracked by JSON-RPC request id, but broader live coverage and more server-request families are still open. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
-| Binary discovery and compatibility policy | `Partial` | Explicit binary override exists, but version compatibility policy and richer discovery diagnostics are still open. |
-| README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, and an interactive lifecycle example covering stream handling plus steering and interruption, but richer examples and compatibility guidance are still open. |
+| Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a rolling support window of the latest public Codex CLI release plus the prior two minor versions, and transport startup now checks PATH, common Homebrew paths, and the npm global prefix on macOS, but richer discovery diagnostics are still open. |
+| README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current rolling Codex CLI compatibility window, but richer examples are still open. |
 | End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including same-thread concurrency probing and a best-effort live approval-path probe, while the default test suite still relies on a deterministic fake transport seam because the current runtime does not reliably force an approval request on demand. |
 | Apache 2.0 licensing | `Shipped` | The repo now carries an Apache 2.0 `LICENSE` file and README references the live license surface. |
 
@@ -54,10 +54,11 @@
 
 ## Current Maintainer Priority
 
-The next meaningful package step is not "more API surface."
+The next meaningful package step is still not "more API surface."
 
-The next meaningful step is to turn the now-working interactive lifecycle into
-an explicit release boundary.
+The interactive lifecycle now has a written release boundary, so the next
+meaningful work is to validate that boundary against binary compatibility and
+the remaining promotion gaps.
 
 The package can now:
 
@@ -71,11 +72,10 @@ The package can now:
 
 That means the current priority order is:
 
-1. Audit and classify the generated lifecycle graph so the public-now versus internal-for-now boundary is explicit.
-2. Write the maintainer-facing release-boundary note that says which notification families intentionally remain internal.
-3. Add version-compatibility policy notes for the local Codex binary and any sharper discovery diagnostics we want before a first broader release.
-4. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
-5. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
+1. Decide whether any remaining protocol or event promotion is actually required beyond the now-written release boundary.
+2. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
+3. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
+4. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
 
 ## Proposed Next Release Slice
 
@@ -87,7 +87,7 @@ as a convenience-API release.
 - Enough notification coverage that a consumer can build a multi-turn interactive flow without dropping to raw payloads.
 - A written release boundary that says what is public, what stays internal scaffolding, and what is intentionally unsupported.
 - A maintainer-facing classification of generated notification families as public now, observable-only for now, or internal-only for now.
-- Version-compatibility guidance for the local Codex CLI runtime.
+- Version-compatibility guidance and any remaining discovery diagnostics for the local Codex CLI runtime.
 - Any remaining protocol/event promotion work that is actually required to support the release boundary we claim.
 
 ### Explicitly defer unless one of the above forces it
@@ -127,6 +127,9 @@ without needing raw JSON-RPC access or generated wire types.
 - Promote additional notification families by supported-release intent, not by schema breadth alone.
 - Keep public lifecycle failures unified under `CodexAppServerError`.
 - Defer a one-shot `run(...)` API until the lower-level interactive lifecycle is complete enough to hide honestly.
+- Do not add a `CodexSession` type at this layer; the package should keep connection ownership on `CodexAppServer` and conversation ownership on `CodexThread`.
+- If reusable execution knobs need a shared public value type later, prefer a narrow thread-scoped shape such as `CodexThreadDefaults` instead of a new top-level owner or a vague global config wrapper.
+- Treat app-level defaults as inputs to new thread creation, and treat later user changes as persisted thread-scoped overrides so one thread's settings do not silently affect another.
 
 ## Milestone 0: Package And Repo Baseline
 
@@ -230,7 +233,7 @@ Exit criteria:
 Scope:
 
 - [x] Add typed protocol mapping for an initial batch of generated thread, turn, item, and reasoning notifications beyond `turn/completed`.
-- [ ] Audit the generated lifecycle batch and explicitly mark which notification families matter for the first interactive public lifecycle.
+- [x] Audit the generated lifecycle batch and explicitly mark which notification families matter for the first interactive public lifecycle.
 - [ ] Expand typed protocol mapping to the remaining generated notifications that matter for the first public interactive lifecycle.
 - [x] Decide how to surface `ThreadItem`-level activity in the public API.
   Decision: stream-first, with observable companions limited to selected latest-state mirrors for UI-oriented summaries.
@@ -256,10 +259,10 @@ Scope:
 - [x] Expand `README.md` with installation, runtime assumptions, and a minimal working example.
 - [x] Document the local Codex CLI dependency and explicit binary override path clearly.
 - [x] Add at least one consumer-facing example for initialize, thread start, turn start, event streaming, and approval handling.
-- [ ] Decide on the first release boundary and what remains intentionally internal.
+- [x] Decide on the first release boundary and what remains intentionally internal.
 - [x] Add an explicit "Supported Today" section to `README.md` that mirrors the real public lifecycle and concurrency contract.
-- [ ] Add a maintainer-facing note that clarifies which generated notification families intentionally remain internal for now.
-- [ ] Add version-compatibility policy notes for the local Codex binary.
+- [x] Add a maintainer-facing note that clarifies which generated notification families intentionally remain internal for now.
+- [x] Add version-compatibility policy notes for the local Codex binary.
 - [x] Decide whether real subprocess integration tests are required before the first release.
   Decision: yes, but as opt-in suites rather than as part of the default `swift test` path while the live Codex runtime remains an external local dependency.
 - [x] Add an explicit open-source license for the package.
@@ -267,14 +270,14 @@ Scope:
 Exit criteria:
 
 - [x] A new consumer can understand what `SwiftASB` is, what it depends on, and how to use the first supported lifecycle slice.
-- [ ] The release boundary between public API, internal wire scaffolding, and unsupported protocol surfaces is explicit.
+- [x] The release boundary between public API, internal wire scaffolding, and unsupported protocol surfaces is explicit.
 - [x] A new consumer can discover the supported interactive lifecycle, including approval handling if shipped, from docs and examples without reading tests or maintainer notes.
 - [x] The roadmap can identify a credible `v0.x` release candidate instead of only an exploration phase.
 
 ## Open Tickets
 
 - [x] Freeze the Milestone 4 handle model enough that Milestone 5 does not reopen the ownership story for `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`, and `Minimap`.
-- [ ] Audit the generated lifecycle graph and classify events as public now, observable-only for now, or internal-only for now.
+- [x] Audit the generated lifecycle graph and classify events as public now, observable-only for now, or internal-only for now.
 - [x] Add `CodexThread` as a first-class public wrapper and move turn creation onto it.
 - [x] Document and enforce the intended behavior for multiple active threads on one `CodexAppServer`.
 - [x] Investigate same-thread concurrent turn behavior against the real app-server and codify the result.
