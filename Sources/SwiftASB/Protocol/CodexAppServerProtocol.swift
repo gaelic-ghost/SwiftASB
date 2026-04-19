@@ -1,38 +1,19 @@
 import Foundation
 
-internal enum CodexAppServerProtocolEvent: Equatable, Sendable {
-    case threadStarted(CodexWireThreadStartedNotification)
-    case threadStatusChanged(CodexWireThreadStatusChangedNotification)
-    case threadArchived(CodexWireThreadArchivedNotification)
-    case threadUnarchived(CodexWireThreadUnarchivedNotification)
-    case threadClosed(CodexWireThreadClosedNotification)
-    case threadNameUpdated(CodexWireThreadNameUpdatedNotification)
-    case threadTokenUsageUpdated(CodexWireThreadTokenUsageUpdatedNotification)
-    case turnStarted(CodexWireTurnStartedNotification)
-    case turnDiffUpdated(CodexWireTurnDiffUpdatedNotification)
-    case turnPlanUpdated(CodexWireTurnPlanUpdatedNotification)
-    case turnCompleted(CodexWireTurnCompletedNotification)
-    case itemStarted(CodexWireItemStartedNotification)
-    case itemCompleted(CodexWireItemCompletedNotification)
-    case agentMessageDelta(CodexWireAgentMessageDeltaNotification)
-    case planDelta(CodexWirePlanDeltaNotification)
-    case reasoningSummaryPartAdded(CodexWireReasoningSummaryPartAddedNotification)
-    case reasoningSummaryTextDelta(CodexWireReasoningSummaryTextDeltaNotification)
-    case reasoningTextDelta(CodexWireReasoningTextDeltaNotification)
-}
-
-internal struct CodexAppServerProtocol {
-    internal enum Method: String, Sendable, Codable {
+struct CodexAppServerProtocol {
+    enum Method: String, Sendable, Codable {
         case initialize = "initialize"
         case initialized = "initialized"
         case threadStart = "thread/start"
         case turnStart = "turn/start"
+        case turnSteer = "turn/steer"
+        case turnInterrupt = "turn/interrupt"
     }
 
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    internal init(
+    init(
         encoder: JSONEncoder = JSONEncoder(),
         decoder: JSONDecoder = JSONDecoder()
     ) {
@@ -40,7 +21,7 @@ internal struct CodexAppServerProtocol {
         self.decoder = decoder
     }
 
-    internal func makeInitializeRequest(
+    func makeInitializeRequest(
         id: CodexRPCRequestID,
         params: CodexWireInitializeParams
     ) throws -> Data {
@@ -50,14 +31,14 @@ internal struct CodexAppServerProtocol {
         )
     }
 
-    internal func makeInitializedNotification() throws -> Data {
+    func makeInitializedNotification() throws -> Data {
         try encodeNotification(
             JSONRPCNotificationEnvelope(method: .initialized),
             method: .initialized
         )
     }
 
-    internal func makeThreadStartRequest(
+    func makeThreadStartRequest(
         id: CodexRPCRequestID,
         params: CodexWireThreadStartParams
     ) throws -> Data {
@@ -67,7 +48,7 @@ internal struct CodexAppServerProtocol {
         )
     }
 
-    internal func makeTurnStartRequest(
+    func makeTurnStartRequest(
         id: CodexRPCRequestID,
         params: CodexWireTurnStartParams
     ) throws -> Data {
@@ -77,7 +58,41 @@ internal struct CodexAppServerProtocol {
         )
     }
 
-    internal func decodeInitializeResponse(
+    func makeTurnInterruptRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolTurnInterruptParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .turnInterrupt, params: params),
+            method: .turnInterrupt
+        )
+    }
+
+    func makeTurnSteerRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolTurnSteerParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .turnSteer, params: params),
+            method: .turnSteer
+        )
+    }
+
+    func makeServerResponse<Result: Encodable>(
+        id: CodexRPCRequestID,
+        result: Result
+    ) throws -> Data {
+        do {
+            return try encoder.encode(JSONRPCResultEnvelope(id: id, result: result))
+        } catch {
+            throw CodexProtocolError.requestEncodingFailed(
+                method: "server request response",
+                reason: String(describing: error)
+            )
+        }
+    }
+
+    func decodeInitializeResponse(
         _ responsePayload: Data,
         expectedID: CodexRPCRequestID
     ) throws -> CodexWireInitializeResponse {
@@ -89,7 +104,7 @@ internal struct CodexAppServerProtocol {
         )
     }
 
-    internal func decodeThreadStartResponse(
+    func decodeThreadStartResponse(
         _ responsePayload: Data,
         expectedID: CodexRPCRequestID
     ) throws -> CodexWireThreadStartResponse {
@@ -101,7 +116,7 @@ internal struct CodexAppServerProtocol {
         )
     }
 
-    internal func decodeTurnStartResponse(
+    func decodeTurnStartResponse(
         _ responsePayload: Data,
         expectedID: CodexRPCRequestID
     ) throws -> CodexWireTurnStartResponse {
@@ -113,12 +128,83 @@ internal struct CodexAppServerProtocol {
         )
     }
 
-    internal func decodeServerEvent(
+    func decodeTurnInterruptResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolTurnInterruptResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .turnInterrupt,
+            resultType: CodexProtocolTurnInterruptResponse.self
+        )
+    }
+
+    func decodeTurnSteerResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolTurnSteerResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .turnSteer,
+            resultType: CodexProtocolTurnSteerResponse.self
+        )
+    }
+
+    func decodeServerEvent(
         _ serverEvent: CodexRPCServerEvent
     ) throws -> CodexAppServerProtocolEvent? {
         switch serverEvent {
-        case .request:
-            return nil
+        case let .request(id, method, payload):
+            switch method {
+            case "item/commandExecution/requestApproval":
+                return .commandExecutionApprovalRequested(
+                    try decodeServerRequest(
+                        payload,
+                        method: method,
+                        id: id,
+                        requestType: CodexProtocolCommandExecutionApprovalRequest.self
+                    )
+                )
+            case "item/fileChange/requestApproval":
+                return .fileChangeApprovalRequested(
+                    try decodeServerRequest(
+                        payload,
+                        method: method,
+                        id: id,
+                        requestType: CodexProtocolFileChangeApprovalRequest.self
+                    )
+                )
+            case "item/permissions/requestApproval":
+                return .permissionsApprovalRequested(
+                    try decodeServerRequest(
+                        payload,
+                        method: method,
+                        id: id,
+                        requestType: CodexProtocolPermissionsApprovalRequest.self
+                    )
+                )
+            case "item/tool/requestUserInput":
+                return .toolUserInputRequested(
+                    try decodeServerRequest(
+                        payload,
+                        method: method,
+                        id: id,
+                        requestType: CodexProtocolToolUserInputRequest.self
+                    )
+                )
+            case "mcpServer/elicitation/request":
+                return .mcpServerElicitationRequested(
+                    try decodeMCPServerElicitationRequest(
+                        payload,
+                        method: method,
+                        id: id
+                    )
+                )
+            default:
+                return nil
+            }
         case let .notification(method, payload):
             switch method {
             case "thread/started":
@@ -265,6 +351,14 @@ internal struct CodexAppServerProtocol {
                         resultType: CodexWireReasoningTextDeltaNotification.self
                     )
                 )
+            case "serverRequest/resolved":
+                return .serverRequestResolved(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireServerRequestResolvedNotification.self
+                    )
+                )
             default:
                 return nil
             }
@@ -351,6 +445,101 @@ internal struct CodexAppServerProtocol {
             )
         }
     }
+
+    private func decodeServerRequest<Request: Decodable & RequestIDBindable>(
+        _ payload: Data,
+        method: String,
+        id: CodexRPCRequestID,
+        requestType: Request.Type
+    ) throws -> Request {
+        do {
+            let decoded = try decoder.decode(requestType, from: payload)
+            return decoded.settingRequestID(id)
+        } catch {
+            throw CodexProtocolError.eventDecodingFailed(
+                method: method,
+                reason: String(describing: error)
+            )
+        }
+    }
+
+    private func decodeMCPServerElicitationRequest(
+        _ payload: Data,
+        method: String,
+        id: CodexRPCRequestID
+    ) throws -> CodexProtocolMCPServerElicitationRequest {
+        do {
+            let decoded = try decoder.decode(CodexProtocolMCPServerElicitationRequest.self, from: payload)
+            return decoded.settingRequestID(id)
+        } catch {
+            throw CodexProtocolError.eventDecodingFailed(
+                method: method,
+                reason: String(describing: error)
+            )
+        }
+    }
+}
+
+private protocol RequestIDBindable {
+    func settingRequestID(_ requestID: CodexRPCRequestID) -> Self
+}
+
+extension CodexProtocolCommandExecutionApprovalRequest: RequestIDBindable {
+    fileprivate func settingRequestID(_ requestID: CodexRPCRequestID) -> Self {
+        var copy = self
+        copy.requestID = requestID
+        return copy
+    }
+}
+
+extension CodexProtocolFileChangeApprovalRequest: RequestIDBindable {
+    fileprivate func settingRequestID(_ requestID: CodexRPCRequestID) -> Self {
+        var copy = self
+        copy.requestID = requestID
+        return copy
+    }
+}
+
+extension CodexProtocolPermissionsApprovalRequest: RequestIDBindable {
+    fileprivate func settingRequestID(_ requestID: CodexRPCRequestID) -> Self {
+        var copy = self
+        copy.requestID = requestID
+        return copy
+    }
+}
+
+extension CodexProtocolToolUserInputRequest: RequestIDBindable {
+    fileprivate func settingRequestID(_ requestID: CodexRPCRequestID) -> Self {
+        var copy = self
+        copy.requestID = requestID
+        return copy
+    }
+}
+
+extension CodexProtocolMCPServerElicitationRequest {
+    fileprivate func settingRequestID(_ requestID: CodexRPCRequestID) -> Self {
+        .init(
+            mode: mode,
+            requestID: requestID,
+            serverName: serverName,
+            threadID: threadID,
+            turnID: turnID
+        )
+    }
+
+    fileprivate init(
+        mode: Mode,
+        requestID: CodexRPCRequestID,
+        serverName: String,
+        threadID: String,
+        turnID: String?
+    ) {
+        self.mode = mode
+        self.requestID = requestID
+        self.serverName = serverName
+        self.threadID = threadID
+        self.turnID = turnID
+    }
 }
 
 private struct JSONRPCRequestEnvelope<Params: Encodable>: Encodable {
@@ -364,6 +553,11 @@ private struct JSONRPCNotificationEnvelope: Encodable {
 }
 
 private struct JSONRPCResponseEnvelope<Result: Decodable>: Decodable {
+    let id: CodexRPCRequestID
+    let result: Result
+}
+
+private struct JSONRPCResultEnvelope<Result: Encodable>: Encodable {
     let id: CodexRPCRequestID
     let result: Result
 }

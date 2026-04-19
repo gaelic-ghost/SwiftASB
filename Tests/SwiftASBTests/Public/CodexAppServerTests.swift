@@ -257,6 +257,10 @@ struct CodexAppServerTests {
             try await threadEvents(from: thread.events, count: 7)
         }
 
+        for _ in 0..<5 {
+            await Task.yield()
+        }
+
         await transport.emitThreadStarted(threadID: thread.id)
         await transport.emitThreadStatusChanged(threadID: thread.id)
         await transport.emitThreadArchived(threadID: thread.id)
@@ -267,6 +271,10 @@ struct CodexAppServerTests {
 
         let receivedEvents = try await threadEventsTask.value
         #expect(receivedEvents.count == 7)
+        guard receivedEvents.count == 7 else {
+            await client.stop()
+            return
+        }
 
         switch receivedEvents[0] {
         case let .started(started):
@@ -328,6 +336,109 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("interrupts a turn through CodexTurnHandle")
+    func interruptsTurnThroughHandle() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+        let turnHandle = try await thread.startTextTurn("Please stop when asked.")
+
+        try await turnHandle.interrupt()
+
+        let recordedMethods = await transport.recordedMethods
+        #expect(
+            recordedMethods == [
+                "initialize",
+                "initialized",
+                "thread/start",
+                "turn/start",
+                "turn/interrupt",
+            ]
+        )
+
+        let interruptRequest = try #require(await transport.recordedRequestPayload(for: "turn/interrupt"))
+        let requestObject = try #require(
+            try JSONSerialization.jsonObject(with: interruptRequest) as? [String: Any]
+        )
+        let params = try #require(requestObject["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        #expect(params["turnId"] as? String == turnHandle.turn.id)
+
+        await client.stop()
+    }
+
+    @Test("steers a turn through CodexTurnHandle")
+    func steersTurnThroughHandle() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+        let turnHandle = try await thread.startTextTurn("Please draft an answer.")
+
+        try await turnHandle.steerText("Please make it shorter and more direct.")
+
+        let recordedMethods = await transport.recordedMethods
+        #expect(
+            recordedMethods == [
+                "initialize",
+                "initialized",
+                "thread/start",
+                "turn/start",
+                "turn/steer",
+            ]
+        )
+
+        let steerRequest = try #require(await transport.recordedRequestPayload(for: "turn/steer"))
+        let requestObject = try #require(
+            try JSONSerialization.jsonObject(with: steerRequest) as? [String: Any]
+        )
+        let params = try #require(requestObject["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        #expect(params["expectedTurnId"] as? String == turnHandle.turn.id)
+
+        let input = try #require(params["input"] as? [[String: Any]])
+        #expect(input.count == 1)
+        #expect(input.first?["type"] as? String == "text")
+        #expect(input.first?["text"] as? String == "Please make it shorter and more direct.")
+
+        await client.stop()
+    }
+
     @Test("rejects overlapping same-thread turn starts until the active turn completes")
     func rejectsOverlappingSameThreadTurns() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -384,6 +495,252 @@ struct CodexAppServerTests {
 
         let recordedMethodsAfterCompletion = await transport.recordedMethods
         #expect(recordedMethodsAfterCompletion == ["initialize", "initialized", "thread/start", "turn/start", "turn/start"])
+
+        await client.stop()
+    }
+
+    @Test("buffers early interactive turn events and answers command approvals through CodexTurnHandle")
+    func buffersInteractiveTurnEventsAndAnswersApproval() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        let turnHandle = try await thread.startTextTurn("Review the patch.")
+        var iterator = turnHandle.events.makeAsyncIterator()
+        await transport.emitCommandExecutionApprovalRequest(
+            requestID: .string("approval-1"),
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-command-1"
+        )
+
+        let firstEvent = try await iterator.next()
+        guard case let .approvalRequested(approvalRequest)? = firstEvent else {
+            Issue.record("Expected the first buffered turn event to be .approvalRequested.")
+            await client.stop()
+            return
+        }
+
+        guard case let .commandExecution(commandRequest) = approvalRequest else {
+            Issue.record("Expected the buffered approval request to be a command execution approval.")
+            await client.stop()
+            return
+        }
+
+        #expect(commandRequest.threadID == thread.id)
+        #expect(commandRequest.turnID == turnHandle.turn.id)
+        #expect(commandRequest.itemID == "item-command-1")
+        #expect(commandRequest.command == "git status")
+        #expect(commandRequest.reason == "Needs approval to read repository state.")
+
+        try await turnHandle.respond(
+            to: approvalRequest,
+            with: .commandExecution(.accept)
+        )
+
+        await transport.emitServerRequestResolved(
+            threadID: thread.id,
+            requestID: .string("approval-1")
+        )
+
+        let secondEvent = try await iterator.next()
+        guard case let .serverRequestResolved(resolution)? = secondEvent else {
+            Issue.record("Expected the follow-up turn event to be .serverRequestResolved.")
+            await client.stop()
+            return
+        }
+
+        #expect(resolution.threadID == thread.id)
+        #expect(resolution.turnID == turnHandle.turn.id)
+        #expect(resolution.kind == .commandExecutionApproval)
+
+        let recordedResponses = await transport.recordedResponses
+        #expect(recordedResponses.count == 1)
+        #expect(recordedResponses.first?.requestID == .string("approval-1"))
+        let responseObject = try #require(
+            try JSONSerialization.jsonObject(with: recordedResponses[0].payload) as? [String: Any]
+        )
+        #expect(responseObject["id"] as? String == "approval-1")
+        let responseResult = try #require(responseObject["result"] as? [String: Any])
+        #expect(responseResult["decision"] as? String == "accept")
+
+        await client.stop()
+    }
+
+    @Test("routes unroutable MCP elicitation requests through CodexThread and answers them there")
+    func routesUnroutableMcpElicitationsThroughThread() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        var iterator = thread.events.makeAsyncIterator()
+
+        await transport.emitMcpServerElicitationRequest(
+            requestID: .string("mcp-1"),
+            threadID: thread.id,
+            turnID: nil
+        )
+
+        let firstEvent = try await iterator.next()
+        guard case let .elicitationRequested(request)? = firstEvent else {
+            Issue.record("Expected the first thread event to be .elicitationRequested.")
+            await client.stop()
+            return
+        }
+
+        guard case let .mcpServer(mcpRequest) = request else {
+            Issue.record("Expected the thread elicitation event to contain an MCP server request.")
+            await client.stop()
+            return
+        }
+
+        #expect(mcpRequest.threadID == thread.id)
+        #expect(mcpRequest.turnID == nil)
+        #expect(mcpRequest.serverName == "calendar")
+
+        try await thread.respond(
+            to: request,
+            with: .mcpServer(.init(action: .decline))
+        )
+
+        await transport.emitServerRequestResolved(
+            threadID: thread.id,
+            requestID: .string("mcp-1")
+        )
+
+        let secondEvent = try await iterator.next()
+        guard case let .serverRequestResolved(resolution)? = secondEvent else {
+            Issue.record("Expected the follow-up thread event to be .serverRequestResolved.")
+            await client.stop()
+            return
+        }
+
+        #expect(resolution.threadID == thread.id)
+        #expect(resolution.turnID == nil)
+        #expect(resolution.kind == .mcpServerElicitation)
+
+        let recordedResponses = await transport.recordedResponses
+        #expect(recordedResponses.count == 1)
+        #expect(recordedResponses.first?.requestID == .string("mcp-1"))
+        let responseObject = try #require(
+            try JSONSerialization.jsonObject(with: recordedResponses[0].payload) as? [String: Any]
+        )
+        let responseResult = try #require(responseObject["result"] as? [String: Any])
+        #expect(responseResult["action"] as? String == "decline")
+
+        await client.stop()
+    }
+
+    @Test("answers tool user input requests through CodexTurnHandle")
+    func answersToolUserInputRequests() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        let turnHandle = try await thread.startTextTurn("Ask the user a question.")
+        let eventTask = Task {
+            try await turnEvents(from: turnHandle.events, count: 1)
+        }
+
+        await transport.emitToolUserInputRequest(
+            requestID: .string("input-1"),
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-input-1"
+        )
+
+        let receivedEvents = try await eventTask.value
+        guard case let .elicitationRequested(request) = receivedEvents[0] else {
+            Issue.record("Expected the turn event to be .elicitationRequested.")
+            await client.stop()
+            return
+        }
+
+        guard case let .toolUserInput(inputRequest) = request else {
+            Issue.record("Expected the elicitation event to contain a tool user input request.")
+            await client.stop()
+            return
+        }
+
+        #expect(inputRequest.questions.count == 1)
+        #expect(inputRequest.questions[0].header == "Goal")
+        #expect(inputRequest.questions[0].options?.count == 2)
+
+        try await turnHandle.respond(
+            to: request,
+            with: .toolUserInput(
+                .init(
+                    answers: [
+                        "goal": .init(answers: ["Ship it"])
+                    ]
+                )
+            )
+        )
+
+        let recordedResponses = await transport.recordedResponses
+        #expect(recordedResponses.count == 1)
+        #expect(recordedResponses.first?.requestID == .string("input-1"))
+        let responseObject = try #require(
+            try JSONSerialization.jsonObject(with: recordedResponses[0].payload) as? [String: Any]
+        )
+        let responseResult = try #require(responseObject["result"] as? [String: Any])
+        let answers = try #require(responseResult["answers"] as? [String: Any])
+        let goalAnswer = try #require(answers["goal"] as? [String: Any])
+        #expect(goalAnswer["answers"] as? [String] == ["Ship it"])
 
         await client.stop()
     }
@@ -540,7 +897,14 @@ struct CodexAppServerTests {
 }
 
 private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
+    struct RecordedResponse: Sendable, Equatable {
+        let requestID: CodexRPCRequestID
+        let payload: Data
+    }
+
     private(set) var recordedMethods: [String] = []
+    private(set) var recordedResponses: [RecordedResponse] = []
+    private var recordedRequestPayloads: [String: [Data]] = [:]
     private var started = false
     private var initializedSeen = false
     private var serverEventContinuation: AsyncStream<CodexRPCServerEvent>.Continuation?
@@ -563,6 +927,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
         let method = try requestMethod(from: requestPayload)
         recordedMethods.append(method)
+        recordedRequestPayloads[method, default: []].append(requestPayload)
 
         switch method {
         case "initialize":
@@ -630,6 +995,18 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     ],
                 ]
             )
+        case "turn/steer":
+            return responsePayload(
+                id: id,
+                result: [
+                    "turnId": "turn-123",
+                ]
+            )
+        case "turn/interrupt":
+            return responsePayload(
+                id: id,
+                result: [:]
+            )
         default:
             return errorPayload(
                 id: id,
@@ -651,6 +1028,14 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         }
     }
 
+    func sendResponse(_ responsePayload: Data, requestID: CodexRPCRequestID) throws {
+        guard started else {
+            throw CodexTransportError.notStarted
+        }
+
+        recordedResponses.append(.init(requestID: requestID, payload: responsePayload))
+    }
+
     func serverEvents() -> AsyncStream<CodexRPCServerEvent> {
         AsyncStream { continuation in
             serverEventContinuation = continuation
@@ -660,6 +1045,10 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 }
             }
         }
+    }
+
+    func recordedRequestPayload(for method: String) -> Data? {
+        recordedRequestPayloads[method]?.last
     }
 
     func emitTurnCompleted(threadID: String, turnID: String) {
@@ -678,6 +1067,120 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
         serverEventContinuation?.yield(
             .notification(method: "turn/completed", payload: payload)
+        )
+    }
+
+    func emitCommandExecutionApprovalRequest(
+        requestID: CodexRPCRequestID,
+        threadID: String,
+        turnID: String,
+        itemID: String
+    ) {
+        let payload = payloadObject([
+            "command": "git status",
+            "commandActions": [
+                [
+                    "command": "git status",
+                    "type": "unknown",
+                ]
+            ],
+            "cwd": "/tmp/project",
+            "itemId": itemID,
+            "reason": "Needs approval to read repository state.",
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .request(
+                id: requestID,
+                method: "item/commandExecution/requestApproval",
+                payload: payload
+            )
+        )
+    }
+
+    func emitToolUserInputRequest(
+        requestID: CodexRPCRequestID,
+        threadID: String,
+        turnID: String,
+        itemID: String
+    ) {
+        let payload = payloadObject([
+            "itemId": itemID,
+            "questions": [
+                [
+                    "header": "Goal",
+                    "id": "goal",
+                    "options": [
+                        [
+                            "description": "Use the existing plan as-is.",
+                            "label": "Ship it",
+                        ],
+                        [
+                            "description": "Pause the implementation and revisit scope.",
+                            "label": "Replan",
+                        ],
+                    ],
+                    "question": "Which direction should we take?",
+                ]
+            ],
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .request(
+                id: requestID,
+                method: "item/tool/requestUserInput",
+                payload: payload
+            )
+        )
+    }
+
+    func emitMcpServerElicitationRequest(
+        requestID: CodexRPCRequestID,
+        threadID: String,
+        turnID: String?
+    ) {
+        var payload: [String: Any] = [
+            "message": "Do you want to connect the calendar server?",
+            "mode": "url",
+            "serverName": "calendar",
+            "threadId": threadID,
+            "url": "https://example.com/authorize",
+            "elicitationId": "elicitation-1",
+        ]
+        payload["turnId"] = turnID ?? NSNull()
+
+        serverEventContinuation?.yield(
+            .request(
+                id: requestID,
+                method: "mcpServer/elicitation/request",
+                payload: payloadObject(payload)
+            )
+        )
+    }
+
+    func emitServerRequestResolved(
+        threadID: String,
+        requestID: CodexRPCRequestID
+    ) {
+        let jsonRequestID: Any
+        switch requestID {
+        case let .string(value):
+            jsonRequestID = value
+        case let .int(value):
+            jsonRequestID = value
+        }
+
+        let payload = payloadObject([
+            "requestId": jsonRequestID,
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "serverRequest/resolved", payload: payload)
         )
     }
 

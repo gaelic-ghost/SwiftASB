@@ -142,6 +142,58 @@ struct CodexAppServerProtocolTests {
         #expect(outputSchema["type"] as? String == "object")
     }
 
+    @Test("encodes turn/interrupt requests with the expected method and params payload")
+    func encodesTurnInterruptRequest() throws {
+        let payload = try protocolLayer.makeTurnInterruptRequest(
+            id: .string("interrupt-1"),
+            params: .init(threadID: "thread-123", turnID: "turn-123")
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "turn/interrupt")
+        #expect(object["id"] as? String == "interrupt-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["turnId"] as? String == "turn-123")
+    }
+
+    @Test("encodes turn/steer requests with the expected method and params payload")
+    func encodesTurnSteerRequest() throws {
+        let payload = try protocolLayer.makeTurnSteerRequest(
+            id: .string("steer-1"),
+            params: .init(
+                expectedTurnID: "turn-123",
+                input: [
+                    CodexWireUserInput(
+                        text: "Please summarize the answer more briefly.",
+                        textElements: nil,
+                        type: .text,
+                        url: nil,
+                        path: nil,
+                        name: nil
+                    )
+                ],
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "turn/steer")
+        #expect(object["id"] as? String == "steer-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["expectedTurnId"] as? String == "turn-123")
+
+        let input = try #require(params["input"] as? [[String: Any]])
+        #expect(input.count == 1)
+        #expect(input.first?["type"] as? String == "text")
+        #expect(input.first?["text"] as? String == "Please summarize the answer more briefly.")
+    }
+
     @Test("decodes initialize responses and honors the expected request ID")
     func decodesInitializeResponse() throws {
         let payload = Data(
@@ -211,6 +263,28 @@ struct CodexAppServerProtocolTests {
         #expect(response.turn.startedAt == 1713350002)
         #expect(response.turn.completedAt == nil)
         #expect(response.turn.items.isEmpty)
+    }
+
+    @Test("decodes turn/interrupt responses and honors the expected request ID")
+    func decodesTurnInterruptResponse() throws {
+        let payload = Data(#"{"id":"interrupt-1","result":{}}"#.utf8)
+
+        _ = try protocolLayer.decodeTurnInterruptResponse(
+            payload,
+            expectedID: .string("interrupt-1")
+        )
+    }
+
+    @Test("decodes turn/steer responses and honors the expected request ID")
+    func decodesTurnSteerResponse() throws {
+        let payload = Data(#"{"id":"steer-1","result":{"turnId":"turn-123"}}"#.utf8)
+
+        let response = try protocolLayer.decodeTurnSteerResponse(
+            payload,
+            expectedID: .string("steer-1")
+        )
+
+        #expect(response.turnID == "turn-123")
     }
 
     @Test("decodes turn/completed notifications into typed protocol events")
@@ -483,6 +557,106 @@ struct CodexAppServerProtocolTests {
         default:
             Issue.record("Expected item/plan/delta to decode into .planDelta.")
         }
+    }
+
+    @Test("decodes server-originated approval and elicitation requests into typed protocol events")
+    func decodesServerRequests() throws {
+        let commandApprovalPayload = Data(
+            #"""
+            {"command":"git status","commandActions":[{"command":"git status","type":"unknown"}],"cwd":"/tmp/project","itemId":"item-command-1","reason":"Needs approval to inspect repository state.","threadId":"thread-123","turnId":"turn-123"}
+            """#.utf8
+        )
+
+        let commandApprovalEvent = try #require(
+            try protocolLayer.decodeServerEvent(
+                .request(
+                    id: .string("approval-1"),
+                    method: "item/commandExecution/requestApproval",
+                    payload: commandApprovalPayload
+                )
+            )
+        )
+
+        switch commandApprovalEvent {
+        case let .commandExecutionApprovalRequested(request):
+            #expect(request.requestID == .string("approval-1"))
+            #expect(request.threadID == "thread-123")
+            #expect(request.turnID == "turn-123")
+            #expect(request.itemID == "item-command-1")
+            #expect(request.command == "git status")
+        default:
+            Issue.record("Expected command approval server request to decode into .commandExecutionApprovalRequested.")
+        }
+
+        let toolInputPayload = Data(
+            #"""
+            {"itemId":"item-input-1","questions":[{"header":"Goal","id":"goal","question":"What should we do next?"}],"threadId":"thread-123","turnId":"turn-123"}
+            """#.utf8
+        )
+
+        let toolInputEvent = try #require(
+            try protocolLayer.decodeServerEvent(
+                .request(
+                    id: .string("input-1"),
+                    method: "item/tool/requestUserInput",
+                    payload: toolInputPayload
+                )
+            )
+        )
+
+        switch toolInputEvent {
+        case let .toolUserInputRequested(request):
+            #expect(request.requestID == .string("input-1"))
+            #expect(request.questions.count == 1)
+            #expect(request.questions[0].isOther == false)
+            #expect(request.questions[0].isSecret == false)
+        default:
+            Issue.record("Expected tool user input server request to decode into .toolUserInputRequested.")
+        }
+
+        let mcpPayload = Data(
+            #"""
+            {"message":"Authorize the calendar server.","mode":"url","serverName":"calendar","threadId":"thread-123","turnId":null,"url":"https://example.com/authorize","elicitationId":"elicitation-1"}
+            """#.utf8
+        )
+
+        let mcpEvent = try #require(
+            try protocolLayer.decodeServerEvent(
+                .request(
+                    id: .string("mcp-1"),
+                    method: "mcpServer/elicitation/request",
+                    payload: mcpPayload
+                )
+            )
+        )
+
+        switch mcpEvent {
+        case let .mcpServerElicitationRequested(request):
+            #expect(request.requestID == .string("mcp-1"))
+            #expect(request.serverName == "calendar")
+            #expect(request.threadID == "thread-123")
+            #expect(request.turnID == nil)
+        default:
+            Issue.record("Expected MCP elicitation server request to decode into .mcpServerElicitationRequested.")
+        }
+    }
+
+    @Test("encodes JSON-RPC server request responses with the expected id and result payload")
+    func encodesServerResponses() throws {
+        struct ResultPayload: Encodable {
+            let decision: String
+        }
+
+        let payload = try protocolLayer.makeServerResponse(
+            id: .string("approval-1"),
+            result: ResultPayload(decision: "accept")
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["id"] as? String == "approval-1")
+        let result = try #require(object["result"] as? [String: Any])
+        #expect(result["decision"] as? String == "accept")
     }
 
     @Test("decodes reasoning notifications into typed protocol events")

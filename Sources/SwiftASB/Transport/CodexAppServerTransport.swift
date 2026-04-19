@@ -150,6 +150,21 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         }
     }
 
+    internal func sendResponse(_ responsePayload: Data, requestID: CodexRPCRequestID) throws {
+        guard process != nil, let standardInputHandle else {
+            throw CodexTransportError.notStarted
+        }
+
+        do {
+            try writeFramedPayload(responsePayload, to: standardInputHandle)
+        } catch {
+            throw CodexTransportError.failedToWriteNotification(
+                method: "response for request \(requestID.description)",
+                reason: String(describing: error)
+            )
+        }
+    }
+
     internal func serverEvents() -> AsyncStream<CodexRPCServerEvent> {
         let streamID = UUID()
         return AsyncStream { continuation in

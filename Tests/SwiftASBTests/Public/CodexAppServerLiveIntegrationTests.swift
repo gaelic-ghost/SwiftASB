@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import Testing
 @testable import SwiftASB
 
@@ -440,6 +441,111 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "probes live approval-path behavior for shell commands",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI."
+        ),
+        .timeLimit(.minutes(2))
+    )
+    func acceptsLiveApprovalRequestAndCompletesTurn() async throws {
+        let harness = try LiveCodexHarness()
+        defer { harness.cleanup() }
+
+        let approvalFixtureURL = harness.threadAWorkspace
+            .appendingPathComponent("approval-target.txt", isDirectory: false)
+        let fixtureText = "approval-fixture-\(UUID().uuidString)\n"
+        try Data(fixtureText.utf8).write(to: approvalFixtureURL)
+        let expectedDigest = Data(SHA256.hash(data: Data(fixtureText.utf8))).map {
+            String(format: "%02x", $0)
+        }.joined()
+
+        let client = try await makeInitializedLiveClient(using: harness)
+        do {
+            let approvalThread = try await startThread(
+                on: client,
+                workspacePath: harness.threadAWorkspace.path,
+                label: "approval",
+                approvalPolicy: .onRequest,
+                approvalsReviewer: .user,
+                developerInstructions: """
+                You are running inside a SwiftASB live integration test.
+                You must use a shell command if approval is granted.
+                Do not ask follow-up questions.
+                Do not guess or answer from memory.
+                After the shell command succeeds, reply with exactly the requested digest and nothing else.
+                """
+            )
+
+            let approvalTurn = try await startTurn(
+                on: approvalThread,
+                prompt: """
+                Use a shell command to print the SHA-256 digest of approval-target.txt in the current
+                working directory, then reply with exactly that digest and nothing else.
+                """,
+                approvalPolicy: .onRequest,
+                approvalsReviewer: .user
+            )
+
+            let minimap = await approvalTurn.makeMinimap()
+            let approvalOutcome = try await awaitApprovalPathOutcome(
+                in: minimap,
+                timeoutSeconds: 20,
+                operation: "waiting for a live approval-path outcome"
+            )
+
+            switch approvalOutcome {
+            case let .approvalRequested(approvalRequest):
+                switch approvalRequest {
+                case let .commandExecution(commandRequest):
+                    #expect(commandRequest.threadID == approvalThread.id)
+                    #expect(commandRequest.turnID == approvalTurn.turn.id)
+                    #expect(commandRequest.reason?.isEmpty == false)
+                case let .fileChange(fileRequest):
+                    #expect(fileRequest.threadID == approvalThread.id)
+                    #expect(fileRequest.turnID == approvalTurn.turn.id)
+                case let .permissions(permissionsRequest):
+                    #expect(permissionsRequest.threadID == approvalThread.id)
+                    #expect(permissionsRequest.turnID == approvalTurn.turn.id)
+                }
+
+                try await approvalTurn.respond(
+                    to: approvalRequest,
+                    with: acceptanceResponse(for: approvalRequest)
+                )
+
+                let resolution = try await awaitRequestResolution(
+                    in: minimap,
+                    expectedKind: approvalRequest.kind,
+                    timeoutSeconds: 20,
+                    operation: "waiting for the accepted live approval request to resolve"
+                )
+                #expect(resolution.threadID == approvalThread.id)
+                #expect(resolution.turnID == approvalTurn.turn.id)
+
+                let completion = try await awaitCompletion(
+                    of: approvalTurn,
+                    timeoutSeconds: 45,
+                    operation: "waiting for the live approval-path turn to complete"
+                )
+                #expect(completion.turn.status == .completed)
+            case let .completedWithoutApproval(status, completedText):
+                #expect(status == .completed)
+                #expect(completedText == expectedDigest)
+            }
+
+            let latestCompletedItemText = await MainActor.run(body: { minimap.latestCompletedItem?.item.text })
+            #expect(latestCompletedItemText == expectedDigest)
+
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "probes live same-thread overlapping turn behavior",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
@@ -626,6 +732,11 @@ private final class LiveCodexHarness {
     }
 }
 
+private enum LiveApprovalPathOutcome {
+    case approvalRequested(CodexApprovalRequest)
+    case completedWithoutApproval(CodexAppServer.TurnStatus, String?)
+}
+
 private enum LiveTurnStartOutcome {
     case started(CodexTurnHandle)
     case failed(String)
@@ -651,20 +762,24 @@ private enum LiveIntegrationError: Error, LocalizedError {
 private func startThread(
     on client: CodexAppServer,
     workspacePath: String,
-    label: String
+    label: String,
+    approvalPolicy: CodexAppServer.ApprovalPolicy = .never,
+    approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil,
+    developerInstructions: String = """
+    You are running inside a SwiftASB live integration test.
+    Do not call tools.
+    Do not edit files.
+    Do not ask follow-up questions.
+    Reply only with the exact text requested by the user message.
+    """
 ) async throws -> CodexThread {
     return try await withTimeout(seconds: 15, operation: "starting the \(label) thread") {
         try await client.startThread(
             .init(
-                approvalPolicy: .never,
+                approvalPolicy: approvalPolicy,
+                approvalsReviewer: approvalsReviewer,
                 currentDirectoryPath: workspacePath,
-                developerInstructions: """
-                You are running inside a SwiftASB live integration test.
-                Do not call tools.
-                Do not edit files.
-                Do not ask follow-up questions.
-                Reply only with the exact text requested by the user message.
-                """,
+                developerInstructions: developerInstructions,
                 ephemeral: true,
                 sandboxMode: .workspaceWrite
             )
@@ -674,12 +789,15 @@ private func startThread(
 
 private func startTurn(
     on thread: CodexThread,
-    prompt: String
+    prompt: String,
+    approvalPolicy: CodexAppServer.ApprovalPolicy = .never,
+    approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil
 ) async throws -> CodexTurnHandle {
     return try await withTimeout(seconds: 20, operation: "starting a live turn on thread \(thread.id)") {
         try await thread.startTextTurn(
             prompt,
-            approvalPolicy: .never,
+            approvalPolicy: approvalPolicy,
+            approvalsReviewer: approvalsReviewer,
             summary: CodexAppServer.ReasoningSummary.none
         )
     }
@@ -710,6 +828,60 @@ private func awaitCompletion(
         }
 
         throw LiveIntegrationError.eventStreamEnded(operation: operation)
+    }
+}
+
+private func awaitApprovalPathOutcome(
+    in minimap: CodexTurnHandle.Minimap,
+    timeoutSeconds: Double,
+    operation: String
+) async throws -> LiveApprovalPathOutcome {
+    let deadline = ContinuousClock.now + .seconds(timeoutSeconds)
+    while ContinuousClock.now < deadline {
+        if let request = await MainActor.run(body: { minimap.latestApprovalRequest }) {
+            return .approvalRequested(request)
+        }
+        if let completion = await MainActor.run(body: { minimap.latestCompletion }) {
+            let completedItem = await MainActor.run(body: { minimap.latestCompletedItem?.item.text })
+            return .completedWithoutApproval(completion.turn.status, completedItem)
+        }
+        try await Task.sleep(nanoseconds: 100_000_000)
+    }
+
+    throw LiveIntegrationError.timedOut(operation: operation, seconds: timeoutSeconds)
+}
+
+private func awaitRequestResolution(
+    in minimap: CodexTurnHandle.Minimap,
+    expectedKind: CodexInteractiveRequestKind,
+    timeoutSeconds: Double,
+    operation: String
+) async throws -> CodexInteractiveRequestResolved {
+    let deadline = ContinuousClock.now + .seconds(timeoutSeconds)
+    while ContinuousClock.now < deadline {
+        if let resolution = await MainActor.run(body: { minimap.latestRequestResolution }),
+           resolution.kind == expectedKind {
+            return resolution
+        }
+        try await Task.sleep(nanoseconds: 100_000_000)
+    }
+
+    throw LiveIntegrationError.timedOut(operation: operation, seconds: timeoutSeconds)
+}
+
+private func acceptanceResponse(for request: CodexApprovalRequest) -> CodexApprovalResponse {
+    switch request {
+    case .commandExecution:
+        return .commandExecution(.accept)
+    case .fileChange:
+        return .fileChange(.accept)
+    case let .permissions(permissionsRequest):
+        return .permissions(
+            .init(
+                permissions: permissionsRequest.permissions,
+                scope: .turn
+            )
+        )
     }
 }
 

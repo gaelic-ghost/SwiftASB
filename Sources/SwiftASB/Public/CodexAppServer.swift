@@ -204,11 +204,7 @@ public actor CodexAppServer {
 
     public struct TurnInput: Sendable, Equatable {
         public enum Kind: String, Sendable, Equatable {
-            case image
-            case localImage
-            case mention
-            case skill
-            case text
+            case image, localImage, mention, skill, text
         }
 
         public var kind: Kind
@@ -277,30 +273,23 @@ public actor CodexAppServer {
     }
 
     public enum ApprovalsReviewer: String, Sendable, Equatable {
-        case guardianSubagent
-        case user
+        case guardianSubagent, user
     }
 
     public enum Personality: String, Sendable, Equatable {
-        case friendly
-        case none
-        case pragmatic
+        case friendly, none, pragmatic
     }
 
     public enum SandboxMode: String, Sendable, Equatable {
-        case dangerFullAccess
-        case readOnly
-        case workspaceWrite
+        case dangerFullAccess, readOnly, workspaceWrite
     }
 
     public enum ServiceTier: String, Sendable, Equatable {
-        case fast
-        case flex
+        case fast, flex
     }
 
     public enum SessionStartSource: String, Sendable, Equatable {
-        case clear
-        case startup
+        case clear, startup
     }
 
     public enum ReasoningEffort: String, Sendable, Equatable {
@@ -329,52 +318,46 @@ public actor CodexAppServer {
     }
 
     public enum ReadOnlyAccessType: String, Sendable, Equatable {
-        case fullAccess
-        case restricted
+        case fullAccess, restricted
     }
 
     public enum NetworkAccess: Sendable, Equatable {
-        case explicit(Bool)
-        case enabled
-        case restricted
+        case explicit(Bool), enabled, restricted
     }
 
     public enum SandboxPolicyType: String, Sendable, Equatable {
-        case dangerFullAccess
-        case externalSandbox
-        case readOnly
-        case workspaceWrite
+        case dangerFullAccess, externalSandbox, readOnly, workspaceWrite
     }
 
     public enum ReasoningSummary: String, Sendable, Equatable {
-        case auto
-        case concise
-        case detailed
-        case none
+        case auto, concise, detailed, none
     }
 
     public enum ThreadStatusType: String, Sendable, Equatable {
-        case active
-        case idle
-        case notLoaded
-        case systemError
+        case active, idle, notLoaded, systemError
     }
 
     public enum ThreadActiveFlag: String, Sendable, Equatable {
-        case waitingOnApproval
-        case waitingOnUserInput
+        case waitingOnApproval, waitingOnUserInput
     }
 
     public enum TurnStatus: String, Sendable, Equatable {
-        case completed
-        case failed
-        case inProgress
-        case interrupted
+        case completed, failed, inProgress, interrupted
     }
 
     private enum ThreadTurnActivity: Sendable, Equatable {
-        case starting
-        case active(turnID: String)
+        case starting, active(turnID: String)
+    }
+
+    private enum InteractiveRequestDestination: Sendable, Equatable {
+        case thread(threadID: String), turn(turnID: String)
+    }
+
+    private struct OutstandingInteractiveRequest: Sendable, Equatable {
+        let destination: InteractiveRequestDestination
+        let kind: CodexInteractiveRequestKind
+        let threadID: String
+        let turnID: String?
     }
 
     private let transport: any CodexAppServerTransporting
@@ -385,9 +368,11 @@ public actor CodexAppServer {
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var turnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
+    private var bufferedTurnEvents: [String: [CodexTurnEvent]] = [:]
     private var bufferedTerminalTurnEvents: [String: CodexTurnEvent] = [:]
     private var threadTurnActivities: [String: ThreadTurnActivity] = [:]
     private var turnThreadIDs: [String: String] = [:]
+    private var outstandingInteractiveRequests: [CodexRPCRequestID: OutstandingInteractiveRequest] = [:]
     private var hasStarted = false
     private var hasCompletedInitializeHandshake = false
     private var isStopping = false
@@ -437,8 +422,10 @@ public actor CodexAppServer {
         threadTurnActivities.removeAll()
         turnThreadIDs.removeAll()
         bufferedThreadEvents.removeAll()
+        bufferedTurnEvents.removeAll()
         bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
+        outstandingInteractiveRequests.removeAll()
     }
 
     public func initialize(_ request: InitializeRequest) async throws -> InitializeSession {
@@ -525,6 +512,63 @@ public actor CodexAppServer {
         }
     }
 
+    internal func interruptTurn(
+        threadID: String,
+        turnID: String
+    ) async throws {
+        try requireInitialized(for: "turn/interrupt")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeTurnInterruptRequest(
+                id: requestID,
+                params: .init(threadID: threadID, turnID: turnID)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            _ = try protocolLayer.decodeTurnInterruptResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "turn/interrupt")
+        }
+    }
+
+    internal func steerTurn(
+        threadID: String,
+        turnID: String,
+        input: [TurnInput]
+    ) async throws {
+        try requireInitialized(for: "turn/steer")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeTurnSteerRequest(
+                id: requestID,
+                params: .init(
+                    expectedTurnID: turnID,
+                    input: input.map(\.wireValue),
+                    threadID: threadID
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeTurnSteerResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            guard response.turnID == turnID else {
+                throw CodexAppServerError.invalidState(
+                    reason: "Codex app-server acknowledged turn steering for turn \(response.turnID), but this handle owns turn \(turnID)."
+                )
+            }
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "turn/steer")
+        }
+    }
+
     internal func threadEventStream(
         threadID: String
     ) -> AsyncThrowingStream<CodexThreadEvent, Error> {
@@ -539,6 +583,87 @@ public actor CodexAppServer {
         turnID: String
     ) -> AsyncThrowingStream<CodexTurnEvent, Error> {
         makeTurnEventStream(turnID: turnID)
+    }
+
+    internal func respond(
+        to request: CodexApprovalRequest,
+        with response: CodexApprovalResponse,
+        expectedThreadID: String,
+        expectedTurnID: String?
+    ) async throws {
+        let requestID = request.requestID
+        let outstandingRequest = try requireOutstandingInteractiveRequest(
+            requestID: requestID,
+            expectedThreadID: expectedThreadID,
+            expectedTurnID: expectedTurnID
+        )
+
+        let payload: Data
+        switch (request, response) {
+        case (_, .commandExecution(let decision)) where outstandingRequest.kind == .commandExecutionApproval:
+            payload = try protocolLayer.makeServerResponse(
+                id: requestID,
+                result: decision.protocolValue
+            )
+        case (_, .fileChange(let decision)) where outstandingRequest.kind == .fileChangeApproval:
+            payload = try protocolLayer.makeServerResponse(
+                id: requestID,
+                result: CodexProtocolFileChangeApprovalDecisionPayload(decision: decision.rawValue)
+            )
+        case (_, .permissions(let grantedPermissions)) where outstandingRequest.kind == .permissionsApproval:
+            payload = try protocolLayer.makeServerResponse(
+                id: requestID,
+                result: grantedPermissions.protocolValue
+            )
+        default:
+            throw CodexAppServerError.invalidState(
+                reason: "Interactive approval response kind did not match the outstanding request kind for request \(requestID.description)."
+            )
+        }
+
+        do {
+            try await transport.sendResponse(payload, requestID: requestID)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "server request response")
+        }
+    }
+
+    internal func respond(
+        to request: CodexElicitationRequest,
+        with response: CodexElicitationResponse,
+        expectedThreadID: String,
+        expectedTurnID: String?
+    ) async throws {
+        let requestID = request.requestID
+        let outstandingRequest = try requireOutstandingInteractiveRequest(
+            requestID: requestID,
+            expectedThreadID: expectedThreadID,
+            expectedTurnID: expectedTurnID
+        )
+
+        let payload: Data
+        switch (request, response) {
+        case (_, .toolUserInput(let answers)) where outstandingRequest.kind == .toolUserInput:
+            payload = try protocolLayer.makeServerResponse(
+                id: requestID,
+                result: answers.protocolValue
+            )
+        case (_, .mcpServer(let elicitation)) where outstandingRequest.kind == .mcpServerElicitation:
+            payload = try protocolLayer.makeServerResponse(
+                id: requestID,
+                result: elicitation.protocolValue
+            )
+        default:
+            throw CodexAppServerError.invalidState(
+                reason: "Interactive elicitation response kind did not match the outstanding request kind for request \(requestID.description)."
+            )
+        }
+
+        do {
+            try await transport.sendResponse(payload, requestID: requestID)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "server request response")
+        }
     }
 
     private func requireStarted(for operation: String) throws {
@@ -760,6 +885,18 @@ public actor CodexAppServer {
                 delta: notification.delta
             )
             publishTurnEvent(.reasoningTextDelta(delta), for: notification.turnID, isTerminal: false)
+        case let .commandExecutionApprovalRequested(request):
+            handleInteractiveApprovalRequest(request.publicValue)
+        case let .fileChangeApprovalRequested(request):
+            handleInteractiveApprovalRequest(request.publicValue)
+        case let .permissionsApprovalRequested(request):
+            handleInteractiveApprovalRequest(request.publicValue)
+        case let .toolUserInputRequested(request):
+            handleInteractiveElicitationRequest(request.publicValue)
+        case let .mcpServerElicitationRequested(request):
+            handleInteractiveElicitationRequest(request.publicValue)
+        case let .serverRequestResolved(notification):
+            handleServerRequestResolved(notification)
         case let .turnCompleted(notification):
             clearTurnActivity(turnID: notification.turn.id)
             let completion = CodexTurnCompletion(
@@ -830,6 +967,12 @@ public actor CodexAppServer {
 
         return AsyncThrowingStream { continuation in
             registerTurnEventContinuation(continuation, streamID: streamID, turnID: turnID)
+
+            if let bufferedEvents = bufferedTurnEvents.removeValue(forKey: turnID) {
+                for event in bufferedEvents {
+                    continuation.yield(event)
+                }
+            }
 
             if let bufferedEvent = bufferedTerminalTurnEvents.removeValue(forKey: turnID) {
                 continuation.yield(bufferedEvent)
@@ -915,11 +1058,14 @@ public actor CodexAppServer {
     private func publishTurnEvent(
         _ event: CodexTurnEvent,
         for turnID: String,
-        isTerminal: Bool
+        isTerminal: Bool,
+        bufferIfUnobserved: Bool = false
     ) {
         guard let continuations = turnEventContinuations[turnID], !continuations.isEmpty else {
             if isTerminal {
                 bufferedTerminalTurnEvents[turnID] = event
+            } else if bufferIfUnobserved {
+                bufferedTurnEvents[turnID, default: []].append(event)
             }
             return
         }
@@ -949,6 +1095,133 @@ public actor CodexAppServer {
         }
     }
 
+    private func requireOutstandingInteractiveRequest(
+        requestID: CodexRPCRequestID,
+        expectedThreadID: String,
+        expectedTurnID: String?
+    ) throws -> OutstandingInteractiveRequest {
+        guard let outstandingRequest = outstandingInteractiveRequests[requestID] else {
+            throw CodexAppServerError.invalidState(
+                reason: "No outstanding interactive server request with id \(requestID.description) is currently tracked."
+            )
+        }
+
+        guard outstandingRequest.threadID == expectedThreadID else {
+            throw CodexAppServerError.invalidState(
+                reason: "Interactive server request \(requestID.description) belongs to thread \(outstandingRequest.threadID), not thread \(expectedThreadID)."
+            )
+        }
+
+        switch (expectedTurnID, outstandingRequest.destination) {
+        case let (.some(expectedTurnID), .turn(turnID)) where expectedTurnID == turnID:
+            return outstandingRequest
+        case (.none, .thread):
+            return outstandingRequest
+        case let (.some(expectedTurnID), .turn(turnID)):
+            throw CodexAppServerError.invalidState(
+                reason: "Interactive server request \(requestID.description) belongs to turn \(turnID), not turn \(expectedTurnID)."
+            )
+        case (.some, .thread):
+            throw CodexAppServerError.invalidState(
+                reason: "Interactive server request \(requestID.description) was surfaced at the thread level and must be answered through CodexThread."
+            )
+        case (.none, .turn):
+            throw CodexAppServerError.invalidState(
+                reason: "Interactive server request \(requestID.description) belongs to a specific turn and must be answered through CodexTurnHandle."
+            )
+        }
+    }
+
+    private func handleInteractiveApprovalRequest(_ request: CodexApprovalRequest) {
+        let destination = interactiveRequestDestination(
+            threadID: request.threadID,
+            turnID: request.turnID
+        )
+        outstandingInteractiveRequests[request.requestID] = OutstandingInteractiveRequest(
+            destination: destination,
+            kind: request.kind,
+            threadID: request.threadID,
+            turnID: request.turnID
+        )
+
+        switch destination {
+        case let .thread(threadID):
+            publishThreadEvent(.approvalRequested(request), for: threadID, isTerminal: false)
+        case let .turn(turnID):
+            publishTurnEvent(
+                .approvalRequested(request),
+                for: turnID,
+                isTerminal: false,
+                bufferIfUnobserved: true
+            )
+        }
+    }
+
+    private func handleInteractiveElicitationRequest(_ request: CodexElicitationRequest) {
+        let destination = interactiveRequestDestination(
+            threadID: request.threadID,
+            turnID: request.turnID
+        )
+        outstandingInteractiveRequests[request.requestID] = OutstandingInteractiveRequest(
+            destination: destination,
+            kind: request.kind,
+            threadID: request.threadID,
+            turnID: request.turnID
+        )
+
+        switch destination {
+        case let .thread(threadID):
+            publishThreadEvent(.elicitationRequested(request), for: threadID, isTerminal: false)
+        case let .turn(turnID):
+            publishTurnEvent(
+                .elicitationRequested(request),
+                for: turnID,
+                isTerminal: false,
+                bufferIfUnobserved: true
+            )
+        }
+    }
+
+    private func handleServerRequestResolved(_ notification: CodexWireServerRequestResolvedNotification) {
+        let requestID = CodexRPCRequestID(wireValue: notification.requestID)
+        guard let outstandingRequest = outstandingInteractiveRequests.removeValue(forKey: requestID) else {
+            return
+        }
+
+        let resolution = CodexInteractiveRequestResolved(
+            requestID: requestID,
+            threadID: outstandingRequest.threadID,
+            turnID: outstandingRequest.turnID,
+            kind: outstandingRequest.kind
+        )
+
+        switch outstandingRequest.destination {
+        case let .thread(threadID):
+            publishThreadEvent(.serverRequestResolved(resolution), for: threadID, isTerminal: false)
+        case let .turn(turnID):
+            publishTurnEvent(
+                .serverRequestResolved(resolution),
+                for: turnID,
+                isTerminal: false,
+                bufferIfUnobserved: true
+            )
+        }
+    }
+
+    private func interactiveRequestDestination(
+        threadID: String,
+        turnID: String?
+    ) -> InteractiveRequestDestination {
+        guard
+            let turnID,
+            turnThreadIDs[turnID] == threadID
+        else {
+            return .thread(threadID: threadID)
+        }
+
+        return .turn(turnID: turnID)
+    }
+
     private func finishAllThreadEventStreams(throwing error: CodexAppServerError?) {
         let activeContinuations = threadEventContinuations.values.flatMap(\.values)
         threadEventContinuations.removeAll()
@@ -969,6 +1242,307 @@ private extension CodexTurnPlanUpdate.Step {
             status: .init(wireValue: wireValue.status),
             step: wireValue.step
         )
+    }
+}
+
+private struct CodexProtocolCommandExecutionApprovalDecisionPayload: Encodable {
+    let decision: CodexProtocolCommandExecutionApprovalDecision
+}
+
+private enum CodexProtocolCommandExecutionApprovalDecision: Encodable {
+    case accept
+    case acceptForSession
+    case acceptWithExecpolicyAmendment([String])
+    case applyNetworkPolicyAmendment(CodexNetworkPolicyAmendment)
+    case decline
+    case cancel
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .accept:
+            try container.encode("accept")
+        case .acceptForSession:
+            try container.encode("acceptForSession")
+        case let .acceptWithExecpolicyAmendment(amendment):
+            try container.encode(
+                ["acceptWithExecpolicyAmendment": ["execpolicy_amendment": amendment]]
+            )
+        case let .applyNetworkPolicyAmendment(amendment):
+            try container.encode(
+                [
+                    "applyNetworkPolicyAmendment": [
+                        "network_policy_amendment": [
+                            "action": amendment.action.rawValue,
+                            "host": amendment.host,
+                        ]
+                    ]
+                ]
+            )
+        case .decline:
+            try container.encode("decline")
+        case .cancel:
+            try container.encode("cancel")
+        }
+    }
+}
+
+private struct CodexProtocolFileChangeApprovalDecisionPayload: Encodable {
+    let decision: String
+}
+
+private struct CodexProtocolPermissionsApprovalResponsePayload: Encodable {
+    let permissions: CodexProtocolPermissionProfilePayload
+    let scope: String
+}
+
+private struct CodexProtocolPermissionProfilePayload: Encodable {
+    let fileSystem: CodexProtocolPermissionFileSystemPayload?
+    let network: CodexProtocolPermissionNetworkPayload?
+}
+
+private struct CodexProtocolPermissionFileSystemPayload: Encodable {
+    let read: [String]?
+    let write: [String]?
+}
+
+private struct CodexProtocolPermissionNetworkPayload: Encodable {
+    let enabled: Bool?
+}
+
+private struct CodexProtocolToolUserInputResponsePayload: Encodable {
+    struct AnswerPayload: Encodable {
+        let answers: [String]
+    }
+
+    let answers: [String: AnswerPayload]
+}
+
+private struct CodexProtocolMCPServerElicitationResponsePayload: Encodable {
+    let action: String
+    let content: CodexWireJSONValue?
+    let _meta: CodexWireJSONValue?
+}
+
+private extension CodexProtocolCommandExecutionApprovalRequest {
+    var publicValue: CodexApprovalRequest {
+        .commandExecution(
+            .init(
+                requestID: requestID,
+                threadID: threadID,
+                turnID: turnID,
+                itemID: itemID,
+                approvalID: approvalID,
+                command: command,
+                commandActions: commandActions?.map(\.publicValue),
+                currentDirectoryPath: cwd,
+                reason: reason,
+                proposedExecpolicyAmendment: proposedExecpolicyAmendment,
+                proposedNetworkPolicyAmendments: proposedNetworkPolicyAmendments?.map(\.publicValue),
+                networkApprovalContext: networkApprovalContext.map(CodexAppServer.JSONValue.init(wireValue:))
+            )
+        )
+    }
+}
+
+private extension CodexProtocolFileChangeApprovalRequest {
+    var publicValue: CodexApprovalRequest {
+        .fileChange(
+            .init(
+                requestID: requestID,
+                threadID: threadID,
+                turnID: turnID,
+                itemID: itemID,
+                grantRoot: grantRoot,
+                reason: reason
+            )
+        )
+    }
+}
+
+private extension CodexProtocolPermissionsApprovalRequest {
+    var publicValue: CodexApprovalRequest {
+        .permissions(
+            .init(
+                requestID: requestID,
+                threadID: threadID,
+                turnID: turnID,
+                itemID: itemID,
+                permissions: permissions.publicValue,
+                reason: reason
+            )
+        )
+    }
+}
+
+private extension CodexProtocolToolUserInputRequest {
+    var publicValue: CodexElicitationRequest {
+        .toolUserInput(
+            .init(
+                requestID: requestID,
+                threadID: threadID,
+                turnID: turnID,
+                itemID: itemID,
+                questions: questions.map(\.publicValue)
+            )
+        )
+    }
+}
+
+private extension CodexProtocolMCPServerElicitationRequest {
+    var publicValue: CodexElicitationRequest {
+        .mcpServer(
+            .init(
+                requestID: requestID,
+                serverName: serverName,
+                threadID: threadID,
+                turnID: turnID,
+                mode: mode.publicValue
+            )
+        )
+    }
+}
+
+private extension CodexProtocolMCPServerElicitationRequest.Mode {
+    var publicValue: CodexMcpServerElicitationRequest.Mode {
+        switch self {
+        case let .form(form):
+            .form(
+                .init(
+                    message: form.message,
+                    requestedSchema: .init(wireValue: form.requestedSchema)
+                )
+            )
+        case let .url(prompt):
+            .url(
+                .init(
+                    elicitationID: prompt.elicitationID,
+                    message: prompt.message,
+                    url: prompt.url
+                )
+            )
+        }
+    }
+}
+
+private extension CodexProtocolToolUserInputRequest.Question {
+    var publicValue: CodexToolUserInputRequest.Question {
+        .init(
+            header: header,
+            id: id,
+            isOther: isOther,
+            isSecret: isSecret,
+            options: options?.map(\.publicValue),
+            question: question
+        )
+    }
+}
+
+private extension CodexProtocolToolUserInputRequest.Question.Option {
+    var publicValue: CodexToolUserInputRequest.Question.Option {
+        .init(description: description, label: label)
+    }
+}
+
+private extension CodexProtocolCommandAction {
+    var publicValue: CodexCommandAction {
+        switch self {
+        case let .read(action):
+            .read(.init(command: action.command, name: action.name, path: action.path))
+        case let .listFiles(action):
+            .listFiles(.init(command: action.command, path: action.path))
+        case let .search(action):
+            .search(.init(command: action.command, path: action.path, query: action.query))
+        case let .unknown(action):
+            .unknown(.init(command: action.command))
+        }
+    }
+}
+
+private extension CodexProtocolNetworkPolicyAmendment {
+    var publicValue: CodexNetworkPolicyAmendment {
+        .init(
+            action: .init(rawValue: action) ?? .allow,
+            host: host
+        )
+    }
+}
+
+private extension CodexProtocolPermissionProfile {
+    var publicValue: CodexPermissionProfile {
+        .init(
+            fileSystem: fileSystem.map { .init(read: $0.read, write: $0.write) },
+            network: network.map { .init(enabled: $0.enabled) }
+        )
+    }
+}
+
+private extension CodexCommandExecutionApprovalResponse {
+    var protocolValue: CodexProtocolCommandExecutionApprovalDecisionPayload {
+        let decision: CodexProtocolCommandExecutionApprovalDecision
+        switch self {
+        case .accept:
+            decision = .accept
+        case .acceptForSession:
+            decision = .acceptForSession
+        case let .acceptWithExecpolicyAmendment(amendment):
+            decision = .acceptWithExecpolicyAmendment(amendment)
+        case let .applyNetworkPolicyAmendment(amendment):
+            decision = .applyNetworkPolicyAmendment(amendment)
+        case .decline:
+            decision = .decline
+        case .cancel:
+            decision = .cancel
+        }
+
+        return .init(decision: decision)
+    }
+}
+
+private extension CodexPermissionsApprovalResponse {
+    var protocolValue: CodexProtocolPermissionsApprovalResponsePayload {
+        .init(
+            permissions: .init(
+                fileSystem: permissions.fileSystem.map {
+                    .init(read: $0.read, write: $0.write)
+                },
+                network: permissions.network.map {
+                    .init(enabled: $0.enabled)
+                }
+            ),
+            scope: scope.rawValue
+        )
+    }
+}
+
+private extension CodexToolUserInputResponse {
+    var protocolValue: CodexProtocolToolUserInputResponsePayload {
+        .init(
+            answers: answers.mapValues {
+                .init(answers: $0.answers)
+            }
+        )
+    }
+}
+
+private extension CodexMcpServerElicitationResponse {
+    var protocolValue: CodexProtocolMCPServerElicitationResponsePayload {
+        .init(
+            action: action.rawValue,
+            content: content?.wireValue,
+            _meta: metadata?.wireValue
+        )
+    }
+}
+
+private extension CodexRPCRequestID {
+    init(wireValue: CodexWireRequestID) {
+        switch wireValue {
+        case let .integer(value):
+            self = .int(value)
+        case let .string(value):
+            self = .string(value)
+        }
     }
 }
 
