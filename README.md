@@ -82,6 +82,18 @@ Current non-goals and intentionally deferred areas are also explicit:
   deterministic release gate, because the current Codex runtime does not
   reliably force an approval request on command.
 
+Current Codex CLI compatibility policy is intentionally rolling:
+
+- `SwiftASB` aims to support the latest public Codex CLI release plus the prior
+  two minor versions.
+- When newer Codex CLI releases add protocol features without breaking existing
+  behavior, `SwiftASB` may adopt those additions later or gate them behind
+  newer-version-aware promotion work rather than treating every new upstream
+  feature as an immediate public-surface requirement.
+- If Codex reaches a future major-version release with a materially different
+  compatibility story, this policy should be reassessed rather than assumed to
+  carry forward unchanged.
+
 A minimal flow looks like this:
 
 ```swift
