@@ -39,7 +39,7 @@
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partial` | Explicit binary override exists, but version compatibility policy and richer discovery diagnostics are still open. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, and the current concurrency contract, but richer examples plus compatibility guidance are still open. |
-| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, while the default test suite still relies on a deterministic fake transport seam. |
+| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including same-thread concurrency probing and a live approval-path behavior probe, while the default test suite still relies on a deterministic fake transport seam. |
 | Apache 2.0 licensing | `Shipped` | The repo now carries an Apache 2.0 `LICENSE` file and README references the live license surface. |
 
 ## Milestone Progress
