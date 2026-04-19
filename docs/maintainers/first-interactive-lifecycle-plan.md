@@ -114,6 +114,39 @@ pass unless a concrete protocol constraint forces a revisit.
 - The lower-level interactive lifecycle must be coherent before a convenience
   API is allowed to hide it.
 
+### 8. Buffer early interactive turn events
+
+- `startTurn(...)` returning a `CodexTurnHandle` must not force consumers to
+  race the server just to observe the first interactive lifecycle request.
+- Turn buffering for this pass should widen beyond terminal-only buffering to
+  cover the early approval, elicitation, and closely related resolution events
+  needed for a sane first consumer experience.
+- Buffering should stay lifecycle-oriented and deliberate rather than becoming
+  an unbounded hidden event log.
+
+### 9. Keep turn-handle answers ergonomic
+
+- The public answer path for approval and elicitation requests should live on
+  `CodexTurnHandle`.
+- `CodexAppServer` remains the underlying transport and request-routing owner.
+- The package should avoid splitting the public control path across multiple
+  top-level surfaces when the interaction clearly belongs to one turn.
+
+### 10. Treat server request IDs as the internal resolution key
+
+- Approval requests have enough turn-scoped context to surface naturally on
+  `CodexTurnHandle`, but their cleanup path still needs explicit internal
+  correlation.
+- Command approvals carry `itemId`, `threadId`, `turnId`, and may also carry an
+  optional `approvalId` for subcommand callback disambiguation.
+- File-change approvals carry `itemId`, `threadId`, and `turnId`.
+- MCP elicitation requests carry `threadId` and a best-effort nullable `turnId`,
+  so turn routing is a correlation convenience rather than the protocol’s
+  canonical identity.
+- `serverRequest/resolved` carries `threadId` plus `requestId`, so internal
+  outstanding-request tracking must key off the JSON-RPC server request id even
+  when the public API presents a turn-scoped model.
+
 ## Phase 1: Lock The Public Ownership Model
 
 Objective:
@@ -184,6 +217,11 @@ Chosen shape:
   `CodexTurnHandle`
 - `Minimap` may mirror only the latest approval or elicitation state if that
   turns out to be useful for UI consumers
+- turn-scoped streams should buffer the early interactive request and
+  resolution events that can arrive before a consumer starts iterating the
+  handle-owned stream returned by `startTurn(...)`
+- server-request resolution support is part of the first pass rather than a
+  follow-up cleanup slice
 
 Non-goals:
 
@@ -224,6 +262,9 @@ Work:
 - keep `ThreadItem` activity stream-first, with observable mirrors only where a
   UI-facing current-state summary is genuinely useful
 - keep naming explicit and lifecycle-oriented
+- make the internal routing model strong enough to resolve requests by
+  JSON-RPC request id while still exposing turn-oriented public handles when the
+  request is correlated to a turn
 
 Decision:
 
@@ -251,6 +292,10 @@ Required tests:
 - fake-transport tests for elicitation request delivery
 - fake-transport tests for answering those requests through the chosen public
   surface
+- fake-transport tests for buffered delivery of early approval or elicitation
+  events on a newly returned `CodexTurnHandle`
+- fake-transport tests for request-resolution delivery and cleanup keyed from
+  the original JSON-RPC server request id
 - regression coverage that proves the existing turn and thread event flows still
   behave correctly
 
