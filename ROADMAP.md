@@ -52,6 +52,69 @@
 - [ ] Milestone 5: Approvals, richer notifications, and broader protocol coverage
 - [ ] Milestone 6: Public docs, examples, and release readiness
 
+## Current Maintainer Priority
+
+The next meaningful package step is not "more API surface."
+
+The next meaningful step is to finish the first real interactive lifecycle so the
+public API can represent what the live app-server actually does once a turn is
+running and the server starts talking back.
+
+That means the current priority order is:
+
+1. Finish the Milestone 5 lifecycle gaps.
+2. Lock the public shape for event streams, approval handling, and item-level activity.
+3. Write consumer-facing examples and release-boundary docs for the now-stable shape.
+4. Re-evaluate whether a convenience `run(...)` API is still earned after the lower-level lifecycle feels complete.
+
+## Proposed Next Release Slice
+
+Treat the next release candidate as a "first interactive lifecycle" release, not
+as a convenience-API release.
+
+### Must ship in the next slice
+
+- Typed public handling for server-originated approval and elicitation requests.
+- Enough notification coverage that a consumer can build a multi-turn interactive flow without dropping to raw payloads.
+- A deliberate public story for `ThreadItem`-level activity, whether that is stream-first, observable-first, or explicitly split between the two.
+- A written release boundary that says what is public, what stays internal scaffolding, and what is intentionally unsupported.
+- Consumer-facing examples that exercise the supported lifecycle shape rather than only the minimal bootstrap path.
+
+### Explicitly defer unless one of the above forces it
+
+- A one-shot `run(...)` convenience API.
+- Broader sugar beyond `startTextTurn(...)`.
+- Public exposure of generated wire models.
+- Expanding the public API just because the generated schema contains more message types.
+
+### Exit signal for this slice
+
+This slice is done when a Swift consumer can:
+
+- start the app-server
+- initialize a session
+- start a thread
+- start a turn
+- observe meaningful thread and turn progress
+- respond to approval or elicitation requests
+- understand, from the docs alone, which lifecycle surfaces are supported today
+
+without needing raw JSON-RPC access or generated wire types.
+
+## Decisions Made For The First Interactive Lifecycle
+
+- Keep the current ownership model:
+  - `CodexAppServer` owns transport, protocol, fanout, and server-request routing.
+  - `CodexThread` remains the ergonomic thread handle.
+  - `CodexTurnHandle` remains the ergonomic turn handle.
+- Keep typed async streams as the canonical lifecycle surface.
+- Keep `Dashboard` and `Minimap` as current-state mirrors of typed public events, not as a second control path.
+- Use a stream-first model for approval and elicitation requests.
+- Keep `ThreadItem` activity stream-first, with observable companions mirroring only selected latest-state summaries when useful.
+- Promote additional notification families by supported-release intent, not by schema breadth alone.
+- Keep public lifecycle failures unified under `CodexAppServerError`.
+- Defer a one-shot `run(...)` API until the lower-level interactive lifecycle is complete enough to hide honestly.
+
 ## Milestone 0: Package And Repo Baseline
 
 Scope:
@@ -134,14 +197,19 @@ Scope:
 - [x] Add a simple text-only turn convenience on `CodexThread` for the common case.
 - [x] Add live observable thread state via `CodexThread.Dashboard` and `makeDashboard()`.
 - [x] Add live observable turn state via `CodexTurnHandle.Minimap` and `makeMinimap()`.
-- [ ] Decide whether additional convenience APIs belong as observable companions, async helpers, or neither.
-- [ ] Decide how much terminal-event buffering should remain implicit versus explicit in the public API.
+- [x] Decide whether additional convenience APIs belong as observable companions, async helpers, or neither.
+  Decision: defer new convenience APIs for now; keep the current handle model and revisit helpers only after the interactive lifecycle is complete enough to hide honestly.
+- [x] Decide how much terminal-event buffering should remain implicit versus explicit in the public API.
+  Decision: typed public streams remain the canonical lifecycle surface, while `Dashboard` and `Minimap` keep only current-state mirror buffering rather than becoming a second event system.
+- [x] Decide whether Milestone 4 is complete enough to freeze the current handle model before adding approval-driven surfaces above it.
+  Decision: yes for ownership. `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`, and `Minimap` are the model Milestone 5 should build on.
 
 Exit criteria:
 
 - [x] A started turn can emit at least one typed async event through a handle-owned stream.
 - [x] `CodexThread` exists as a public ergonomic wrapper with a clear ownership model.
 - [x] The documented concurrency model is explicit for both cross-thread and same-thread turn starts.
+- [x] The remaining open questions for Milestone 4 are narrow enough that Milestone 5 can build on the current handles without likely reshaping them again.
 - [ ] Thread and turn handles plus their observable companions feel like the real public surface rather than transitional wrappers.
 
 ## Milestone 5: Approvals, Richer Notifications, And Broader Protocol Coverage
@@ -149,15 +217,21 @@ Exit criteria:
 Scope:
 
 - [x] Add typed protocol mapping for an initial batch of generated thread, turn, item, and reasoning notifications beyond `turn/completed`.
+- [ ] Audit the generated lifecycle batch and explicitly mark which notification families matter for the first interactive public lifecycle.
 - [ ] Expand typed protocol mapping to the remaining generated notifications that matter for the first public interactive lifecycle.
-- [ ] Decide how to surface `ThreadItem`-level activity in the public API.
+- [x] Decide how to surface `ThreadItem`-level activity in the public API.
+  Decision: stream-first, with observable companions limited to selected latest-state mirrors for UI-oriented summaries.
 - [ ] Add a public model for server-originated approval and elicitation requests.
-- [ ] Decide whether approval handling should be callback-based, stream-based, or both.
+- [x] Decide whether approval handling should be callback-based, stream-based, or both.
+  Decision: stream-first. Approval and elicitation requests should arrive as typed public events, with answers sent through explicit public methods on the owning surface.
+- [ ] Add fake-transport tests that prove approval and elicitation messages can be observed and answered through the chosen public shape.
+- [ ] Add opt-in live coverage for at least one approval or server-request path if the local Codex runtime exposes a stable repro.
 - [ ] Add cancellation, interruption, or steering flows if they are part of the intended first public lifecycle.
 - [ ] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources.
 
 Exit criteria:
 
+- [x] The repo has a deliberate answer for where approval requests, elicitation requests, and item-level activity belong in the public model.
 - [ ] The public API can represent the most important server-driven lifecycle events without dropping back to raw payloads.
 - [ ] Approval and user-input request handling has a deliberate public model.
 - [ ] The package covers a meaningful multi-turn interactive lifecycle rather than only the happy-path bootstrap.
@@ -168,8 +242,10 @@ Scope:
 
 - [x] Expand `README.md` with installation, runtime assumptions, and a minimal working example.
 - [x] Document the local Codex CLI dependency and explicit binary override path clearly.
-- [ ] Add consumer-facing examples for initialize, thread start, turn start, and event streaming.
+- [ ] Add consumer-facing examples for initialize, thread start, turn start, event streaming, and approval handling.
 - [ ] Decide on the first release boundary and what remains intentionally internal.
+- [ ] Add an explicit "Supported Today" section to `README.md` that mirrors the real public lifecycle and concurrency contract.
+- [ ] Add a maintainer-facing note that clarifies which generated notification families intentionally remain internal for now.
 - [ ] Add version-compatibility policy notes for the local Codex binary.
 - [x] Decide whether real subprocess integration tests are required before the first release.
   Decision: yes, but as opt-in suites rather than as part of the default `swift test` path while the live Codex runtime remains an external local dependency.
@@ -179,19 +255,26 @@ Exit criteria:
 
 - [x] A new consumer can understand what `SwiftASB` is, what it depends on, and how to use the first supported lifecycle slice.
 - [ ] The release boundary between public API, internal wire scaffolding, and unsupported protocol surfaces is explicit.
+- [ ] A new consumer can discover the supported interactive lifecycle, including approval handling if shipped, from docs and examples without reading tests or maintainer notes.
 - [x] The roadmap can identify a credible `v0.x` release candidate instead of only an exploration phase.
 
 ## Open Tickets
 
+- [x] Freeze the Milestone 4 handle model enough that Milestone 5 does not reopen the ownership story for `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`, and `Minimap`.
+- [ ] Audit the generated lifecycle graph and classify events as public now, observable-only for now, or internal-only for now.
 - [x] Add `CodexThread` as a first-class public wrapper and move turn creation onto it.
 - [x] Document and enforce the intended behavior for multiple active threads on one `CodexAppServer`.
 - [x] Investigate same-thread concurrent turn behavior against the real app-server and codify the result.
   Result: cross-thread concurrent turns complete successfully through the live client, but same-thread overlap is not independently routable at the live app-server layer today. `SwiftASB` now rejects overlapping same-thread `startTurn(...)` calls client-side with a descriptive `CodexAppServerError.invalidState` until the upstream lifecycle semantics become reliable.
 - [x] Map an initial progress-oriented notification batch into `CodexTurnEvent` so the stream covers more than completion.
-- [ ] Decide whether additional item lifecycle and thread-scoped notifications should join the public stream surface or instead only feed observable companions like `Dashboard` and `Minimap`.
-- [ ] Decide whether the public stream should surface protocol failures directly or always wrap them as `CodexAppServerError`.
+- [x] Decide whether additional item lifecycle and thread-scoped notifications should join the public stream surface or instead only feed observable companions like `Dashboard` and `Minimap`.
+  Decision: default to the public stream; use observable companions only for selected current-state mirrors.
+- [x] Decide whether the public stream should surface protocol failures directly or always wrap them as `CodexAppServerError`.
+  Decision: keep public lifecycle failures unified under `CodexAppServerError`, with internal causes preserved only as supporting detail.
 - [ ] Add a typed surface for approval requests and other server-originated request messages.
+- [ ] Add tests that prove approval and elicitation handling through the public surface before adding more convenience APIs.
 - [ ] Add a one-shot `run(...)` convenience API once the handle model feels stable.
+- [ ] Add consumer-facing examples for the supported interactive lifecycle before broadening the public API further.
 - [x] Add a real subprocess-backed integration test harness once the supported event set is less volatile.
   Current shape: the repo now has an opt-in live harness for raw transport/protocol checks plus public-client turn and concurrency probes; broader always-on subprocess coverage is still intentionally deferred.
 - [x] Expand `README.md` with first-use examples and runtime expectations.
