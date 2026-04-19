@@ -8,15 +8,18 @@ public struct CodexTurnHandle: Sendable {
         public let threadID: String
         public let turnID: String
         public private(set) var currentTurn: CodexAppServer.TurnInfo
+        public private(set) var latestApprovalRequest: CodexApprovalRequest?
         public private(set) var latestAgentMessageDelta: CodexTurnAgentMessageDelta?
         public private(set) var latestCompletedItem: CodexTurnItemCompleted?
         public private(set) var latestCompletion: CodexTurnCompletion?
         public private(set) var latestDiffUpdate: CodexTurnDiffUpdate?
+        public private(set) var latestElicitationRequest: CodexElicitationRequest?
         public private(set) var latestPlanDelta: CodexTurnPlanDelta?
         public private(set) var latestPlanUpdate: CodexTurnPlanUpdate?
         public private(set) var latestReasoningSummaryPartAdded: CodexTurnReasoningSummaryPartAdded?
         public private(set) var latestReasoningSummaryTextDelta: CodexTurnReasoningSummaryTextDelta?
         public private(set) var latestReasoningTextDelta: CodexTurnReasoningTextDelta?
+        public private(set) var latestRequestResolution: CodexInteractiveRequestResolved?
         public private(set) var latestStartedItem: CodexTurnItemStarted?
         public private(set) var latestStartedTurn: CodexTurnStarted?
 
@@ -31,15 +34,18 @@ public struct CodexTurnHandle: Sendable {
             self.threadID = threadID
             self.turnID = initialTurn.id
             self.currentTurn = initialTurn
+            self.latestApprovalRequest = nil
             self.latestAgentMessageDelta = nil
             self.latestCompletedItem = nil
             self.latestCompletion = nil
             self.latestDiffUpdate = nil
+            self.latestElicitationRequest = nil
             self.latestPlanDelta = nil
             self.latestPlanUpdate = nil
             self.latestReasoningSummaryPartAdded = nil
             self.latestReasoningSummaryTextDelta = nil
             self.latestReasoningTextDelta = nil
+            self.latestRequestResolution = nil
             self.latestStartedItem = nil
             self.latestStartedTurn = nil
 
@@ -73,6 +79,18 @@ public struct CodexTurnHandle: Sendable {
                 latestPlanDelta = delta
             case let .diffUpdated(update):
                 latestDiffUpdate = update
+            case let .approvalRequested(request):
+                latestApprovalRequest = request
+            case let .elicitationRequested(request):
+                latestElicitationRequest = request
+            case let .serverRequestResolved(resolution):
+                latestRequestResolution = resolution
+                if latestApprovalRequest?.requestID == resolution.requestID {
+                    latestApprovalRequest = nil
+                }
+                if latestElicitationRequest?.requestID == resolution.requestID {
+                    latestElicitationRequest = nil
+                }
             case let .itemStarted(itemStarted):
                 latestStartedItem = itemStarted
             case let .itemCompleted(itemCompleted):
@@ -118,6 +136,30 @@ public struct CodexTurnHandle: Sendable {
             events: events
         )
     }
+
+    public func respond(
+        to request: CodexApprovalRequest,
+        with response: CodexApprovalResponse
+    ) async throws {
+        try await appServer.respond(
+            to: request,
+            with: response,
+            expectedThreadID: threadID,
+            expectedTurnID: turn.id
+        )
+    }
+
+    public func respond(
+        to request: CodexElicitationRequest,
+        with response: CodexElicitationResponse
+    ) async throws {
+        try await appServer.respond(
+            to: request,
+            with: response,
+            expectedThreadID: threadID,
+            expectedTurnID: turn.id
+        )
+    }
 }
 
 public enum CodexTurnEvent: Sendable, Equatable {
@@ -125,6 +167,9 @@ public enum CodexTurnEvent: Sendable, Equatable {
     case planUpdated(CodexTurnPlanUpdate)
     case planDelta(CodexTurnPlanDelta)
     case diffUpdated(CodexTurnDiffUpdate)
+    case approvalRequested(CodexApprovalRequest)
+    case elicitationRequested(CodexElicitationRequest)
+    case serverRequestResolved(CodexInteractiveRequestResolved)
     case itemStarted(CodexTurnItemStarted)
     case itemCompleted(CodexTurnItemCompleted)
     case agentMessageDelta(CodexTurnAgentMessageDelta)

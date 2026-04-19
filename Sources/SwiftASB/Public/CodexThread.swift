@@ -56,6 +56,12 @@ public struct CodexThread: Sendable {
                 status = started.thread.status
             case let .statusChanged(change):
                 status = change.status
+            case .approvalRequested:
+                return
+            case .elicitationRequested:
+                return
+            case .serverRequestResolved:
+                return
             case .archived:
                 isArchived = true
             case .unarchived:
@@ -198,11 +204,38 @@ public struct CodexThread: Sendable {
         )
     }
 
+    public func respond(
+        to request: CodexApprovalRequest,
+        with response: CodexApprovalResponse
+    ) async throws {
+        try await appServer.respond(
+            to: request,
+            with: response,
+            expectedThreadID: id,
+            expectedTurnID: nil
+        )
+    }
+
+    public func respond(
+        to request: CodexElicitationRequest,
+        with response: CodexElicitationResponse
+    ) async throws {
+        try await appServer.respond(
+            to: request,
+            with: response,
+            expectedThreadID: id,
+            expectedTurnID: nil
+        )
+    }
+
 }
 
 public enum CodexThreadEvent: Sendable, Equatable {
     case started(CodexThreadStarted)
     case statusChanged(CodexThreadStatusChanged)
+    case approvalRequested(CodexApprovalRequest)
+    case elicitationRequested(CodexElicitationRequest)
+    case serverRequestResolved(CodexInteractiveRequestResolved)
     case archived(CodexThreadArchived)
     case unarchived(CodexThreadUnarchived)
     case closed(CodexThreadClosed)

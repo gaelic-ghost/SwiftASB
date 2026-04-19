@@ -80,6 +80,9 @@ pass unless a concrete protocol constraint forces a revisit.
 
 - Approval and elicitation requests should appear as typed turn-scoped public
   events.
+- If a server-originated interactive request cannot be confidently routed to a
+  `CodexTurnHandle`, it should fall back to a deliberate thread-scoped public
+  event rather than being forced into an incorrect turn association.
 - Responses should be sent through explicit public methods on the owning
   surface, routed by `CodexAppServer` and exposed ergonomically from
   `CodexTurnHandle`.
@@ -123,6 +126,10 @@ pass unless a concrete protocol constraint forces a revisit.
   needed for a sane first consumer experience.
 - Buffering should stay lifecycle-oriented and deliberate rather than becoming
   an unbounded hidden event log.
+- Approval requests are usually one-at-a-time per thread, so thread-level
+  mirrors may preserve the current pending approval briefly if that proves
+  useful for UI consumers, but this is optional rather than required for the
+  first pass.
 
 ### 9. Keep turn-handle answers ergonomic
 
@@ -212,11 +219,19 @@ Use a stream-first model anchored in the existing typed async lifecycle.
 Chosen shape:
 
 - `CodexTurnEvent` gains typed server-request cases for approval and elicitation
+- approval and elicitation cases should carry dedicated public value types
+  rather than generic catch-all payload shapes
+- the public model should be broad enough to grow into additional interactive
+  server-request families over time, even if the first shipped slice only maps
+  a narrower subset concretely
 - answering those requests happens through explicit methods on the owning
   surface, likely routed through `CodexAppServer` and exposed ergonomically from
   `CodexTurnHandle`
+- if a request cannot be confidently routed to a turn, it should surface on a
+  thread-scoped event path instead of being misclassified as a turn event
 - `Minimap` may mirror only the latest approval or elicitation state if that
-  turns out to be useful for UI consumers
+  turns out to be useful for UI consumers, but approval mirroring is optional
+  rather than mandatory for the first pass
 - turn-scoped streams should buffer the early interactive request and
   resolution events that can arrive before a consumer starts iterating the
   handle-owned stream returned by `startTurn(...)`

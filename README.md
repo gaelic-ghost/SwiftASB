@@ -47,6 +47,8 @@ The package assumes a local Codex CLI runtime. The currently shipped public surf
 - `CodexAppServer` for process ownership, initialize, thread start, and turn start.
 - `CodexThread` for thread-scoped turn creation plus a live `Dashboard` companion.
 - `CodexTurnHandle` for typed turn events plus a live `Minimap` companion.
+- typed approval and elicitation request models, with explicit response APIs on
+  `CodexThread` and `CodexTurnHandle`.
 
 A minimal flow looks like this:
 
@@ -96,9 +98,19 @@ Current concurrency behavior is explicit:
 - Different threads may host concurrent turns.
 - Overlapping turns on the same thread are rejected client-side with `CodexAppServerError.invalidState` because the live app-server does not yet expose a reliable independent lifecycle for them.
 
-Current non-goals and not-yet-shipped areas are also explicit:
+Supported today is also explicit:
 
-- Approval and elicitation requests are not surfaced yet.
+- `CodexTurnEvent` and `CodexThreadEvent` can now surface typed
+  server-originated approval and elicitation requests.
+- `CodexTurnHandle.respond(to:with:)` answers turn-routed approval and
+  elicitation requests.
+- `CodexThread.respond(to:with:)` answers thread-routed fallback requests when a
+  request cannot be confidently associated with a turn.
+- interactive request resolution is surfaced through typed
+  `serverRequestResolved` events.
+
+Current non-goals and intentionally deferred areas are also explicit:
+
 - The generated wire layer stays internal.
 - There is not yet a one-shot `run(...)` convenience API.
 

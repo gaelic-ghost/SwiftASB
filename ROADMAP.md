@@ -35,7 +35,7 @@
 | `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, includes a `startTextTurn(...)` happy-path helper, exposes a typed thread event stream, and can now vend a live `Dashboard` observable mirror via `makeDashboard()`. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` can now vend a live `Minimap` observable mirror via `makeMinimap()`, seeded from the initial turn snapshot and updated from the turn event stream. |
 | Additional turn event mapping | `Partially started` | The generated wire layer now includes many relevant notification types, but most are not yet promoted into protocol/public event enums. |
-| Server request / approval handling | `Not started` | Approval prompts, elicitation requests, and other server-initiated request flows are not surfaced yet. |
+| Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, and request resolution is tracked by JSON-RPC request id, but broader live coverage and more server-request families are still open. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partial` | Explicit binary override exists, but version compatibility policy and richer discovery diagnostics are still open. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, and the current concurrency contract, but richer examples plus compatibility guidance are still open. |
@@ -221,10 +221,10 @@ Scope:
 - [ ] Expand typed protocol mapping to the remaining generated notifications that matter for the first public interactive lifecycle.
 - [x] Decide how to surface `ThreadItem`-level activity in the public API.
   Decision: stream-first, with observable companions limited to selected latest-state mirrors for UI-oriented summaries.
-- [ ] Add a public model for server-originated approval and elicitation requests.
+- [x] Add a public model for server-originated approval and elicitation requests.
 - [x] Decide whether approval handling should be callback-based, stream-based, or both.
   Decision: stream-first. Approval and elicitation requests should arrive as typed public events, with answers sent through explicit public methods on the owning surface.
-- [ ] Add fake-transport tests that prove approval and elicitation messages can be observed and answered through the chosen public shape.
+- [x] Add fake-transport tests that prove approval and elicitation messages can be observed and answered through the chosen public shape.
 - [ ] Add opt-in live coverage for at least one approval or server-request path if the local Codex runtime exposes a stable repro.
 - [ ] Add cancellation, interruption, or steering flows if they are part of the intended first public lifecycle.
 - [ ] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources.
@@ -232,8 +232,8 @@ Scope:
 Exit criteria:
 
 - [x] The repo has a deliberate answer for where approval requests, elicitation requests, and item-level activity belong in the public model.
-- [ ] The public API can represent the most important server-driven lifecycle events without dropping back to raw payloads.
-- [ ] Approval and user-input request handling has a deliberate public model.
+- [x] The public API can represent the most important server-driven lifecycle events without dropping back to raw payloads.
+- [x] Approval and user-input request handling has a deliberate public model.
 - [ ] The package covers a meaningful multi-turn interactive lifecycle rather than only the happy-path bootstrap.
 
 ## Milestone 6: Public Docs, Examples, And Release Readiness
@@ -271,8 +271,8 @@ Exit criteria:
   Decision: default to the public stream; use observable companions only for selected current-state mirrors.
 - [x] Decide whether the public stream should surface protocol failures directly or always wrap them as `CodexAppServerError`.
   Decision: keep public lifecycle failures unified under `CodexAppServerError`, with internal causes preserved only as supporting detail.
-- [ ] Add a typed surface for approval requests and other server-originated request messages.
-- [ ] Add tests that prove approval and elicitation handling through the public surface before adding more convenience APIs.
+- [x] Add a typed surface for approval requests and other server-originated request messages.
+- [x] Add tests that prove approval and elicitation handling through the public surface before adding more convenience APIs.
 - [ ] Add a one-shot `run(...)` convenience API once the handle model feels stable.
 - [ ] Add consumer-facing examples for the supported interactive lifecycle before broadening the public API further.
 - [x] Add a real subprocess-backed integration test harness once the supported event set is less volatile.
