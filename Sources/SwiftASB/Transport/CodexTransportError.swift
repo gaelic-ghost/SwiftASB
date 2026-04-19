@@ -3,6 +3,7 @@ import Foundation
 internal enum CodexTransportError: Error, Sendable, LocalizedError, Equatable {
     case alreadyStarted
     case notStarted
+    case executableDiscoveryFailed(reason: String)
     case failedToLaunch(executable: String, reason: String)
     case failedToWriteRequest(id: CodexRPCRequestID, reason: String)
     case failedToWriteNotification(method: String, reason: String)
@@ -18,6 +19,8 @@ internal enum CodexTransportError: Error, Sendable, LocalizedError, Equatable {
             return "Codex app-server transport is already running."
         case .notStarted:
             return "Codex app-server transport has not been started yet."
+        case let .executableDiscoveryFailed(reason):
+            return reason
         case let .failedToLaunch(executable, reason):
             return "Failed to launch Codex app-server transport using \(executable): \(reason)"
         case let .failedToWriteRequest(id, reason):

@@ -64,6 +64,17 @@ Practical implications:
   written public lifecycle boundary, tighten the support statement explicitly
   in docs and tests instead of letting drift stay implicit
 
+Current binary discovery on macOS should follow this order:
+
+1. explicit `CodexAppServer.Configuration.codexExecutableURL`
+2. `PATH` probe via `codex --version`
+3. Homebrew paths:
+   `/opt/homebrew/bin/codex` and `/usr/local/bin/codex`
+4. npm global prefix lookup via `npm prefix -g`, then `<prefix>/bin/codex`
+
+The discovery path intentionally covers the two officially documented install
+options for Codex CLI on macOS: Homebrew cask install and global npm install.
+
 This policy is intentionally softer than the upstream Python package model that
 pins an exact runtime dependency. `SwiftASB` is expected to work against a
 reasonably recent installed local Codex CLI, not only one exact binary build.

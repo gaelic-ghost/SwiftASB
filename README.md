@@ -94,6 +94,17 @@ Current Codex CLI compatibility policy is intentionally rolling:
   compatibility story, this policy should be reassessed rather than assumed to
   carry forward unchanged.
 
+Current executable discovery on macOS follows this order when you do not pass
+an explicit `CodexAppServer.Configuration.codexExecutableURL`:
+
+- probe `codex --version` through the current `PATH`
+- check the common Homebrew install locations
+  `/opt/homebrew/bin/codex` and `/usr/local/bin/codex`
+- check the npm global prefix reported by `npm prefix -g`, then look for
+  `<prefix>/bin/codex`
+
+If you want to bypass discovery entirely, pass an explicit executable URL.
+
 A minimal flow looks like this:
 
 ```swift
