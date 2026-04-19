@@ -6,6 +6,8 @@ struct CodexAppServerProtocol {
         case initialized = "initialized"
         case threadStart = "thread/start"
         case turnStart = "turn/start"
+        case turnSteer = "turn/steer"
+        case turnInterrupt = "turn/interrupt"
     }
 
     private let encoder: JSONEncoder
@@ -56,6 +58,26 @@ struct CodexAppServerProtocol {
         )
     }
 
+    func makeTurnInterruptRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolTurnInterruptParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .turnInterrupt, params: params),
+            method: .turnInterrupt
+        )
+    }
+
+    func makeTurnSteerRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolTurnSteerParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .turnSteer, params: params),
+            method: .turnSteer
+        )
+    }
+
     func makeServerResponse<Result: Encodable>(
         id: CodexRPCRequestID,
         result: Result
@@ -103,6 +125,30 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .turnStart,
             resultType: CodexWireTurnStartResponse.self
+        )
+    }
+
+    func decodeTurnInterruptResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolTurnInterruptResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .turnInterrupt,
+            resultType: CodexProtocolTurnInterruptResponse.self
+        )
+    }
+
+    func decodeTurnSteerResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolTurnSteerResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .turnSteer,
+            resultType: CodexProtocolTurnSteerResponse.self
         )
     }
 

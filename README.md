@@ -50,6 +50,38 @@ The package assumes a local Codex CLI runtime. The currently shipped public surf
 - typed approval and elicitation request models, with explicit response APIs on
   `CodexThread` and `CodexTurnHandle`.
 
+## Supported Today
+
+The current public lifecycle contract is intentionally narrow and explicit:
+
+- `CodexAppServer` owns the local subprocess plus initialize, thread start, and
+  turn start.
+- `CodexThread` owns thread-scoped turn creation and thread-scoped fallback
+  responses for unroutable interactive requests.
+- `CodexTurnHandle` owns the active turn stream plus turn-scoped control
+  methods, including `respond(to:with:)`, `steer(_:)`, `steerText(_:)`, and
+  `interrupt()`.
+- `CodexTurnEvent` and `CodexThreadEvent` surface typed progress, item,
+  approval, elicitation, and request-resolution events without exposing raw
+  generated wire payloads.
+- `Dashboard` and `Minimap` are current-state mirrors of the typed public event
+  streams rather than a second control path.
+
+Current concurrency behavior is also explicit:
+
+- Different threads may host concurrent turns.
+- Overlapping turns on the same thread are rejected client-side with
+  `CodexAppServerError.invalidState` because the live app-server does not yet
+  expose a reliable independent lifecycle for them.
+
+Current non-goals and intentionally deferred areas are also explicit:
+
+- The generated wire layer stays internal.
+- There is not yet a one-shot `run(...)` convenience API.
+- The live approval-path probe is best-effort runtime observation, not a
+  deterministic release gate, because the current Codex runtime does not
+  reliably force an approval request on command.
+
 A minimal flow looks like this:
 
 ```swift
@@ -93,26 +125,103 @@ for try await event in turn.events {
 }
 ```
 
-Current concurrency behavior is explicit:
+### Interactive Lifecycle Example
 
-- Different threads may host concurrent turns.
-- Overlapping turns on the same thread are rejected client-side with `CodexAppServerError.invalidState` because the live app-server does not yet expose a reliable independent lifecycle for them.
+This example shows the current intended handle-owned lifecycle: start a turn,
+observe events, answer approval requests if they appear, and optionally steer
+or interrupt the active turn.
 
-Supported today is also explicit:
+```swift
+import SwiftASB
 
-- `CodexTurnEvent` and `CodexThreadEvent` can now surface typed
-  server-originated approval and elicitation requests.
-- `CodexTurnHandle.respond(to:with:)` answers turn-routed approval and
-  elicitation requests.
-- `CodexThread.respond(to:with:)` answers thread-routed fallback requests when a
-  request cannot be confidently associated with a turn.
-- interactive request resolution is surfaced through typed
-  `serverRequestResolved` events.
+let client = CodexAppServer()
 
-Current non-goals and intentionally deferred areas are also explicit:
+try await client.start()
+defer { Task { await client.stop() } }
 
-- The generated wire layer stays internal.
-- There is not yet a one-shot `run(...)` convenience API.
+_ = try await client.initialize(
+    .init(
+        clientInfo: .init(
+            name: "ExampleApp",
+            title: "Example App",
+            version: "0.1.0"
+        )
+    )
+)
+
+let thread = try await client.startThread(
+    .init(
+        approvalPolicy: .onRequest,
+        approvalsReviewer: .user,
+        currentDirectoryPath: "/absolute/path/to/workspace",
+        ephemeral: true,
+        sandboxMode: .workspaceWrite
+    )
+)
+
+let turn = try await thread.startTextTurn(
+    "Inspect the workspace and summarize what changed.",
+    approvalPolicy: .onRequest,
+    summary: .concise
+)
+
+try await turn.steerText("Keep the answer short and lead with the most important change.")
+
+for try await event in turn.events {
+    switch event {
+    case let .approvalRequested(request):
+        switch request {
+        case .commandExecution:
+            try await turn.respond(to: request, with: .commandExecution(.accept))
+        case .fileChange:
+            try await turn.respond(to: request, with: .fileChange(.accept))
+        case let .permissions(permissionsRequest):
+            try await turn.respond(
+                to: request,
+                with: .permissions(
+                    .init(
+                        permissions: permissionsRequest.permissions,
+                        scope: .turn
+                    )
+                )
+            )
+        }
+    case let .elicitationRequested(request):
+        switch request {
+        case let .toolUserInput(inputRequest):
+            let answers = Dictionary(
+                uniqueKeysWithValues: inputRequest.questions.map { question in
+                    (question.id, CodexToolUserInputResponse.Answer(answers: []))
+                }
+            )
+            try await turn.respond(
+                to: request,
+                with: .toolUserInput(.init(answers: answers))
+            )
+        case .mcpServer:
+            try await turn.respond(
+                to: request,
+                with: .mcpServer(.init(action: .accept))
+            )
+        }
+    case let .serverRequestResolved(resolution):
+        print("Resolved request:", resolution.requestID)
+    case let .completed(completion):
+        print("Turn finished with status:", completion.turn.status)
+        break
+    default:
+        continue
+    }
+}
+
+// If your UI or workflow decides the turn should stop early:
+try await turn.interrupt()
+```
+
+If the runtime does not naturally raise an approval request for a particular
+prompt, that is expected today. The live approval-path test is useful for
+observing current behavior, but it is not treated as deterministic release
+coverage.
 
 ## Development
 
@@ -131,6 +240,7 @@ swift build
 - Keep the public API deliberate and library-first.
 - Use the fake transport tests for deterministic public-surface work.
 - Use the opt-in live tests when verifying real Codex CLI subprocess behavior.
+- Treat the live approval-path probe as best-effort coverage, not as a deterministic release gate; the current Codex runtime does not reliably force an approval request on command, so the same prompt may either raise approval or complete directly.
 - Keep generated wire code internal and treat the public wrappers as the actual package surface.
 - Keep temporary codegen artifacts under `codex-schemas/` and `tmp/` untracked unless a maintainer explicitly decides otherwise.
 
@@ -154,6 +264,7 @@ env SWIFTASB_ENABLE_LIVE_CODEX_SAME_THREAD_TESTS=1 swift test
 ```
 
 Those live suites launch the local Codex CLI through temp workspaces with explicit test time limits. They are intentionally opt-in so day-to-day package validation stays fast and deterministic.
+The approval-path probe is especially non-deterministic today and should be read as runtime observation rather than a strict pass/fail release gate.
 
 ## Repo Structure
 

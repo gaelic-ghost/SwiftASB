@@ -34,6 +34,38 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case serverRequestResolved(CodexWireServerRequestResolvedNotification)
 }
 
+struct CodexProtocolTurnInterruptParams: Encodable, Equatable, Sendable {
+	let threadID: String
+	let turnID: String
+
+	enum CodingKeys: String, CodingKey {
+		case threadID = "threadId"
+		case turnID = "turnId"
+	}
+}
+
+struct CodexProtocolTurnSteerParams: Encodable, Equatable, Sendable {
+	let expectedTurnID: String
+	let input: [CodexWireUserInput]
+	let threadID: String
+
+	enum CodingKeys: String, CodingKey {
+		case expectedTurnID = "expectedTurnId"
+		case input
+		case threadID = "threadId"
+	}
+}
+
+struct CodexProtocolTurnSteerResponse: Decodable, Equatable, Sendable {
+	let turnID: String
+
+	enum CodingKeys: String, CodingKey {
+		case turnID = "turnId"
+	}
+}
+
+struct CodexProtocolTurnInterruptResponse: Decodable, Equatable, Sendable {}
+
 struct CodexProtocolCommandExecutionApprovalRequest: Decodable, Equatable, Sendable {
 	let approvalID: String?
 	let command: String?

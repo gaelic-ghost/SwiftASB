@@ -160,6 +160,25 @@ public struct CodexTurnHandle: Sendable {
             expectedTurnID: turn.id
         )
     }
+
+    public func interrupt() async throws {
+        try await appServer.interruptTurn(
+            threadID: threadID,
+            turnID: turn.id
+        )
+    }
+
+    public func steer(_ input: [CodexAppServer.TurnInput]) async throws {
+        try await appServer.steerTurn(
+            threadID: threadID,
+            turnID: turn.id,
+            input: input
+        )
+    }
+
+    public func steerText(_ text: String) async throws {
+        try await steer([.text(text)])
+    }
 }
 
 public enum CodexTurnEvent: Sendable, Equatable {

@@ -142,6 +142,58 @@ struct CodexAppServerProtocolTests {
         #expect(outputSchema["type"] as? String == "object")
     }
 
+    @Test("encodes turn/interrupt requests with the expected method and params payload")
+    func encodesTurnInterruptRequest() throws {
+        let payload = try protocolLayer.makeTurnInterruptRequest(
+            id: .string("interrupt-1"),
+            params: .init(threadID: "thread-123", turnID: "turn-123")
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "turn/interrupt")
+        #expect(object["id"] as? String == "interrupt-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["turnId"] as? String == "turn-123")
+    }
+
+    @Test("encodes turn/steer requests with the expected method and params payload")
+    func encodesTurnSteerRequest() throws {
+        let payload = try protocolLayer.makeTurnSteerRequest(
+            id: .string("steer-1"),
+            params: .init(
+                expectedTurnID: "turn-123",
+                input: [
+                    CodexWireUserInput(
+                        text: "Please summarize the answer more briefly.",
+                        textElements: nil,
+                        type: .text,
+                        url: nil,
+                        path: nil,
+                        name: nil
+                    )
+                ],
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "turn/steer")
+        #expect(object["id"] as? String == "steer-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["expectedTurnId"] as? String == "turn-123")
+
+        let input = try #require(params["input"] as? [[String: Any]])
+        #expect(input.count == 1)
+        #expect(input.first?["type"] as? String == "text")
+        #expect(input.first?["text"] as? String == "Please summarize the answer more briefly.")
+    }
+
     @Test("decodes initialize responses and honors the expected request ID")
     func decodesInitializeResponse() throws {
         let payload = Data(
@@ -211,6 +263,28 @@ struct CodexAppServerProtocolTests {
         #expect(response.turn.startedAt == 1713350002)
         #expect(response.turn.completedAt == nil)
         #expect(response.turn.items.isEmpty)
+    }
+
+    @Test("decodes turn/interrupt responses and honors the expected request ID")
+    func decodesTurnInterruptResponse() throws {
+        let payload = Data(#"{"id":"interrupt-1","result":{}}"#.utf8)
+
+        _ = try protocolLayer.decodeTurnInterruptResponse(
+            payload,
+            expectedID: .string("interrupt-1")
+        )
+    }
+
+    @Test("decodes turn/steer responses and honors the expected request ID")
+    func decodesTurnSteerResponse() throws {
+        let payload = Data(#"{"id":"steer-1","result":{"turnId":"turn-123"}}"#.utf8)
+
+        let response = try protocolLayer.decodeTurnSteerResponse(
+            payload,
+            expectedID: .string("steer-1")
+        )
+
+        #expect(response.turnID == "turn-123")
     }
 
     @Test("decodes turn/completed notifications into typed protocol events")

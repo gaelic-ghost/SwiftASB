@@ -512,6 +512,63 @@ public actor CodexAppServer {
         }
     }
 
+    internal func interruptTurn(
+        threadID: String,
+        turnID: String
+    ) async throws {
+        try requireInitialized(for: "turn/interrupt")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeTurnInterruptRequest(
+                id: requestID,
+                params: .init(threadID: threadID, turnID: turnID)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            _ = try protocolLayer.decodeTurnInterruptResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "turn/interrupt")
+        }
+    }
+
+    internal func steerTurn(
+        threadID: String,
+        turnID: String,
+        input: [TurnInput]
+    ) async throws {
+        try requireInitialized(for: "turn/steer")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeTurnSteerRequest(
+                id: requestID,
+                params: .init(
+                    expectedTurnID: turnID,
+                    input: input.map(\.wireValue),
+                    threadID: threadID
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeTurnSteerResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            guard response.turnID == turnID else {
+                throw CodexAppServerError.invalidState(
+                    reason: "Codex app-server acknowledged turn steering for turn \(response.turnID), but this handle owns turn \(turnID)."
+                )
+            }
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "turn/steer")
+        }
+    }
+
     internal func threadEventStream(
         threadID: String
     ) -> AsyncThrowingStream<CodexThreadEvent, Error> {

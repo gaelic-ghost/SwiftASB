@@ -336,6 +336,109 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("interrupts a turn through CodexTurnHandle")
+    func interruptsTurnThroughHandle() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+        let turnHandle = try await thread.startTextTurn("Please stop when asked.")
+
+        try await turnHandle.interrupt()
+
+        let recordedMethods = await transport.recordedMethods
+        #expect(
+            recordedMethods == [
+                "initialize",
+                "initialized",
+                "thread/start",
+                "turn/start",
+                "turn/interrupt",
+            ]
+        )
+
+        let interruptRequest = try #require(await transport.recordedRequestPayload(for: "turn/interrupt"))
+        let requestObject = try #require(
+            try JSONSerialization.jsonObject(with: interruptRequest) as? [String: Any]
+        )
+        let params = try #require(requestObject["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        #expect(params["turnId"] as? String == turnHandle.turn.id)
+
+        await client.stop()
+    }
+
+    @Test("steers a turn through CodexTurnHandle")
+    func steersTurnThroughHandle() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+        let turnHandle = try await thread.startTextTurn("Please draft an answer.")
+
+        try await turnHandle.steerText("Please make it shorter and more direct.")
+
+        let recordedMethods = await transport.recordedMethods
+        #expect(
+            recordedMethods == [
+                "initialize",
+                "initialized",
+                "thread/start",
+                "turn/start",
+                "turn/steer",
+            ]
+        )
+
+        let steerRequest = try #require(await transport.recordedRequestPayload(for: "turn/steer"))
+        let requestObject = try #require(
+            try JSONSerialization.jsonObject(with: steerRequest) as? [String: Any]
+        )
+        let params = try #require(requestObject["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        #expect(params["expectedTurnId"] as? String == turnHandle.turn.id)
+
+        let input = try #require(params["input"] as? [[String: Any]])
+        #expect(input.count == 1)
+        #expect(input.first?["type"] as? String == "text")
+        #expect(input.first?["text"] as? String == "Please make it shorter and more direct.")
+
+        await client.stop()
+    }
+
     @Test("rejects overlapping same-thread turn starts until the active turn completes")
     func rejectsOverlappingSameThreadTurns() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -801,6 +904,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
     private(set) var recordedMethods: [String] = []
     private(set) var recordedResponses: [RecordedResponse] = []
+    private var recordedRequestPayloads: [String: [Data]] = [:]
     private var started = false
     private var initializedSeen = false
     private var serverEventContinuation: AsyncStream<CodexRPCServerEvent>.Continuation?
@@ -823,6 +927,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
         let method = try requestMethod(from: requestPayload)
         recordedMethods.append(method)
+        recordedRequestPayloads[method, default: []].append(requestPayload)
 
         switch method {
         case "initialize":
@@ -890,6 +995,18 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     ],
                 ]
             )
+        case "turn/steer":
+            return responsePayload(
+                id: id,
+                result: [
+                    "turnId": "turn-123",
+                ]
+            )
+        case "turn/interrupt":
+            return responsePayload(
+                id: id,
+                result: [:]
+            )
         default:
             return errorPayload(
                 id: id,
@@ -928,6 +1045,10 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 }
             }
         }
+    }
+
+    func recordedRequestPayload(for method: String) -> Data? {
+        recordedRequestPayloads[method]?.last
     }
 
     func emitTurnCompleted(threadID: String, turnID: String) {
