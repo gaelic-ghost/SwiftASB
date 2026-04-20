@@ -75,6 +75,12 @@ Current binary discovery on macOS should follow this order:
 The discovery path intentionally covers the two officially documented install
 options for Codex CLI on macOS: Homebrew cask install and global npm install.
 
+The package now also exposes read-only startup diagnostics for the resolved
+binary through `CodexAppServer.cliExecutableDiagnostics()`. That surface is for
+operator inspection only; it should not become a second source of lifecycle
+control or a reason to widen the public API beyond binary, source, version, and
+support-window inspection.
+
 This policy is intentionally softer than the upstream Python package model that
 pins an exact runtime dependency. `SwiftASB` is expected to work against a
 reasonably recent installed local Codex CLI, not only one exact binary build.

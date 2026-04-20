@@ -7,6 +7,7 @@ internal struct CodexCLIExecutableResolver {
         internal let resolvedExecutableURL: URL?
         internal let source: Source
         internal let versionString: String
+        internal let compatibility: Compatibility
     }
 
     internal enum Source: Sendable, Equatable {
@@ -15,6 +16,47 @@ internal struct CodexCLIExecutableResolver {
         case homebrewAppleSilicon
         case homebrewIntel
         case npmGlobal(prefix: String)
+    }
+
+    internal enum Compatibility: Sendable, Equatable {
+        case supported(documentedWindow: String)
+        case outsideDocumentedWindow(documentedWindow: String)
+        case unknownVersionFormat(documentedWindow: String)
+    }
+
+    internal struct Version: Sendable, Equatable {
+        internal let major: Int
+        internal let minor: Int
+        internal let patch: Int
+
+        private static let regex = try! NSRegularExpression(pattern: #"(\d+)\.(\d+)\.(\d+)"#)
+        internal static let latestSupportedPublicRelease = Version(major: 0, minor: 121, patch: 0)
+
+        internal static var documentedWindowDescription: String {
+            let latest = latestSupportedPublicRelease
+            let earliestMinor = max(0, latest.minor - 2)
+            return "\(latest.major).\(earliestMinor).x through \(latest.major).\(latest.minor).x"
+        }
+
+        internal static func parse(from text: String) -> Version? {
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            guard let match = regex.firstMatch(in: text, range: range), match.numberOfRanges == 4 else {
+                return nil
+            }
+
+            guard
+                let majorRange = Range(match.range(at: 1), in: text),
+                let minorRange = Range(match.range(at: 2), in: text),
+                let patchRange = Range(match.range(at: 3), in: text),
+                let major = Int(text[majorRange]),
+                let minor = Int(text[minorRange]),
+                let patch = Int(text[patchRange])
+            else {
+                return nil
+            }
+
+            return Version(major: major, minor: minor, patch: patch)
+        }
     }
 
     internal struct CommandResult: Sendable, Equatable {
@@ -112,7 +154,8 @@ internal struct CodexCLIExecutableResolver {
             launchArgumentsPrefix: [],
             resolvedExecutableURL: executableURL,
             source: .explicit,
-            versionString: versionString
+            versionString: versionString,
+            compatibility: compatibility(for: versionString)
         )
     }
 
@@ -131,7 +174,8 @@ internal struct CodexCLIExecutableResolver {
                 launchArgumentsPrefix: ["codex"],
                 resolvedExecutableURL: nil,
                 source: .path,
-                versionString: versionString
+                versionString: versionString,
+                compatibility: compatibility(for: versionString)
             )
         } catch let error as CodexTransportError {
             switch error {
@@ -163,7 +207,8 @@ internal struct CodexCLIExecutableResolver {
             launchArgumentsPrefix: [],
             resolvedExecutableURL: executableURL,
             source: source,
-            versionString: versionString
+            versionString: versionString,
+            compatibility: compatibility(for: versionString)
         )
     }
 
@@ -245,6 +290,26 @@ internal struct CodexCLIExecutableResolver {
         }
 
         return versionString
+    }
+
+    private func compatibility(for versionString: String) -> Compatibility {
+        let documentedWindow = Version.documentedWindowDescription
+        guard let parsedVersion = Version.parse(from: versionString) else {
+            return .unknownVersionFormat(documentedWindow: documentedWindow)
+        }
+
+        let latest = Version.latestSupportedPublicRelease
+        let earliestSupportedMinor = max(0, latest.minor - 2)
+
+        guard parsedVersion.major == latest.major else {
+            return .outsideDocumentedWindow(documentedWindow: documentedWindow)
+        }
+
+        if (earliestSupportedMinor...latest.minor).contains(parsedVersion.minor) {
+            return .supported(documentedWindow: documentedWindow)
+        }
+
+        return .outsideDocumentedWindow(documentedWindow: documentedWindow)
     }
 
     private static func runProcess(

@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import SwiftASB
 
-@Suite("CodexAppServer")
+@Suite("CodexAppServer", .serialized)
 struct CodexAppServerTests {
     @Test("requires initialize before starting a thread")
     func requiresInitializeBeforeStartingThread() async throws {
@@ -14,6 +14,31 @@ struct CodexAppServerTests {
         await #expect(throws: CodexAppServerError.self) {
             try await client.startThread()
         }
+
+        await client.stop()
+    }
+
+    @Test("surfaces Codex CLI diagnostics after start")
+    func surfacesCodexCLIDiagnosticsAfterStart() async throws {
+        let transport = FakeCodexAppServerTransport(
+            executableResolution: .init(
+                launchExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+                launchArgumentsPrefix: [],
+                resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+                source: .homebrewAppleSilicon,
+                versionString: "codex-cli 0.121.0",
+                compatibility: .supported(documentedWindow: "0.119.x through 0.121.x")
+            )
+        )
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+
+        let diagnostics = try await client.cliExecutableDiagnostics()
+        #expect(diagnostics.source == .homebrewAppleSilicon)
+        #expect(diagnostics.resolvedExecutablePath == "/opt/homebrew/bin/codex")
+        #expect(diagnostics.versionString == "codex-cli 0.121.0")
+        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.119.x through 0.121.x"))
 
         await client.stop()
     }
@@ -444,59 +469,74 @@ struct CodexAppServerTests {
         let transport = FakeCodexAppServerTransport()
         let client = CodexAppServer(transport: transport)
 
-        try await client.start()
-        _ = try await client.initialize(
-            .init(
-                clientInfo: .init(
-                    name: "SwiftASBTests",
-                    title: "SwiftASB Tests",
-                    version: "0.1.0"
+        do {
+            try await client.start()
+            _ = try await client.initialize(
+                .init(
+                    clientInfo: .init(
+                        name: "SwiftASBTests",
+                        title: "SwiftASB Tests",
+                        version: "0.1.0"
+                    )
                 )
             )
-        )
 
-        let thread = try await client.startThread(
-            .init(
-                currentDirectoryPath: "/tmp/project",
-                model: "gpt-5.4",
-                modelProvider: "openai"
+            let thread = try await client.startThread(
+                .init(
+                    currentDirectoryPath: "/tmp/project",
+                    model: "gpt-5.4",
+                    modelProvider: "openai"
+                )
             )
-        )
 
-        let firstTurn = try await thread.startTextTurn("First live turn")
-        #expect(firstTurn.turn.id == "turn-123")
+            let firstTurn = try await thread.startTextTurn("First live turn")
+            #expect(firstTurn.turn.id == "turn-123")
 
-        do {
-            _ = try await thread.startTextTurn("Second overlapping live turn")
-            Issue.record("Expected overlapping same-thread turn start to be rejected.")
-        } catch let error as CodexAppServerError {
-            switch error {
-            case let .invalidState(reason):
-                #expect(reason.contains("overlapping same-thread turns") || reason.contains("already has an active turn"))
-            default:
-                Issue.record("Expected overlapping same-thread turn start to throw an invalidState error.")
+            do {
+                _ = try await thread.startTextTurn("Second overlapping live turn")
+                Issue.record("Expected overlapping same-thread turn start to be rejected.")
+            } catch let error as CodexAppServerError {
+                switch error {
+                case let .invalidState(reason):
+                    #expect(reason.contains("overlapping same-thread turns") || reason.contains("already has an active turn"))
+                default:
+                    Issue.record("Expected overlapping same-thread turn start to throw an invalidState error.")
+                }
             }
+
+            let recordedMethodsBeforeCompletion = await transport.recordedMethods
+            #expect(recordedMethodsBeforeCompletion == ["initialize", "initialized", "thread/start", "turn/start"])
+
+            let completionTask = Task {
+                for try await event in firstTurn.events {
+                    if case let .completed(completion) = event {
+                        return completion
+                    }
+                }
+
+                Issue.record("Expected the first turn event stream to finish with a completed event.")
+                throw CancellationError()
+            }
+
+            await transport.emitTurnCompleted(
+                threadID: thread.id,
+                turnID: firstTurn.turn.id
+            )
+            let completion = try await completionTask.value
+            #expect(completion.turn.id == firstTurn.turn.id)
+            #expect(completion.threadID == thread.id)
+
+            let secondTurn = try await thread.startTextTurn("Second live turn after completion")
+            #expect(secondTurn.turn.id == "turn-123")
+
+            let recordedMethodsAfterCompletion = await transport.recordedMethods
+            #expect(recordedMethodsAfterCompletion == ["initialize", "initialized", "thread/start", "turn/start", "turn/start"])
+
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
         }
-
-        let recordedMethodsBeforeCompletion = await transport.recordedMethods
-        #expect(recordedMethodsBeforeCompletion == ["initialize", "initialized", "thread/start", "turn/start"])
-
-        await transport.emitTurnCompleted(
-            threadID: thread.id,
-            turnID: firstTurn.turn.id
-        )
-
-        for _ in 0..<20 {
-            await Task.yield()
-        }
-
-        let secondTurn = try await thread.startTextTurn("Second live turn after completion")
-        #expect(secondTurn.turn.id == "turn-123")
-
-        let recordedMethodsAfterCompletion = await transport.recordedMethods
-        #expect(recordedMethodsAfterCompletion == ["initialize", "initialized", "thread/start", "turn/start", "turn/start"])
-
-        await client.stop()
     }
 
     @Test("buffers early interactive turn events and answers command approvals through CodexTurnHandle")
@@ -905,9 +945,14 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private(set) var recordedMethods: [String] = []
     private(set) var recordedResponses: [RecordedResponse] = []
     private var recordedRequestPayloads: [String: [Data]] = [:]
+    private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
     private var started = false
     private var initializedSeen = false
     private var serverEventContinuation: AsyncStream<CodexRPCServerEvent>.Continuation?
+
+    init(executableResolution: CodexCLIExecutableResolver.Resolution? = nil) {
+        self.resolvedExecutable = executableResolution
+    }
 
     func start() throws {
         started = true
@@ -1045,6 +1090,10 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 }
             }
         }
+    }
+
+    func executableResolution() -> CodexCLIExecutableResolver.Resolution? {
+        resolvedExecutable
     }
 
     func recordedRequestPayload(for method: String) -> Data? {

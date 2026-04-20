@@ -3,7 +3,7 @@ import CryptoKit
 import Testing
 @testable import SwiftASB
 
-@Suite("CodexAppServer live integration")
+@Suite("CodexAppServer live integration", .serialized)
 struct CodexAppServerLiveIntegrationTests {
     @Test(
         "initializes through the raw live transport and protocol stack",

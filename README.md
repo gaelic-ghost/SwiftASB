@@ -105,6 +105,10 @@ an explicit `CodexAppServer.Configuration.codexExecutableURL`:
 
 If you want to bypass discovery entirely, pass an explicit executable URL.
 
+After `start()`, you can inspect the resolved binary, version string, and
+documented support-window assessment through
+`CodexAppServer.cliExecutableDiagnostics()`.
+
 A minimal flow looks like this:
 
 ```swift
@@ -316,4 +320,7 @@ The approval-path probe is especially non-deterministic today and should be read
 
 ## License
 
-SwiftASB is licensed under Apache 2.0. See [LICENSE](./LICENSE).
+SwiftASB is licensed under `FSL-1.1-ALv2`. That means current versions are
+available under the Functional Source License with no commercial competing-use
+right, and each version converts to Apache 2.0 on the second anniversary of
+the date that version was first made available. See [LICENSE](./LICENSE).

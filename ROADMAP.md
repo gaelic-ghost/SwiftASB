@@ -40,7 +40,7 @@
 | Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a rolling support window of the latest public Codex CLI release plus the prior two minor versions, and transport startup now checks PATH, common Homebrew paths, and the npm global prefix on macOS, but richer discovery diagnostics are still open. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current rolling Codex CLI compatibility window, but richer examples are still open. |
 | End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including same-thread concurrency probing and a best-effort live approval-path probe, while the default test suite still relies on a deterministic fake transport seam because the current runtime does not reliably force an approval request on demand. |
-| Apache 2.0 licensing | `Shipped` | The repo now carries an Apache 2.0 `LICENSE` file and README references the live license surface. |
+| FSL-1.1-ALv2 licensing | `Shipped` | The repo now carries the `FSL-1.1-ALv2` license text, README references the live license surface, and each released version converts to Apache 2.0 two years after it is first made available. |
 
 ## Milestone Progress
 
@@ -265,7 +265,7 @@ Scope:
 - [x] Add version-compatibility policy notes for the local Codex binary.
 - [x] Decide whether real subprocess integration tests are required before the first release.
   Decision: yes, but as opt-in suites rather than as part of the default `swift test` path while the live Codex runtime remains an external local dependency.
-- [x] Add an explicit open-source license for the package.
+- [x] Add an explicit source-available license for the package.
 
 Exit criteria:
 

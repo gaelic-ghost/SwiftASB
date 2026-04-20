@@ -7,4 +7,5 @@ internal protocol CodexAppServerTransporting: Actor {
     func sendResponse(_ responsePayload: Data, requestID: CodexRPCRequestID) throws
     func sendNotification(_ notificationPayload: Data, method: String) throws
     func serverEvents() -> AsyncStream<CodexRPCServerEvent>
+    func executableResolution() -> CodexCLIExecutableResolver.Resolution?
 }

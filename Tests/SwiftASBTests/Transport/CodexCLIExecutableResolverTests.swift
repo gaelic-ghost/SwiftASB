@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import SwiftASB
 
-@Suite("CodexCLIExecutableResolver")
+@Suite("CodexCLIExecutableResolver", .serialized)
 struct CodexCLIExecutableResolverTests {
     @Test("prefers an explicit executable URL when configured")
     func prefersExplicitExecutableURL() throws {
@@ -24,6 +24,7 @@ struct CodexCLIExecutableResolverTests {
         #expect(resolution.launchArgumentsPrefix.isEmpty)
         #expect(resolution.resolvedExecutableURL == explicitURL)
         #expect(resolution.versionString == "codex-cli 0.123.0")
+        #expect(resolution.compatibility == .outsideDocumentedWindow(documentedWindow: "0.119.x through 0.121.x"))
         #expect(recorder.recordedInvocations == [
             .init(executablePath: explicitURL.path, arguments: ["--version"])
         ])
@@ -47,6 +48,7 @@ struct CodexCLIExecutableResolverTests {
         #expect(resolution.launchExecutableURL.path == "/usr/bin/env")
         #expect(resolution.launchArgumentsPrefix == ["codex"])
         #expect(resolution.resolvedExecutableURL == nil)
+        #expect(resolution.compatibility == .outsideDocumentedWindow(documentedWindow: "0.119.x through 0.121.x"))
         #expect(recorder.recordedInvocations == [
             .init(executablePath: "/usr/bin/env", arguments: ["codex", "--version"])
         ])
@@ -74,6 +76,7 @@ struct CodexCLIExecutableResolverTests {
         #expect(resolution.launchExecutableURL.path == homebrewPath)
         #expect(resolution.launchArgumentsPrefix.isEmpty)
         #expect(resolution.resolvedExecutableURL?.path == homebrewPath)
+        #expect(resolution.compatibility == .outsideDocumentedWindow(documentedWindow: "0.119.x through 0.121.x"))
         #expect(recorder.recordedInvocations == [
             .init(executablePath: "/usr/bin/env", arguments: ["codex", "--version"]),
             .init(executablePath: homebrewPath, arguments: ["--version"])
@@ -103,6 +106,7 @@ struct CodexCLIExecutableResolverTests {
         #expect(resolution.launchExecutableURL.path == npmCodexPath)
         #expect(resolution.launchArgumentsPrefix.isEmpty)
         #expect(resolution.resolvedExecutableURL?.path == npmCodexPath)
+        #expect(resolution.compatibility == .outsideDocumentedWindow(documentedWindow: "0.119.x through 0.121.x"))
         #expect(recorder.recordedInvocations == [
             .init(executablePath: "/usr/bin/env", arguments: ["codex", "--version"]),
             .init(executablePath: "/usr/bin/env", arguments: ["npm", "prefix", "-g"]),
@@ -130,6 +134,40 @@ struct CodexCLIExecutableResolverTests {
         #expect(throws: CodexTransportError.self) {
             try resolver.resolve()
         }
+    }
+
+    @Test("marks supported versions inside the documented rolling window")
+    func marksSupportedVersionsInsideRollingWindow() throws {
+        let explicitURL = URL(fileURLWithPath: "/tmp/codex-explicit")
+        let recorder = CommandRecorder(pathVersionStandardOutput: "codex-cli 0.120.3")
+
+        let resolver = CodexCLIExecutableResolver(
+            explicitExecutableURL: explicitURL,
+            environment: nil,
+            currentDirectoryURL: nil,
+            runCommand: recorder.run,
+            isExecutableFile: { $0 == explicitURL.path }
+        )
+
+        let resolution = try resolver.resolve()
+        #expect(resolution.compatibility == .supported(documentedWindow: "0.119.x through 0.121.x"))
+    }
+
+    @Test("marks unparseable version strings as unknown format")
+    func marksUnparseableVersionStringsAsUnknownFormat() throws {
+        let explicitURL = URL(fileURLWithPath: "/tmp/codex-explicit")
+        let recorder = CommandRecorder(pathVersionStandardOutput: "codex dev build")
+
+        let resolver = CodexCLIExecutableResolver(
+            explicitExecutableURL: explicitURL,
+            environment: nil,
+            currentDirectoryURL: nil,
+            runCommand: recorder.run,
+            isExecutableFile: { $0 == explicitURL.path }
+        )
+
+        let resolution = try resolver.resolve()
+        #expect(resolution.compatibility == .unknownVersionFormat(documentedWindow: "0.119.x through 0.121.x"))
     }
 }
 
@@ -194,8 +232,8 @@ private final class CommandRecorder: @unchecked Sendable {
 
         return .init(
             terminationStatus: 0,
-            standardOutput: "codex-cli 0.123.0",
-            standardError: ""
+            standardOutput: pathVersionStandardOutput,
+            standardError: pathVersionStandardError
         )
     }
 }
