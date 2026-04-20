@@ -810,19 +810,6 @@ struct CodexAppServerTests {
             )
         )
 
-        let dashboard = await thread.makeDashboard()
-
-        #expect(dashboard.threadID == thread.id)
-        #expect(dashboard.name == nil)
-        #expect(dashboard.preview == "Hello from the fake app-server")
-        #expect(dashboard.status.type == .active)
-        #expect(dashboard.isArchived == false)
-        #expect(dashboard.isClosed == false)
-        #expect(dashboard.isCompactingThreadContext == false)
-        #expect(dashboard.latestTokenUsage == nil)
-        #expect(dashboard.toolCallingStatus == .idle)
-        #expect(dashboard.mcpCallingStatus == .idle)
-
         let turnHandle = try await thread.startTextTurn("Track dashboard activity")
 
         await transport.emitItemStarted(
@@ -855,6 +842,16 @@ struct CodexAppServerTests {
                 "type": "contextCompaction",
             ]
         )
+
+        let dashboard = await thread.makeDashboard()
+
+        #expect(dashboard.threadID == thread.id)
+        #expect(dashboard.name == nil)
+        #expect(dashboard.preview == "Hello from the fake app-server")
+        #expect(dashboard.status.type == .active)
+        #expect(dashboard.isArchived == false)
+        #expect(dashboard.isClosed == false)
+        #expect(dashboard.latestTokenUsage == nil)
 
         for _ in 0..<20 {
             if dashboard.toolCallingStatus == .inProgress,
@@ -970,16 +967,6 @@ struct CodexAppServerTests {
         )
 
         let turnHandle = try await thread.startTextTurn("Hello from SwiftASB")
-        let minimap = await turnHandle.makeMinimap()
-
-        #expect(minimap.threadID == thread.id)
-        #expect(minimap.turnID == turnHandle.turn.id)
-        #expect(minimap.currentTurn.id == turnHandle.turn.id)
-        #expect(minimap.currentTurn.status == .inProgress)
-        #expect(minimap.callSnapshots.isEmpty)
-        #expect(minimap.latestPlanUpdate == nil)
-        #expect(minimap.latestAgentMessageDelta == nil)
-        #expect(minimap.latestCompletion == nil)
 
         await transport.emitTurnStarted(
             threadID: thread.id,
@@ -1080,12 +1067,20 @@ struct CodexAppServerTests {
             turnID: turnHandle.turn.id
         )
 
+        let minimap = turnHandle.minimap
+
+        #expect(minimap.threadID == thread.id)
+        #expect(minimap.turnID == turnHandle.turn.id)
+        #expect(minimap.currentTurn.id == turnHandle.turn.id)
+        #expect(minimap.callSnapshots.count == 3)
+
         for _ in 0..<20 {
             if minimap.latestPlanUpdate != nil,
                minimap.latestAgentMessageDelta != nil,
                minimap.latestReasoningTextDelta != nil,
                minimap.latestCompletion != nil,
-               minimap.callSnapshots.count == 3 {
+               minimap.callSnapshots.count == 3,
+               minimap.currentTurn.status == .completed {
                 break
             }
             await Task.yield()

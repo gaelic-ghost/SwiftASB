@@ -225,7 +225,16 @@ public struct CodexTurnHandle: Sendable {
         }
     }
 
+    private final class MinimapStorage: @unchecked Sendable {
+        let minimap: Minimap
+
+        init(minimap: Minimap) {
+            self.minimap = minimap
+        }
+    }
+
     private let appServer: CodexAppServer
+    private let minimapStorage: MinimapStorage
     public let threadID: String
     public let turn: CodexAppServer.TurnInfo
     public let events: AsyncThrowingStream<CodexTurnEvent, Error>
@@ -234,22 +243,24 @@ public struct CodexTurnHandle: Sendable {
         appServer: CodexAppServer,
         threadID: String,
         turn: CodexAppServer.TurnInfo,
-        events: AsyncThrowingStream<CodexTurnEvent, Error>
+        events: AsyncThrowingStream<CodexTurnEvent, Error>,
+        minimap: Minimap
     ) {
         self.appServer = appServer
+        self.minimapStorage = MinimapStorage(minimap: minimap)
         self.threadID = threadID
         self.turn = turn
         self.events = events
     }
 
     @MainActor
+    public var minimap: Minimap {
+        minimapStorage.minimap
+    }
+
+    @MainActor
     public func makeMinimap() async -> Minimap {
-        let events = await appServer.turnEventStream(turnID: turn.id)
-        return Minimap(
-            threadID: threadID,
-            initialTurn: turn,
-            events: events
-        )
+        minimap
     }
 
     public func respond(

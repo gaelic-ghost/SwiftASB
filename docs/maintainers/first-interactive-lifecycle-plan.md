@@ -375,6 +375,15 @@ design sketch, not a committed public API.
 in-flight and completed turn activity that a UI can render as a "calls made
 during this turn" list without having to interpret raw deltas.
 
+Review-driven ownership correction:
+
+- `Minimap` should be created and attached when `startTurn(...)` creates the
+  `CodexTurnHandle`, not later on demand.
+- the public handle should expose a stored `turn.minimap` reference instead of
+  depending on a late `makeMinimap()` subscription for correctness.
+- this avoids losing early item activity that starts before a consumer asks for
+  a minimap and makes `callSnapshots` an honest per-turn current-state mirror.
+
 Proposed shape:
 
 - `callSnapshots: [CallSnapshot]`
@@ -414,10 +423,28 @@ Mapping intent:
 - command, file-change, and MCP progress notifications may later enrich the
   current snapshot instead of forcing new top-level public event cases
 
+Attachment rule:
+
+- `CodexTurnHandle` owns exactly one minimap for its turn
+- value copies of the handle should continue to reference the same minimap
+- compatibility helpers may remain temporarily, but they should forward to the
+  already-attached minimap rather than creating a second subscription path
+
 ### Dashboard draft
 
 `CodexThread.Dashboard` should expose current thread-level system state that
 helps a consumer answer "what is blocking or occupying this thread right now?"
+
+Review-driven correction:
+
+- `Dashboard` should stay opt-in for now rather than being attached eagerly to
+  every thread.
+- because it remains optional, `CodexAppServer` must not accumulate an
+  unbounded thread-scoped backlog of turn events just in case a dashboard might
+  appear later.
+- thread-level aggregate status should describe what is happening right now, so
+  active in-flight work should win over stale error residue when both are
+  present.
 
 Proposed fields:
 
@@ -435,6 +462,8 @@ Design note:
 
 - avoid a thread-level `completed` state unless a concrete UI need proves that
   it carries better meaning than immediately falling back to `idle`
+- if one tool or MCP call has errored but another is still running, aggregate
+  status should remain `inProgress` until no relevant work is active
 
 ### Reroute handling draft
 

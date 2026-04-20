@@ -370,6 +370,14 @@ public actor CodexAppServer {
         case starting, active(turnID: String)
     }
 
+    private struct ThreadObservableActivityState: Sendable, Equatable {
+        var activeToolLikeItemIDs: Set<String> = []
+        var activeMcpItemIDs: Set<String> = []
+        var hasToolErrorResidue = false
+        var hasMcpErrorResidue = false
+        var isCompactingThreadContext = false
+    }
+
     private enum InteractiveRequestDestination: Sendable, Equatable {
         case thread(threadID: String), turn(turnID: String)
     }
@@ -389,11 +397,11 @@ public actor CodexAppServer {
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var threadTurnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
-    private var bufferedThreadTurnEvents: [String: [CodexTurnEvent]] = [:]
     private var turnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
     private var bufferedTurnEvents: [String: [CodexTurnEvent]] = [:]
     private var bufferedTerminalTurnEvents: [String: CodexTurnEvent] = [:]
     private var threadTurnActivities: [String: ThreadTurnActivity] = [:]
+    private var threadObservableActivityStates: [String: ThreadObservableActivityState] = [:]
     private var turnThreadIDs: [String: String] = [:]
     private var outstandingInteractiveRequests: [CodexRPCRequestID: OutstandingInteractiveRequest] = [:]
     private var hasStarted = false
@@ -443,9 +451,9 @@ public actor CodexAppServer {
         hasCompletedInitializeHandshake = false
         threadStatuses.removeAll()
         threadTurnActivities.removeAll()
+        threadObservableActivityStates.removeAll()
         turnThreadIDs.removeAll()
         bufferedThreadEvents.removeAll()
-        bufferedThreadTurnEvents.removeAll()
         bufferedTurnEvents.removeAll()
         bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
@@ -540,11 +548,21 @@ public actor CodexAppServer {
 
             let turn = TurnInfo(wireValue: response.turn)
             markThreadTurnActive(threadID: request.threadID, turnID: turn.id)
+            let eventStream = makeTurnEventStream(turnID: turn.id)
+            let minimapStream = makeTurnEventStream(turnID: turn.id)
+            let minimap = await MainActor.run {
+                CodexTurnHandle.Minimap(
+                    threadID: request.threadID,
+                    initialTurn: turn,
+                    events: minimapStream
+                )
+            }
             return CodexTurnHandle(
                 appServer: self,
                 threadID: request.threadID,
                 turn: turn,
-                events: makeTurnEventStream(turnID: turn.id)
+                events: eventStream,
+                minimap: minimap
             )
         } catch {
             clearThreadTurnReservation(threadID: request.threadID)
@@ -629,6 +647,17 @@ public actor CodexAppServer {
         threadID: String
     ) -> AsyncThrowingStream<CodexTurnEvent, Error> {
         makeThreadTurnEventStream(threadID: threadID)
+    }
+
+    internal func threadObservableActivityState(threadID: String) -> CodexThread.Dashboard.ActivityState {
+        let state = threadObservableActivityStates[threadID] ?? .init()
+        return .init(
+            activeMcpItemIDs: state.activeMcpItemIDs,
+            activeToolLikeItemIDs: state.activeToolLikeItemIDs,
+            hasMcpErrorResidue: state.hasMcpErrorResidue,
+            hasToolErrorResidue: state.hasToolErrorResidue,
+            isCompactingThreadContext: state.isCompactingThreadContext
+        )
     }
 
     internal func respond(
@@ -775,6 +804,7 @@ public actor CodexAppServer {
 
     private func clearTurnActivities(threadID: String) {
         threadTurnActivities.removeValue(forKey: threadID)
+        threadObservableActivityStates.removeValue(forKey: threadID)
         turnThreadIDs = turnThreadIDs.filter { $0.value != threadID }
     }
 
@@ -868,6 +898,7 @@ public actor CodexAppServer {
             )
             publishTurnEvent(.diffUpdated(diffUpdate), for: notification.turnID, isTerminal: false)
         case let .itemStarted(notification):
+            updateThreadObservableActivityForItemStarted(notification.item, threadID: notification.threadID)
             let itemStarted = CodexTurnItemStarted(
                 threadID: notification.threadID,
                 turnID: notification.turnID,
@@ -875,6 +906,7 @@ public actor CodexAppServer {
             )
             publishTurnEvent(.itemStarted(itemStarted), for: notification.turnID, isTerminal: false)
         case let .itemCompleted(notification):
+            updateThreadObservableActivityForItemCompleted(notification.item, threadID: notification.threadID)
             let itemCompleted = CodexTurnItemCompleted(
                 threadID: notification.threadID,
                 turnID: notification.turnID,
@@ -945,6 +977,7 @@ public actor CodexAppServer {
             handleServerRequestResolved(notification)
         case let .turnCompleted(notification):
             clearTurnActivity(turnID: notification.turn.id)
+            threadObservableActivityStates[notification.threadID] = .init()
             let completion = CodexTurnCompletion(
                 threadID: notification.threadID,
                 turn: TurnInfo(wireValue: notification.turn)
@@ -1046,12 +1079,6 @@ public actor CodexAppServer {
                 streamID: streamID,
                 threadID: threadID
             )
-
-            if let bufferedEvents = bufferedThreadTurnEvents.removeValue(forKey: threadID) {
-                for event in bufferedEvents {
-                    continuation.yield(event)
-                }
-            }
 
             continuation.onTermination = { _ in
                 Task {
@@ -1183,7 +1210,6 @@ public actor CodexAppServer {
 
     private func publishThreadTurnEvent(_ event: CodexTurnEvent, for threadID: String) {
         guard let continuations = threadTurnEventContinuations[threadID], !continuations.isEmpty else {
-            bufferedThreadTurnEvents[threadID, default: []].append(event)
             return
         }
 
@@ -1212,6 +1238,58 @@ public actor CodexAppServer {
             } else {
                 continuation.finish()
             }
+        }
+    }
+
+    private func updateThreadObservableActivityForItemStarted(
+        _ item: CodexWireThreadItem,
+        threadID: String
+    ) {
+        var state = threadObservableActivityStates[threadID] ?? .init()
+        switch item.type {
+        case .commandExecution, .dynamicToolCall, .collabAgentToolCall, .fileChange:
+            state.activeToolLikeItemIDs.insert(item.id)
+        case .mcpToolCall:
+            state.activeMcpItemIDs.insert(item.id)
+        case .contextCompaction:
+            state.isCompactingThreadContext = true
+        default:
+            break
+        }
+        threadObservableActivityStates[threadID] = state
+    }
+
+    private func updateThreadObservableActivityForItemCompleted(
+        _ item: CodexWireThreadItem,
+        threadID: String
+    ) {
+        var state = threadObservableActivityStates[threadID] ?? .init()
+        switch item.type {
+        case .commandExecution, .dynamicToolCall, .collabAgentToolCall, .fileChange:
+            state.activeToolLikeItemIDs.remove(item.id)
+            if itemHasError(status: item.status) {
+                state.hasToolErrorResidue = true
+            }
+        case .mcpToolCall:
+            state.activeMcpItemIDs.remove(item.id)
+            if itemHasError(status: item.status) {
+                state.hasMcpErrorResidue = true
+            }
+        case .contextCompaction:
+            state.isCompactingThreadContext = false
+        default:
+            break
+        }
+        threadObservableActivityStates[threadID] = state
+    }
+
+    private func itemHasError(status: String?) -> Bool {
+        guard let status else { return false }
+        return switch status.lowercased() {
+        case "error", "errored", "failed", "interrupted":
+            true
+        default:
+            false
         }
     }
 

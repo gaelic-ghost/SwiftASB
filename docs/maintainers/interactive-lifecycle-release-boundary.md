@@ -143,6 +143,15 @@ Current likely examples for future consideration:
   helps UI consumers understand whether forward progress is waiting on an
   external operation
 
+Current implementation intent for those mirrors:
+
+- a turn-scoped minimap is a handle-owned current-state companion and should be
+  attached eagerly with the turn handle rather than depending on late observer
+  subscription for correctness
+- a thread-scoped dashboard remains opt-in for now, so the package should not
+  retain an unbounded backlog of thread-level turn activity solely to serve a
+  dashboard that may never be created
+
 ### Internal-only for now
 
 | Family | Why it remains internal |

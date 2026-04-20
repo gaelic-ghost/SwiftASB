@@ -11,6 +11,14 @@ public struct CodexThread: Sendable {
             case inProgress
         }
 
+        internal struct ActivityState: Sendable, Equatable {
+            var activeMcpItemIDs: Set<String> = []
+            var activeToolLikeItemIDs: Set<String> = []
+            var hasMcpErrorResidue = false
+            var hasToolErrorResidue = false
+            var isCompactingThreadContext = false
+        }
+
         public let threadID: String
         public private(set) var isArchived: Bool
         public private(set) var isClosed: Bool
@@ -29,29 +37,32 @@ public struct CodexThread: Sendable {
         private var turnActivityTask: Task<Void, Never>?
 
         @ObservationIgnored
-        private var activeToolLikeItemIDs: Set<String>
-
-        @ObservationIgnored
-        private var activeMcpItemIDs: Set<String>
+        private var activityState: ActivityState
 
         internal init(
             threadID: String,
             initialInfo: CodexAppServer.ThreadInfo,
             events: AsyncThrowingStream<CodexThreadEvent, Error>,
+            initialActivityState: ActivityState,
             turnEvents: AsyncThrowingStream<CodexTurnEvent, Error>
         ) {
             self.threadID = threadID
             self.isArchived = false
             self.isClosed = false
-            self.isCompactingThreadContext = false
             self.latestTokenUsage = nil
-            self.mcpCallingStatus = .idle
             self.name = initialInfo.name
             self.preview = initialInfo.preview
             self.status = initialInfo.status
-            self.toolCallingStatus = .idle
-            self.activeToolLikeItemIDs = []
-            self.activeMcpItemIDs = []
+            self.activityState = initialActivityState
+            self.isCompactingThreadContext = initialActivityState.isCompactingThreadContext
+            self.mcpCallingStatus = Self.activityStatus(
+                activeIDs: initialActivityState.activeMcpItemIDs,
+                hasErrorResidue: initialActivityState.hasMcpErrorResidue
+            )
+            self.toolCallingStatus = Self.activityStatus(
+                activeIDs: initialActivityState.activeToolLikeItemIDs,
+                hasErrorResidue: initialActivityState.hasToolErrorResidue
+            )
 
             eventTask = Task { [weak self] in
                 guard let self else { return }
@@ -121,11 +132,8 @@ public struct CodexThread: Sendable {
             case let .itemCompleted(itemCompleted):
                 handleItemCompleted(itemCompleted.item)
             case .completed:
-                activeToolLikeItemIDs.removeAll()
-                activeMcpItemIDs.removeAll()
-                isCompactingThreadContext = false
-                toolCallingStatus = .idle
-                mcpCallingStatus = .idle
+                activityState = .init()
+                syncActivityPresentation()
             default:
                 return
             }
@@ -134,39 +142,60 @@ public struct CodexThread: Sendable {
         private func handleItemStarted(_ item: CodexTurnItem) {
             switch item.kind {
             case .commandExecution, .dynamicToolCall, .collabAgentToolCall, .fileChange:
-                activeToolLikeItemIDs.insert(item.id)
-                toolCallingStatus = .inProgress
+                activityState.activeToolLikeItemIDs.insert(item.id)
             case .mcpToolCall:
-                activeMcpItemIDs.insert(item.id)
-                mcpCallingStatus = .inProgress
+                activityState.activeMcpItemIDs.insert(item.id)
             case .contextCompaction:
-                isCompactingThreadContext = true
+                activityState.isCompactingThreadContext = true
             default:
                 return
             }
+            syncActivityPresentation()
         }
 
         private func handleItemCompleted(_ item: CodexTurnItem) {
             switch item.kind {
             case .commandExecution, .dynamicToolCall, .collabAgentToolCall, .fileChange:
-                activeToolLikeItemIDs.remove(item.id)
+                activityState.activeToolLikeItemIDs.remove(item.id)
                 if item.isErrored {
-                    toolCallingStatus = .errored
-                } else if activeToolLikeItemIDs.isEmpty {
-                    toolCallingStatus = .idle
+                    activityState.hasToolErrorResidue = true
                 }
             case .mcpToolCall:
-                activeMcpItemIDs.remove(item.id)
+                activityState.activeMcpItemIDs.remove(item.id)
                 if item.isErrored {
-                    mcpCallingStatus = .errored
-                } else if activeMcpItemIDs.isEmpty {
-                    mcpCallingStatus = .idle
+                    activityState.hasMcpErrorResidue = true
                 }
             case .contextCompaction:
-                isCompactingThreadContext = false
+                activityState.isCompactingThreadContext = false
             default:
                 return
             }
+            syncActivityPresentation()
+        }
+
+        private func syncActivityPresentation() {
+            isCompactingThreadContext = activityState.isCompactingThreadContext
+            toolCallingStatus = Self.activityStatus(
+                activeIDs: activityState.activeToolLikeItemIDs,
+                hasErrorResidue: activityState.hasToolErrorResidue
+            )
+            mcpCallingStatus = Self.activityStatus(
+                activeIDs: activityState.activeMcpItemIDs,
+                hasErrorResidue: activityState.hasMcpErrorResidue
+            )
+        }
+
+        private static func activityStatus(
+            activeIDs: Set<String>,
+            hasErrorResidue: Bool
+        ) -> ActivityStatus {
+            if !activeIDs.isEmpty {
+                return .inProgress
+            }
+            if hasErrorResidue {
+                return .errored
+            }
+            return .idle
         }
     }
 
@@ -291,11 +320,13 @@ public struct CodexThread: Sendable {
     @MainActor
     public func makeDashboard() async -> Dashboard {
         let events = await appServer.threadEventStream(threadID: id)
+        let initialActivityState = await appServer.threadObservableActivityState(threadID: id)
         let turnEvents = await appServer.threadTurnEventStream(threadID: id)
         return Dashboard(
             threadID: id,
             initialInfo: info,
             events: events,
+            initialActivityState: initialActivityState,
             turnEvents: turnEvents
         )
     }
