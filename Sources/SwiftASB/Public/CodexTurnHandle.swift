@@ -5,8 +5,77 @@ public struct CodexTurnHandle: Sendable {
     @MainActor
     @Observable
     public final class Minimap {
+        public struct CallSnapshot: Sendable, Equatable, Identifiable {
+            public enum Kind: String, Sendable, Equatable {
+                case collabTool
+                case command
+                case dynamicTool
+                case fileEdit
+                case mcp
+            }
+
+            public enum Status: String, Sendable, Equatable {
+                case completed
+                case errored
+                case inProgress
+            }
+
+            public let id: String
+            public private(set) var displayName: String
+            public private(set) var filePath: String?
+            public let kind: Kind
+            public private(set) var latestStatusText: String?
+            public private(set) var serverName: String?
+            public private(set) var status: Status
+            public private(set) var toolName: String?
+
+            fileprivate mutating func apply(_ item: CodexTurnItem, status: Status) {
+                displayName = Self.makeDisplayName(from: item)
+                filePath = item.path
+                latestStatusText = item.status ?? item.text
+                serverName = item.serverName
+                self.status = status
+                toolName = item.toolName
+            }
+
+            fileprivate init(item: CodexTurnItem, kind: Kind, status: Status) {
+                self.id = item.id
+                self.displayName = Self.makeDisplayName(from: item)
+                self.filePath = item.path
+                self.kind = kind
+                self.latestStatusText = item.status ?? item.text
+                self.serverName = item.serverName
+                self.status = status
+                self.toolName = item.toolName
+            }
+
+            private static func makeDisplayName(from item: CodexTurnItem) -> String {
+                switch item.kind {
+                case .commandExecution:
+                    item.command ?? "Command"
+                case .mcpToolCall:
+                    if let toolName = item.toolName, let serverName = item.serverName {
+                        "\(serverName).\(toolName)"
+                    } else if let toolName = item.toolName {
+                        toolName
+                    } else {
+                        "MCP tool call"
+                    }
+                case .dynamicToolCall:
+                    item.toolName ?? "Dynamic tool call"
+                case .collabAgentToolCall:
+                    item.toolName ?? "Collab tool call"
+                case .fileChange:
+                    item.path ?? "File edit"
+                default:
+                    item.text ?? item.status ?? item.kind.rawValue
+                }
+            }
+        }
+
         public let threadID: String
         public let turnID: String
+        public private(set) var callSnapshots: [CallSnapshot]
         public private(set) var currentTurn: CodexAppServer.TurnInfo
         public private(set) var latestApprovalRequest: CodexApprovalRequest?
         public private(set) var latestAgentMessageDelta: CodexTurnAgentMessageDelta?
@@ -33,6 +102,7 @@ public struct CodexTurnHandle: Sendable {
         ) {
             self.threadID = threadID
             self.turnID = initialTurn.id
+            self.callSnapshots = []
             self.currentTurn = initialTurn
             self.latestApprovalRequest = nil
             self.latestAgentMessageDelta = nil
@@ -93,8 +163,13 @@ public struct CodexTurnHandle: Sendable {
                 }
             case let .itemStarted(itemStarted):
                 latestStartedItem = itemStarted
+                upsertCallSnapshot(from: itemStarted.item, status: .inProgress)
             case let .itemCompleted(itemCompleted):
                 latestCompletedItem = itemCompleted
+                upsertCallSnapshot(
+                    from: itemCompleted.item,
+                    status: Self.callSnapshotStatus(for: itemCompleted.item)
+                )
             case let .agentMessageDelta(delta):
                 latestAgentMessageDelta = delta
             case let .reasoningSummaryPartAdded(partAdded):
@@ -107,6 +182,46 @@ public struct CodexTurnHandle: Sendable {
                 latestCompletion = completion
                 currentTurn = completion.turn
             }
+        }
+
+        private func upsertCallSnapshot(from item: CodexTurnItem, status: CallSnapshot.Status) {
+            guard let kind = Self.callSnapshotKind(for: item.kind) else { return }
+
+            if let index = callSnapshots.firstIndex(where: { $0.id == item.id }) {
+                callSnapshots[index].apply(item, status: status)
+            } else {
+                callSnapshots.append(
+                    .init(
+                        item: item,
+                        kind: kind,
+                        status: status
+                    )
+                )
+            }
+        }
+
+        private static func callSnapshotKind(for kind: CodexTurnItem.Kind) -> CallSnapshot.Kind? {
+            switch kind {
+            case .collabAgentToolCall:
+                .collabTool
+            case .commandExecution:
+                .command
+            case .dynamicToolCall:
+                .dynamicTool
+            case .fileChange:
+                .fileEdit
+            case .mcpToolCall:
+                .mcp
+            default:
+                nil
+            }
+        }
+
+        private static func callSnapshotStatus(for item: CodexTurnItem) -> CallSnapshot.Status {
+            if item.isErrored {
+                return .errored
+            }
+            return .completed
         }
     }
 
@@ -306,19 +421,41 @@ public struct CodexTurnItem: Sendable, Equatable {
 
     public let id: String
     public let kind: Kind
+    public let command: String?
+    public let path: String?
+    public let serverName: String?
     public let text: String?
     public let status: String?
+    public let toolName: String?
 
     internal init(
         id: String,
         kind: Kind,
+        command: String?,
+        path: String?,
+        serverName: String?,
         text: String?,
-        status: String?
+        status: String?,
+        toolName: String?
     ) {
         self.id = id
         self.kind = kind
+        self.command = command
+        self.path = path
+        self.serverName = serverName
         self.text = text
         self.status = status
+        self.toolName = toolName
+    }
+
+    var isErrored: Bool {
+        guard let status else { return false }
+        return switch status.lowercased() {
+        case "error", "errored", "failed", "interrupted":
+            true
+        default:
+            false
+        }
     }
 }
 

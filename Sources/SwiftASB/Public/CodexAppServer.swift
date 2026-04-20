@@ -388,6 +388,8 @@ public actor CodexAppServer {
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
+    private var threadTurnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
+    private var bufferedThreadTurnEvents: [String: [CodexTurnEvent]] = [:]
     private var turnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
     private var bufferedTurnEvents: [String: [CodexTurnEvent]] = [:]
     private var bufferedTerminalTurnEvents: [String: CodexTurnEvent] = [:]
@@ -443,6 +445,7 @@ public actor CodexAppServer {
         threadTurnActivities.removeAll()
         turnThreadIDs.removeAll()
         bufferedThreadEvents.removeAll()
+        bufferedThreadTurnEvents.removeAll()
         bufferedTurnEvents.removeAll()
         bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
@@ -620,6 +623,12 @@ public actor CodexAppServer {
         turnID: String
     ) -> AsyncThrowingStream<CodexTurnEvent, Error> {
         makeTurnEventStream(turnID: turnID)
+    }
+
+    internal func threadTurnEventStream(
+        threadID: String
+    ) -> AsyncThrowingStream<CodexTurnEvent, Error> {
+        makeThreadTurnEventStream(threadID: threadID)
     }
 
     internal func respond(
@@ -1026,6 +1035,35 @@ public actor CodexAppServer {
         }
     }
 
+    private func makeThreadTurnEventStream(
+        threadID: String
+    ) -> AsyncThrowingStream<CodexTurnEvent, Error> {
+        let streamID = UUID()
+
+        return AsyncThrowingStream { continuation in
+            registerThreadTurnEventContinuation(
+                continuation,
+                streamID: streamID,
+                threadID: threadID
+            )
+
+            if let bufferedEvents = bufferedThreadTurnEvents.removeValue(forKey: threadID) {
+                for event in bufferedEvents {
+                    continuation.yield(event)
+                }
+            }
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeThreadTurnEventContinuation(
+                        streamID: streamID,
+                        threadID: threadID
+                    )
+                }
+            }
+        }
+    }
+
     private func registerTurnEventContinuation(
         _ continuation: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation,
         streamID: UUID,
@@ -1066,6 +1104,26 @@ public actor CodexAppServer {
         }
     }
 
+    private func registerThreadTurnEventContinuation(
+        _ continuation: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation,
+        streamID: UUID,
+        threadID: String
+    ) {
+        var continuations = threadTurnEventContinuations[threadID] ?? [:]
+        continuations[streamID] = continuation
+        threadTurnEventContinuations[threadID] = continuations
+    }
+
+    private func removeThreadTurnEventContinuation(streamID: UUID, threadID: String) {
+        guard var continuations = threadTurnEventContinuations[threadID] else { return }
+        continuations.removeValue(forKey: streamID)
+        if continuations.isEmpty {
+            threadTurnEventContinuations.removeValue(forKey: threadID)
+        } else {
+            threadTurnEventContinuations[threadID] = continuations
+        }
+    }
+
     private func publishThreadEvent(
         _ event: CodexThreadEvent,
         for threadID: String,
@@ -1098,6 +1156,10 @@ public actor CodexAppServer {
         isTerminal: Bool,
         bufferIfUnobserved: Bool = false
     ) {
+        if let threadID = turnThreadIDs[turnID] {
+            publishThreadTurnEvent(event, for: threadID)
+        }
+
         guard let continuations = turnEventContinuations[turnID], !continuations.isEmpty else {
             if isTerminal {
                 bufferedTerminalTurnEvents[turnID] = event
@@ -1119,11 +1181,32 @@ public actor CodexAppServer {
         }
     }
 
+    private func publishThreadTurnEvent(_ event: CodexTurnEvent, for threadID: String) {
+        guard let continuations = threadTurnEventContinuations[threadID], !continuations.isEmpty else {
+            bufferedThreadTurnEvents[threadID, default: []].append(event)
+            return
+        }
+
+        for continuation in continuations.values {
+            continuation.yield(event)
+        }
+    }
+
     private func finishAllTurnEventStreams(throwing error: CodexAppServerError?) {
         let activeContinuations = turnEventContinuations.values.flatMap(\.values)
+        let activeThreadTurnContinuations = threadTurnEventContinuations.values.flatMap(\.values)
         turnEventContinuations.removeAll()
+        threadTurnEventContinuations.removeAll()
 
         for continuation in activeContinuations {
+            if let error {
+                continuation.finish(throwing: error)
+            } else {
+                continuation.finish()
+            }
+        }
+
+        for continuation in activeThreadTurnContinuations {
             if let error {
                 continuation.finish(throwing: error)
             } else {
@@ -1601,8 +1684,12 @@ private extension CodexTurnItem {
         self.init(
             id: wireValue.id,
             kind: .init(wireValue: wireValue.type),
+            command: wireValue.command,
+            path: wireValue.path ?? wireValue.savedPath ?? wireValue.changes?.first?.path,
+            serverName: wireValue.server,
             text: wireValue.text,
-            status: wireValue.status
+            status: wireValue.status,
+            toolName: wireValue.tool
         )
     }
 }

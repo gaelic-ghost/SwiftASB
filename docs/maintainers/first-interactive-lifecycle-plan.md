@@ -93,7 +93,9 @@ pass unless a concrete protocol constraint forces a revisit.
 - `ThreadItem`-level activity belongs primarily in typed public event streams.
 - Observable companions may mirror selected latest-state summaries when useful
   for UI consumers.
-- The package should avoid an observable-first item model.
+- The package should avoid an observable-first item model for canonical
+  lifecycle history, but carefully chosen observable-only current-state
+  summaries are acceptable when they are more ergonomic than raw event replay.
 
 ### 5. Promote protocol coverage by release intent, not schema breadth
 
@@ -262,6 +264,11 @@ Chosen shape:
 - `Minimap` may mirror only the latest approval or elicitation state if that
   turns out to be useful for UI consumers, but approval mirroring is optional
   rather than mandatory for the first pass
+- `Minimap` may later mirror richer in-flight work state for UI consumers, such
+  as a stable array of tool, MCP, or file-edit call snapshots with display
+  name plus a small lifecycle enum like `inProgress`, `completed`, or `error`
+  when that provides a clearer "calls made during this turn" surface than raw
+  event playback
 - turn-scoped streams should buffer the early interactive request and
   resolution events that can arrive before a consumer starts iterating the
   handle-owned stream returned by `startTurn(...)`
@@ -306,6 +313,9 @@ Work:
 - expose typed answering APIs on the owning public surface
 - keep `ThreadItem` activity stream-first, with observable mirrors only where a
   UI-facing current-state summary is genuinely useful
+- allow companion-only summaries for selected operational state when the public
+  consumer need is "what is happening right now" rather than "replay the exact
+  event history"
 - keep naming explicit and lifecycle-oriented
 - make the internal routing model strong enough to resolve requests by
   JSON-RPC request id while still exposing turn-oriented public handles when the
@@ -318,11 +328,124 @@ slightly behind as current-state mirrors.
 
 That keeps one canonical lifecycle path:
 
+- streams answer "what happened, in order"
+- observable companions answer "what is the latest useful state for UI right
+  now"
+
+Examples worth exploring in a later promotion pass:
+
+- `CodexTurnHandle.Minimap.toolCallSnapshots` for a stable per-turn list of
+  tool, MCP, and file-edit activity summaries
+- `CodexThread.Dashboard.isCompactingThreadContext` when context compaction is
+  actively blocking normal forward progress
+- aggregate thread-level status such as tool-calling or MCP-calling activity
+  when the implementation can define a trustworthy summary model
+
+Near-term adjacent public surfaces worth planning now:
+
+- `thread/list` so consumers can enumerate conversations without dropping to
+  raw JSON-RPC
+- `thread/resume` so consumers can continue a conversation through the package
+- `thread/fork` so consumers can branch an existing conversation without
+  rebuilding history manually
+- `thread/read` so consumers can deliberately fetch thread and turn history,
+  especially for completed-turn inspection and richer item detail lookup
+
+Open design question worth deciding before that thread-management pass lands:
+
+- should `SwiftASB` cache completed turn results received through
+  `turn/completed` as a convenience for consumers, or should completed-turn
+  retention remain explicitly consumer-owned until `thread/read` exists as the
+  authoritative fetch path?
+
 - protocol event
 - public typed event
 - optional observable mirror update
 
 instead of creating two equivalent public control systems.
+
+## Draft Unified Observable Model
+
+This is a concrete draft for the next observable-shaping pass. It is still a
+design sketch, not a committed public API.
+
+### Minimap draft
+
+`CodexTurnHandle.Minimap` should expose a single unified collection for
+in-flight and completed turn activity that a UI can render as a "calls made
+during this turn" list without having to interpret raw deltas.
+
+Proposed shape:
+
+- `callSnapshots: [CallSnapshot]`
+
+Proposed `CallSnapshot` fields:
+
+- `id: String`
+- `kind: CallKind`
+- `displayName: String`
+- `status: CallStatus`
+- `latestStatusText: String?`
+- `filePath: String?`
+- `toolName: String?`
+- `serverName: String?`
+- `isBlockingForwardProgress: Bool`
+
+Proposed `CallKind` cases:
+
+- `command`
+- `mcp`
+- `dynamicTool`
+- `collabTool`
+- `fileEdit`
+
+Proposed `CallStatus` cases:
+
+- `inProgress`
+- `completed`
+- `errored`
+
+Mapping intent:
+
+- `item/started` for `commandExecution`, `mcpToolCall`, `dynamicToolCall`,
+  `collabAgentToolCall`, and `fileChange` should create or update the matching
+  snapshot
+- `item/completed` should mark the snapshot `completed` or `errored`
+- command, file-change, and MCP progress notifications may later enrich the
+  current snapshot instead of forcing new top-level public event cases
+
+### Dashboard draft
+
+`CodexThread.Dashboard` should expose current thread-level system state that
+helps a consumer answer "what is blocking or occupying this thread right now?"
+
+Proposed fields:
+
+- `isCompactingThreadContext: Bool`
+- `toolCallingStatus: ActivityStatus`
+- `mcpCallingStatus: ActivityStatus`
+
+Proposed `ActivityStatus` cases:
+
+- `idle`
+- `inProgress`
+- `errored`
+
+Design note:
+
+- avoid a thread-level `completed` state unless a concrete UI need proves that
+  it carries better meaning than immediately falling back to `idle`
+
+### Reroute handling draft
+
+Model-rerouted notifications should currently stay internal.
+
+Current reasoning:
+
+- the generated wire family appears to communicate an operational model switch,
+  not a consumer action surface
+- the currently generated reroute reason set is narrow and not consumer-owned
+- internal logging is useful, but public API exposure is not yet earned
 
 ## Phase 6: Tests Before Sugar
 

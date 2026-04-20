@@ -39,8 +39,8 @@ The first interactive lifecycle release does not support:
   the package
 - public APIs for every generated notification family just because the schema
   already contains them
-- any "second event system" where observable companions expose lifecycle data
-  that the typed public streams do not
+- an accidental "second event system" where observable companions drift into a
+  broad unsourced parallel lifecycle without a deliberate current-state role
 
 ## Codex CLI Compatibility Policy
 
@@ -113,12 +113,35 @@ belongs in the release boundary:
 
 ### Observable-only for now
 
-None.
+None yet, but this category is allowed when used deliberately.
 
 `Dashboard` and `Minimap` currently mirror selected latest-state summaries from
 already-public thread and turn events. They do not presently introduce any
 extra lifecycle family that exists only through Observation and not through the
 typed public streams.
+
+Future observable-only families are acceptable when all of the following are
+true:
+
+- the consumer job is current-state UI, not historical replay or precise event
+  sequencing
+- the mirrored state is derived from one or more generated or protocol families
+  that would be awkward, noisy, or misleading to expose as first-class public
+  event cases
+- the observable shape is a deliberate ergonomic summary such as a status flag,
+  activity snapshot, or in-flight work list rather than a raw payload dump
+- the docs say plainly that the observable surface is a current-state mirror,
+  not the canonical event history
+
+Current likely examples for future consideration:
+
+- `CodexTurnHandle.Minimap` mirroring tool, MCP, and file-edit activity as a
+  list of per-call snapshots suitable for "calls made during this turn" UI
+- `CodexThread.Dashboard` mirroring thread-level blocked-state summaries such
+  as whether context compaction is currently active
+- thread- or turn-level aggregate tool-calling or MCP-calling status when that
+  helps UI consumers understand whether forward progress is waiting on an
+  external operation
 
 ### Internal-only for now
 
@@ -199,6 +222,10 @@ Only promote another internal family when all of the following are true:
 3. the public destination is clear:
    either `CodexThreadEvent`, `CodexTurnEvent`, or a future deliberate public
    companion surface
+
+If the destination is a companion surface, the design should state why the
+family works better as a current-state observable mirror than as a canonical
+typed event case.
 
 Until those conditions are met, the generated wire layer should remain broader
 than the public API on purpose.

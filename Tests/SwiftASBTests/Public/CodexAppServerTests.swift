@@ -818,7 +818,99 @@ struct CodexAppServerTests {
         #expect(dashboard.status.type == .active)
         #expect(dashboard.isArchived == false)
         #expect(dashboard.isClosed == false)
+        #expect(dashboard.isCompactingThreadContext == false)
         #expect(dashboard.latestTokenUsage == nil)
+        #expect(dashboard.toolCallingStatus == .idle)
+        #expect(dashboard.mcpCallingStatus == .idle)
+
+        let turnHandle = try await thread.startTextTurn("Track dashboard activity")
+
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-command-1",
+            item: [
+                "command": "ls",
+                "id": "item-command-1",
+                "type": "commandExecution",
+            ]
+        )
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-mcp-1",
+            item: [
+                "id": "item-mcp-1",
+                "server": "calendar",
+                "tool": "list_events",
+                "type": "mcpToolCall",
+            ]
+        )
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-compact-1",
+            item: [
+                "id": "item-compact-1",
+                "type": "contextCompaction",
+            ]
+        )
+
+        for _ in 0..<20 {
+            if dashboard.toolCallingStatus == .inProgress,
+               dashboard.mcpCallingStatus == .inProgress,
+               dashboard.isCompactingThreadContext {
+                break
+            }
+            await Task.yield()
+        }
+
+        #expect(dashboard.toolCallingStatus == .inProgress)
+        #expect(dashboard.mcpCallingStatus == .inProgress)
+        #expect(dashboard.isCompactingThreadContext == true)
+
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-command-1",
+            item: [
+                "command": "ls",
+                "id": "item-command-1",
+                "status": "failed",
+                "type": "commandExecution",
+            ]
+        )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-mcp-1",
+            item: [
+                "id": "item-mcp-1",
+                "server": "calendar",
+                "status": "completed",
+                "tool": "list_events",
+                "type": "mcpToolCall",
+            ]
+        )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-compact-1",
+            item: [
+                "id": "item-compact-1",
+                "status": "completed",
+                "type": "contextCompaction",
+            ]
+        )
+
+        for _ in 0..<20 {
+            if dashboard.toolCallingStatus == .errored,
+               dashboard.mcpCallingStatus == .idle,
+               dashboard.isCompactingThreadContext == false {
+                break
+            }
+            await Task.yield()
+        }
 
         await transport.emitThreadStarted(threadID: thread.id)
         await transport.emitThreadStatusChanged(threadID: thread.id)
@@ -843,8 +935,11 @@ struct CodexAppServerTests {
         #expect(dashboard.status.activeFlags == [.waitingOnApproval])
         #expect(dashboard.isArchived == true)
         #expect(dashboard.isClosed == true)
+        #expect(dashboard.isCompactingThreadContext == false)
         #expect(dashboard.latestTokenUsage?.turnID == "turn-123")
         #expect(dashboard.latestTokenUsage?.total.totalTokens == 650)
+        #expect(dashboard.toolCallingStatus == .errored)
+        #expect(dashboard.mcpCallingStatus == .idle)
 
         await client.stop()
     }
@@ -881,6 +976,7 @@ struct CodexAppServerTests {
         #expect(minimap.turnID == turnHandle.turn.id)
         #expect(minimap.currentTurn.id == turnHandle.turn.id)
         #expect(minimap.currentTurn.status == .inProgress)
+        #expect(minimap.callSnapshots.isEmpty)
         #expect(minimap.latestPlanUpdate == nil)
         #expect(minimap.latestAgentMessageDelta == nil)
         #expect(minimap.latestCompletion == nil)
@@ -892,6 +988,37 @@ struct CodexAppServerTests {
         await transport.emitTurnPlanUpdated(
             threadID: thread.id,
             turnID: turnHandle.turn.id
+        )
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-command-1",
+            item: [
+                "command": "ls Sources",
+                "id": "item-command-1",
+                "type": "commandExecution",
+            ]
+        )
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-file-1",
+            item: [
+                "id": "item-file-1",
+                "path": "/tmp/project/README.md",
+                "type": "fileChange",
+            ]
+        )
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-mcp-1",
+            item: [
+                "id": "item-mcp-1",
+                "server": "calendar",
+                "tool": "list_events",
+                "type": "mcpToolCall",
+            ]
         )
         await transport.emitPlanDelta(
             threadID: thread.id,
@@ -908,6 +1035,46 @@ struct CodexAppServerTests {
             turnID: turnHandle.turn.id,
             itemID: "item-reasoning-1"
         )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-command-1",
+            item: [
+                "command": "ls Sources",
+                "id": "item-command-1",
+                "status": "completed",
+                "type": "commandExecution",
+            ]
+        )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-file-1",
+            item: [
+                "changes": [
+                    [
+                        "diff": "@@ -1 +1 @@",
+                        "kind": ["type": "update"],
+                        "path": "/tmp/project/README.md",
+                    ],
+                ],
+                "id": "item-file-1",
+                "status": "completed",
+                "type": "fileChange",
+            ]
+        )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-mcp-1",
+            item: [
+                "id": "item-mcp-1",
+                "server": "calendar",
+                "status": "errored",
+                "tool": "list_events",
+                "type": "mcpToolCall",
+            ]
+        )
         await transport.emitTurnCompleted(
             threadID: thread.id,
             turnID: turnHandle.turn.id
@@ -917,7 +1084,8 @@ struct CodexAppServerTests {
             if minimap.latestPlanUpdate != nil,
                minimap.latestAgentMessageDelta != nil,
                minimap.latestReasoningTextDelta != nil,
-               minimap.latestCompletion != nil {
+               minimap.latestCompletion != nil,
+               minimap.callSnapshots.count == 3 {
                 break
             }
             await Task.yield()
@@ -930,6 +1098,16 @@ struct CodexAppServerTests {
         #expect(minimap.latestReasoningTextDelta?.itemID == "item-reasoning-1")
         #expect(minimap.latestCompletion?.turn.id == turnHandle.turn.id)
         #expect(minimap.currentTurn.status == .completed)
+        #expect(minimap.callSnapshots.count == 3)
+        #expect(minimap.callSnapshots[0].kind == .command)
+        #expect(minimap.callSnapshots[0].displayName == "ls Sources")
+        #expect(minimap.callSnapshots[0].status == .completed)
+        #expect(minimap.callSnapshots[1].kind == .fileEdit)
+        #expect(minimap.callSnapshots[1].filePath == "/tmp/project/README.md")
+        #expect(minimap.callSnapshots[1].status == .completed)
+        #expect(minimap.callSnapshots[2].kind == .mcp)
+        #expect(minimap.callSnapshots[2].displayName == "calendar.list_events")
+        #expect(minimap.callSnapshots[2].status == .errored)
 
         await client.stop()
     }
@@ -1379,9 +1557,14 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
     }
 
-    func emitItemStarted(threadID: String, turnID: String, itemID: String) {
+    func emitItemStarted(
+        threadID: String,
+        turnID: String,
+        itemID: String,
+        item: [String: Any]? = nil
+    ) {
         let payload = payloadObject([
-            "item": [
+            "item": item ?? [
                 "id": itemID,
                 "type": "plan",
             ],
@@ -1448,9 +1631,14 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
     }
 
-    func emitItemCompleted(threadID: String, turnID: String, itemID: String) {
+    func emitItemCompleted(
+        threadID: String,
+        turnID: String,
+        itemID: String,
+        item: [String: Any]? = nil
+    ) {
         let payload = payloadObject([
-            "item": [
+            "item": item ?? [
                 "id": itemID,
                 "status": "completed",
                 "text": "Done.",

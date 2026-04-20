@@ -72,10 +72,12 @@ The package can now:
 
 That means the current priority order is:
 
-1. Decide whether any remaining protocol or event promotion is actually required beyond the now-written release boundary.
-2. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
-3. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
-4. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
+1. Widen promotion for the next real consumer slice, especially unified tool, MCP, file-edit, and compaction state that can drive ergonomic `Dashboard` and `Minimap` surfaces without forcing consumers down to raw payloads.
+2. Promote the near-term thread-management surface that upstream already documents as core workflow, namely `thread/list`, `thread/resume`, `thread/fork`, and `thread/read`.
+3. Decide whether completed turn results from `turn/completed` should be cached by `SwiftASB` as a consumer convenience or whether completed-turn retention should remain a caller responsibility until broader thread read APIs land.
+4. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
+5. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
+6. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
 
 ## Proposed Next Release Slice
 
@@ -85,10 +87,13 @@ as a convenience-API release.
 ### Must ship in the next slice
 
 - Enough notification coverage that a consumer can build a multi-turn interactive flow without dropping to raw payloads.
+- A unified observable current-state model for in-flight call activity and blocked thread state so UI consumers can show "what is happening right now" without replaying raw deltas themselves.
 - A written release boundary that says what is public, what stays internal scaffolding, and what is intentionally unsupported.
 - A maintainer-facing classification of generated notification families as public now, observable-only for now, or internal-only for now.
+- The first deliberate public thread-management expansion beyond `thread/start`, with `thread/list`, `thread/resume`, `thread/fork`, and `thread/read` treated as the intended next wrapped upstream surfaces.
 - Version-compatibility guidance and any remaining discovery diagnostics for the local Codex CLI runtime.
 - Any remaining protocol/event promotion work that is actually required to support the release boundary we claim.
+- A written decision about whether completed turn results should be cached by the package after `turn/completed` or intentionally left to consumers.
 
 ### Explicitly defer unless one of the above forces it
 

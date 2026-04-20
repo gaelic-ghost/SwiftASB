@@ -5,29 +5,53 @@ public struct CodexThread: Sendable {
     @MainActor
     @Observable
     public final class Dashboard {
+        public enum ActivityStatus: String, Sendable, Equatable {
+            case errored
+            case idle
+            case inProgress
+        }
+
         public let threadID: String
         public private(set) var isArchived: Bool
         public private(set) var isClosed: Bool
+        public private(set) var isCompactingThreadContext: Bool
         public private(set) var latestTokenUsage: CodexThreadTokenUsageUpdated?
+        public private(set) var mcpCallingStatus: ActivityStatus
         public private(set) var name: String?
         public private(set) var preview: String
         public private(set) var status: CodexAppServer.ThreadStatus
+        public private(set) var toolCallingStatus: ActivityStatus
 
         @ObservationIgnored
         private var eventTask: Task<Void, Never>?
 
+        @ObservationIgnored
+        private var turnActivityTask: Task<Void, Never>?
+
+        @ObservationIgnored
+        private var activeToolLikeItemIDs: Set<String>
+
+        @ObservationIgnored
+        private var activeMcpItemIDs: Set<String>
+
         internal init(
             threadID: String,
             initialInfo: CodexAppServer.ThreadInfo,
-            events: AsyncThrowingStream<CodexThreadEvent, Error>
+            events: AsyncThrowingStream<CodexThreadEvent, Error>,
+            turnEvents: AsyncThrowingStream<CodexTurnEvent, Error>
         ) {
             self.threadID = threadID
             self.isArchived = false
             self.isClosed = false
+            self.isCompactingThreadContext = false
             self.latestTokenUsage = nil
+            self.mcpCallingStatus = .idle
             self.name = initialInfo.name
             self.preview = initialInfo.preview
             self.status = initialInfo.status
+            self.toolCallingStatus = .idle
+            self.activeToolLikeItemIDs = []
+            self.activeMcpItemIDs = []
 
             eventTask = Task { [weak self] in
                 guard let self else { return }
@@ -42,10 +66,25 @@ public struct CodexThread: Sendable {
                     return
                 }
             }
+
+            turnActivityTask = Task { [weak self] in
+                guard let self else { return }
+
+                do {
+                    for try await event in turnEvents {
+                        self.apply(turnEvent: event)
+                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    return
+                }
+            }
         }
 
         deinit {
             eventTask?.cancel()
+            turnActivityTask?.cancel()
         }
 
         private func apply(_ event: CodexThreadEvent) {
@@ -72,6 +111,61 @@ public struct CodexThread: Sendable {
                 name = update.threadName
             case let .tokenUsageUpdated(update):
                 latestTokenUsage = update
+            }
+        }
+
+        private func apply(turnEvent: CodexTurnEvent) {
+            switch turnEvent {
+            case let .itemStarted(itemStarted):
+                handleItemStarted(itemStarted.item)
+            case let .itemCompleted(itemCompleted):
+                handleItemCompleted(itemCompleted.item)
+            case .completed:
+                activeToolLikeItemIDs.removeAll()
+                activeMcpItemIDs.removeAll()
+                isCompactingThreadContext = false
+                toolCallingStatus = .idle
+                mcpCallingStatus = .idle
+            default:
+                return
+            }
+        }
+
+        private func handleItemStarted(_ item: CodexTurnItem) {
+            switch item.kind {
+            case .commandExecution, .dynamicToolCall, .collabAgentToolCall, .fileChange:
+                activeToolLikeItemIDs.insert(item.id)
+                toolCallingStatus = .inProgress
+            case .mcpToolCall:
+                activeMcpItemIDs.insert(item.id)
+                mcpCallingStatus = .inProgress
+            case .contextCompaction:
+                isCompactingThreadContext = true
+            default:
+                return
+            }
+        }
+
+        private func handleItemCompleted(_ item: CodexTurnItem) {
+            switch item.kind {
+            case .commandExecution, .dynamicToolCall, .collabAgentToolCall, .fileChange:
+                activeToolLikeItemIDs.remove(item.id)
+                if item.isErrored {
+                    toolCallingStatus = .errored
+                } else if activeToolLikeItemIDs.isEmpty {
+                    toolCallingStatus = .idle
+                }
+            case .mcpToolCall:
+                activeMcpItemIDs.remove(item.id)
+                if item.isErrored {
+                    mcpCallingStatus = .errored
+                } else if activeMcpItemIDs.isEmpty {
+                    mcpCallingStatus = .idle
+                }
+            case .contextCompaction:
+                isCompactingThreadContext = false
+            default:
+                return
             }
         }
     }
@@ -197,10 +291,12 @@ public struct CodexThread: Sendable {
     @MainActor
     public func makeDashboard() async -> Dashboard {
         let events = await appServer.threadEventStream(threadID: id)
+        let turnEvents = await appServer.threadTurnEventStream(threadID: id)
         return Dashboard(
             threadID: id,
             initialInfo: info,
-            events: events
+            events: events,
+            turnEvents: turnEvents
         )
     }
 
