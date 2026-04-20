@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import SwiftASB
 
-@Suite("CodexAppServerProtocol")
+@Suite("CodexAppServerProtocol", .serialized)
 struct CodexAppServerProtocolTests {
     private let protocolLayer = CodexAppServerProtocol()
 

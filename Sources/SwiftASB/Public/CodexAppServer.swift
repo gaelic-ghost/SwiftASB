@@ -1,6 +1,27 @@
 import Foundation
 
 public actor CodexAppServer {
+    public struct CLIExecutableDiagnostics: Sendable, Equatable {
+        public enum Source: Sendable, Equatable {
+            case explicit
+            case path
+            case homebrewAppleSilicon
+            case homebrewIntel
+            case npmGlobal(prefix: String)
+        }
+
+        public enum Compatibility: Sendable, Equatable {
+            case supported(documentedWindow: String)
+            case outsideDocumentedWindow(documentedWindow: String)
+            case unknownVersionFormat(documentedWindow: String)
+        }
+
+        public let source: Source
+        public let resolvedExecutablePath: String?
+        public let versionString: String
+        public let compatibility: Compatibility
+    }
+
     public struct Configuration: Sendable, Equatable {
         public var codexExecutableURL: URL?
         public var arguments: [String]
@@ -426,6 +447,22 @@ public actor CodexAppServer {
         bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
         outstandingInteractiveRequests.removeAll()
+    }
+
+    public func cliExecutableDiagnostics() async throws -> CLIExecutableDiagnostics {
+        guard hasStarted else {
+            throw CodexAppServerError.invalidState(
+                reason: "Codex CLI diagnostics are only available after the app-server transport has been started."
+            )
+        }
+
+        guard let resolution = await transport.executableResolution() else {
+            throw CodexAppServerError.invalidState(
+                reason: "Codex CLI diagnostics are not available for the current transport."
+            )
+        }
+
+        return .init(resolution: resolution)
     }
 
     public func initialize(_ request: InitializeRequest) async throws -> InitializeSession {
@@ -2059,6 +2096,47 @@ private extension CodexAppServer.ThreadInfo {
             status: .init(wireValue: wireValue.status),
             updatedAt: wireValue.updatedAt
         )
+    }
+}
+
+private extension CodexAppServer.CLIExecutableDiagnostics {
+    init(resolution: CodexCLIExecutableResolver.Resolution) {
+        self.init(
+            source: .init(resolution.source),
+            resolvedExecutablePath: resolution.resolvedExecutableURL?.path,
+            versionString: resolution.versionString,
+            compatibility: .init(resolution.compatibility)
+        )
+    }
+}
+
+private extension CodexAppServer.CLIExecutableDiagnostics.Source {
+    init(_ source: CodexCLIExecutableResolver.Source) {
+        switch source {
+        case .explicit:
+            self = .explicit
+        case .path:
+            self = .path
+        case .homebrewAppleSilicon:
+            self = .homebrewAppleSilicon
+        case .homebrewIntel:
+            self = .homebrewIntel
+        case let .npmGlobal(prefix):
+            self = .npmGlobal(prefix: prefix)
+        }
+    }
+}
+
+private extension CodexAppServer.CLIExecutableDiagnostics.Compatibility {
+    init(_ compatibility: CodexCLIExecutableResolver.Compatibility) {
+        switch compatibility {
+        case let .supported(documentedWindow):
+            self = .supported(documentedWindow: documentedWindow)
+        case let .outsideDocumentedWindow(documentedWindow):
+            self = .outsideDocumentedWindow(documentedWindow: documentedWindow)
+        case let .unknownVersionFormat(documentedWindow):
+            self = .unknownVersionFormat(documentedWindow: documentedWindow)
+        }
     }
 }
 

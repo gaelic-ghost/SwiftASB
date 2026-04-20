@@ -31,6 +31,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
     private var pendingResponses: [CodexRPCRequestID: CheckedContinuation<Data, Error>] = [:]
     private var serverEventContinuations: [UUID: AsyncStream<CodexRPCServerEvent>.Continuation] = [:]
     private var recentStandardErrorLines: [String] = []
+    private var lastExecutableResolution: CodexCLIExecutableResolver.Resolution?
     private var hasFinished = false
 
     internal init(configuration: Configuration = .init()) {
@@ -51,6 +52,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
             environment: configuration.environment,
             currentDirectoryURL: configuration.currentDirectoryURL
         ).resolve()
+        lastExecutableResolution = executableResolution
 
         process.executableURL = executableResolution.launchExecutableURL
         process.arguments = executableResolution.launchArgumentsPrefix + configuration.arguments
@@ -71,7 +73,10 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         } catch {
             throw CodexTransportError.failedToLaunch(
                 executable: process.executableURL?.path ?? "codex",
-                reason: String(describing: error)
+                reason: String(describing: error),
+                discoverySource: describe(executableResolution.source),
+                versionString: executableResolution.versionString,
+                compatibilityNote: describe(executableResolution.compatibility)
             )
         }
 
@@ -175,6 +180,10 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
                 }
             }
         }
+    }
+
+    internal func executableResolution() -> CodexCLIExecutableResolver.Resolution? {
+        lastExecutableResolution
     }
 
     private func registerServerEventContinuation(
@@ -359,6 +368,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         standardErrorBuffer.removeAll(keepingCapacity: false)
 
         process = nil
+        lastExecutableResolution = nil
 
         let pending = pendingResponses.values
         pendingResponses.removeAll()
@@ -370,5 +380,31 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
             continuation.finish()
         }
         serverEventContinuations.removeAll()
+    }
+
+    private func describe(_ source: CodexCLIExecutableResolver.Source) -> String {
+        switch source {
+        case .explicit:
+            return "explicit executable URL"
+        case .path:
+            return "PATH lookup via /usr/bin/env codex"
+        case .homebrewAppleSilicon:
+            return "Homebrew Apple Silicon path /opt/homebrew/bin/codex"
+        case .homebrewIntel:
+            return "Homebrew Intel path /usr/local/bin/codex"
+        case let .npmGlobal(prefix):
+            return "npm global prefix \(prefix)"
+        }
+    }
+
+    private func describe(_ compatibility: CodexCLIExecutableResolver.Compatibility) -> String {
+        switch compatibility {
+        case let .supported(documentedWindow):
+            return "Version is within SwiftASB's documented rolling support window (\(documentedWindow))."
+        case let .outsideDocumentedWindow(documentedWindow):
+            return "Version is outside SwiftASB's documented rolling support window (\(documentedWindow))."
+        case let .unknownVersionFormat(documentedWindow):
+            return "Version string could not be parsed against SwiftASB's documented rolling support window (\(documentedWindow))."
+        }
     }
 }

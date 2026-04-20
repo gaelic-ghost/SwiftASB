@@ -4,7 +4,13 @@ internal enum CodexTransportError: Error, Sendable, LocalizedError, Equatable {
     case alreadyStarted
     case notStarted
     case executableDiscoveryFailed(reason: String)
-    case failedToLaunch(executable: String, reason: String)
+    case failedToLaunch(
+        executable: String,
+        reason: String,
+        discoverySource: String?,
+        versionString: String?,
+        compatibilityNote: String?
+    )
     case failedToWriteRequest(id: CodexRPCRequestID, reason: String)
     case failedToWriteNotification(method: String, reason: String)
     case duplicatePendingRequest(id: CodexRPCRequestID)
@@ -21,8 +27,18 @@ internal enum CodexTransportError: Error, Sendable, LocalizedError, Equatable {
             return "Codex app-server transport has not been started yet."
         case let .executableDiscoveryFailed(reason):
             return reason
-        case let .failedToLaunch(executable, reason):
-            return "Failed to launch Codex app-server transport using \(executable): \(reason)"
+        case let .failedToLaunch(executable, reason, discoverySource, versionString, compatibilityNote):
+            var lines = ["Failed to launch Codex app-server transport using \(executable): \(reason)"]
+            if let discoverySource {
+                lines.append("Resolved executable source: \(discoverySource)")
+            }
+            if let versionString {
+                lines.append("Resolved Codex CLI version: \(versionString)")
+            }
+            if let compatibilityNote {
+                lines.append("Compatibility note: \(compatibilityNote)")
+            }
+            return lines.joined(separator: "\n")
         case let .failedToWriteRequest(id, reason):
             return "Failed to write JSON-RPC request \(id.description) to Codex app-server stdin: \(reason)"
         case let .failedToWriteNotification(method, reason):
