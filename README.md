@@ -78,6 +78,14 @@ The current public lifecycle contract is intentionally narrow and explicit:
   older/newer whole-turn window expansion, seeds upstream paging cursors even
   when the visible initial window came from local history, and can fall back to
   paged stored-turn reads when local recent history is not resident yet.
+- `CodexThread.RecentTurns` now owns a first-pass in-memory cache policy too:
+  it surfaces load-state flags, trims its resident turn window around bound
+  scroll or visibility context, tracks resident item counts, can evict the
+  oldest completed turns when a configured item budget is exceeded while still
+  respecting a resident-turn floor, and can automatically prefetch older or
+  newer windows when a SwiftUI consumer binds the visible turn id through
+  `scrollPosition(id:anchor:)` and visibility through
+  `onScrollTargetVisibilityChange(idType:threshold:_:)`.
 - `CodexTurnHandle.close()` now seals a completed turn into a caller-owned
   value snapshot and releases per-turn observation bookkeeping explicitly.
 - `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate

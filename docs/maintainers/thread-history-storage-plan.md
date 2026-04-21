@@ -734,7 +734,17 @@ Current status:
 - initial recent-turn window construction now also seeds upstream paging
   cursors even when the visible recent window came from local history first,
   so remote fallback can continue cleanly after multiple local-only expansions
-- richer resident-cache policy controls are still open
+- `RecentTurns` now owns a first-pass cache policy:
+  - a bounded resident turn cap
+  - a minimum resident-turn floor
+  - a resident item count
+  - oldest-completed-turn eviction when a configured item budget is exceeded
+  - scroll-position-driven focus
+  - visible-turn protection for eviction
+  - load-state flags and surfaced load errors
+  - automatic edge prefetch when the consumer binds scroll position and
+    visibility information into the observable
+- richer policy tuning and deeper item-budget heuristics are still open
 
 ## Remaining Open Questions
 

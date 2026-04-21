@@ -5,6 +5,44 @@ public struct CodexThread: Sendable {
     @MainActor
     @Observable
     public final class RecentTurns {
+        public struct CachePolicy: Sendable, Equatable {
+            public let edgePrefetchThreshold: Int
+            public let maximumResidentItems: Int?
+            public let maxResidentTurns: Int
+            public let minimumResidentTurns: Int
+            public let protectedTurnBuffer: Int
+
+            public init(
+                maxResidentTurns: Int,
+                minimumResidentTurns: Int = 1,
+                maximumResidentItems: Int? = nil,
+                protectedTurnBuffer: Int = 2,
+                edgePrefetchThreshold: Int = 1
+            ) {
+                let normalizedMaxResidentTurns = max(1, maxResidentTurns)
+                let normalizedMinimumResidentTurns = min(
+                    normalizedMaxResidentTurns,
+                    max(1, minimumResidentTurns)
+                )
+                self.maxResidentTurns = normalizedMaxResidentTurns
+                self.minimumResidentTurns = normalizedMinimumResidentTurns
+                self.maximumResidentItems = maximumResidentItems.map { max(1, $0) }
+                self.protectedTurnBuffer = max(0, protectedTurnBuffer)
+                self.edgePrefetchThreshold = max(0, edgePrefetchThreshold)
+            }
+
+            public static func automatic(pageSize: Int) -> Self {
+                let normalizedPageSize = max(1, pageSize)
+                return .init(
+                    maxResidentTurns: max(normalizedPageSize * 3, normalizedPageSize + 8),
+                    minimumResidentTurns: max(2, normalizedPageSize),
+                    maximumResidentItems: max(normalizedPageSize * 12, 24),
+                    protectedTurnBuffer: max(1, normalizedPageSize / 2),
+                    edgePrefetchThreshold: max(1, min(2, normalizedPageSize))
+                )
+            }
+        }
+
         public struct TurnSnapshot: Sendable, Equatable, Identifiable {
             public struct Item: Sendable, Equatable, Identifiable {
                 public let id: String
@@ -40,11 +78,22 @@ public struct CodexThread: Sendable {
             public let tokenUsage: TokenUsage?
         }
 
+        public let cachePolicy: CachePolicy
         public let threadID: String
         public let residentLimit: Int
+        public private(set) var isLoadingNewerTurns: Bool
+        public private(set) var isLoadingOlderTurns: Bool
+        public private(set) var lastLoadErrorDescription: String?
         public private(set) var nextNewerCursor: String?
         public private(set) var nextOlderCursor: String?
+        public private(set) var residentItemCount: Int
         public private(set) var turns: [TurnSnapshot]
+        public private(set) var visibleTurnIDs: [String]
+        public var scrollPositionTurnID: String? {
+            didSet {
+                scheduleViewportMaintenance()
+            }
+        }
 
         @ObservationIgnored
         private let appServer: CodexAppServer
@@ -52,7 +101,11 @@ public struct CodexThread: Sendable {
         @ObservationIgnored
         private var eventTask: Task<Void, Never>?
 
+        @ObservationIgnored
+        private var viewportTask: Task<Void, Never>?
+
         internal init(
+            cachePolicy: CachePolicy,
             threadID: String,
             residentLimit: Int,
             nextNewerCursor: String?,
@@ -61,12 +114,20 @@ public struct CodexThread: Sendable {
             events: AsyncThrowingStream<CodexTurnEvent, Error>,
             appServer: CodexAppServer
         ) {
+            self.cachePolicy = cachePolicy
             self.threadID = threadID
             self.residentLimit = residentLimit
+            self.isLoadingNewerTurns = false
+            self.isLoadingOlderTurns = false
+            self.lastLoadErrorDescription = nil
             self.nextNewerCursor = nextNewerCursor
             self.nextOlderCursor = nextOlderCursor
+            self.residentItemCount = initialTurns.reduce(0) { $0 + $1.items.count }
             self.turns = initialTurns
+            self.visibleTurnIDs = []
+            self.scrollPositionTurnID = nil
             self.appServer = appServer
+            trimResidentTurnsIfNeeded()
 
             eventTask = Task { [weak self] in
                 guard let self else { return }
@@ -85,38 +146,69 @@ public struct CodexThread: Sendable {
 
         deinit {
             eventTask?.cancel()
+            viewportTask?.cancel()
         }
 
         public func loadOlderTurns(limit: Int? = nil) async throws {
+            guard !isLoadingOlderTurns else { return }
             guard let oldestOrderIndex = turns.last?.orderIndex else { return }
             let pageLimit = limit ?? residentLimit
-            let window = try await appServer.olderTurnWindow(
-                threadID: threadID,
-                olderThanOrderIndex: oldestOrderIndex,
-                cursor: nextOlderCursor,
-                limit: pageLimit
-            )
-            merge(window.turns.map(TurnSnapshot.init))
-            nextOlderCursor = window.nextOlderCursor
-            if let nextNewerCursor = window.nextNewerCursor {
-                self.nextNewerCursor = nextNewerCursor
+            isLoadingOlderTurns = true
+            defer { isLoadingOlderTurns = false }
+
+            do {
+                let window = try await appServer.olderTurnWindow(
+                    threadID: threadID,
+                    olderThanOrderIndex: oldestOrderIndex,
+                    cursor: nextOlderCursor,
+                    limit: pageLimit
+                )
+                lastLoadErrorDescription = nil
+                merge(window.turns.map(TurnSnapshot.init))
+                nextOlderCursor = window.nextOlderCursor
+                if let nextNewerCursor = window.nextNewerCursor {
+                    self.nextNewerCursor = nextNewerCursor
+                }
+                trimResidentTurnsIfNeeded()
+                scheduleViewportMaintenance()
+            } catch {
+                lastLoadErrorDescription = Self.describe(error)
+                throw error
             }
         }
 
         public func loadNewerTurns(limit: Int? = nil) async throws {
+            guard !isLoadingNewerTurns else { return }
             guard let newestOrderIndex = turns.first?.orderIndex else { return }
             let pageLimit = limit ?? residentLimit
-            let window = try await appServer.newerTurnWindow(
-                threadID: threadID,
-                newerThanOrderIndex: newestOrderIndex,
-                cursor: nextNewerCursor,
-                limit: pageLimit
-            )
-            merge(window.turns.map(TurnSnapshot.init))
-            if let nextOlderCursor = window.nextOlderCursor {
-                self.nextOlderCursor = nextOlderCursor
+            isLoadingNewerTurns = true
+            defer { isLoadingNewerTurns = false }
+
+            do {
+                let window = try await appServer.newerTurnWindow(
+                    threadID: threadID,
+                    newerThanOrderIndex: newestOrderIndex,
+                    cursor: nextNewerCursor,
+                    limit: pageLimit
+                )
+                lastLoadErrorDescription = nil
+                merge(window.turns.map(TurnSnapshot.init))
+                if let nextOlderCursor = window.nextOlderCursor {
+                    self.nextOlderCursor = nextOlderCursor
+                }
+                nextNewerCursor = window.nextNewerCursor
+                trimResidentTurnsIfNeeded()
+                scheduleViewportMaintenance()
+            } catch {
+                lastLoadErrorDescription = Self.describe(error)
+                throw error
             }
-            nextNewerCursor = window.nextNewerCursor
+        }
+
+        public func updateVisibleTurnIDs(_ ids: [String]) {
+            let deduplicatedIDs = Array(NSOrderedSet(array: ids)) as? [String] ?? ids
+            visibleTurnIDs = deduplicatedIDs
+            scheduleViewportMaintenance()
         }
 
         private func apply(_ event: CodexTurnEvent) async {
@@ -126,6 +218,8 @@ public struct CodexThread: Sendable {
             }
 
             merge([TurnSnapshot(snapshot)])
+            trimResidentTurnsIfNeeded()
+            scheduleViewportMaintenance()
         }
 
         private static func turnID(from event: CodexTurnEvent) -> String? {
@@ -169,6 +263,171 @@ public struct CodexThread: Sendable {
             }
 
             turns.sort { $0.orderIndex > $1.orderIndex }
+            refreshResidentMetrics()
+        }
+
+        private func scheduleViewportMaintenance() {
+            viewportTask?.cancel()
+            viewportTask = Task { [weak self] in
+                guard let self else { return }
+                self.trimResidentTurnsIfNeeded()
+                await self.prefetchForViewportIfNeeded()
+            }
+        }
+
+        private func prefetchForViewportIfNeeded() async {
+            guard !turns.isEmpty else { return }
+            guard scrollPositionTurnID != nil || !visibleTurnIDs.isEmpty else { return }
+
+            let focusIndices = focusIndices()
+            let lowerEdgeThreshold = cachePolicy.edgePrefetchThreshold
+            let upperEdgeThreshold = max(0, turns.count - 1 - cachePolicy.edgePrefetchThreshold)
+
+            if focusIndices.upperBound >= upperEdgeThreshold {
+                do {
+                    try await loadOlderTurns()
+                } catch {
+                    return
+                }
+            }
+
+            if focusIndices.lowerBound <= lowerEdgeThreshold {
+                do {
+                    try await loadNewerTurns()
+                } catch {
+                    return
+                }
+            }
+        }
+
+        private func trimResidentTurnsIfNeeded() {
+            let maxResidentTurns = cachePolicy.maxResidentTurns
+            if turns.count > maxResidentTurns {
+                let focusIndices = focusIndices()
+                let focusLowerBound = max(0, focusIndices.lowerBound - cachePolicy.protectedTurnBuffer)
+                let focusUpperBound = min(turns.count - 1, focusIndices.upperBound + cachePolicy.protectedTurnBuffer)
+
+                var mandatoryIndices = Set<Int>(focusLowerBound...focusUpperBound)
+                for (index, turn) in turns.enumerated() where !Self.isTerminalStatus(turn.status) {
+                    mandatoryIndices.insert(index)
+                }
+
+                let retainedIndices: Set<Int>
+                if mandatoryIndices.count >= maxResidentTurns {
+                    retainedIndices = mandatoryIndices
+                } else {
+                    let supplementalIndices = turns.indices
+                        .filter { !mandatoryIndices.contains($0) }
+                        .sorted { lhs, rhs in
+                            let lhsDistance = Self.distanceToRange(lhs, lowerBound: focusLowerBound, upperBound: focusUpperBound)
+                            let rhsDistance = Self.distanceToRange(rhs, lowerBound: focusLowerBound, upperBound: focusUpperBound)
+                            if lhsDistance != rhsDistance {
+                                return lhsDistance < rhsDistance
+                            }
+                            return lhs < rhs
+                        }
+
+                    var selectedIndices = mandatoryIndices
+                    for index in supplementalIndices.prefix(maxResidentTurns - mandatoryIndices.count) {
+                        selectedIndices.insert(index)
+                    }
+                    retainedIndices = selectedIndices
+                }
+
+                turns = turns.enumerated()
+                    .filter { retainedIndices.contains($0.offset) }
+                    .map(\.element)
+                refreshResidentMetrics()
+            }
+
+            trimResidentItemsIfNeeded()
+        }
+
+        private func trimResidentItemsIfNeeded() {
+            guard let maximumResidentItems = cachePolicy.maximumResidentItems else {
+                refreshResidentMetrics()
+                return
+            }
+
+            refreshResidentMetrics()
+            guard residentItemCount > maximumResidentItems else { return }
+
+            let protectedTurnIDs = protectedTurnIDSet()
+            while residentItemCount > maximumResidentItems, turns.count > cachePolicy.minimumResidentTurns {
+                guard let evictableIndex = turns.indices.reversed().first(where: { index in
+                    let turn = turns[index]
+                    return Self.isTerminalStatus(turn.status) && !protectedTurnIDs.contains(turn.id)
+                }) else {
+                    break
+                }
+
+                turns.remove(at: evictableIndex)
+                refreshResidentMetrics()
+            }
+        }
+
+        private func protectedTurnIDSet() -> Set<String> {
+            let focusIndices = focusIndices()
+            let focusLowerBound = max(0, focusIndices.lowerBound - cachePolicy.protectedTurnBuffer)
+            let focusUpperBound = min(turns.count - 1, focusIndices.upperBound + cachePolicy.protectedTurnBuffer)
+            var protectedIDs = Set(turns[focusLowerBound...focusUpperBound].map(\.id))
+            for turn in turns where !Self.isTerminalStatus(turn.status) {
+                protectedIDs.insert(turn.id)
+            }
+            return protectedIDs
+        }
+
+        private func refreshResidentMetrics() {
+            residentItemCount = turns.reduce(0) { $0 + $1.items.count }
+        }
+
+        private func focusIndices() -> ClosedRange<Int> {
+            let visibleIndexSet = Set(visibleTurnIDs.compactMap(index(forTurnID:)))
+            if !visibleIndexSet.isEmpty {
+                return visibleIndexSet.min()!...visibleIndexSet.max()!
+            }
+
+            if let scrollPositionTurnID, let index = index(forTurnID: scrollPositionTurnID) {
+                return index...index
+            }
+
+            return 0...0
+        }
+
+        private func index(forTurnID turnID: String) -> Int? {
+            turns.firstIndex { $0.id == turnID }
+        }
+
+        private static func distanceToRange(
+            _ index: Int,
+            lowerBound: Int,
+            upperBound: Int
+        ) -> Int {
+            if index < lowerBound {
+                return lowerBound - index
+            }
+            if index > upperBound {
+                return index - upperBound
+            }
+            return 0
+        }
+
+        private static func isTerminalStatus(_ status: String) -> Bool {
+            switch status {
+            case CodexAppServer.TurnStatus.completed.rawValue,
+                 CodexAppServer.TurnStatus.failed.rawValue,
+                 CodexAppServer.TurnStatus.interrupted.rawValue:
+                true
+            default:
+                false
+            }
+        }
+
+        private static func describe(_ error: any Error) -> String {
+            if let localizedError = error as? LocalizedError, let description = localizedError.errorDescription {
+                return description
+            }
+            return String(describing: error)
         }
     }
 
@@ -502,10 +761,14 @@ public struct CodexThread: Sendable {
     }
 
     @MainActor
-    public func makeRecentTurns(limit: Int = 12) async throws -> RecentTurns {
+    public func makeRecentTurns(
+        limit: Int = 12,
+        cachePolicy: RecentTurns.CachePolicy? = nil
+    ) async throws -> RecentTurns {
         let window = try await appServer.recentTurnWindow(threadID: id, limit: limit)
         let events = await appServer.threadTurnEventStream(threadID: id)
         return RecentTurns(
+            cachePolicy: cachePolicy ?? .automatic(pageSize: limit),
             threadID: id,
             residentLimit: limit,
             nextNewerCursor: window.nextNewerCursor,
