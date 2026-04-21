@@ -627,7 +627,15 @@ Current status:
 - both paths now hydrate the internal Core Data store
 - `thread/turns/list` can now seed local history even when the thread has not
   been materialized locally yet
-- merge and dedup policy is still the main remaining gap in this phase
+- overlapping hydration now preserves richer locally assembled item detail when
+  stored history is thinner, while still accepting canonical upstream turn
+  ordering and terminal status
+- thread completeness now promotes to `serverParity` after clean stored-history
+  hydration and to `richerThanServer` when local assembly preserved detail that
+  the server read did not include
+- remaining work in this phase is no longer basic merge and dedup wiring, but
+  the next reconciliation tier around `thread/fork`, `thread/resume`, and
+  archive-state drift
 
 ### Phase 3: Archive-aware cache eviction
 

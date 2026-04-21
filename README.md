@@ -73,6 +73,14 @@ The current public lifecycle contract is intentionally narrow and explicit:
 - `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate
   the internal history store so stored-thread reads can enrich the same local
   persistence layer as live item-stream assembly.
+- overlapping stored-history hydration now reconciles against live-built local
+  turns instead of blindly overwriting them, preserving richer local item detail
+  when upstream stored history is thinner while still accepting canonical
+  terminal status from upstream.
+- the internal history store now tracks conservative completeness state for each
+  thread, with `serverParity` for clean stored-history hydration and
+  `richerThanServer` when local item-stream assembly has preserved detail that
+  upstream stored reads did not return.
 
 Current concurrency behavior is also explicit:
 
@@ -88,6 +96,10 @@ Current non-goals and intentionally deferred areas are also explicit:
 - The current history-reading API is still intentionally narrow: there is not
   yet a broader public search, recent-history, or consumer-friendly cursor
   helper surface over the local store.
+- The current reconciliation policy is intentionally conservative and still
+  internal: merge rules now distinguish terminal status from richer local text
+  and command detail, but fork-aware reconciliation, resume-aware bookkeeping,
+  and a broader public history-reading API are still open.
 - Richer command-output, file-change-output, MCP-progress, and compaction detail
   still remain internal while the package decides whether those belong as new
   event cases or as deeper observable summary state.

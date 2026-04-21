@@ -139,6 +139,10 @@ actor ThreadHistoryStore {
         let items: [CodexTurnItem]
     }
 
+    private struct HydrationMergeOutcome: Sendable {
+        let preservedRicherLocalDetail: Bool
+    }
+
     private let container: NSPersistentContainer
     private var activeTurns: [String: ActiveTurnBuilder] = [:]
     private var nextTurnOrderByThreadID: [String: Int] = [:]
@@ -493,11 +497,14 @@ actor ThreadHistoryStore {
             let threadObject = try Self.fetchOrInsertThread(id: thread.id, in: context)
             Self.applyThreadInfo(thread, to: threadObject)
             Self.ensureThreadPersistenceScaffolding(for: threadObject, in: context)
-            try Self.upsertHydratedTurns(
+            let outcome = try Self.upsertHydratedTurns(
                 turns,
                 for: threadObject,
                 in: context
             )
+            threadObject.state?.completeness = outcome.preservedRicherLocalDetail
+                ? Completeness.richerThanServer.rawValue
+                : Completeness.serverParity.rawValue
             try context.saveIfChanged()
         }
 
@@ -514,11 +521,18 @@ actor ThreadHistoryStore {
         try context.performAndWaitReturning {
             let thread = try Self.fetchOrInsertThread(id: threadID, in: context)
             Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
-            try Self.upsertHydratedTurns(
+            let outcome = try Self.upsertHydratedTurns(
                 turns,
                 for: thread,
                 in: context
             )
+            if let state = thread.state, state.completeness != Completeness.richerThanServer.rawValue {
+                if outcome.preservedRicherLocalDetail {
+                    state.completeness = Completeness.richerThanServer.rawValue
+                } else if state.completeness.isEmpty {
+                    state.completeness = Completeness.partial.rawValue
+                }
+            }
             try context.saveIfChanged()
         }
 
@@ -572,24 +586,36 @@ actor ThreadHistoryStore {
         _ hydratedTurns: [HydratedTurn],
         for thread: HistoryThread,
         in context: NSManagedObjectContext
-    ) throws {
-        guard !hydratedTurns.isEmpty else { return }
+    ) throws -> HydrationMergeOutcome {
+        guard !hydratedTurns.isEmpty else {
+            return .init(preservedRicherLocalDetail: false)
+        }
+
+        var preservedRicherLocalDetail = false
 
         for hydratedTurn in hydratedTurns {
             let turnObject = try fetchOrInsertTurn(id: hydratedTurn.turn.id, in: context)
-            Self.applyTurnInfo(hydratedTurn.turn, orderIndex: Int(turnObject.orderIndex), to: turnObject)
+            preservedRicherLocalDetail = Self.mergeHydratedTurnInfo(
+                hydratedTurn.turn,
+                into: turnObject
+            ) || preservedRicherLocalDetail
             turnObject.thread = thread
+
+            let existingTurnItems = ((turnObject.items as? Set<HistoryItem>) ?? [])
+            let incomingItemIDs = Set(hydratedTurn.items.map(\.id))
+            if existingTurnItems.contains(where: { !incomingItemIDs.contains($0.itemID) }) {
+                preservedRicherLocalDetail = true
+            }
 
             for (itemIndex, item) in hydratedTurn.items.enumerated() {
                 let stableID = stableItemID(turnID: hydratedTurn.turn.id, itemID: item.id)
                 let itemObject = try fetchOrInsertItem(stableID: stableID, in: context)
-                Self.applyItem(
+                preservedRicherLocalDetail = Self.mergeHydratedItem(
                     item,
                     stableID: stableID,
                     orderIndex: itemIndex,
-                    streamedText: item.text,
-                    to: itemObject
-                )
+                    into: itemObject
+                ) || preservedRicherLocalDetail
                 itemObject.turn = turnObject
             }
         }
@@ -609,6 +635,8 @@ actor ThreadHistoryStore {
         for (turnIndex, turn) in persistedTurns.enumerated() {
             turn.orderIndex = Int64(turnIndex)
         }
+
+        return .init(preservedRicherLocalDetail: preservedRicherLocalDetail)
     }
 
     private static func applyThreadDefaults(
@@ -640,6 +668,40 @@ actor ThreadHistoryStore {
         turn.status = info.status.rawValue
     }
 
+    private static func mergeHydratedTurnInfo(
+        _ info: CodexAppServer.TurnInfo,
+        into turn: HistoryTurn
+    ) -> Bool {
+        var preservedRicherLocalDetail = false
+        turn.id = info.id
+        if let completedAt = info.completedAt {
+            turn.completedAt = Int64(completedAt)
+        } else if turn.completedAt != 0 {
+            preservedRicherLocalDetail = true
+        }
+        if let durationMS = info.durationMS {
+            turn.durationMS = Int64(durationMS)
+        } else if turn.durationMS != 0 {
+            preservedRicherLocalDetail = true
+        }
+        if let errorMessage = info.errorMessage, !errorMessage.isEmpty {
+            turn.errorMessage = errorMessage
+        } else if let existingErrorMessage = turn.errorMessage, !existingErrorMessage.isEmpty {
+            preservedRicherLocalDetail = true
+        }
+        if let startedAt = info.startedAt {
+            turn.startedAt = Int64(startedAt)
+        } else if turn.startedAt != 0 {
+            preservedRicherLocalDetail = true
+        }
+        let mergedStatus = mergedTurnStatus(existing: turn.status, incoming: info.status.rawValue)
+        if mergedStatus == turn.status && mergedStatus != info.status.rawValue {
+            preservedRicherLocalDetail = true
+        }
+        turn.status = mergedStatus
+        return preservedRicherLocalDetail
+    }
+
     private static func applyItem(
         _ item: CodexTurnItem,
         stableID: String,
@@ -658,6 +720,163 @@ actor ThreadHistoryStore {
         persistedItem.streamedText = streamedText
         persistedItem.text = item.text
         persistedItem.toolName = item.toolName
+    }
+
+    private static func mergeHydratedItem(
+        _ item: CodexTurnItem,
+        stableID: String,
+        orderIndex: Int,
+        into persistedItem: HistoryItem
+    ) -> Bool {
+        var preservedRicherLocalDetail = false
+        persistedItem.id = stableID
+        persistedItem.itemID = item.id
+        persistedItem.kind = item.kind.rawValue
+        persistedItem.orderIndex = Int64(orderIndex)
+        let mergedCommand = mergeIncomingPreferredString(existing: persistedItem.command, incoming: item.command)
+        preservedRicherLocalDetail = preservedRicherLocalDetail || mergedCommand.preservedExistingDetail
+        persistedItem.command = mergedCommand.value
+        let mergedPath = mergeIncomingPreferredString(existing: persistedItem.path, incoming: item.path)
+        preservedRicherLocalDetail = preservedRicherLocalDetail || mergedPath.preservedExistingDetail
+        persistedItem.path = mergedPath.value
+        let mergedServerName = mergeIncomingPreferredString(existing: persistedItem.serverName, incoming: item.serverName)
+        preservedRicherLocalDetail = preservedRicherLocalDetail || mergedServerName.preservedExistingDetail
+        persistedItem.serverName = mergedServerName.value
+        let mergedStatus = mergeItemStatus(existing: persistedItem.status, incoming: item.status)
+        preservedRicherLocalDetail = preservedRicherLocalDetail || mergedStatus.preservedExistingDetail
+        persistedItem.status = mergedStatus.value
+        let mergedStreamedText = mergeStreamedText(existing: persistedItem.streamedText, incoming: item.text)
+        preservedRicherLocalDetail = preservedRicherLocalDetail || mergedStreamedText.preservedExistingDetail
+        persistedItem.streamedText = mergedStreamedText.value
+        let mergedText = mergeCanonicalText(existing: persistedItem.text, incoming: item.text)
+        preservedRicherLocalDetail = preservedRicherLocalDetail || mergedText.preservedExistingDetail
+        persistedItem.text = mergedText.value
+        let mergedToolName = mergeIncomingPreferredString(existing: persistedItem.toolName, incoming: item.toolName)
+        preservedRicherLocalDetail = preservedRicherLocalDetail || mergedToolName.preservedExistingDetail
+        persistedItem.toolName = mergedToolName.value
+        return preservedRicherLocalDetail
+    }
+
+    private struct MergedString: Sendable {
+        let value: String?
+        let preservedExistingDetail: Bool
+    }
+
+    private static func mergeIncomingPreferredString(existing: String?, incoming: String?) -> MergedString {
+        let existing = normalizedMeaningfulString(existing)
+        let incoming = normalizedMeaningfulString(incoming)
+
+        switch (existing, incoming) {
+        case let (nil, incoming):
+            return .init(value: incoming, preservedExistingDetail: false)
+        case let (existing, nil):
+            return .init(value: existing, preservedExistingDetail: existing != nil)
+        case let (.some(_), .some(incoming)):
+            return .init(value: incoming, preservedExistingDetail: false)
+        }
+    }
+
+    private static func mergeCanonicalText(existing: String?, incoming: String?) -> MergedString {
+        let existing = normalizedMeaningfulString(existing)
+        let incoming = normalizedMeaningfulString(incoming)
+
+        switch (existing, incoming) {
+        case let (nil, incoming):
+            return .init(value: incoming, preservedExistingDetail: false)
+        case let (existing, nil):
+            return .init(value: existing, preservedExistingDetail: existing != nil)
+        case let (.some(existing), .some(incoming)):
+            if incoming == existing {
+                return .init(value: incoming, preservedExistingDetail: false)
+            }
+            if existing.hasPrefix(incoming) {
+                return .init(value: existing, preservedExistingDetail: true)
+            }
+            return .init(value: incoming, preservedExistingDetail: false)
+        }
+    }
+
+    private static func mergeStreamedText(existing: String?, incoming: String?) -> MergedString {
+        let existing = normalizedMeaningfulString(existing)
+        let incoming = normalizedMeaningfulString(incoming)
+
+        switch (existing, incoming) {
+        case let (nil, incoming):
+            return .init(value: incoming, preservedExistingDetail: false)
+        case let (existing, nil):
+            return .init(value: existing, preservedExistingDetail: existing != nil)
+        case let (.some(existing), .some(incoming)):
+            if incoming == existing {
+                return .init(value: incoming, preservedExistingDetail: false)
+            }
+            if incoming.hasPrefix(existing) {
+                return .init(value: incoming, preservedExistingDetail: false)
+            }
+            return .init(value: existing, preservedExistingDetail: true)
+        }
+    }
+
+    private static func mergeItemStatus(existing: String?, incoming: String?) -> MergedString {
+        let existing = normalizedMeaningfulString(existing)
+        let incoming = normalizedMeaningfulString(incoming)
+
+        switch (existing, incoming) {
+        case let (nil, incoming):
+            return .init(value: incoming, preservedExistingDetail: false)
+        case let (existing, nil):
+            return .init(value: existing, preservedExistingDetail: existing != nil)
+        case let (.some(existing), .some(incoming)):
+            let normalizedExisting = existing.lowercased()
+            let normalizedIncoming = incoming.lowercased()
+            let incomingTerminal = isTerminalItemStatus(normalizedIncoming)
+            let existingTerminal = isTerminalItemStatus(normalizedExisting)
+
+            if incomingTerminal {
+                return .init(value: incoming, preservedExistingDetail: false)
+            }
+            if existingTerminal {
+                return .init(value: existing, preservedExistingDetail: normalizedIncoming != normalizedExisting)
+            }
+            return .init(value: incoming, preservedExistingDetail: false)
+        }
+    }
+
+    private static func normalizedMeaningfulString(_ value: String?) -> String? {
+        guard let value else { return nil }
+        return value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : value
+    }
+
+    private static func mergedTurnStatus(existing: String, incoming: String) -> String {
+        let incomingTerminal = isTerminalTurnStatus(incoming)
+        let existingTerminal = isTerminalTurnStatus(existing)
+
+        if incomingTerminal {
+            return incoming
+        }
+        if existingTerminal {
+            return existing
+        }
+        return incoming
+    }
+
+    private static func isTerminalTurnStatus(_ status: String) -> Bool {
+        switch status {
+        case CodexAppServer.TurnStatus.completed.rawValue,
+             CodexAppServer.TurnStatus.failed.rawValue,
+             CodexAppServer.TurnStatus.interrupted.rawValue:
+            true
+        default:
+            false
+        }
+    }
+
+    private static func isTerminalItemStatus(_ status: String) -> Bool {
+        switch status {
+        case "completed", "failed", "error", "errored", "interrupted", "cancelled", "canceled":
+            true
+        default:
+            false
+        }
     }
 
     private static func fetchOrInsertThread(id: String, in context: NSManagedObjectContext) throws -> HistoryThread {

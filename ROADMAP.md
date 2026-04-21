@@ -38,7 +38,7 @@
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. |
 | Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors, but richer command-output, file-change-output, MCP-progress, reroute, hook, and compaction detail still remain internal. |
 | Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, and request resolution is tracked by JSON-RPC request id, but broader live coverage and more server-request families are still open. |
-| Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read` and `thread/turns/list`, and keeps that history separate from the current-state `Dashboard` and `Minimap` mirrors, but public history-reading helpers and richer reconciliation policy are still open. |
+| Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read` and `thread/turns/list`, seeds previously unknown local threads from paged history, and performs conservative reconciliation that preserves richer local detail while accepting canonical upstream ordering and terminal status, but public history-reading helpers and fork or resume-aware bookkeeping are still open. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a rolling support window of the latest public Codex CLI release plus the prior two minor versions, and transport startup now checks PATH, common Homebrew paths, and the npm global prefix on macOS, but richer discovery diagnostics are still open. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current rolling Codex CLI compatibility window, but richer examples are still open. |
@@ -60,8 +60,12 @@
 The next meaningful package step is no longer proving that history hydration is
 possible. That slice now exists.
 
-The next meaningful work is to tighten reconciliation and public history
-ergonomics while keeping the observable release boundary honest.
+The next meaningful work is no longer basic hydration or first-pass
+reconciliation. That slice now exists.
+
+The next meaningful work is to extend reconciliation into the remaining thread
+management flows and then expose a deliberate public history-reading surface
+without making the stored-history contract sound richer than it really is.
 
 The package can now:
 
@@ -81,12 +85,13 @@ The package can now:
 That means the current priority order is:
 
 1. Tighten the observable slice we just shipped by deciding whether any richer command-output, file-change-output, MCP-progress, or compaction detail belongs as additional public events or as further `Dashboard` and `Minimap` mirror state.
-2. Tighten history reconciliation now that `thread/read` and `thread/turns/list` are wrapped, especially merge and dedup behavior between live-built turns and server-read turns.
+2. Extend history reconciliation beyond overlap-safe `thread/read` and `thread/turns/list` hydration, especially fork-aware lineage reconciliation, resume-aware bookkeeping, and archive-state drift handling through list-style sync.
 3. Promote the next near-term thread-management surface that upstream already documents as core workflow, namely `thread/list`, `thread/resume`, and `thread/fork`, using the storage policy now captured in `docs/maintainers/thread-history-storage-plan.md`.
-4. Decide whether completed turn results from `turn/completed` should be cached by `SwiftASB` as a consumer convenience or whether completed-turn retention should remain a caller responsibility until the broader history surface lands.
-5. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
-6. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
-7. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
+4. Expose a deliberate public history-reading API over the local store, starting with recent-history and paged turn windows rather than broad search or generic fetch sugar.
+5. Decide whether completed turn results from `turn/completed` should be cached by `SwiftASB` as a consumer convenience or whether completed-turn retention should remain a caller responsibility until the broader history surface lands.
+6. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
+7. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
+8. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
 
 ## Proposed Next Release Slice
 
