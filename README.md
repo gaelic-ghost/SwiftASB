@@ -74,7 +74,9 @@ The current public lifecycle contract is intentionally narrow and explicit:
 - `CodexThread.Dashboard` already summarizes aggregate tool activity, aggregate
   MCP activity, and whether thread compaction is currently active.
 - `CodexThread.makeRecentTurns(limit:)` now vends a thread-scoped recent-turns
-  observable that prewarms from the local history store and can fall back to
+  observable that prewarms from the local history store, supports explicit
+  older/newer whole-turn window expansion, seeds upstream paging cursors even
+  when the visible initial window came from local history, and can fall back to
   paged stored-turn reads when local recent history is not resident yet.
 - `CodexTurnHandle.close()` now seals a completed turn into a caller-owned
   value snapshot and releases per-turn observation bookkeeping explicitly.

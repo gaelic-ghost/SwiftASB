@@ -1121,10 +1121,17 @@ public actor CodexAppServer {
         let historyStore = try requireHistoryStore(for: "recent turn history")
         let localTurns = try await historyStore.recentTurnSnapshots(threadID: threadID, limit: limit)
         if !localTurns.isEmpty {
+            let seededRemotePage = try? await listThreadTurns(
+                .init(
+                    threadID: threadID,
+                    limit: limit,
+                    sortDirection: .desc
+                )
+            )
             return .init(
                 turns: localTurns,
-                nextOlderCursor: nil,
-                nextNewerCursor: nil
+                nextOlderCursor: seededRemotePage?.nextCursor,
+                nextNewerCursor: seededRemotePage?.backwardsCursor
             )
         }
 
@@ -1776,7 +1783,11 @@ public actor CodexAppServer {
     private func releaseTurnObservation(turnID: String) {
         bufferedTurnEvents.removeValue(forKey: turnID)
         bufferedTerminalTurnEvents.removeValue(forKey: turnID)
-        turnEventContinuations.removeValue(forKey: turnID)
+        if let continuations = turnEventContinuations.removeValue(forKey: turnID)?.values {
+            for continuation in continuations {
+                continuation.finish()
+            }
+        }
     }
 
     private func registerThreadEventContinuation(

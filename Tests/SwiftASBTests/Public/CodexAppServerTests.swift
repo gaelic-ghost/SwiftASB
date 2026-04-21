@@ -442,6 +442,69 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("closing a completed turn finishes its live turn stream")
+    func closingCompletedTurnFinishesTurnStream() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        let turn = try await thread.startTextTurn("Summarize the project state.")
+        let eventTask = Task {
+            try await turnEvents(from: turn.events, count: 5)
+        }
+
+        await transport.emitTurnStarted(threadID: thread.id, turnID: turn.turn.id)
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-agent-1",
+            item: [
+                "id": "item-agent-1",
+                "type": "agentMessage",
+            ]
+        )
+        await transport.emitAgentMessageDelta(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-agent-1"
+        )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-agent-1"
+        )
+        await transport.emitTurnCompleted(threadID: thread.id, turnID: turn.turn.id)
+        _ = try await eventTask.value
+
+        _ = try await turn.close()
+        let nextEvent = try await nextTurnEventOrEnd(from: turn.events)
+        #expect(nextEvent == nil)
+
+        await client.stop()
+    }
+
     @Test("lists stored threads and reconciles archive state into the local history store")
     func listsStoredThreadsAndReconcilesArchiveState() async throws {
         let transport = FakeCodexAppServerTransport(
@@ -938,6 +1001,157 @@ struct CodexAppServerTests {
         #expect(expandedSnapshots[0].id == "turn-newer")
         #expect(expandedSnapshots[1].id == "turn-older")
         #expect(methodsBeforeOlderLoad == methodsAfterOlderLoad)
+
+        await client.stop()
+    }
+
+    @Test("seeds remote older cursors for recent turns even when the initial window is local")
+    func seedsRemoteOlderCursorsForLocalRecentWindow() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadTurnsListResultQueue: [
+                [
+                    "backwardsCursor": "cursor-newer-1",
+                    "data": [
+                        [
+                            "completedAt": 1713350300,
+                            "durationMs": 2500,
+                            "error": NSNull(),
+                            "id": "turn-3",
+                            "items": [],
+                            "startedAt": 1713350250,
+                            "status": "completed",
+                        ],
+                    ],
+                    "nextCursor": "cursor-older-1",
+                ],
+                [
+                    "backwardsCursor": "cursor-newer-2",
+                    "data": [
+                        [
+                            "completedAt": 1713350005,
+                            "durationMs": 2500,
+                            "error": NSNull(),
+                            "id": "turn-0",
+                            "items": [],
+                            "startedAt": 1713350000,
+                            "status": "completed",
+                        ],
+                    ],
+                    "nextCursor": NSNull(),
+                ],
+            ]
+        )
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: temporaryDirectory,
+            withIntermediateDirectories: true
+        )
+        let historyStore = try ThreadHistoryStore(
+            configuration: .init(
+                inMemory: false,
+                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
+            )
+        )
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        defer {
+            try? FileManager.default.removeItem(at: temporaryDirectory)
+        }
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        try await historyStore.hydrateHistoricalTurns(
+            threadID: thread.id,
+            turns: [
+                ThreadHistoryStore.HydratedTurn(
+                    turn: CodexAppServer.TurnInfo(
+                        completedAt: 1713350300,
+                        durationMS: 2500,
+                        errorMessage: nil,
+                        id: "turn-3",
+                        startedAt: 1713350250,
+                        status: .completed
+                    ),
+                    items: []
+                ),
+                ThreadHistoryStore.HydratedTurn(
+                    turn: CodexAppServer.TurnInfo(
+                        completedAt: 1713350200,
+                        durationMS: 2500,
+                        errorMessage: nil,
+                        id: "turn-2",
+                        startedAt: 1713350150,
+                        status: .completed
+                    ),
+                    items: []
+                ),
+                ThreadHistoryStore.HydratedTurn(
+                    turn: CodexAppServer.TurnInfo(
+                        completedAt: 1713350100,
+                        durationMS: 2500,
+                        errorMessage: nil,
+                        id: "turn-1",
+                        startedAt: 1713350050,
+                        status: .completed
+                    ),
+                    items: []
+                ),
+            ]
+        )
+
+        let recentTurns = try await thread.makeRecentTurns(limit: 1)
+        let methodsAfterInitialLoad = await transport.recordedMethods
+        #expect(methodsAfterInitialLoad == ["initialize", "initialized", "thread/start", "thread/turns/list"])
+
+        let initialSnapshots = await MainActor.run { recentTurns.turns }
+        #expect(initialSnapshots.count == 1)
+        #expect(initialSnapshots[0].id == "turn-3")
+
+        try await recentTurns.loadOlderTurns(limit: 1)
+        try await recentTurns.loadOlderTurns(limit: 1)
+        let methodsBeforeRemoteFallback = await transport.recordedMethods
+        #expect(methodsBeforeRemoteFallback == methodsAfterInitialLoad)
+
+        try await recentTurns.loadOlderTurns(limit: 1)
+        let methodsAfterRemoteFallback = await transport.recordedMethods
+        #expect(
+            methodsAfterRemoteFallback == [
+                "initialize",
+                "initialized",
+                "thread/start",
+                "thread/turns/list",
+                "thread/turns/list",
+            ]
+        )
+
+        let expandedSnapshots = await MainActor.run { recentTurns.turns }
+        #expect(expandedSnapshots.map { $0.id } == ["turn-3", "turn-2", "turn-1", "turn-0"])
+        #expect(await MainActor.run { recentTurns.nextOlderCursor } == nil)
 
         await client.stop()
     }
@@ -2271,6 +2485,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var threadForkResult: [String: Any]?
     private var threadResumeResult: [String: Any]?
     private var threadTurnsListResult: [String: Any]?
+    private var threadTurnsListResultQueue: [[String: Any]]
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
     private var started = false
     private var initializedSeen = false
@@ -2282,7 +2497,8 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         threadReadResult: [String: Any]? = nil,
         threadForkResult: [String: Any]? = nil,
         threadResumeResult: [String: Any]? = nil,
-        threadTurnsListResult: [String: Any]? = nil
+        threadTurnsListResult: [String: Any]? = nil,
+        threadTurnsListResultQueue: [[String: Any]] = []
     ) {
         self.resolvedExecutable = executableResolution
         self.threadListResult = threadListResult
@@ -2290,6 +2506,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         self.threadForkResult = threadForkResult
         self.threadResumeResult = threadResumeResult
         self.threadTurnsListResult = threadTurnsListResult
+        self.threadTurnsListResultQueue = threadTurnsListResultQueue
     }
 
     func setThreadListResult(_ result: [String: Any]?) {
@@ -2534,6 +2751,12 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 ]
             )
         case "thread/turns/list":
+            if !threadTurnsListResultQueue.isEmpty {
+                return responsePayload(
+                    id: id,
+                    result: threadTurnsListResultQueue.removeFirst()
+                )
+            }
             return responsePayload(
                 id: id,
                 result: threadTurnsListResult ?? [
@@ -3058,6 +3281,39 @@ private func turnEvents(
     return events
 }
 
+private func nextTurnEventOrEnd(
+    from stream: AsyncThrowingStream<CodexTurnEvent, Error>,
+    timeoutNanoseconds: UInt64 = 1_000_000_000
+) async throws -> CodexTurnEvent? {
+    let iteratorTask = Task {
+        var iterator = stream.makeAsyncIterator()
+        return try await iterator.next()
+    }
+
+    let timeoutTask = Task {
+        try await Task.sleep(nanoseconds: timeoutNanoseconds)
+    }
+
+    defer {
+        iteratorTask.cancel()
+        timeoutTask.cancel()
+    }
+
+    return try await withThrowingTaskGroup(of: CodexTurnEvent?.self) { group in
+        group.addTask {
+            try await iteratorTask.value
+        }
+        group.addTask {
+            try await timeoutTask.value
+            throw TimeoutError()
+        }
+
+        let result = try await group.next()
+        group.cancelAll()
+        return try #require(result)
+    }
+}
+
 private func threadEvents(
     from stream: AsyncThrowingStream<CodexThreadEvent, Error>,
     count: Int
@@ -3082,3 +3338,5 @@ private extension CodexRPCRequestID {
         }
     }
 }
+
+private struct TimeoutError: Error {}

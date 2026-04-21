@@ -728,11 +728,12 @@ Current status:
   `thread/turns/list` when local recent turns are not resident yet
 - `CodexTurnHandle.close()` now exists as the explicit handoff from a completed
   live handle to a caller-owned sealed turn value
-- the next implementation step is explicit older/newer scroll-window expansion
-  over whole-turn pages, still preferring local Core Data windows before
-  falling back to upstream cursors
-- the current remaining paging gap is remote cursor continuity once multiple
-  upstream fallback pages are mixed with already-resident local windows
+- explicit older/newer scroll-window expansion over whole-turn pages now
+  exists, still preferring local Core Data windows before falling back to
+  upstream cursors
+- initial recent-turn window construction now also seeds upstream paging
+  cursors even when the visible recent window came from local history first,
+  so remote fallback can continue cleanly after multiple local-only expansions
 - richer resident-cache policy controls are still open
 
 ## Remaining Open Questions
