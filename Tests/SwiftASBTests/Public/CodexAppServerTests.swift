@@ -376,6 +376,254 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("lists stored threads and reconciles archive state into the local history store")
+    func listsStoredThreadsAndReconcilesArchiveState() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadListResult: [
+                "data": [
+                    [
+                        "cliVersion": "0.121.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-123",
+                        "modelProvider": "openai",
+                        "name": "Archived release prep",
+                        "preview": "Summarize the release notes",
+                        "source": "cli",
+                        "status": ["type": "notLoaded"],
+                        "turns": [],
+                        "updatedAt": 1713350005,
+                    ],
+                ],
+                "nextCursor": "cursor-next",
+            ]
+        )
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: temporaryDirectory,
+            withIntermediateDirectories: true
+        )
+        let historyStore = try ThreadHistoryStore(
+            configuration: .init(
+                inMemory: false,
+                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
+            )
+        )
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        defer {
+            try? FileManager.default.removeItem(at: temporaryDirectory)
+        }
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        _ = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        let archivedPage = try await client.listThreads(
+            .init(
+                limit: 20,
+                sortKey: .updatedAt,
+                sortDirection: .desc,
+                sourceKinds: [.cli],
+                archived: true,
+                currentDirectoryPath: "/tmp/project"
+            )
+        )
+
+        #expect(archivedPage.threads.count == 1)
+        #expect(archivedPage.threads[0].id == "thread-123")
+        #expect(archivedPage.threads[0].name == "Archived release prep")
+        #expect(archivedPage.nextCursor == "cursor-next")
+
+        let archivedSnapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-123")
+        let archivedThread = try #require(archivedSnapshot)
+        #expect(archivedThread.isArchived == true)
+        #expect(archivedThread.name == "Archived release prep")
+        #expect(archivedThread.statusType == "notLoaded")
+        #expect(archivedThread.state.completeness == "partial")
+
+        await transport.setThreadListResult([
+            "data": [
+                [
+                    "cliVersion": "0.121.0",
+                    "createdAt": 1713350000,
+                    "cwd": "/tmp/project",
+                    "ephemeral": false,
+                    "id": "thread-123",
+                    "modelProvider": "openai",
+                    "name": "Active release prep",
+                    "preview": "Summarize the release notes",
+                    "source": "cli",
+                    "status": ["type": "idle"],
+                    "turns": [],
+                    "updatedAt": 1713350007,
+                ],
+            ],
+        ])
+
+        let activePage = try await client.listThreads(
+            .init(
+                archived: false,
+                currentDirectoryPath: "/tmp/project"
+            )
+        )
+
+        #expect(activePage.threads.count == 1)
+        #expect(activePage.threads[0].name == "Active release prep")
+        #expect(activePage.nextCursor == nil)
+
+        let activeSnapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-123")
+        let activeThread = try #require(activeSnapshot)
+        #expect(activeThread.isArchived == false)
+        #expect(activeThread.name == "Active release prep")
+        #expect(activeThread.statusType == "idle")
+
+        await client.stop()
+    }
+
+    @Test("resumes a stored thread and hydrates resumed history into the local history store")
+    func resumesStoredThreadAndHydratesHistory() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadResumeResult: [
+                "approvalPolicy": "on-request",
+                "approvalsReviewer": "user",
+                "cwd": "/tmp/project",
+                "instructionSources": ["AGENTS.md"],
+                "model": "gpt-5.4",
+                "modelProvider": "openai",
+                "reasoningEffort": "medium",
+                "sandbox": [
+                    "type": "workspaceWrite",
+                    "networkAccess": "enabled",
+                    "writableRoots": ["/tmp/project"],
+                ],
+                "serviceTier": "fast",
+                "thread": [
+                    "cliVersion": "0.121.0",
+                    "createdAt": 1713350000,
+                    "cwd": "/tmp/project",
+                    "ephemeral": false,
+                    "id": "thread-123",
+                    "modelProvider": "openai",
+                    "name": "Resumed Thread",
+                    "preview": "Hydrated resume preview",
+                    "source": "cli",
+                    "status": ["type": "idle"],
+                    "turns": [
+                        [
+                            "completedAt": 1713350005,
+                            "durationMs": 3000,
+                            "error": NSNull(),
+                            "id": "turn-hydrated-1",
+                            "items": [
+                                [
+                                    "id": "item-agent-1",
+                                    "status": "completed",
+                                    "text": "Resumed reply from thread/resume.",
+                                    "type": "agentMessage",
+                                ],
+                            ],
+                            "startedAt": 1713350002,
+                            "status": "completed",
+                        ],
+                    ],
+                    "updatedAt": 1713350005,
+                ],
+            ]
+        )
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: temporaryDirectory,
+            withIntermediateDirectories: true
+        )
+        let historyStore = try ThreadHistoryStore(
+            configuration: .init(
+                inMemory: false,
+                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
+            )
+        )
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        defer {
+            try? FileManager.default.removeItem(at: temporaryDirectory)
+        }
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        _ = try await client.listThreads(
+            .init(
+                archived: true,
+                currentDirectoryPath: "/tmp/project"
+            )
+        )
+
+        let thread = try await client.resumeThread(
+            .init(
+                threadID: "thread-123",
+                personality: .friendly
+            )
+        )
+
+        #expect(thread.id == "thread-123")
+        #expect(thread.model == "gpt-5.4")
+        #expect(thread.modelProvider == "openai")
+        #expect(thread.currentDirectoryPath == "/tmp/project")
+        #expect(thread.info.status.type == .idle)
+        #expect(thread.info.preview == "Hydrated resume preview")
+
+        let snapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-123")
+        let threadSnapshot = try #require(snapshot)
+        #expect(threadSnapshot.name == "Resumed Thread")
+        #expect(threadSnapshot.isArchived == false)
+        #expect(threadSnapshot.statusType == "idle")
+        #expect(threadSnapshot.defaults.approvalPolicy == "onRequest")
+        #expect(threadSnapshot.defaults.currentDirectoryPath == "/tmp/project")
+        #expect(threadSnapshot.turns.count == 1)
+        #expect(threadSnapshot.turns[0].id == "turn-hydrated-1")
+        #expect(threadSnapshot.turns[0].items.count == 1)
+        #expect(threadSnapshot.turns[0].items[0].text == "Resumed reply from thread/resume.")
+        #expect(threadSnapshot.state.completeness == "serverParity")
+
+        await client.stop()
+    }
+
     @Test("reads a stored thread and hydrates returned turns into the local history store")
     func readsStoredThreadAndHydratesHistory() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -1700,8 +1948,10 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private(set) var recordedMethods: [String] = []
     private(set) var recordedResponses: [RecordedResponse] = []
     private var recordedRequestPayloads: [String: [Data]] = [:]
-    private let threadReadResult: [String: Any]?
-    private let threadTurnsListResult: [String: Any]?
+    private var threadListResult: [String: Any]?
+    private var threadReadResult: [String: Any]?
+    private var threadResumeResult: [String: Any]?
+    private var threadTurnsListResult: [String: Any]?
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
     private var started = false
     private var initializedSeen = false
@@ -1709,12 +1959,20 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
     init(
         executableResolution: CodexCLIExecutableResolver.Resolution? = nil,
+        threadListResult: [String: Any]? = nil,
         threadReadResult: [String: Any]? = nil,
+        threadResumeResult: [String: Any]? = nil,
         threadTurnsListResult: [String: Any]? = nil
     ) {
         self.resolvedExecutable = executableResolution
+        self.threadListResult = threadListResult
         self.threadReadResult = threadReadResult
+        self.threadResumeResult = threadResumeResult
         self.threadTurnsListResult = threadTurnsListResult
+    }
+
+    func setThreadListResult(_ result: [String: Any]?) {
+        threadListResult = result
     }
 
     func start() throws {
@@ -1788,6 +2046,29 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     ],
                 ]
             )
+        case "thread/list":
+            return responsePayload(
+                id: id,
+                result: threadListResult ?? [
+                    "data": [
+                        [
+                            "cliVersion": "0.121.0",
+                            "createdAt": 1713350000,
+                            "cwd": "/tmp/project",
+                            "ephemeral": false,
+                            "id": "thread-123",
+                            "modelProvider": "openai",
+                            "name": "Hydrated Thread",
+                            "preview": "Hydrated thread preview",
+                            "source": "cli",
+                            "status": ["type": "notLoaded"],
+                            "turns": [],
+                            "updatedAt": 1713350005,
+                        ],
+                    ],
+                    "nextCursor": "cursor-next",
+                ]
+            )
         case "thread/read":
             return responsePayload(
                 id: id,
@@ -1819,6 +2100,56 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                                         "id": "item-agent-1",
                                         "status": "completed",
                                         "text": "Hydrated reply from thread/read.",
+                                        "type": "agentMessage",
+                                    ],
+                                ],
+                                "startedAt": 1713350002,
+                                "status": "completed",
+                            ],
+                        ],
+                        "updatedAt": 1713350005,
+                    ],
+                ]
+            )
+        case "thread/resume":
+            return responsePayload(
+                id: id,
+                result: threadResumeResult ?? [
+                    "approvalPolicy": "on-request",
+                    "approvalsReviewer": "user",
+                    "cwd": "/tmp/project",
+                    "instructionSources": ["AGENTS.md"],
+                    "model": "gpt-5.4",
+                    "modelProvider": "openai",
+                    "reasoningEffort": "medium",
+                    "sandbox": [
+                        "type": "workspaceWrite",
+                        "networkAccess": "enabled",
+                        "writableRoots": ["/tmp/project"],
+                    ],
+                    "serviceTier": "fast",
+                    "thread": [
+                        "cliVersion": "0.121.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-123",
+                        "modelProvider": "openai",
+                        "name": "Resumed Thread",
+                        "preview": "Hydrated resume preview",
+                        "source": "cli",
+                        "status": ["type": "idle"],
+                        "turns": [
+                            [
+                                "completedAt": 1713350005,
+                                "durationMs": 3000,
+                                "error": NSNull(),
+                                "id": "turn-hydrated-1",
+                                "items": [
+                                    [
+                                        "id": "item-agent-1",
+                                        "status": "completed",
+                                        "text": "Resumed reply from thread/resume.",
                                         "type": "agentMessage",
                                     ],
                                 ],

@@ -139,6 +139,52 @@ public actor CodexAppServer {
         }
     }
 
+    public struct ThreadResumeRequest: Sendable, Equatable {
+        public var approvalPolicy: ApprovalPolicy?
+        public var approvalsReviewer: ApprovalsReviewer?
+        public var baseInstructions: String?
+        public var config: [String: JSONValue]?
+        public var currentDirectoryPath: String?
+        public var developerInstructions: String?
+        public var model: String?
+        public var modelProvider: String?
+        public var personality: Personality?
+        public var sandboxMode: SandboxMode?
+        public var serviceName: String?
+        public var serviceTier: ServiceTier?
+        public var threadID: String
+
+        public init(
+            threadID: String,
+            approvalPolicy: ApprovalPolicy? = nil,
+            approvalsReviewer: ApprovalsReviewer? = nil,
+            baseInstructions: String? = nil,
+            config: [String: JSONValue]? = nil,
+            currentDirectoryPath: String? = nil,
+            developerInstructions: String? = nil,
+            model: String? = nil,
+            modelProvider: String? = nil,
+            personality: Personality? = nil,
+            sandboxMode: SandboxMode? = nil,
+            serviceName: String? = nil,
+            serviceTier: ServiceTier? = nil
+        ) {
+            self.threadID = threadID
+            self.approvalPolicy = approvalPolicy
+            self.approvalsReviewer = approvalsReviewer
+            self.baseInstructions = baseInstructions
+            self.config = config
+            self.currentDirectoryPath = currentDirectoryPath
+            self.developerInstructions = developerInstructions
+            self.model = model
+            self.modelProvider = modelProvider
+            self.personality = personality
+            self.sandboxMode = sandboxMode
+            self.serviceName = serviceName
+            self.serviceTier = serviceTier
+        }
+    }
+
     public struct ThreadSession: Sendable, Equatable {
         public let approvalPolicy: ApprovalPolicy
         public let approvalsReviewer: ApprovalsReviewer
@@ -181,6 +227,63 @@ public actor CodexAppServer {
     public struct ThreadReadResult: Sendable, Equatable {
         public let thread: ThreadInfo
         public let turns: [TurnInfo]
+    }
+
+    public enum ThreadListSortKey: String, Sendable, Equatable {
+        case createdAt
+        case updatedAt
+    }
+
+    public enum ThreadListSortDirection: String, Sendable, Equatable {
+        case asc
+        case desc
+    }
+
+    public enum ThreadListSourceKind: String, Sendable, Equatable {
+        case appServer
+        case cli
+        case exec
+        case unknown
+        case vscode
+    }
+
+    public struct ThreadListRequest: Sendable, Equatable {
+        public var archived: Bool?
+        public var cursor: String?
+        public var currentDirectoryPath: String?
+        public var limit: Int?
+        public var modelProviders: [String]?
+        public var searchTerm: String?
+        public var sortDirection: ThreadListSortDirection?
+        public var sortKey: ThreadListSortKey?
+        public var sourceKinds: [ThreadListSourceKind]?
+
+        public init(
+            cursor: String? = nil,
+            limit: Int? = nil,
+            sortKey: ThreadListSortKey? = nil,
+            sortDirection: ThreadListSortDirection? = nil,
+            modelProviders: [String]? = nil,
+            sourceKinds: [ThreadListSourceKind]? = nil,
+            archived: Bool? = nil,
+            currentDirectoryPath: String? = nil,
+            searchTerm: String? = nil
+        ) {
+            self.archived = archived
+            self.cursor = cursor
+            self.currentDirectoryPath = currentDirectoryPath
+            self.limit = limit
+            self.modelProviders = modelProviders
+            self.searchTerm = searchTerm
+            self.sortDirection = sortDirection
+            self.sortKey = sortKey
+            self.sourceKinds = sourceKinds
+        }
+    }
+
+    public struct ThreadListPage: Sendable, Equatable {
+        public let nextCursor: String?
+        public let threads: [ThreadInfo]
     }
 
     public enum ThreadTurnsSortDirection: String, Sendable, Equatable {
@@ -598,6 +701,86 @@ public actor CodexAppServer {
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/start")
+        }
+    }
+
+    public func resumeThread(_ request: ThreadResumeRequest) async throws -> CodexThread {
+        try requireInitialized(for: "thread/resume")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadResumeRequest(
+                id: requestID,
+                params: request.wireValue
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadResumeResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            let session = ThreadSession(wireValue: response)
+            threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
+            let historyStore = try requireHistoryStore(for: "thread/resume")
+            try await historyStore.recordThreadResumed(
+                session: session,
+                turns: response.thread.turns.map {
+                    .init(
+                        turn: .init(wireValue: $0),
+                        items: $0.items.map(CodexTurnItem.init(wireValue:))
+                    )
+                }
+            )
+            try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
+
+            return CodexThread(
+                appServer: self,
+                session: session,
+                events: makeThreadEventStream(threadID: response.thread.id)
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/resume")
+        }
+    }
+
+    public func listThreads(_ request: ThreadListRequest = .init()) async throws -> ThreadListPage {
+        try requireInitialized(for: "thread/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadListRequest(
+                id: requestID,
+                params: .init(
+                    archived: request.archived,
+                    cursor: request.cursor,
+                    cwd: request.currentDirectoryPath,
+                    limit: request.limit,
+                    modelProviders: request.modelProviders,
+                    searchTerm: request.searchTerm,
+                    sortDirection: request.sortDirection.map(CodexProtocolThreadListSortDirection.init),
+                    sortKey: request.sortKey.map(CodexProtocolThreadListSortKey.init),
+                    sourceKinds: request.sourceKinds?.map(CodexProtocolThreadListSourceKind.init)
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            let threads = response.data.map(ThreadInfo.init(wireValue:))
+            try await requireHistoryStore(for: "thread/list").reconcileThreadListPage(
+                threads,
+                archived: request.archived
+            )
+
+            return .init(
+                nextCursor: response.nextCursor,
+                threads: threads
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/list")
         }
     }
 
@@ -2102,6 +2285,26 @@ private extension CodexAppServer.ThreadStartRequest {
     }
 }
 
+private extension CodexAppServer.ThreadResumeRequest {
+    var wireValue: CodexProtocolThreadResumeParams {
+        .init(
+            approvalPolicy: approvalPolicy?.wireValue,
+            approvalsReviewer: approvalsReviewer?.wireValue,
+            baseInstructions: baseInstructions,
+            config: config?.mapValues(\.wireValue),
+            cwd: currentDirectoryPath,
+            developerInstructions: developerInstructions,
+            model: model,
+            modelProvider: modelProvider,
+            personality: personality?.wireValue,
+            sandbox: sandboxMode?.wireValue,
+            serviceName: serviceName,
+            serviceTier: serviceTier?.wireValue,
+            threadID: threadID
+        )
+    }
+}
+
 private extension CodexAppServer.TurnStartRequest {
     var wireValue: CodexWireTurnStartParams {
         CodexWireTurnStartParams(
@@ -2578,6 +2781,45 @@ private extension CodexProtocolThreadTurnsSortDirection {
             self = .asc
         case .desc:
             self = .desc
+        }
+    }
+}
+
+private extension CodexProtocolThreadListSortKey {
+    init(_ key: CodexAppServer.ThreadListSortKey) {
+        switch key {
+        case .createdAt:
+            self = .createdAt
+        case .updatedAt:
+            self = .updatedAt
+        }
+    }
+}
+
+private extension CodexProtocolThreadListSortDirection {
+    init(_ direction: CodexAppServer.ThreadListSortDirection) {
+        switch direction {
+        case .asc:
+            self = .asc
+        case .desc:
+            self = .desc
+        }
+    }
+}
+
+private extension CodexProtocolThreadListSourceKind {
+    init(_ sourceKind: CodexAppServer.ThreadListSourceKind) {
+        switch sourceKind {
+        case .appServer:
+            self = .appServer
+        case .cli:
+            self = .cli
+        case .exec:
+            self = .exec
+        case .unknown:
+            self = .unknown
+        case .vscode:
+            self = .vscode
         }
     }
 }

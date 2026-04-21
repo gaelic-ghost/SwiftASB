@@ -58,6 +58,85 @@ struct CodexProtocolThreadReadResponse: Decodable, Equatable, Sendable {
     let thread: CodexWireThread
 }
 
+struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
+    let approvalPolicy: CodexWireApprovalPolicyUnion?
+    let approvalsReviewer: CodexWireApprovalsReviewer?
+    let baseInstructions: String?
+    let config: [String: CodexWireJSONValue]?
+    let cwd: String?
+    let developerInstructions: String?
+    let model: String?
+    let modelProvider: String?
+    let personality: CodexWirePersonality?
+    let sandbox: CodexWireSandboxMode?
+    let serviceName: String?
+    let serviceTier: CodexWireServiceTier?
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case approvalPolicy
+        case approvalsReviewer
+        case baseInstructions
+        case config
+        case cwd
+        case developerInstructions
+        case model
+        case modelProvider
+        case personality
+        case sandbox
+        case serviceName
+        case serviceTier
+        case threadID = "threadId"
+    }
+}
+
+struct CodexProtocolThreadListParams: Encodable, Equatable, Sendable {
+    let archived: Bool?
+    let cursor: String?
+    let cwd: String?
+    let limit: Int?
+    let modelProviders: [String]?
+    let searchTerm: String?
+    let sortDirection: CodexProtocolThreadListSortDirection?
+    let sortKey: CodexProtocolThreadListSortKey?
+    let sourceKinds: [CodexProtocolThreadListSourceKind]?
+
+    enum CodingKeys: String, CodingKey {
+        case archived
+        case cursor
+        case cwd
+        case limit
+        case modelProviders
+        case searchTerm
+        case sortDirection
+        case sortKey
+        case sourceKinds
+    }
+}
+
+enum CodexProtocolThreadListSortDirection: String, Codable, Equatable, Sendable {
+    case asc
+    case desc
+}
+
+enum CodexProtocolThreadListSortKey: String, Codable, Equatable, Sendable {
+    case createdAt = "created_at"
+    case updatedAt = "updated_at"
+}
+
+enum CodexProtocolThreadListSourceKind: String, Codable, Equatable, Sendable {
+    case appServer = "appServer"
+    case cli
+    case exec
+    case unknown
+    case vscode
+}
+
+struct CodexProtocolThreadListResponse: Decodable, Equatable, Sendable {
+    let data: [CodexWireThread]
+    let nextCursor: String?
+}
+
 struct CodexProtocolThreadTurnsListParams: Encodable, Equatable, Sendable {
     let cursor: String?
     let limit: Int?

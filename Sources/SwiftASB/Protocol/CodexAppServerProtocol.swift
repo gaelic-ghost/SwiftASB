@@ -4,7 +4,9 @@ struct CodexAppServerProtocol {
     enum Method: String, Sendable, Codable {
         case initialize = "initialize"
         case initialized = "initialized"
+        case threadList = "thread/list"
         case threadRead = "thread/read"
+        case threadResume = "thread/resume"
         case threadStart = "thread/start"
         case threadTurnsList = "thread/turns/list"
         case turnStart = "turn/start"
@@ -57,6 +59,26 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadRead, params: params),
             method: .threadRead
+        )
+    }
+
+    func makeThreadResumeRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadResumeParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadResume, params: params),
+            method: .threadResume
+        )
+    }
+
+    func makeThreadListRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadList, params: params),
+            method: .threadList
         )
     }
 
@@ -159,6 +181,30 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadRead,
             resultType: CodexProtocolThreadReadResponse.self
+        )
+    }
+
+    func decodeThreadResumeResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadStartResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadResume,
+            resultType: CodexWireThreadStartResponse.self
+        )
+    }
+
+    func decodeThreadListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadList,
+            resultType: CodexProtocolThreadListResponse.self
         )
     }
 

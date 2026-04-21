@@ -623,8 +623,15 @@ Current status:
 Current status:
 
 - started and partially shipped
-- `thread/read` and `thread/turns/list` are now wrapped
+- `thread/list` is now wrapped for typed stored-thread paging
+- `thread/read`, `thread/resume`, and `thread/turns/list` are now wrapped
 - both paths now hydrate the internal Core Data store
+- `thread/list` now reconciles explicit archived and unarchived list results back
+  into the local thread records so metadata and archive state can drift-correct
+  without forcing a full thread read
+- `thread/resume` now restores thread defaults, clears stale archived state for
+  the reopened thread, and hydrates returned persisted turns back into the same
+  local store without resetting completeness to a fresh thread state
 - `thread/turns/list` can now seed local history even when the thread has not
   been materialized locally yet
 - overlapping hydration now preserves richer locally assembled item detail when
@@ -634,8 +641,8 @@ Current status:
   hydration and to `richerThanServer` when local assembly preserved detail that
   the server read did not include
 - remaining work in this phase is no longer basic merge and dedup wiring, but
-  the next reconciliation tier around `thread/fork`, `thread/resume`, and
-  archive-state drift
+  the next reconciliation tier around `thread/fork` and deeper archive-state
+  drift handling
 
 ### Phase 3: Archive-aware cache eviction
 
@@ -643,6 +650,13 @@ Current status:
 - retain archived threads locally until their scheduled deletion deadline
 - delete local persisted cache only when that deadline is reached
 - add list-based reconciliation for archive state drift
+
+Current status:
+
+- not started as a retention policy
+- the first list-driven archive drift correction now exists through
+  `thread/list` reconciliation, but retention windows and eviction are still
+  open
 
 ### Phase 4: Public consumer surface
 

@@ -44,7 +44,9 @@ If you just want to explore the package repo itself, start with the commands in 
 
 The package assumes a local Codex CLI runtime. The currently shipped public surface includes:
 
-- `CodexAppServer` for process ownership, initialize, thread start, stored-thread reads, paged turn-history reads, and turn start.
+- `CodexAppServer` for process ownership, initialize, thread start,
+  `thread/list`, `thread/read`, `thread/resume`, paged turn-history reads, and
+  turn start.
 - `CodexThread` for thread-scoped turn creation plus a live `Dashboard` companion.
 - `CodexTurnHandle` for typed turn events plus a live `Minimap` companion.
 - typed approval and elicitation request models, with explicit response APIs on
@@ -55,7 +57,8 @@ The package assumes a local Codex CLI runtime. The currently shipped public surf
 The current public lifecycle contract is intentionally narrow and explicit:
 
 - `CodexAppServer` owns the local subprocess plus initialize, thread start,
-  `thread/read`, `thread/turns/list`, and turn start.
+  `thread/list`, `thread/read`, `thread/resume`, `thread/turns/list`, and turn
+  start.
 - `CodexThread` owns thread-scoped turn creation and thread-scoped fallback
   responses for unroutable interactive requests.
 - `CodexTurnHandle` owns the active turn stream plus turn-scoped control
@@ -73,6 +76,13 @@ The current public lifecycle contract is intentionally narrow and explicit:
 - `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate
   the internal history store so stored-thread reads can enrich the same local
   persistence layer as live item-stream assembly.
+- `thread/resume(...)` now restores thread defaults, clears stale archived
+  state for the reopened thread, and hydrates any resumed persisted turns back
+  into that same local history store instead of treating a resumed thread like
+  a fresh conversation.
+- `thread/list(...)` now returns typed stored-thread pages and reconciles local
+  thread metadata and archive state from list results, which gives the package a
+  first list-driven path for archive-drift correction.
 - overlapping stored-history hydration now reconciles against live-built local
   turns instead of blindly overwriting them, preserving richer local item detail
   when upstream stored history is thinner while still accepting canonical
@@ -98,8 +108,9 @@ Current non-goals and intentionally deferred areas are also explicit:
   helper surface over the local store.
 - The current reconciliation policy is intentionally conservative and still
   internal: merge rules now distinguish terminal status from richer local text
-  and command detail, but fork-aware reconciliation, resume-aware bookkeeping,
-  and a broader public history-reading API are still open.
+  and command detail, and `thread/resume` now restores both session defaults and
+  persisted overlapping history into the same local store, but fork-aware
+  reconciliation and a broader public history-reading API are still open.
 - Richer command-output, file-change-output, MCP-progress, and compaction detail
   still remain internal while the package decides whether those belong as new
   event cases or as deeper observable summary state.

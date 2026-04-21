@@ -157,6 +157,7 @@ actor ThreadHistoryStore {
         try context.performAndWaitReturning {
             let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
             Self.applyThreadInfo(session.thread, to: thread)
+            thread.isArchived = false
 
             let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
             Self.applyThreadDefaults(session, to: defaults)
@@ -172,6 +173,47 @@ actor ThreadHistoryStore {
         }
     }
 
+    func recordThreadResumed(
+        session: CodexAppServer.ThreadSession,
+        turns: [HydratedTurn]
+    ) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
+            Self.applyThreadInfo(session.thread, to: thread)
+
+            let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
+            Self.applyThreadDefaults(session, to: defaults)
+            defaults.thread = thread
+            thread.defaults = defaults
+
+            let state = thread.state ?? HistoryThreadState(context: context)
+            state.thread = thread
+            thread.state = state
+
+            if turns.isEmpty {
+                if state.completeness.isEmpty {
+                    state.completeness = Completeness.partial.rawValue
+                }
+            } else {
+                let outcome = try Self.upsertHydratedTurns(
+                    turns,
+                    for: thread,
+                    in: context
+                )
+                state.completeness = outcome.preservedRicherLocalDetail
+                    ? Completeness.richerThanServer.rawValue
+                    : Completeness.serverParity.rawValue
+            }
+
+            try context.saveIfChanged()
+        }
+
+        if let maxOrderIndex = try snapshot(threadID: session.thread.id)?.turns.map(\.orderIndex).max() {
+            nextTurnOrderByThreadID[session.thread.id] = maxOrderIndex + 1
+        }
+    }
+
     func recordThreadMetadataUpdated(_ threadInfo: CodexAppServer.ThreadInfo) throws {
         let context = container.newBackgroundContext()
         try context.performAndWaitReturning {
@@ -184,6 +226,26 @@ actor ThreadHistoryStore {
                 state.completeness = Completeness.partial.rawValue
                 state.thread = thread
                 thread.state = state
+            }
+            try context.saveIfChanged()
+        }
+    }
+
+    func reconcileThreadListPage(
+        _ threads: [CodexAppServer.ThreadInfo],
+        archived: Bool?
+    ) throws {
+        guard !threads.isEmpty else { return }
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            for threadInfo in threads {
+                let thread = try Self.fetchOrInsertThread(id: threadInfo.id, in: context)
+                Self.applyThreadInfo(threadInfo, to: thread)
+                Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
+                if let archived {
+                    thread.isArchived = archived
+                }
             }
             try context.saveIfChanged()
         }
