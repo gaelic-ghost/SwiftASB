@@ -257,26 +257,11 @@ struct CodexAppServerTests {
     @Test("persists sealed turn history in the internal thread history store")
     func persistsSealedTurnHistory() async throws {
         let transport = FakeCodexAppServerTransport()
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let historyStore = try ThreadHistoryStore(configuration: .inMemory())
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -1465,8 +1450,22 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
-    @Test("item-count eviction removes the oldest completed turns once the resident item budget is exceeded")
-    func itemCountEvictionRemovesOldestCompletedTurns() async throws {
+    @Test("recent-turn cache policy presets scale by UI density")
+    func recentTurnCachePolicyPresetsScaleByUIDensity() {
+        let chat = CodexThread.RecentTurns.CachePolicy.chatUI(pageSize: 12)
+        let inspector = CodexThread.RecentTurns.CachePolicy.inspector(pageSize: 12)
+        let historyRail = CodexThread.RecentTurns.CachePolicy.historyRail(pageSize: 12)
+
+        #expect(CodexThread.RecentTurns.CachePolicy.automatic(pageSize: 12) == chat)
+        #expect(inspector.maxResidentTurns > chat.maxResidentTurns)
+        #expect(chat.maxResidentTurns > historyRail.maxResidentTurns)
+        #expect(inspector.maximumResidentItemCost ?? 0 > chat.maximumResidentItemCost ?? 0)
+        #expect(chat.maximumResidentItemCost ?? 0 > historyRail.maximumResidentItemCost ?? 0)
+        #expect(inspector.maxPrefetchPagesPerPass > historyRail.maxPrefetchPagesPerPass)
+    }
+
+    @Test("item-cost eviction removes the oldest completed turns once the resident item budget is exceeded")
+    func itemCostEvictionRemovesOldestCompletedTurns() async throws {
         let transport = FakeCodexAppServerTransport(
             threadTurnsListResult: [
                 "backwardsCursor": "cursor-newer-1",
@@ -1585,22 +1584,22 @@ struct CodexAppServerTests {
             cachePolicy: .init(
                 maxResidentTurns: 5,
                 minimumResidentTurns: 2,
-                maximumResidentItems: 4,
+                maximumResidentItemCost: 4,
                 protectedTurnBuffer: 0,
                 edgePrefetchThreshold: 0
             )
         )
 
         let residentIDs = await MainActor.run { recentTurns.turns.map(\.id) }
-        let residentItemCount = await MainActor.run { recentTurns.residentItemCount }
+        let residentItemCost = await MainActor.run { recentTurns.residentItemCost }
         #expect(residentIDs == ["turn-3", "turn-2"])
-        #expect(residentItemCount == 4)
+        #expect(residentItemCost == 12)
 
         await client.stop()
     }
 
-    @Test("item-count eviction respects the minimum resident-turn floor")
-    func itemCountEvictionRespectsMinimumResidentTurnFloor() async throws {
+    @Test("item-cost eviction respects the minimum resident-turn floor")
+    func itemCostEvictionRespectsMinimumResidentTurnFloor() async throws {
         let transport = FakeCodexAppServerTransport(
             threadTurnsListResult: [
                 "backwardsCursor": "cursor-newer-1",
@@ -1710,16 +1709,251 @@ struct CodexAppServerTests {
             cachePolicy: .init(
                 maxResidentTurns: 4,
                 minimumResidentTurns: 2,
-                maximumResidentItems: 1,
+                maximumResidentItemCost: 1,
                 protectedTurnBuffer: 0,
                 edgePrefetchThreshold: 0
             )
         )
 
         let residentIDs = await MainActor.run { recentTurns.turns.map(\.id) }
-        let residentItemCount = await MainActor.run { recentTurns.residentItemCount }
+        let residentItemCost = await MainActor.run { recentTurns.residentItemCost }
         #expect(residentIDs == ["turn-2", "turn-1"])
-        #expect(residentItemCount == 4)
+        #expect(residentItemCost == 12)
+
+        await client.stop()
+    }
+
+    @Test("low-value items are slimmed before completed turns are evicted")
+    func lowValueItemsAreSlimmedBeforeTurnEviction() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadTurnsListResult: [
+                "backwardsCursor": "cursor-newer-1",
+                "data": [
+                    [
+                        "completedAt": 1713350200,
+                        "durationMs": 2500,
+                        "error": NSNull(),
+                        "id": "turn-2",
+                        "items": [
+                            [
+                                "id": "item-2-user",
+                                "text": "Newest user message",
+                                "type": "userMessage",
+                            ],
+                            [
+                                "id": "item-2-command",
+                                "status": "completed",
+                                "text": "ls Sources",
+                                "type": "commandExecution",
+                            ],
+                        ],
+                        "startedAt": 1713350150,
+                        "status": "completed",
+                    ],
+                    [
+                        "completedAt": 1713350100,
+                        "durationMs": 2500,
+                        "error": NSNull(),
+                        "id": "turn-1",
+                        "items": [
+                            [
+                                "id": "item-1-user",
+                                "text": "Older user message",
+                                "type": "userMessage",
+                            ],
+                            [
+                                "id": "item-1-mcp",
+                                "status": "completed",
+                                "text": "calendar.list_events",
+                                "type": "mcpToolCall",
+                            ],
+                        ],
+                        "startedAt": 1713350050,
+                        "status": "completed",
+                    ],
+                ],
+                "nextCursor": "cursor-older-1",
+            ]
+        )
+        let historyStore = try ThreadHistoryStore(configuration: .inMemory())
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        _ = try await client.listThreadTurns(
+            .init(
+                threadID: thread.id,
+                limit: 2,
+                sortDirection: .desc
+            )
+        )
+
+        let recentTurns = try await thread.makeRecentTurns(
+            limit: 2,
+            cachePolicy: .init(
+                maxResidentTurns: 4,
+                minimumResidentTurns: 2,
+                maximumResidentItemCost: 6,
+                protectedTurnBuffer: 0,
+                protectedRecentCompletedTurns: 1,
+                edgePrefetchThreshold: 0
+            )
+        )
+
+        let residentIDs = await MainActor.run { recentTurns.turns.map(\.id) }
+        let turnOne = await MainActor.run { recentTurns.turns.first(where: { $0.id == "turn-1" }) }
+        let turnTwo = await MainActor.run { recentTurns.turns.first(where: { $0.id == "turn-2" }) }
+        let residentItemCost = await MainActor.run { recentTurns.residentItemCost }
+
+        #expect(residentIDs == ["turn-2", "turn-1"])
+        #expect(try #require(turnTwo).isItemPayloadComplete == true)
+        #expect(try #require(turnOne).isItemPayloadComplete == false)
+        #expect(try #require(turnOne).omittedItemCount == 1)
+        #expect(try #require(turnOne).items.map(\.kind) == ["userMessage"])
+        #expect(residentItemCost == 7)
+
+        await client.stop()
+    }
+
+    @Test("a slimmed turn rehydrates its full items when it becomes visible")
+    func slimmedTurnRehydratesWhenVisible() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadTurnsListResult: [
+                "backwardsCursor": "cursor-newer-1",
+                "data": [
+                    [
+                        "completedAt": 1713350200,
+                        "durationMs": 2500,
+                        "error": NSNull(),
+                        "id": "turn-2",
+                        "items": [
+                            [
+                                "id": "item-2-user",
+                                "text": "Newest user message",
+                                "type": "userMessage",
+                            ],
+                            [
+                                "id": "item-2-command",
+                                "status": "completed",
+                                "text": "ls Sources",
+                                "type": "commandExecution",
+                            ],
+                        ],
+                        "startedAt": 1713350150,
+                        "status": "completed",
+                    ],
+                    [
+                        "completedAt": 1713350100,
+                        "durationMs": 2500,
+                        "error": NSNull(),
+                        "id": "turn-1",
+                        "items": [
+                            [
+                                "id": "item-1-user",
+                                "text": "Older user message",
+                                "type": "userMessage",
+                            ],
+                            [
+                                "id": "item-1-mcp",
+                                "status": "completed",
+                                "text": "calendar.list_events",
+                                "type": "mcpToolCall",
+                            ],
+                        ],
+                        "startedAt": 1713350050,
+                        "status": "completed",
+                    ],
+                ],
+                "nextCursor": "cursor-older-1",
+            ]
+        )
+        let historyStore = try ThreadHistoryStore(configuration: .inMemory())
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        _ = try await client.listThreadTurns(
+            .init(
+                threadID: thread.id,
+                limit: 2,
+                sortDirection: .desc
+            )
+        )
+
+        let recentTurns = try await thread.makeRecentTurns(
+            limit: 2,
+            cachePolicy: .init(
+                maxResidentTurns: 4,
+                minimumResidentTurns: 2,
+                maximumResidentItemCost: 6,
+                protectedTurnBuffer: 0,
+                protectedRecentCompletedTurns: 1,
+                edgePrefetchThreshold: 0
+            )
+        )
+
+        let initialTurnOne = await MainActor.run { recentTurns.turns.first(where: { $0.id == "turn-1" }) }
+        #expect(try #require(initialTurnOne).isItemPayloadComplete == false)
+
+        await MainActor.run {
+            recentTurns.updateVisibleTurnIDs(["turn-1"])
+        }
+
+        await waitForObservableState {
+            recentTurns.turns.first(where: { $0.id == "turn-1" })?.isItemPayloadComplete == true
+        }
+
+        let hydratedTurnOne = await MainActor.run { recentTurns.turns.first(where: { $0.id == "turn-1" }) }
+        #expect(try #require(hydratedTurnOne).omittedItemCount == 0)
+        #expect(try #require(hydratedTurnOne).items.count == 2)
 
         await client.stop()
     }

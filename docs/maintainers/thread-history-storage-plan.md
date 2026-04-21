@@ -162,13 +162,34 @@ reconciliation model proves that it is needed.
 ### Hot-cache policy
 
 - use per-turn persisted segments as the cold-storage unit
-- use an in-memory cache policy with both:
-  - a minimum number of turns to keep resident
-  - a maximum number of item records to keep resident
-- after a completed turn, if the in-memory item count is above the configured
-  maximum and the thread is above the minimum in-memory turn count, evict the
-  oldest resident completed turns until the item count is back under the limit
-  or the minimum resident-turn floor is reached
+- use an in-memory cache policy with:
+  - a maximum number of resident turns
+  - a minimum number of resident turns
+  - a weighted resident item budget rather than a raw item-count limit
+- resident item pressure should be reduced in two stages:
+  - first slim low-value item payloads out of older, non-visible, non-protected
+    completed turns while keeping the turn shell resident
+  - then evict older, non-visible, non-protected completed turns only if the
+    weighted resident item budget is still exceeded
+- "slimming" is a deliberate shell-retention step:
+  - keep turn identity, order, status, timestamps, token usage, and other
+    turn-header metadata resident
+  - keep high-value items such as user messages, agent messages, plans, and
+    reasoning longer than lower-value tool and operational items
+  - fetch the full item payload back from local history when a slimmed turn
+    becomes important again
+- protected turns are not candidates for slimming or eviction; protection
+  explicitly includes:
+  - the current in-progress turn
+  - the most recently completed turn
+  - an explicit recent-terminal-turn protection band used as the package's
+    deterministic answer to "likely to receive late reconciliation enrichment"
+  - the current scroll anchor turn
+  - visible turns and their protected buffer
+  - turns with unresolved interactive requests
+- archived threads are treated as dormant until explicitly unarchived; no
+  separate aggressive hot-cache behavior is needed while the thread remains
+  archived
 
 ### Read preference policy
 
@@ -538,11 +559,15 @@ Concrete eviction policy:
 
 - each thread cache policy should define:
   - `minimumResidentTurns`
-  - `maximumResidentItems`
-- eviction should happen only after a completed turn boundary
-- once above `maximumResidentItems`, evict the oldest resident completed turns
-  until:
-  - resident item count is back under the limit, or
+  - `maximumResidentItemCost`
+- budget enforcement should happen on initial recent-window construction and
+  after later merges, loads, or turn completions
+- once above `maximumResidentItemCost`, the observable should:
+  - slim low-value item payloads from the oldest eligible completed turns first
+  - then evict the oldest eligible completed turns only if the weighted budget
+    is still exceeded
+- eviction should stop when:
+  - resident item cost is back under the limit, or
   - resident turn count has reached `minimumResidentTurns`
 
 The disk cache should be organized as per-turn disposable segments, not as a
@@ -738,26 +763,34 @@ Current status:
   cursors even when the visible recent window came from local history first,
   so remote fallback can continue cleanly after multiple local-only expansions
 - `RecentTurns` now owns a first-pass cache policy:
+  - named presets for chat UIs, full transcript or inspector UIs, and compact
+    history rails
   - a bounded resident turn cap
   - a minimum resident-turn floor
-  - a resident item count
-  - oldest-completed-turn eviction when a configured item budget is exceeded
+  - a resident item count and weighted resident item cost
+  - low-value payload slimming for older non-visible completed turns before
+    whole-turn eviction
+  - oldest-completed-turn eviction when the weighted item budget is still
+    exceeded after slimming
+  - automatic rehydration of slimmed turns when they become visible or
+    otherwise protected again
   - scroll-position-driven focus
-  - visible-turn protection for eviction
+  - visible-turn, scroll-anchor, unresolved-interactive, current-in-progress,
+    and recent-completed protection for eviction
   - load-state flags and surfaced load errors
-  - automatic edge prefetch when the consumer binds scroll position and
-    visibility information into the observable
-- richer policy tuning and deeper item-budget heuristics are still open
+  - automatic earlier edge prefetch when the consumer binds scroll position,
+    visibility information, and scroll activity into the observable
+- richer policy tuning and deeper weighting heuristics are still open
 
 Recommended next steps:
 
 - keep tuning `RecentTurns` policy now that the first end-to-end resident cache
   behavior is real:
-  - add a few intentional policy presets for different UI shapes
-  - decide whether item kinds should have weighted eviction cost instead of
-    plain item-count pressure
-  - decide whether very thin turns should be allowed to remain resident longer
-    than heavier turns under the same budget
+  - calibrate the weighted residency cost rules against real transcript shapes
+  - decide whether some item kinds should be stickier than the current
+    low-value-item slimming rules
+  - decide whether very thin turn shells should remain resident longer than
+    heavier turns under the same weighted budget
 - add the first deliberate public history-reading helpers outside the
   observable surface
 - flesh out archive-aware retention and eviction after the non-archived hot

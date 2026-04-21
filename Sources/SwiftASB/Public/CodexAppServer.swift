@@ -1082,6 +1082,15 @@ public actor CodexAppServer {
         makeThreadTurnEventStream(threadID: threadID)
     }
 
+    internal func unresolvedInteractiveTurnIDs(threadID: String) -> Set<String> {
+        Set(
+            outstandingInteractiveRequests.values.compactMap { request in
+                guard request.threadID == threadID else { return nil }
+                return request.turnID
+            }
+        )
+    }
+
     internal func threadObservableActivityState(threadID: String) -> CodexThread.Dashboard.ActivityState {
         let state = threadObservableActivityStates[threadID] ?? .init()
         return .init(

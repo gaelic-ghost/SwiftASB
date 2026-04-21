@@ -6,46 +6,118 @@ public struct CodexThread: Sendable {
     @Observable
     public final class RecentTurns {
         public struct CachePolicy: Sendable, Equatable {
+            public let fastScrollVelocityThreshold: Double
+            public let jitterScrollVelocityThreshold: Double
             public let edgePrefetchThreshold: Int
-            public let maximumResidentItems: Int?
+            public let maximumResidentItemCost: Int?
+            public let maxPrefetchPagesPerPass: Int
             public let maxResidentTurns: Int
             public let minimumResidentTurns: Int
+            public let protectedRecentCompletedTurns: Int
             public let protectedTurnBuffer: Int
+            public let veryFastScrollVelocityThreshold: Double
 
             public init(
                 maxResidentTurns: Int,
                 minimumResidentTurns: Int = 1,
-                maximumResidentItems: Int? = nil,
+                maximumResidentItemCost: Int? = nil,
                 protectedTurnBuffer: Int = 2,
-                edgePrefetchThreshold: Int = 1
+                protectedRecentCompletedTurns: Int = 2,
+                edgePrefetchThreshold: Int = 1,
+                jitterScrollVelocityThreshold: Double = 120,
+                fastScrollVelocityThreshold: Double = 1_200,
+                veryFastScrollVelocityThreshold: Double = 2_400,
+                maxPrefetchPagesPerPass: Int = 3
             ) {
                 let normalizedMaxResidentTurns = max(1, maxResidentTurns)
                 let normalizedMinimumResidentTurns = min(
                     normalizedMaxResidentTurns,
                     max(1, minimumResidentTurns)
                 )
+                let normalizedProtectedRecentCompletedTurns = min(
+                    normalizedMaxResidentTurns,
+                    max(1, protectedRecentCompletedTurns)
+                )
                 self.maxResidentTurns = normalizedMaxResidentTurns
                 self.minimumResidentTurns = normalizedMinimumResidentTurns
-                self.maximumResidentItems = maximumResidentItems.map { max(1, $0) }
+                self.maximumResidentItemCost = maximumResidentItemCost.map { max(1, $0) }
                 self.protectedTurnBuffer = max(0, protectedTurnBuffer)
                 self.edgePrefetchThreshold = max(0, edgePrefetchThreshold)
+                self.protectedRecentCompletedTurns = normalizedProtectedRecentCompletedTurns
+                self.jitterScrollVelocityThreshold = max(0, jitterScrollVelocityThreshold)
+                self.fastScrollVelocityThreshold = max(0, fastScrollVelocityThreshold)
+                self.veryFastScrollVelocityThreshold = max(
+                    self.fastScrollVelocityThreshold,
+                    veryFastScrollVelocityThreshold
+                )
+                self.maxPrefetchPagesPerPass = max(1, maxPrefetchPagesPerPass)
             }
 
             public static func automatic(pageSize: Int) -> Self {
+                chatUI(pageSize: pageSize)
+            }
+
+            public static func chatUI(pageSize: Int = 12) -> Self {
                 let normalizedPageSize = max(1, pageSize)
                 return .init(
                     maxResidentTurns: max(normalizedPageSize * 3, normalizedPageSize + 8),
                     minimumResidentTurns: max(2, normalizedPageSize),
-                    maximumResidentItems: max(normalizedPageSize * 12, 24),
+                    maximumResidentItemCost: max(normalizedPageSize * 12, 24),
                     protectedTurnBuffer: max(1, normalizedPageSize / 2),
-                    edgePrefetchThreshold: max(1, min(2, normalizedPageSize))
+                    protectedRecentCompletedTurns: 2,
+                    edgePrefetchThreshold: max(1, min(2, normalizedPageSize)),
+                    jitterScrollVelocityThreshold: 120,
+                    fastScrollVelocityThreshold: 1_100,
+                    veryFastScrollVelocityThreshold: 2_100,
+                    maxPrefetchPagesPerPass: 3
                 )
             }
+
+            public static func inspector(pageSize: Int = 24) -> Self {
+                let normalizedPageSize = max(1, pageSize)
+                return .init(
+                    maxResidentTurns: max(normalizedPageSize * 5, normalizedPageSize + 20),
+                    minimumResidentTurns: max(4, normalizedPageSize),
+                    maximumResidentItemCost: max(normalizedPageSize * 20, 64),
+                    protectedTurnBuffer: max(2, normalizedPageSize / 3),
+                    protectedRecentCompletedTurns: 3,
+                    edgePrefetchThreshold: max(2, min(4, normalizedPageSize / 2)),
+                    jitterScrollVelocityThreshold: 80,
+                    fastScrollVelocityThreshold: 900,
+                    veryFastScrollVelocityThreshold: 1_800,
+                    maxPrefetchPagesPerPass: 4
+                )
+            }
+
+            public static func historyRail(pageSize: Int = 8) -> Self {
+                let normalizedPageSize = max(1, pageSize)
+                return .init(
+                    maxResidentTurns: max(normalizedPageSize * 2, normalizedPageSize + 6),
+                    minimumResidentTurns: max(2, normalizedPageSize / 2),
+                    maximumResidentItemCost: max(normalizedPageSize * 8, 16),
+                    protectedTurnBuffer: 1,
+                    protectedRecentCompletedTurns: 1,
+                    edgePrefetchThreshold: 1,
+                    jitterScrollVelocityThreshold: 140,
+                    fastScrollVelocityThreshold: 1_250,
+                    veryFastScrollVelocityThreshold: 2_500,
+                    maxPrefetchPagesPerPass: 2
+                )
+            }
+        }
+
+        public enum ScrollActivityPhase: String, Sendable, Equatable {
+            case idle
+            case tracking
+            case interacting
+            case decelerating
+            case animating
         }
 
         public struct TurnSnapshot: Sendable, Equatable, Identifiable {
             public struct Item: Sendable, Equatable, Identifiable {
                 public let id: String
+                public let isLowValueForResidency: Bool
                 public let orderIndex: Int
                 public let kind: String
                 public let command: String?
@@ -71,7 +143,9 @@ public struct CodexThread: Sendable {
             public let diff: String?
             public let durationMS: Int?
             public let errorMessage: String?
+            public let isItemPayloadComplete: Bool
             public let items: [Item]
+            public let omittedItemCount: Int
             public let orderIndex: Int
             public let startedAt: Int?
             public let status: String
@@ -87,6 +161,9 @@ public struct CodexThread: Sendable {
         public private(set) var nextNewerCursor: String?
         public private(set) var nextOlderCursor: String?
         public private(set) var residentItemCount: Int
+        public private(set) var residentItemCost: Int
+        public private(set) var scrollActivityPhase: ScrollActivityPhase
+        public private(set) var scrollVelocityPointsPerSecond: Double?
         public private(set) var turns: [TurnSnapshot]
         public private(set) var visibleTurnIDs: [String]
         public var scrollPositionTurnID: String? {
@@ -103,6 +180,9 @@ public struct CodexThread: Sendable {
 
         @ObservationIgnored
         private var viewportTask: Task<Void, Never>?
+
+        @ObservationIgnored
+        private var unresolvedInteractiveTurnIDs: Set<String> = []
 
         internal init(
             cachePolicy: CachePolicy,
@@ -123,6 +203,11 @@ public struct CodexThread: Sendable {
             self.nextNewerCursor = nextNewerCursor
             self.nextOlderCursor = nextOlderCursor
             self.residentItemCount = initialTurns.reduce(0) { $0 + $1.items.count }
+            self.residentItemCost = initialTurns.reduce(0) { partialResult, turn in
+                partialResult + Self.turnResidentCost(turn)
+            }
+            self.scrollActivityPhase = .idle
+            self.scrollVelocityPointsPerSecond = nil
             self.turns = initialTurns
             self.visibleTurnIDs = []
             self.scrollPositionTurnID = nil
@@ -211,6 +296,15 @@ public struct CodexThread: Sendable {
             scheduleViewportMaintenance()
         }
 
+        public func updateScrollActivity(
+            phase: ScrollActivityPhase,
+            verticalVelocityPointsPerSecond: Double? = nil
+        ) {
+            scrollActivityPhase = phase
+            scrollVelocityPointsPerSecond = verticalVelocityPointsPerSecond
+            scheduleViewportMaintenance()
+        }
+
         private func apply(_ event: CodexTurnEvent) async {
             guard let turnID = Self.turnID(from: event) else { return }
             guard let snapshot = try? await appServer.turnSnapshot(threadID: threadID, turnID: turnID) else {
@@ -270,6 +364,8 @@ public struct CodexThread: Sendable {
             viewportTask?.cancel()
             viewportTask = Task { [weak self] in
                 guard let self else { return }
+                await self.refreshProtectedTurnContext()
+                await self.hydrateProtectedTurnsIfNeeded()
                 self.trimResidentTurnsIfNeeded()
                 await self.prefetchForViewportIfNeeded()
             }
@@ -278,24 +374,38 @@ public struct CodexThread: Sendable {
         private func prefetchForViewportIfNeeded() async {
             guard !turns.isEmpty else { return }
             guard scrollPositionTurnID != nil || !visibleTurnIDs.isEmpty else { return }
+            guard !shouldSuppressPrefetchForCurrentScrollActivity() else { return }
 
             let focusIndices = focusIndices()
             let lowerEdgeThreshold = cachePolicy.edgePrefetchThreshold
             let upperEdgeThreshold = max(0, turns.count - 1 - cachePolicy.edgePrefetchThreshold)
+            let pageCount = prefetchPageCount()
 
             if focusIndices.upperBound >= upperEdgeThreshold {
-                do {
-                    try await loadOlderTurns()
-                } catch {
-                    return
+                for _ in 0..<pageCount {
+                    let previousCount = turns.count
+                    do {
+                        try await loadOlderTurns()
+                    } catch {
+                        return
+                    }
+                    if turns.count == previousCount {
+                        break
+                    }
                 }
             }
 
             if focusIndices.lowerBound <= lowerEdgeThreshold {
-                do {
-                    try await loadNewerTurns()
-                } catch {
-                    return
+                for _ in 0..<pageCount {
+                    let previousCount = turns.count
+                    do {
+                        try await loadNewerTurns()
+                    } catch {
+                        return
+                    }
+                    if turns.count == previousCount {
+                        break
+                    }
                 }
             }
         }
@@ -344,16 +454,17 @@ public struct CodexThread: Sendable {
         }
 
         private func trimResidentItemsIfNeeded() {
-            guard let maximumResidentItems = cachePolicy.maximumResidentItems else {
+            guard let maximumResidentItemCost = cachePolicy.maximumResidentItemCost else {
                 refreshResidentMetrics()
                 return
             }
 
             refreshResidentMetrics()
-            guard residentItemCount > maximumResidentItems else { return }
+            guard residentItemCost > maximumResidentItemCost else { return }
 
             let protectedTurnIDs = protectedTurnIDSet()
-            while residentItemCount > maximumResidentItems, turns.count > cachePolicy.minimumResidentTurns {
+            slimResidentTurnsIfNeeded(protectedTurnIDs: protectedTurnIDs)
+            while residentItemCost > maximumResidentItemCost, turns.count > cachePolicy.minimumResidentTurns {
                 guard let evictableIndex = turns.indices.reversed().first(where: { index in
                     let turn = turns[index]
                     return Self.isTerminalStatus(turn.status) && !protectedTurnIDs.contains(turn.id)
@@ -366,6 +477,22 @@ public struct CodexThread: Sendable {
             }
         }
 
+        private func slimResidentTurnsIfNeeded(protectedTurnIDs: Set<String>) {
+            guard let maximumResidentItemCost = cachePolicy.maximumResidentItemCost else { return }
+
+            for index in turns.indices.reversed() {
+                guard residentItemCost > maximumResidentItemCost else { break }
+                let turn = turns[index]
+                guard Self.isTerminalStatus(turn.status) else { continue }
+                guard !protectedTurnIDs.contains(turn.id) else { continue }
+                guard turn.isItemPayloadComplete else { continue }
+                let slimmedTurn = Self.slimmedSnapshot(from: turn)
+                guard slimmedTurn != turn else { continue }
+                turns[index] = slimmedTurn
+                refreshResidentMetrics()
+            }
+        }
+
         private func protectedTurnIDSet() -> Set<String> {
             let focusIndices = focusIndices()
             let focusLowerBound = max(0, focusIndices.lowerBound - cachePolicy.protectedTurnBuffer)
@@ -374,11 +501,63 @@ public struct CodexThread: Sendable {
             for turn in turns where !Self.isTerminalStatus(turn.status) {
                 protectedIDs.insert(turn.id)
             }
+            for turn in turns.prefix(cachePolicy.protectedRecentCompletedTurns) where Self.isTerminalStatus(turn.status) {
+                protectedIDs.insert(turn.id)
+            }
+            protectedIDs.formUnion(unresolvedInteractiveTurnIDs)
             return protectedIDs
         }
 
         private func refreshResidentMetrics() {
             residentItemCount = turns.reduce(0) { $0 + $1.items.count }
+            residentItemCost = turns.reduce(0) { $0 + Self.turnResidentCost($1) }
+        }
+
+        private func prefetchPageCount() -> Int {
+            guard let velocity = scrollVelocityPointsPerSecond.map(abs) else { return 1 }
+            if velocity >= cachePolicy.veryFastScrollVelocityThreshold {
+                return cachePolicy.maxPrefetchPagesPerPass
+            }
+            if velocity >= cachePolicy.fastScrollVelocityThreshold {
+                return min(2, cachePolicy.maxPrefetchPagesPerPass)
+            }
+            return 1
+        }
+
+        private func shouldSuppressPrefetchForCurrentScrollActivity() -> Bool {
+            guard let velocity = scrollVelocityPointsPerSecond.map(abs) else { return false }
+            return switch scrollActivityPhase {
+            case .tracking, .interacting:
+                velocity < cachePolicy.jitterScrollVelocityThreshold
+            case .idle, .decelerating, .animating:
+                false
+            }
+        }
+
+        private func refreshProtectedTurnContext() async {
+            unresolvedInteractiveTurnIDs = await appServer.unresolvedInteractiveTurnIDs(threadID: threadID)
+        }
+
+        private func hydrateProtectedTurnsIfNeeded() async {
+            let protectedTurnIDs = protectedTurnIDSet()
+            let slimmedProtectedTurnIDs: [String] = turns.compactMap { turn in
+                guard protectedTurnIDs.contains(turn.id), !turn.isItemPayloadComplete else { return nil }
+                return turn.id
+            }
+
+            guard !slimmedProtectedTurnIDs.isEmpty else { return }
+
+            for turnID in slimmedProtectedTurnIDs {
+                do {
+                    guard let snapshot = try await appServer.turnSnapshot(threadID: threadID, turnID: turnID) else {
+                        continue
+                    }
+                    merge([TurnSnapshot(snapshot)])
+                    lastLoadErrorDescription = nil
+                } catch {
+                    lastLoadErrorDescription = Self.describe(error)
+                }
+            }
         }
 
         private func focusIndices() -> ClosedRange<Int> {
@@ -428,6 +607,79 @@ public struct CodexThread: Sendable {
                 return description
             }
             return String(describing: error)
+        }
+
+        private static func slimmedSnapshot(from snapshot: TurnSnapshot) -> TurnSnapshot {
+            let retainedItems = snapshot.items.filter { !$0.isLowValueForResidency }
+            let omittedItemCount = snapshot.items.count - retainedItems.count
+            guard omittedItemCount > 0 else { return snapshot }
+            return .init(
+                id: snapshot.id,
+                completedAt: snapshot.completedAt,
+                diff: snapshot.diff,
+                durationMS: snapshot.durationMS,
+                errorMessage: snapshot.errorMessage,
+                isItemPayloadComplete: false,
+                items: retainedItems,
+                omittedItemCount: omittedItemCount,
+                orderIndex: snapshot.orderIndex,
+                startedAt: snapshot.startedAt,
+                status: snapshot.status,
+                tokenUsage: snapshot.tokenUsage
+            )
+        }
+
+        private static func turnResidentCost(_ turn: TurnSnapshot) -> Int {
+            turn.items.reduce(0) { $0 + itemResidentCost($1) }
+        }
+
+        private static func itemResidentCost(_ item: TurnSnapshot.Item) -> Int {
+            let baseCost: Int
+            if item.isLowValueForResidency {
+                baseCost = 1
+            } else {
+                baseCost = 3
+            }
+
+            let textLength = (item.text ?? item.streamedText ?? "").count
+            let textWeight: Int
+            switch textLength {
+            case 0..<80:
+                textWeight = 0
+            case 80..<240:
+                textWeight = 1
+            case 240..<800:
+                textWeight = 2
+            default:
+                textWeight = 3
+            }
+
+            return baseCost + textWeight
+        }
+
+        nonisolated private static func isLowValueItemKind(_ kind: String) -> Bool {
+            switch kind {
+            case CodexTurnItem.Kind.commandExecution.rawValue,
+                 CodexTurnItem.Kind.collabAgentToolCall.rawValue,
+                 CodexTurnItem.Kind.contextCompaction.rawValue,
+                 CodexTurnItem.Kind.dynamicToolCall.rawValue,
+                 CodexTurnItem.Kind.enteredReviewMode.rawValue,
+                 CodexTurnItem.Kind.exitedReviewMode.rawValue,
+                 CodexTurnItem.Kind.fileChange.rawValue,
+                 CodexTurnItem.Kind.hookPrompt.rawValue,
+                 CodexTurnItem.Kind.imageGeneration.rawValue,
+                 CodexTurnItem.Kind.imageView.rawValue,
+                 CodexTurnItem.Kind.mcpToolCall.rawValue,
+                 CodexTurnItem.Kind.webSearch.rawValue:
+                true
+            case CodexTurnItem.Kind.agentMessage.rawValue,
+                 CodexTurnItem.Kind.plan.rawValue,
+                 CodexTurnItem.Kind.reasoning.rawValue,
+                 CodexTurnItem.Kind.userMessage.rawValue:
+                false
+            default:
+                false
+            }
         }
     }
 
@@ -928,9 +1180,11 @@ private extension CodexThread.RecentTurns.TurnSnapshot {
             diff: snapshot.diff,
             durationMS: snapshot.durationMS,
             errorMessage: snapshot.errorMessage,
+            isItemPayloadComplete: true,
             items: snapshot.items.map {
                 .init(
                     id: $0.id,
+                    isLowValueForResidency: CodexThread.RecentTurns.isLowValueItemKind($0.kind),
                     orderIndex: $0.orderIndex,
                     kind: $0.kind,
                     command: $0.command,
@@ -942,6 +1196,7 @@ private extension CodexThread.RecentTurns.TurnSnapshot {
                     toolName: $0.toolName
                 )
             },
+            omittedItemCount: 0,
             orderIndex: snapshot.orderIndex,
             startedAt: snapshot.startedAt,
             status: snapshot.status,
