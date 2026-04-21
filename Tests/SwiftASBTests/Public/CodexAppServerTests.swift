@@ -376,6 +376,72 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("closes a completed turn handle into a final sealed turn snapshot")
+    func closesCompletedTurnHandle() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        let turn = try await thread.startTextTurn("Summarize the project state.")
+        let eventTask = Task {
+            try await turnEvents(from: turn.events, count: 5)
+        }
+
+        await transport.emitTurnStarted(threadID: thread.id, turnID: turn.turn.id)
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-agent-1",
+            item: [
+                "id": "item-agent-1",
+                "type": "agentMessage",
+            ]
+        )
+        await transport.emitAgentMessageDelta(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-agent-1"
+        )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-agent-1"
+        )
+        await transport.emitTurnCompleted(threadID: thread.id, turnID: turn.turn.id)
+        _ = try await eventTask.value
+
+        let closedTurn = try await turn.close()
+        #expect(closedTurn.id == turn.turn.id)
+        #expect(closedTurn.threadID == thread.id)
+        #expect(closedTurn.status == "completed")
+        #expect(closedTurn.items.count == 1)
+        #expect(closedTurn.items[0].text == "Done.")
+
+        await client.stop()
+    }
+
     @Test("lists stored threads and reconciles archive state into the local history store")
     func listsStoredThreadsAndReconcilesArchiveState() async throws {
         let transport = FakeCodexAppServerTransport(
@@ -620,6 +686,258 @@ struct CodexAppServerTests {
         #expect(threadSnapshot.turns[0].items.count == 1)
         #expect(threadSnapshot.turns[0].items[0].text == "Resumed reply from thread/resume.")
         #expect(threadSnapshot.state.completeness == "serverParity")
+
+        await client.stop()
+    }
+
+    @Test("forks a stored thread and persists fork lineage plus copied history")
+    func forksStoredThreadAndPersistsLineage() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadForkResult: [
+                "approvalPolicy": "on-request",
+                "approvalsReviewer": "user",
+                "cwd": "/tmp/project",
+                "instructionSources": ["AGENTS.md"],
+                "model": "gpt-5.4",
+                "modelProvider": "openai",
+                "reasoningEffort": "medium",
+                "sandbox": [
+                    "type": "workspaceWrite",
+                    "networkAccess": "enabled",
+                    "writableRoots": ["/tmp/project"],
+                ],
+                "serviceTier": "fast",
+                "thread": [
+                    "cliVersion": "0.121.0",
+                    "createdAt": 1713350010,
+                    "cwd": "/tmp/project",
+                    "ephemeral": true,
+                    "forkedFromId": "thread-123",
+                    "id": "thread-456",
+                    "modelProvider": "openai",
+                    "name": "Forked Thread",
+                    "preview": "Hydrated fork preview",
+                    "source": "cli",
+                    "status": ["type": "idle"],
+                    "turns": [
+                        [
+                            "completedAt": 1713350005,
+                            "durationMs": 3000,
+                            "error": NSNull(),
+                            "id": "turn-shared-1",
+                            "items": [
+                                [
+                                    "id": "item-agent-1",
+                                    "status": "completed",
+                                    "text": "Forked reply from thread/fork.",
+                                    "type": "agentMessage",
+                                ],
+                            ],
+                            "startedAt": 1713350002,
+                            "status": "completed",
+                        ],
+                    ],
+                    "updatedAt": 1713350011,
+                ],
+            ]
+        )
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: temporaryDirectory,
+            withIntermediateDirectories: true
+        )
+        let historyStore = try ThreadHistoryStore(
+            configuration: .init(
+                inMemory: false,
+                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
+            )
+        )
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        defer {
+            try? FileManager.default.removeItem(at: temporaryDirectory)
+        }
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let forkedThread = try await client.forkThread(
+            .init(
+                threadID: "thread-123",
+                ephemeral: true,
+                personality: .pragmatic
+            )
+        )
+
+        #expect(forkedThread.id == "thread-456")
+        #expect(forkedThread.info.forkedFromThreadID == "thread-123")
+        #expect(forkedThread.info.ephemeral == true)
+        #expect(forkedThread.info.status.type == .idle)
+
+        let snapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-456")
+        let threadSnapshot = try #require(snapshot)
+        #expect(threadSnapshot.forkedFromThreadID == "thread-123")
+        #expect(threadSnapshot.forkedFromTurnID == "turn-shared-1")
+        #expect(threadSnapshot.isArchived == false)
+        #expect(threadSnapshot.turns.count == 1)
+        #expect(threadSnapshot.turns[0].id == "turn-shared-1")
+        #expect(threadSnapshot.turns[0].items.count == 1)
+        #expect(threadSnapshot.turns[0].items[0].id == "item-agent-1")
+        #expect(threadSnapshot.turns[0].items[0].text == "Forked reply from thread/fork.")
+        #expect(threadSnapshot.state.completeness == "serverParity")
+
+        await client.stop()
+    }
+
+    @Test("builds a recent-turns observable from the local history store")
+    func buildsRecentTurnsObservable() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        let turn = try await thread.startTextTurn("Summarize the project state.")
+        let eventTask = Task {
+            try await turnEvents(from: turn.events, count: 5)
+        }
+
+        await transport.emitTurnStarted(threadID: thread.id, turnID: turn.turn.id)
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-agent-1",
+            item: [
+                "id": "item-agent-1",
+                "type": "agentMessage",
+            ]
+        )
+        await transport.emitAgentMessageDelta(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-agent-1"
+        )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-agent-1"
+        )
+        await transport.emitTurnCompleted(threadID: thread.id, turnID: turn.turn.id)
+        _ = try await eventTask.value
+
+        let recentTurns = try await thread.makeRecentTurns(limit: 4)
+        let recentSnapshots = await MainActor.run { recentTurns.turns }
+
+        #expect(recentSnapshots.count == 1)
+        #expect(recentSnapshots[0].id == turn.turn.id)
+        #expect(recentSnapshots[0].status == "completed")
+        #expect(recentSnapshots[0].items.count == 1)
+        #expect(recentSnapshots[0].items[0].text == "Done.")
+
+        await client.stop()
+    }
+
+    @Test("loads older recent turns from the local history store before app-server fallback")
+    func loadsOlderRecentTurnsLocallyFirst() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: temporaryDirectory,
+            withIntermediateDirectories: true
+        )
+        let historyStore = try ThreadHistoryStore(
+            configuration: .init(
+                inMemory: false,
+                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
+            )
+        )
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        defer {
+            try? FileManager.default.removeItem(at: temporaryDirectory)
+        }
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        _ = try await client.listThreadTurns(
+            .init(
+                threadID: thread.id,
+                limit: 2,
+                sortDirection: .desc
+            )
+        )
+
+        let recentTurns = try await thread.makeRecentTurns(limit: 1)
+        let initialSnapshots = await MainActor.run { recentTurns.turns }
+        #expect(initialSnapshots.count == 1)
+        #expect(initialSnapshots[0].id == "turn-newer")
+
+        let methodsBeforeOlderLoad = await transport.recordedMethods
+        try await recentTurns.loadOlderTurns(limit: 1)
+        let methodsAfterOlderLoad = await transport.recordedMethods
+
+        let expandedSnapshots = await MainActor.run { recentTurns.turns }
+        #expect(expandedSnapshots.count == 2)
+        #expect(expandedSnapshots[0].id == "turn-newer")
+        #expect(expandedSnapshots[1].id == "turn-older")
+        #expect(methodsBeforeOlderLoad == methodsAfterOlderLoad)
 
         await client.stop()
     }
@@ -1950,6 +2268,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var recordedRequestPayloads: [String: [Data]] = [:]
     private var threadListResult: [String: Any]?
     private var threadReadResult: [String: Any]?
+    private var threadForkResult: [String: Any]?
     private var threadResumeResult: [String: Any]?
     private var threadTurnsListResult: [String: Any]?
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
@@ -1961,12 +2280,14 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         executableResolution: CodexCLIExecutableResolver.Resolution? = nil,
         threadListResult: [String: Any]? = nil,
         threadReadResult: [String: Any]? = nil,
+        threadForkResult: [String: Any]? = nil,
         threadResumeResult: [String: Any]? = nil,
         threadTurnsListResult: [String: Any]? = nil
     ) {
         self.resolvedExecutable = executableResolution
         self.threadListResult = threadListResult
         self.threadReadResult = threadReadResult
+        self.threadForkResult = threadForkResult
         self.threadResumeResult = threadResumeResult
         self.threadTurnsListResult = threadTurnsListResult
     }
@@ -2108,6 +2429,57 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                             ],
                         ],
                         "updatedAt": 1713350005,
+                    ],
+                ]
+            )
+        case "thread/fork":
+            return responsePayload(
+                id: id,
+                result: threadForkResult ?? [
+                    "approvalPolicy": "on-request",
+                    "approvalsReviewer": "user",
+                    "cwd": "/tmp/project",
+                    "instructionSources": ["AGENTS.md"],
+                    "model": "gpt-5.4",
+                    "modelProvider": "openai",
+                    "reasoningEffort": "medium",
+                    "sandbox": [
+                        "type": "workspaceWrite",
+                        "networkAccess": "enabled",
+                        "writableRoots": ["/tmp/project"],
+                    ],
+                    "serviceTier": "fast",
+                    "thread": [
+                        "cliVersion": "0.121.0",
+                        "createdAt": 1713350010,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "forkedFromId": "thread-123",
+                        "id": "thread-456",
+                        "modelProvider": "openai",
+                        "name": "Forked Thread",
+                        "preview": "Hydrated fork preview",
+                        "source": "cli",
+                        "status": ["type": "idle"],
+                        "turns": [
+                            [
+                                "completedAt": 1713350005,
+                                "durationMs": 3000,
+                                "error": NSNull(),
+                                "id": "turn-hydrated-1",
+                                "items": [
+                                    [
+                                        "id": "item-agent-1",
+                                        "status": "completed",
+                                        "text": "Forked reply from thread/fork.",
+                                        "type": "agentMessage",
+                                    ],
+                                ],
+                                "startedAt": 1713350002,
+                                "status": "completed",
+                            ],
+                        ],
+                        "updatedAt": 1713350011,
                     ],
                 ]
             )

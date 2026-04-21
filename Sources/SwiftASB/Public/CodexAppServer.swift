@@ -185,6 +185,55 @@ public actor CodexAppServer {
         }
     }
 
+    public struct ThreadForkRequest: Sendable, Equatable {
+        public var approvalPolicy: ApprovalPolicy?
+        public var approvalsReviewer: ApprovalsReviewer?
+        public var baseInstructions: String?
+        public var config: [String: JSONValue]?
+        public var currentDirectoryPath: String?
+        public var developerInstructions: String?
+        public var ephemeral: Bool?
+        public var model: String?
+        public var modelProvider: String?
+        public var personality: Personality?
+        public var sandboxMode: SandboxMode?
+        public var serviceName: String?
+        public var serviceTier: ServiceTier?
+        public var threadID: String
+
+        public init(
+            threadID: String,
+            approvalPolicy: ApprovalPolicy? = nil,
+            approvalsReviewer: ApprovalsReviewer? = nil,
+            baseInstructions: String? = nil,
+            config: [String: JSONValue]? = nil,
+            currentDirectoryPath: String? = nil,
+            developerInstructions: String? = nil,
+            ephemeral: Bool? = nil,
+            model: String? = nil,
+            modelProvider: String? = nil,
+            personality: Personality? = nil,
+            sandboxMode: SandboxMode? = nil,
+            serviceName: String? = nil,
+            serviceTier: ServiceTier? = nil
+        ) {
+            self.threadID = threadID
+            self.approvalPolicy = approvalPolicy
+            self.approvalsReviewer = approvalsReviewer
+            self.baseInstructions = baseInstructions
+            self.config = config
+            self.currentDirectoryPath = currentDirectoryPath
+            self.developerInstructions = developerInstructions
+            self.ephemeral = ephemeral
+            self.model = model
+            self.modelProvider = modelProvider
+            self.personality = personality
+            self.sandboxMode = sandboxMode
+            self.serviceName = serviceName
+            self.serviceTier = serviceTier
+        }
+    }
+
     public struct ThreadSession: Sendable, Equatable {
         public let approvalPolicy: ApprovalPolicy
         public let approvalsReviewer: ApprovalsReviewer
@@ -204,6 +253,7 @@ public actor CodexAppServer {
         public let createdAt: Int
         public let currentDirectoryPath: String
         public let ephemeral: Bool
+        public let forkedFromThreadID: String?
         public let modelProvider: String
         public let name: String?
         public let preview: String
@@ -529,6 +579,12 @@ public actor CodexAppServer {
         var isCompactingThreadContext = false
     }
 
+    internal struct RecentTurnWindowResult: Sendable {
+        let turns: [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot]
+        let nextOlderCursor: String?
+        let nextNewerCursor: String?
+    }
+
     private enum InteractiveRequestDestination: Sendable, Equatable {
         case thread(threadID: String), turn(turnID: String)
     }
@@ -740,6 +796,45 @@ public actor CodexAppServer {
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/resume")
+        }
+    }
+
+    public func forkThread(_ request: ThreadForkRequest) async throws -> CodexThread {
+        try requireInitialized(for: "thread/fork")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadForkRequest(
+                id: requestID,
+                params: request.wireValue
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadForkResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            let session = ThreadSession(wireValue: response)
+            threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
+            let historyStore = try requireHistoryStore(for: "thread/fork")
+            try await historyStore.recordThreadForked(
+                session: session,
+                turns: response.thread.turns.map {
+                    .init(
+                        turn: .init(wireValue: $0),
+                        items: $0.items.map(CodexTurnItem.init(wireValue:))
+                    )
+                }
+            )
+            try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
+
+            return CodexThread(
+                appServer: self,
+                session: session,
+                events: makeThreadEventStream(threadID: response.thread.id)
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/fork")
         }
     }
 
@@ -1002,6 +1097,170 @@ public actor CodexAppServer {
         threadID: String
     ) async throws -> ThreadHistoryStore.ThreadSnapshot? {
         try await requireHistoryStore(for: "thread history snapshot").snapshot(threadID: threadID)
+    }
+
+    internal func recentClosedTurns(
+        threadID: String,
+        limit: Int
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        let snapshots = try await recentTurnWindow(threadID: threadID, limit: limit).turns
+        return snapshots.map { .init(threadID: threadID, snapshot: $0) }
+    }
+
+    internal func recentTurnSnapshots(
+        threadID: String,
+        limit: Int
+    ) async throws -> [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot] {
+        try await recentTurnWindow(threadID: threadID, limit: limit).turns
+    }
+
+    internal func recentTurnWindow(
+        threadID: String,
+        limit: Int
+    ) async throws -> RecentTurnWindowResult {
+        let historyStore = try requireHistoryStore(for: "recent turn history")
+        let localTurns = try await historyStore.recentTurnSnapshots(threadID: threadID, limit: limit)
+        if !localTurns.isEmpty {
+            return .init(
+                turns: localTurns,
+                nextOlderCursor: nil,
+                nextNewerCursor: nil
+            )
+        }
+
+        let page = try await listThreadTurns(
+            .init(
+                threadID: threadID,
+                limit: limit,
+                sortDirection: .desc
+            )
+        )
+
+        return .init(
+            turns: try await historyStore.turnSnapshots(
+                threadID: threadID,
+                turnIDs: page.turns.map(\.id)
+            ),
+            nextOlderCursor: page.nextCursor,
+            nextNewerCursor: page.backwardsCursor
+        )
+    }
+
+    internal func olderTurnWindow(
+        threadID: String,
+        olderThanOrderIndex: Int,
+        cursor: String?,
+        limit: Int
+    ) async throws -> RecentTurnWindowResult {
+        let historyStore = try requireHistoryStore(for: "older turn window")
+        let localTurns = try await historyStore.olderTurnSnapshots(
+            threadID: threadID,
+            olderThanOrderIndex: olderThanOrderIndex,
+            limit: limit
+        )
+        if !localTurns.isEmpty {
+            return .init(
+                turns: localTurns,
+                nextOlderCursor: cursor,
+                nextNewerCursor: nil
+            )
+        }
+
+        let page = try await listThreadTurns(
+            .init(
+                threadID: threadID,
+                limit: limit,
+                cursor: cursor,
+                sortDirection: .desc
+            )
+        )
+
+        return .init(
+            turns: try await historyStore.turnSnapshots(
+                threadID: threadID,
+                turnIDs: page.turns.map(\.id)
+            ),
+            nextOlderCursor: page.nextCursor,
+            nextNewerCursor: page.backwardsCursor
+        )
+    }
+
+    internal func newerTurnWindow(
+        threadID: String,
+        newerThanOrderIndex: Int,
+        cursor: String?,
+        limit: Int
+    ) async throws -> RecentTurnWindowResult {
+        let historyStore = try requireHistoryStore(for: "newer turn window")
+        let localTurns = try await historyStore.newerTurnSnapshots(
+            threadID: threadID,
+            newerThanOrderIndex: newerThanOrderIndex,
+            limit: limit
+        )
+        if !localTurns.isEmpty {
+            return .init(
+                turns: localTurns,
+                nextOlderCursor: nil,
+                nextNewerCursor: cursor
+            )
+        }
+
+        guard let cursor else {
+            return .init(turns: [], nextOlderCursor: nil, nextNewerCursor: nil)
+        }
+
+        let page = try await listThreadTurns(
+            .init(
+                threadID: threadID,
+                limit: limit,
+                cursor: cursor,
+                sortDirection: .desc
+            )
+        )
+
+        return .init(
+            turns: try await historyStore.turnSnapshots(
+                threadID: threadID,
+                turnIDs: page.turns.map(\.id)
+            ),
+            nextOlderCursor: page.nextCursor,
+            nextNewerCursor: page.backwardsCursor
+        )
+    }
+
+    internal func turnSnapshot(
+        threadID: String,
+        turnID: String
+    ) async throws -> ThreadHistoryStore.ThreadSnapshot.TurnSnapshot? {
+        try await requireHistoryStore(for: "turn snapshot").turnSnapshot(threadID: threadID, turnID: turnID)
+    }
+
+    internal func closedTurn(
+        threadID: String,
+        turnID: String
+    ) async throws -> CodexTurnHandle.ClosedTurn {
+        let historyStore = try requireHistoryStore(for: "closed turn snapshot")
+        guard let snapshot = try await historyStore.turnSnapshot(threadID: threadID, turnID: turnID) else {
+            let reason = """
+            SwiftASB could not close turn \(turnID) for thread \(threadID) because no persisted turn snapshot is available yet.
+            Wait for `turn/completed` to arrive before closing the turn handle.
+            """
+            throw CodexAppServerError.invalidState(reason: reason)
+        }
+
+        guard snapshot.status == TurnStatus.completed.rawValue
+            || snapshot.status == TurnStatus.failed.rawValue
+            || snapshot.status == TurnStatus.interrupted.rawValue
+        else {
+            let reason = """
+            SwiftASB cannot close turn \(turnID) for thread \(threadID) while it is still \(snapshot.status).
+            Wait for a terminal turn status before calling `close()`.
+            """
+            throw CodexAppServerError.invalidState(reason: reason)
+        }
+
+        releaseTurnObservation(turnID: turnID)
+        return .init(threadID: threadID, snapshot: snapshot)
     }
 
     internal func respond(
@@ -1377,16 +1636,16 @@ public actor CodexAppServer {
             clearTurnActivity(turnID: notification.turn.id)
             threadObservableActivityStates[notification.threadID] = .init()
             let turn = TurnInfo(wireValue: notification.turn)
+            try? await historyStore?.recordTurnCompleted(
+                threadID: notification.threadID,
+                turn: turn
+            )
             let completion = CodexTurnCompletion(
                 threadID: notification.threadID,
                 turn: turn
             )
             let turnEvent = CodexTurnEvent.completed(completion)
             publishTurnEvent(turnEvent, for: notification.turn.id, isTerminal: true)
-            try? await historyStore?.recordTurnCompleted(
-                threadID: notification.threadID,
-                turn: turn
-            )
         }
     }
 
@@ -1512,6 +1771,12 @@ public actor CodexAppServer {
         } else {
             turnEventContinuations[turnID] = continuations
         }
+    }
+
+    private func releaseTurnObservation(turnID: String) {
+        bufferedTurnEvents.removeValue(forKey: turnID)
+        bufferedTerminalTurnEvents.removeValue(forKey: turnID)
+        turnEventContinuations.removeValue(forKey: turnID)
     }
 
     private func registerThreadEventContinuation(
@@ -2305,6 +2570,27 @@ private extension CodexAppServer.ThreadResumeRequest {
     }
 }
 
+private extension CodexAppServer.ThreadForkRequest {
+    var wireValue: CodexProtocolThreadForkParams {
+        .init(
+            approvalPolicy: approvalPolicy?.wireValue,
+            approvalsReviewer: approvalsReviewer?.wireValue,
+            baseInstructions: baseInstructions,
+            config: config?.mapValues(\.wireValue),
+            cwd: currentDirectoryPath,
+            developerInstructions: developerInstructions,
+            ephemeral: ephemeral,
+            model: model,
+            modelProvider: modelProvider,
+            personality: personality?.wireValue,
+            sandbox: sandboxMode?.wireValue,
+            serviceName: serviceName,
+            serviceTier: serviceTier?.wireValue,
+            threadID: threadID
+        )
+    }
+}
+
 private extension CodexAppServer.TurnStartRequest {
     var wireValue: CodexWireTurnStartParams {
         CodexWireTurnStartParams(
@@ -2700,6 +2986,7 @@ private extension CodexAppServer.ThreadInfo {
             createdAt: wireValue.createdAt,
             currentDirectoryPath: wireValue.cwd,
             ephemeral: wireValue.ephemeral,
+            forkedFromThreadID: wireValue.forkedFromID,
             modelProvider: wireValue.modelProvider,
             name: wireValue.name,
             preview: wireValue.preview,

@@ -575,6 +575,37 @@ future history API should expose:
 - completed turn inspection
 - optional prewarmed local history snapshots for UI consumers
 
+Recommended first UI-facing shape:
+
+- keep `CodexTurnHandle.Minimap` as the live current-state companion for one
+  active turn
+- add a second thread-scoped `@Observable` recent-turns companion that owns the
+  bounded hot in-memory window for:
+  - active turn builders
+  - recently sealed completed turns
+  - recent-turn paging state and faulted-in older windows
+- let that recent-turns companion hydrate from:
+  - live item-stream assembly
+  - local Core Data history once a thread has local completeness worth trusting
+  - upstream `thread/read` or `thread/turns/list` when local paging needs a
+    turn window that is not resident yet
+
+Recommended completed-turn handoff shape:
+
+- add `CodexTurnHandle.close(...)`
+- `close(...)` should:
+  - return a value-typed sealed final turn representation
+  - unregister the handle's live stream bookkeeping from the owning app-server
+  - detach the handle from future observation updates
+- this should be an explicit lifecycle method, not `deinit`-driven behavior,
+  because turn-handle storage and observation lifetimes should stay deterministic
+- the returned sealed value should be discardable so consumers that only want
+  cleanup can ignore the result
+
+The recent-turns companion should be the package's intentional answer to
+"recent completed turns for UI binding", rather than leaving that behavior as an
+accidental side effect of per-handle current-state mirrors.
+
 Once the local database has reached `serverParity` or `richerThanServer` for a
 thread, the public history surface should prefer local reads and searches by
 default.
@@ -624,7 +655,8 @@ Current status:
 
 - started and partially shipped
 - `thread/list` is now wrapped for typed stored-thread paging
-- `thread/read`, `thread/resume`, and `thread/turns/list` are now wrapped
+- `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list` are
+  now wrapped
 - both paths now hydrate the internal Core Data store
 - `thread/list` now reconciles explicit archived and unarchived list results back
   into the local thread records so metadata and archive state can drift-correct
@@ -632,6 +664,10 @@ Current status:
 - `thread/resume` now restores thread defaults, clears stale archived state for
   the reopened thread, and hydrates returned persisted turns back into the same
   local store without resetting completeness to a fresh thread state
+- `thread/fork` now persists explicit fork lineage through `forkedFromThreadID`
+  plus the last shared `forkedFromTurnID`
+- persisted turn and item identity is now thread-scoped so a source thread and
+  its fork can both own copied history with the same upstream raw ids
 - `thread/turns/list` can now seed local history even when the thread has not
   been materialized locally yet
 - overlapping hydration now preserves richer locally assembled item detail when
@@ -641,8 +677,8 @@ Current status:
   hydration and to `richerThanServer` when local assembly preserved detail that
   the server read did not include
 - remaining work in this phase is no longer basic merge and dedup wiring, but
-  the next reconciliation tier around `thread/fork` and deeper archive-state
-  drift handling
+  deeper archive-state drift handling plus the future public history-reading
+  surface over the now-widened local model
 
 ### Phase 3: Archive-aware cache eviction
 
@@ -663,6 +699,41 @@ Current status:
 - expose a deliberate history-reading API
 - expose eager convenience helpers over the cursor-based paging model
 - add search integration after the transcript model is stable enough to index
+
+Recommended first implementation inside this phase:
+
+- add a thread-scoped recent-turns observable companion
+- back that companion with the bounded hot-cache policy already chosen above
+- let recent-turn loading and scroll-driven expansion page by whole-turn windows
+- let older windows fault back in from Core Data first and app-server second
+- give the companion explicit directional expansion APIs rather than implicit
+  unbounded growth:
+  - `loadOlderTurns(limit:)`
+  - `loadNewerTurns(limit:)`
+- keep one resident ordered window in memory and merge newly loaded turns into
+  that window by turn id
+- preserve sort order by turn recency while still using canonical upstream page
+  direction and cursor semantics when app-server fallback is needed
+- add `CodexTurnHandle.close(...)` as the explicit boundary from live handle to
+  sealed completed-turn value
+- keep `Dashboard` and `Minimap` as current-state summaries, not transcript
+  owners
+
+Current status:
+
+- started
+- `CodexThread.makeRecentTurns(limit:)` now exists as the first thread-scoped
+  recent-turn observable
+- the first load path prefers the local history store and falls back to
+  `thread/turns/list` when local recent turns are not resident yet
+- `CodexTurnHandle.close()` now exists as the explicit handoff from a completed
+  live handle to a caller-owned sealed turn value
+- the next implementation step is explicit older/newer scroll-window expansion
+  over whole-turn pages, still preferring local Core Data windows before
+  falling back to upstream cursors
+- the current remaining paging gap is remote cursor continuity once multiple
+  upstream fallback pages are mixed with already-resident local windows
+- richer resident-cache policy controls are still open
 
 ## Remaining Open Questions
 

@@ -4,6 +4,176 @@ import Observation
 public struct CodexThread: Sendable {
     @MainActor
     @Observable
+    public final class RecentTurns {
+        public struct TurnSnapshot: Sendable, Equatable, Identifiable {
+            public struct Item: Sendable, Equatable, Identifiable {
+                public let id: String
+                public let orderIndex: Int
+                public let kind: String
+                public let command: String?
+                public let path: String?
+                public let serverName: String?
+                public let status: String?
+                public let streamedText: String?
+                public let text: String?
+                public let toolName: String?
+            }
+
+            public struct TokenUsage: Sendable, Equatable {
+                public let cachedInputTokens: Int?
+                public let inputTokens: Int?
+                public let outputTokens: Int?
+                public let reasoningOutputTokens: Int?
+                public let totalTokens: Int?
+                public let modelContextWindow: Int?
+            }
+
+            public let id: String
+            public let completedAt: Int?
+            public let diff: String?
+            public let durationMS: Int?
+            public let errorMessage: String?
+            public let items: [Item]
+            public let orderIndex: Int
+            public let startedAt: Int?
+            public let status: String
+            public let tokenUsage: TokenUsage?
+        }
+
+        public let threadID: String
+        public let residentLimit: Int
+        public private(set) var nextNewerCursor: String?
+        public private(set) var nextOlderCursor: String?
+        public private(set) var turns: [TurnSnapshot]
+
+        @ObservationIgnored
+        private let appServer: CodexAppServer
+
+        @ObservationIgnored
+        private var eventTask: Task<Void, Never>?
+
+        internal init(
+            threadID: String,
+            residentLimit: Int,
+            nextNewerCursor: String?,
+            nextOlderCursor: String?,
+            initialTurns: [TurnSnapshot],
+            events: AsyncThrowingStream<CodexTurnEvent, Error>,
+            appServer: CodexAppServer
+        ) {
+            self.threadID = threadID
+            self.residentLimit = residentLimit
+            self.nextNewerCursor = nextNewerCursor
+            self.nextOlderCursor = nextOlderCursor
+            self.turns = initialTurns
+            self.appServer = appServer
+
+            eventTask = Task { [weak self] in
+                guard let self else { return }
+
+                do {
+                    for try await event in events {
+                        await self.apply(event)
+                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    return
+                }
+            }
+        }
+
+        deinit {
+            eventTask?.cancel()
+        }
+
+        public func loadOlderTurns(limit: Int? = nil) async throws {
+            guard let oldestOrderIndex = turns.last?.orderIndex else { return }
+            let pageLimit = limit ?? residentLimit
+            let window = try await appServer.olderTurnWindow(
+                threadID: threadID,
+                olderThanOrderIndex: oldestOrderIndex,
+                cursor: nextOlderCursor,
+                limit: pageLimit
+            )
+            merge(window.turns.map(TurnSnapshot.init))
+            nextOlderCursor = window.nextOlderCursor
+            if let nextNewerCursor = window.nextNewerCursor {
+                self.nextNewerCursor = nextNewerCursor
+            }
+        }
+
+        public func loadNewerTurns(limit: Int? = nil) async throws {
+            guard let newestOrderIndex = turns.first?.orderIndex else { return }
+            let pageLimit = limit ?? residentLimit
+            let window = try await appServer.newerTurnWindow(
+                threadID: threadID,
+                newerThanOrderIndex: newestOrderIndex,
+                cursor: nextNewerCursor,
+                limit: pageLimit
+            )
+            merge(window.turns.map(TurnSnapshot.init))
+            if let nextOlderCursor = window.nextOlderCursor {
+                self.nextOlderCursor = nextOlderCursor
+            }
+            nextNewerCursor = window.nextNewerCursor
+        }
+
+        private func apply(_ event: CodexTurnEvent) async {
+            guard let turnID = Self.turnID(from: event) else { return }
+            guard let snapshot = try? await appServer.turnSnapshot(threadID: threadID, turnID: turnID) else {
+                return
+            }
+
+            merge([TurnSnapshot(snapshot)])
+        }
+
+        private static func turnID(from event: CodexTurnEvent) -> String? {
+            switch event {
+            case let .started(started):
+                started.turn.id
+            case let .planUpdated(update):
+                update.turnID
+            case let .planDelta(delta):
+                delta.turnID
+            case let .diffUpdated(update):
+                update.turnID
+            case let .itemStarted(itemStarted):
+                itemStarted.turnID
+            case let .itemCompleted(itemCompleted):
+                itemCompleted.turnID
+            case let .agentMessageDelta(delta):
+                delta.turnID
+            case let .reasoningSummaryPartAdded(delta):
+                delta.turnID
+            case let .reasoningSummaryTextDelta(delta):
+                delta.turnID
+            case let .reasoningTextDelta(delta):
+                delta.turnID
+            case let .completed(completion):
+                completion.turn.id
+            case .approvalRequested, .elicitationRequested, .serverRequestResolved:
+                nil
+            }
+        }
+
+        private func merge(_ incoming: [TurnSnapshot]) {
+            guard !incoming.isEmpty else { return }
+
+            for snapshot in incoming {
+                if let index = turns.firstIndex(where: { $0.id == snapshot.id }) {
+                    turns[index] = snapshot
+                } else {
+                    turns.append(snapshot)
+                }
+            }
+
+            turns.sort { $0.orderIndex > $1.orderIndex }
+        }
+    }
+
+    @MainActor
+    @Observable
     public final class Dashboard {
         public enum ActivityStatus: String, Sendable, Equatable {
             case errored
@@ -331,6 +501,21 @@ public struct CodexThread: Sendable {
         )
     }
 
+    @MainActor
+    public func makeRecentTurns(limit: Int = 12) async throws -> RecentTurns {
+        let window = try await appServer.recentTurnWindow(threadID: id, limit: limit)
+        let events = await appServer.threadTurnEventStream(threadID: id)
+        return RecentTurns(
+            threadID: id,
+            residentLimit: limit,
+            nextNewerCursor: window.nextNewerCursor,
+            nextOlderCursor: window.nextOlderCursor,
+            initialTurns: window.turns.map(RecentTurns.TurnSnapshot.init),
+            events: events,
+            appServer: appServer
+        )
+    }
+
     public func respond(
         to request: CodexApprovalRequest,
         with response: CodexApprovalResponse
@@ -469,5 +654,44 @@ public struct CodexThreadTokenUsageUpdated: Sendable, Equatable {
         self.last = last
         self.modelContextWindow = modelContextWindow
         self.total = total
+    }
+}
+
+private extension CodexThread.RecentTurns.TurnSnapshot {
+    init(_ snapshot: ThreadHistoryStore.ThreadSnapshot.TurnSnapshot) {
+        self.init(
+            id: snapshot.id,
+            completedAt: snapshot.completedAt,
+            diff: snapshot.diff,
+            durationMS: snapshot.durationMS,
+            errorMessage: snapshot.errorMessage,
+            items: snapshot.items.map {
+                .init(
+                    id: $0.id,
+                    orderIndex: $0.orderIndex,
+                    kind: $0.kind,
+                    command: $0.command,
+                    path: $0.path,
+                    serverName: $0.serverName,
+                    status: $0.status,
+                    streamedText: $0.streamedText,
+                    text: $0.text,
+                    toolName: $0.toolName
+                )
+            },
+            orderIndex: snapshot.orderIndex,
+            startedAt: snapshot.startedAt,
+            status: snapshot.status,
+            tokenUsage: snapshot.tokenUsage.map {
+                .init(
+                    cachedInputTokens: $0.cachedInputTokens,
+                    inputTokens: $0.inputTokens,
+                    outputTokens: $0.outputTokens,
+                    reasoningOutputTokens: $0.reasoningOutputTokens,
+                    totalTokens: $0.totalTokens,
+                    modelContextWindow: $0.modelContextWindow
+                )
+            }
+        )
     }
 }

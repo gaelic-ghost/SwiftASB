@@ -2,6 +2,42 @@ import Foundation
 import Observation
 
 public struct CodexTurnHandle: Sendable {
+    public struct ClosedTurn: Sendable, Equatable, Identifiable {
+        public struct Item: Sendable, Equatable, Identifiable {
+            public let id: String
+            public let orderIndex: Int
+            public let kind: String
+            public let command: String?
+            public let path: String?
+            public let serverName: String?
+            public let status: String?
+            public let streamedText: String?
+            public let text: String?
+            public let toolName: String?
+        }
+
+        public struct TokenUsage: Sendable, Equatable {
+            public let cachedInputTokens: Int?
+            public let inputTokens: Int?
+            public let outputTokens: Int?
+            public let reasoningOutputTokens: Int?
+            public let totalTokens: Int?
+            public let modelContextWindow: Int?
+        }
+
+        public let id: String
+        public let threadID: String
+        public let completedAt: Int?
+        public let diff: String?
+        public let durationMS: Int?
+        public let errorMessage: String?
+        public let items: [Item]
+        public let orderIndex: Int
+        public let startedAt: Int?
+        public let status: String
+        public let tokenUsage: TokenUsage?
+    }
+
     @MainActor
     @Observable
     public final class Minimap {
@@ -305,6 +341,11 @@ public struct CodexTurnHandle: Sendable {
     public func steerText(_ text: String) async throws {
         try await steer([.text(text)])
     }
+
+    @discardableResult
+    public func close() async throws -> ClosedTurn {
+        try await appServer.closedTurn(threadID: threadID, turnID: turn.id)
+    }
 }
 
 public enum CodexTurnEvent: Sendable, Equatable {
@@ -594,5 +635,45 @@ public struct CodexTurnCompletion: Sendable, Equatable {
     ) {
         self.threadID = threadID
         self.turn = turn
+    }
+}
+
+internal extension CodexTurnHandle.ClosedTurn {
+    init(threadID: String, snapshot: ThreadHistoryStore.ThreadSnapshot.TurnSnapshot) {
+        self.init(
+            id: snapshot.id,
+            threadID: threadID,
+            completedAt: snapshot.completedAt,
+            diff: snapshot.diff,
+            durationMS: snapshot.durationMS,
+            errorMessage: snapshot.errorMessage,
+            items: snapshot.items.map {
+                .init(
+                    id: $0.id,
+                    orderIndex: $0.orderIndex,
+                    kind: $0.kind,
+                    command: $0.command,
+                    path: $0.path,
+                    serverName: $0.serverName,
+                    status: $0.status,
+                    streamedText: $0.streamedText,
+                    text: $0.text,
+                    toolName: $0.toolName
+                )
+            },
+            orderIndex: snapshot.orderIndex,
+            startedAt: snapshot.startedAt,
+            status: snapshot.status,
+            tokenUsage: snapshot.tokenUsage.map {
+                .init(
+                    cachedInputTokens: $0.cachedInputTokens,
+                    inputTokens: $0.inputTokens,
+                    outputTokens: $0.outputTokens,
+                    reasoningOutputTokens: $0.reasoningOutputTokens,
+                    totalTokens: $0.totalTokens,
+                    modelContextWindow: $0.modelContextWindow
+                )
+            }
+        )
     }
 }

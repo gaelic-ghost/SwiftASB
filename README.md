@@ -45,8 +45,8 @@ If you just want to explore the package repo itself, start with the commands in 
 The package assumes a local Codex CLI runtime. The currently shipped public surface includes:
 
 - `CodexAppServer` for process ownership, initialize, thread start,
-  `thread/list`, `thread/read`, `thread/resume`, paged turn-history reads, and
-  turn start.
+  `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, paged
+  turn-history reads, and turn start.
 - `CodexThread` for thread-scoped turn creation plus a live `Dashboard` companion.
 - `CodexTurnHandle` for typed turn events plus a live `Minimap` companion.
 - typed approval and elicitation request models, with explicit response APIs on
@@ -57,8 +57,8 @@ The package assumes a local Codex CLI runtime. The currently shipped public surf
 The current public lifecycle contract is intentionally narrow and explicit:
 
 - `CodexAppServer` owns the local subprocess plus initialize, thread start,
-  `thread/list`, `thread/read`, `thread/resume`, `thread/turns/list`, and turn
-  start.
+  `thread/list`, `thread/read`, `thread/resume`, `thread/fork`,
+  `thread/turns/list`, and turn start.
 - `CodexThread` owns thread-scoped turn creation and thread-scoped fallback
   responses for unroutable interactive requests.
 - `CodexTurnHandle` owns the active turn stream plus turn-scoped control
@@ -73,6 +73,11 @@ The current public lifecycle contract is intentionally narrow and explicit:
   of command, file-edit, dynamic-tool, collab-tool, and MCP activity.
 - `CodexThread.Dashboard` already summarizes aggregate tool activity, aggregate
   MCP activity, and whether thread compaction is currently active.
+- `CodexThread.makeRecentTurns(limit:)` now vends a thread-scoped recent-turns
+  observable that prewarms from the local history store and can fall back to
+  paged stored-turn reads when local recent history is not resident yet.
+- `CodexTurnHandle.close()` now seals a completed turn into a caller-owned
+  value snapshot and releases per-turn observation bookkeeping explicitly.
 - `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate
   the internal history store so stored-thread reads can enrich the same local
   persistence layer as live item-stream assembly.
@@ -80,6 +85,9 @@ The current public lifecycle contract is intentionally narrow and explicit:
   state for the reopened thread, and hydrates any resumed persisted turns back
   into that same local history store instead of treating a resumed thread like
   a fresh conversation.
+- `thread/fork(...)` now creates typed forked-thread sessions, persists copied
+  fork history into thread-scoped local turn records, and records both the
+  source thread id and the last shared turn id as explicit local lineage data.
 - `thread/list(...)` now returns typed stored-thread pages and reconciles local
   thread metadata and archive state from list results, which gives the package a
   first list-driven path for archive-drift correction.
@@ -106,11 +114,15 @@ Current non-goals and intentionally deferred areas are also explicit:
 - The current history-reading API is still intentionally narrow: there is not
   yet a broader public search, recent-history, or consumer-friendly cursor
   helper surface over the local store.
+- The broader history-reading API is still intentionally incomplete even though
+  the first recent-turns observable and explicit `CodexTurnHandle.close()` path
+  now exist: there is not yet a fuller public cursor model, search surface, or
+  scroll-driven history-window API over the local store.
 - The current reconciliation policy is intentionally conservative and still
   internal: merge rules now distinguish terminal status from richer local text
-  and command detail, and `thread/resume` now restores both session defaults and
-  persisted overlapping history into the same local store, but fork-aware
-  reconciliation and a broader public history-reading API are still open.
+  and command detail, and the package now persists explicit fork lineage plus
+  thread-scoped copied fork history, but a broader public history-reading API
+  is still open.
 - Richer command-output, file-change-output, MCP-progress, and compaction detail
   still remain internal while the package decides whether those belong as new
   event cases or as deeper observable summary state.

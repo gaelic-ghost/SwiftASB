@@ -85,6 +85,8 @@ actor ThreadHistoryStore {
         let currentDirectoryPath: String
         let defaults: DefaultsSnapshot
         let ephemeral: Bool
+        let forkedFromThreadID: String?
+        let forkedFromTurnID: String?
         let isArchived: Bool
         let isClosed: Bool
         let modelProvider: String
@@ -181,6 +183,51 @@ actor ThreadHistoryStore {
         try context.performAndWaitReturning {
             let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
             Self.applyThreadInfo(session.thread, to: thread)
+
+            let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
+            Self.applyThreadDefaults(session, to: defaults)
+            defaults.thread = thread
+            thread.defaults = defaults
+
+            let state = thread.state ?? HistoryThreadState(context: context)
+            state.thread = thread
+            thread.state = state
+
+            if turns.isEmpty {
+                if state.completeness.isEmpty {
+                    state.completeness = Completeness.partial.rawValue
+                }
+            } else {
+                let outcome = try Self.upsertHydratedTurns(
+                    turns,
+                    for: thread,
+                    in: context
+                )
+                state.completeness = outcome.preservedRicherLocalDetail
+                    ? Completeness.richerThanServer.rawValue
+                    : Completeness.serverParity.rawValue
+            }
+
+            try context.saveIfChanged()
+        }
+
+        if let maxOrderIndex = try snapshot(threadID: session.thread.id)?.turns.map(\.orderIndex).max() {
+            nextTurnOrderByThreadID[session.thread.id] = maxOrderIndex + 1
+        }
+    }
+
+    func recordThreadForked(
+        session: CodexAppServer.ThreadSession,
+        turns: [HydratedTurn]
+    ) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
+            Self.applyThreadInfo(session.thread, to: thread)
+            thread.isArchived = false
+            if thread.forkedFromTurnID == nil {
+                thread.forkedFromTurnID = turns.last?.turn.id
+            }
 
             let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
             Self.applyThreadDefaults(session, to: defaults)
@@ -317,7 +364,11 @@ actor ThreadHistoryStore {
                     "Cannot record turn \(turn.id) because thread \(threadID) is missing from the local history store."
                 )
             }
-            let turnObject = try Self.fetchOrInsertTurn(id: turn.id, in: context)
+            let turnObject = try Self.fetchOrInsertTurn(
+                turnID: turn.id,
+                threadID: threadID,
+                in: context
+            )
             Self.applyTurnInfo(turn, orderIndex: orderIndex, to: turnObject)
             turnObject.thread = thread
             try context.saveIfChanged()
@@ -328,10 +379,15 @@ actor ThreadHistoryStore {
         guard var builder = activeTurns[turnID] else { return }
         builder.diff = diff
         activeTurns[turnID] = builder
+        let threadID = builder.threadID
 
         let context = container.newBackgroundContext()
         try context.performAndWaitReturning {
-            guard let turn = try Self.fetchTurn(id: turnID, in: context) else { return }
+            guard let turn = try Self.fetchTurn(
+                turnID: turnID,
+                threadID: threadID,
+                in: context
+            ) else { return }
             turn.diff = diff
             try context.saveIfChanged()
         }
@@ -352,12 +408,12 @@ actor ThreadHistoryStore {
         )
         activeTurns[turnID] = builder
 
-        let stableID = Self.stableItemID(turnID: turnID, itemID: item.id)
+        let stableID = Self.stableItemID(threadID: threadID, turnID: turnID, itemID: item.id)
         let streamedText = builder.items[item.id]?.streamedText
 
         let context = container.newBackgroundContext()
         try context.performAndWaitReturning {
-            guard let turn = try Self.fetchTurn(id: turnID, in: context) else {
+            guard let turn = try Self.fetchTurn(turnID: turnID, threadID: threadID, in: context) else {
                 throw ThreadHistoryStoreError.missingTurn(
                     "Cannot record item \(item.id) because turn \(turnID) is missing from the local history store."
                 )
@@ -375,7 +431,7 @@ actor ThreadHistoryStore {
         builder.items[itemID] = activeItem
         activeTurns[turnID] = builder
 
-        let stableID = Self.stableItemID(turnID: turnID, itemID: itemID)
+        let stableID = Self.stableItemID(threadID: builder.threadID, turnID: turnID, itemID: itemID)
         let streamedText = activeItem.streamedText
 
         let context = container.newBackgroundContext()
@@ -399,7 +455,7 @@ actor ThreadHistoryStore {
         builder.items[item.id] = activeItem
         activeTurns[turnID] = builder
 
-        let stableID = Self.stableItemID(turnID: turnID, itemID: item.id)
+        let stableID = Self.stableItemID(threadID: threadID, turnID: turnID, itemID: item.id)
         let orderIndex = activeItem.orderIndex
         let streamedText = activeItem.streamedText
 
@@ -428,7 +484,7 @@ actor ThreadHistoryStore {
 
         let context = container.newBackgroundContext()
         try context.performAndWaitReturning {
-            guard let turn = try Self.fetchTurn(id: turnID, in: context) else { return }
+            guard let turn = try Self.fetchTurn(turnID: turnID, threadID: threadID, in: context) else { return }
             turn.tokenUsageData = try Self.encode(snapshot)
             if turn.thread == nil, let thread = try Self.fetchThread(id: threadID, in: context) {
                 turn.thread = thread
@@ -445,7 +501,7 @@ actor ThreadHistoryStore {
 
         let context = container.newBackgroundContext()
         try context.performAndWaitReturning {
-            guard let turnObject = try Self.fetchTurn(id: turn.id, in: context) else { return }
+            guard let turnObject = try Self.fetchTurn(turnID: turn.id, threadID: threadID, in: context) else { return }
             Self.applyTurnInfo(turn, orderIndex: Int(turnObject.orderIndex), to: turnObject)
             if let builder {
                 turnObject.diff = builder.diff
@@ -482,41 +538,8 @@ actor ThreadHistoryStore {
             turnRequest.predicate = NSPredicate(format: "thread == %@", thread)
             let turns = try context.fetch(turnRequest)
                 .sorted { $0.orderIndex < $1.orderIndex }
-                .map { turn -> ThreadSnapshot.TurnSnapshot in
-                    let itemRequest = HistoryItem.fetchRequest()
-                    itemRequest.predicate = NSPredicate(format: "turn == %@", turn)
-                    let items = (try context.fetch(itemRequest))
-                        .sorted { $0.orderIndex < $1.orderIndex }
-                        .map {
-                            ThreadSnapshot.TurnSnapshot.ItemSnapshot(
-                                id: $0.itemID,
-                                orderIndex: Int($0.orderIndex),
-                                kind: $0.kind,
-                                command: $0.command,
-                                path: $0.path,
-                                serverName: $0.serverName,
-                                status: $0.status,
-                                streamedText: $0.streamedText,
-                                text: $0.text,
-                                toolName: $0.toolName
-                            )
-                        }
-                    let tokenUsage = try Self.decode(
-                        ThreadSnapshot.TurnSnapshot.TokenUsageSnapshot.self,
-                        from: turn.tokenUsageData
-                    )
-                    return .init(
-                        id: turn.id,
-                        completedAt: turn.completedAt == 0 ? nil : Int(turn.completedAt),
-                        diff: turn.diff,
-                        durationMS: turn.durationMS == 0 ? nil : Int(turn.durationMS),
-                        errorMessage: turn.errorMessage,
-                        items: items,
-                        orderIndex: Int(turn.orderIndex),
-                        startedAt: turn.startedAt == 0 ? nil : Int(turn.startedAt),
-                        status: turn.status,
-                        tokenUsage: tokenUsage
-                    )
+                .map { turn in
+                    try Self.makeTurnSnapshot(turn, in: context)
                 }
 
             return .init(
@@ -536,6 +559,8 @@ actor ThreadHistoryStore {
                     serviceTier: defaults.serviceTier
                 ),
                 ephemeral: thread.ephemeral,
+                forkedFromThreadID: thread.forkedFromThreadID,
+                forkedFromTurnID: thread.forkedFromTurnID,
                 isArchived: thread.isArchived,
                 isClosed: thread.isClosed,
                 modelProvider: thread.modelProvider,
@@ -547,6 +572,146 @@ actor ThreadHistoryStore {
                 turns: turns,
                 updatedAt: Int(thread.updatedAt)
             )
+        }
+    }
+
+    func turnSnapshot(
+        threadID: String,
+        turnID: String
+    ) throws -> ThreadSnapshot.TurnSnapshot? {
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return nil
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.fetchLimit = 1
+            request.predicate = NSPredicate(
+                format: "thread == %@ AND turnID == %@",
+                thread,
+                turnID
+            )
+
+            guard let turn = try context.fetch(request).first else {
+                return nil
+            }
+
+            return try Self.makeTurnSnapshot(turn, in: context)
+        }
+    }
+
+    func recentTurnSnapshots(
+        threadID: String,
+        limit: Int
+    ) throws -> [ThreadSnapshot.TurnSnapshot] {
+        guard limit > 0 else { return [] }
+
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return []
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.predicate = NSPredicate(format: "thread == %@", thread)
+            request.fetchLimit = limit
+            request.sortDescriptors = [
+                NSSortDescriptor(key: "orderIndex", ascending: false)
+            ]
+
+            let turns = try context.fetch(request)
+            return try turns
+                .sorted { $0.orderIndex > $1.orderIndex }
+                .map { try Self.makeTurnSnapshot($0, in: context) }
+        }
+    }
+
+    func olderTurnSnapshots(
+        threadID: String,
+        olderThanOrderIndex: Int,
+        limit: Int
+    ) throws -> [ThreadSnapshot.TurnSnapshot] {
+        guard limit > 0 else { return [] }
+
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return []
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.predicate = NSPredicate(
+                format: "thread == %@ AND orderIndex < %d",
+                thread,
+                olderThanOrderIndex
+            )
+            request.fetchLimit = limit
+            request.sortDescriptors = [
+                NSSortDescriptor(key: "orderIndex", ascending: false)
+            ]
+
+            return try context.fetch(request).map { try Self.makeTurnSnapshot($0, in: context) }
+        }
+    }
+
+    func newerTurnSnapshots(
+        threadID: String,
+        newerThanOrderIndex: Int,
+        limit: Int
+    ) throws -> [ThreadSnapshot.TurnSnapshot] {
+        guard limit > 0 else { return [] }
+
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return []
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.predicate = NSPredicate(
+                format: "thread == %@ AND orderIndex > %d",
+                thread,
+                newerThanOrderIndex
+            )
+            request.fetchLimit = limit
+            request.sortDescriptors = [
+                NSSortDescriptor(key: "orderIndex", ascending: true)
+            ]
+
+            return try context.fetch(request)
+                .map { try Self.makeTurnSnapshot($0, in: context) }
+                .sorted { $0.orderIndex > $1.orderIndex }
+        }
+    }
+
+    func turnSnapshots(
+        threadID: String,
+        turnIDs: [String]
+    ) throws -> [ThreadSnapshot.TurnSnapshot] {
+        guard !turnIDs.isEmpty else { return [] }
+
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return []
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.predicate = NSPredicate(
+                format: "thread == %@ AND turnID IN %@",
+                thread,
+                turnIDs
+            )
+
+            let fetchedTurns = try context.fetch(request)
+            let byTurnID = try Dictionary(
+                uniqueKeysWithValues: fetchedTurns.map { turn in
+                    (turn.turnID, try Self.makeTurnSnapshot(turn, in: context))
+                }
+            )
+
+            return turnIDs.compactMap { byTurnID[$0] }
         }
     }
 
@@ -603,8 +768,12 @@ actor ThreadHistoryStore {
         }
     }
 
-    private static func stableItemID(turnID: String, itemID: String) -> String {
-        "\(turnID)::\(itemID)"
+    private static func stableTurnID(threadID: String, turnID: String) -> String {
+        "\(threadID)::\(turnID)"
+    }
+
+    private static func stableItemID(threadID: String, turnID: String, itemID: String) -> String {
+        "\(threadID)::\(turnID)::\(itemID)"
     }
 
     private static func applyThreadInfo(_ info: CodexAppServer.ThreadInfo, to thread: HistoryThread) {
@@ -613,6 +782,7 @@ actor ThreadHistoryStore {
         thread.createdAt = Int64(info.createdAt)
         thread.currentDirectoryPath = info.currentDirectoryPath
         thread.ephemeral = info.ephemeral
+        thread.forkedFromThreadID = info.forkedFromThreadID
         thread.modelProvider = info.modelProvider
         thread.name = info.name
         thread.preview = info.preview
@@ -656,7 +826,11 @@ actor ThreadHistoryStore {
         var preservedRicherLocalDetail = false
 
         for hydratedTurn in hydratedTurns {
-            let turnObject = try fetchOrInsertTurn(id: hydratedTurn.turn.id, in: context)
+            let turnObject = try fetchOrInsertTurn(
+                turnID: hydratedTurn.turn.id,
+                threadID: thread.id,
+                in: context
+            )
             preservedRicherLocalDetail = Self.mergeHydratedTurnInfo(
                 hydratedTurn.turn,
                 into: turnObject
@@ -670,7 +844,11 @@ actor ThreadHistoryStore {
             }
 
             for (itemIndex, item) in hydratedTurn.items.enumerated() {
-                let stableID = stableItemID(turnID: hydratedTurn.turn.id, itemID: item.id)
+                let stableID = stableItemID(
+                    threadID: thread.id,
+                    turnID: hydratedTurn.turn.id,
+                    itemID: item.id
+                )
                 let itemObject = try fetchOrInsertItem(stableID: stableID, in: context)
                 preservedRicherLocalDetail = Self.mergeHydratedItem(
                     item,
@@ -701,6 +879,46 @@ actor ThreadHistoryStore {
         return .init(preservedRicherLocalDetail: preservedRicherLocalDetail)
     }
 
+    private static func makeTurnSnapshot(
+        _ turn: HistoryTurn,
+        in context: NSManagedObjectContext
+    ) throws -> ThreadSnapshot.TurnSnapshot {
+        let itemRequest = HistoryItem.fetchRequest()
+        itemRequest.predicate = NSPredicate(format: "turn == %@", turn)
+        let items = (try context.fetch(itemRequest))
+            .sorted { $0.orderIndex < $1.orderIndex }
+            .map {
+                ThreadSnapshot.TurnSnapshot.ItemSnapshot(
+                    id: $0.itemID,
+                    orderIndex: Int($0.orderIndex),
+                    kind: $0.kind,
+                    command: $0.command,
+                    path: $0.path,
+                    serverName: $0.serverName,
+                    status: $0.status,
+                    streamedText: $0.streamedText,
+                    text: $0.text,
+                    toolName: $0.toolName
+                )
+            }
+        let tokenUsage = try Self.decode(
+            ThreadSnapshot.TurnSnapshot.TokenUsageSnapshot.self,
+            from: turn.tokenUsageData
+        )
+        return .init(
+            id: turn.turnID,
+            completedAt: turn.completedAt == 0 ? nil : Int(turn.completedAt),
+            diff: turn.diff,
+            durationMS: turn.durationMS == 0 ? nil : Int(turn.durationMS),
+            errorMessage: turn.errorMessage,
+            items: items,
+            orderIndex: Int(turn.orderIndex),
+            startedAt: turn.startedAt == 0 ? nil : Int(turn.startedAt),
+            status: turn.status,
+            tokenUsage: tokenUsage
+        )
+    }
+
     private static func applyThreadDefaults(
         _ session: CodexAppServer.ThreadSession,
         to defaults: HistoryThreadDefaults
@@ -721,7 +939,7 @@ actor ThreadHistoryStore {
         orderIndex: Int,
         to turn: HistoryTurn
     ) {
-        turn.id = info.id
+        turn.turnID = info.id
         turn.completedAt = Int64(info.completedAt ?? 0)
         turn.durationMS = Int64(info.durationMS ?? 0)
         turn.errorMessage = info.errorMessage
@@ -735,7 +953,7 @@ actor ThreadHistoryStore {
         into turn: HistoryTurn
     ) -> Bool {
         var preservedRicherLocalDetail = false
-        turn.id = info.id
+        turn.turnID = info.id
         if let completedAt = info.completedAt {
             turn.completedAt = Int64(completedAt)
         } else if turn.completedAt != 0 {
@@ -951,6 +1169,8 @@ actor ThreadHistoryStore {
         thread.createdAt = 0
         thread.currentDirectoryPath = ""
         thread.ephemeral = false
+        thread.forkedFromThreadID = nil
+        thread.forkedFromTurnID = nil
         thread.isArchived = false
         thread.isClosed = false
         thread.modelProvider = ""
@@ -967,19 +1187,31 @@ actor ThreadHistoryStore {
         return try context.fetch(request).first
     }
 
-    private static func fetchOrInsertTurn(id: String, in context: NSManagedObjectContext) throws -> HistoryTurn {
-        if let existing = try fetchTurn(id: id, in: context) {
+    private static func fetchOrInsertTurn(
+        turnID: String,
+        threadID: String,
+        in context: NSManagedObjectContext
+    ) throws -> HistoryTurn {
+        if let existing = try fetchTurn(turnID: turnID, threadID: threadID, in: context) {
             return existing
         }
         let turn = HistoryTurn(context: context)
-        turn.id = id
+        turn.id = stableTurnID(threadID: threadID, turnID: turnID)
+        turn.turnID = turnID
         return turn
     }
 
-    private static func fetchTurn(id: String, in context: NSManagedObjectContext) throws -> HistoryTurn? {
+    private static func fetchTurn(
+        turnID: String,
+        threadID: String,
+        in context: NSManagedObjectContext
+    ) throws -> HistoryTurn? {
         let request = HistoryTurn.fetchRequest()
         request.fetchLimit = 1
-        request.predicate = NSPredicate(format: "id == %@", id)
+        request.predicate = NSPredicate(
+            format: "id == %@",
+            stableTurnID(threadID: threadID, turnID: turnID)
+        )
         return try context.fetch(request).first
     }
 
@@ -1047,6 +1279,8 @@ actor ThreadHistoryStore {
             attribute("createdAt", .integer64AttributeType, isOptional: false),
             attribute("currentDirectoryPath", .stringAttributeType, isOptional: false),
             attribute("ephemeral", .booleanAttributeType, isOptional: false),
+            attribute("forkedFromThreadID", .stringAttributeType, isOptional: true),
+            attribute("forkedFromTurnID", .stringAttributeType, isOptional: true),
             attribute("modelProvider", .stringAttributeType, isOptional: false),
             attribute("name", .stringAttributeType, isOptional: true),
             attribute("preview", .stringAttributeType, isOptional: false),
@@ -1093,6 +1327,7 @@ actor ThreadHistoryStore {
             attribute("startedAt", .integer64AttributeType, isOptional: false),
             attribute("status", .stringAttributeType, isOptional: false),
             attribute("tokenUsageData", .binaryDataAttributeType, isOptional: true),
+            attribute("turnID", .stringAttributeType, isOptional: false),
         ]
         turnEntity.uniquenessConstraints = [["id"]]
 
@@ -1264,6 +1499,8 @@ final class HistoryThread: NSManagedObject {
     @NSManaged var currentDirectoryPath: String
     @NSManaged var defaults: HistoryThreadDefaults?
     @NSManaged var ephemeral: Bool
+    @NSManaged var forkedFromThreadID: String?
+    @NSManaged var forkedFromTurnID: String?
     @NSManaged var id: String
     @NSManaged var isArchived: Bool
     @NSManaged var isClosed: Bool
@@ -1309,6 +1546,7 @@ final class HistoryTurn: NSManagedObject {
     @NSManaged var startedAt: Int64
     @NSManaged var status: String
     @NSManaged var thread: HistoryThread?
+    @NSManaged var turnID: String
     @NSManaged var tokenUsageData: Data?
 }
 

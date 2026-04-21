@@ -162,6 +162,45 @@ struct CodexAppServerProtocolTests {
         #expect(config["temperature"] as? Double == 0.15)
     }
 
+    @Test("encodes thread/fork requests with the expected method and params payload")
+    func encodesThreadForkRequest() throws {
+        let payload = try protocolLayer.makeThreadForkRequest(
+            id: .string("thread-fork-1"),
+            params: .init(
+                approvalPolicy: .enumeration(.onRequest),
+                approvalsReviewer: .user,
+                baseInstructions: "Branch from the existing work.",
+                config: ["temperature": .double(0.2)],
+                cwd: "/tmp/project",
+                developerInstructions: "Keep the fork focused.",
+                ephemeral: true,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                personality: .pragmatic,
+                sandbox: .workspaceWrite,
+                serviceName: "codex",
+                serviceTier: .fast,
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/fork")
+        #expect(object["id"] as? String == "thread-fork-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["cwd"] as? String == "/tmp/project")
+        #expect(params["ephemeral"] as? Bool == true)
+        #expect(params["model"] as? String == "gpt-5.4")
+        #expect(params["personality"] as? String == "pragmatic")
+        #expect(params["serviceTier"] as? String == "fast")
+
+        let config = try #require(params["config"] as? [String: Any])
+        #expect(config["temperature"] as? Double == 0.2)
+    }
+
     @Test("encodes turn/start requests with the expected method and params payload")
     func encodesTurnStartRequest() throws {
         let payload = try protocolLayer.makeTurnStartRequest(
@@ -349,6 +388,23 @@ struct CodexAppServerProtocolTests {
 
         #expect(response.thread.id == "thread-123")
         #expect(response.thread.name == "Resumed Thread")
+        #expect(response.thread.turns.count == 1)
+        #expect(response.thread.turns[0].items.count == 1)
+    }
+
+    @Test("decodes thread/fork responses and honors the expected request ID")
+    func decodesThreadForkResponse() throws {
+        let payload = Data(
+            #"""
+            {"id":"thread-fork-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.121.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":true,"forkedFromId":"thread-123","id":"thread-456","modelProvider":"openai","name":"Forked Thread","preview":"Hydrated fork preview","source":"cli","status":{"type":"idle"},"turns":[{"completedAt":1713350005,"durationMs":3000,"error":null,"id":"turn-hydrated-1","items":[{"id":"item-agent-1","status":"completed","text":"Forked reply.","type":"agentMessage"}],"startedAt":1713350002,"status":"completed"}],"updatedAt":1713350005}}}
+            """#.utf8
+        )
+
+        let response = try protocolLayer.decodeThreadForkResponse(payload, expectedID: .string("thread-fork-1"))
+
+        #expect(response.thread.id == "thread-456")
+        #expect(response.thread.forkedFromID == "thread-123")
+        #expect(response.thread.ephemeral == true)
         #expect(response.thread.turns.count == 1)
         #expect(response.thread.turns[0].items.count == 1)
     }

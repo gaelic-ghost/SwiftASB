@@ -90,6 +90,40 @@ struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
     }
 }
 
+struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
+    let approvalPolicy: CodexWireApprovalPolicyUnion?
+    let approvalsReviewer: CodexWireApprovalsReviewer?
+    let baseInstructions: String?
+    let config: [String: CodexWireJSONValue]?
+    let cwd: String?
+    let developerInstructions: String?
+    let ephemeral: Bool?
+    let model: String?
+    let modelProvider: String?
+    let personality: CodexWirePersonality?
+    let sandbox: CodexWireSandboxMode?
+    let serviceName: String?
+    let serviceTier: CodexWireServiceTier?
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case approvalPolicy
+        case approvalsReviewer
+        case baseInstructions
+        case config
+        case cwd
+        case developerInstructions
+        case ephemeral
+        case model
+        case modelProvider
+        case personality
+        case sandbox
+        case serviceName
+        case serviceTier
+        case threadID = "threadId"
+    }
+}
+
 struct CodexProtocolThreadListParams: Encodable, Equatable, Sendable {
     let archived: Bool?
     let cursor: String?

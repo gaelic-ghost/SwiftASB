@@ -4,6 +4,7 @@ struct CodexAppServerProtocol {
     enum Method: String, Sendable, Codable {
         case initialize = "initialize"
         case initialized = "initialized"
+        case threadFork = "thread/fork"
         case threadList = "thread/list"
         case threadRead = "thread/read"
         case threadResume = "thread/resume"
@@ -69,6 +70,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadResume, params: params),
             method: .threadResume
+        )
+    }
+
+    func makeThreadForkRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadForkParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadFork, params: params),
+            method: .threadFork
         )
     }
 
@@ -192,6 +203,18 @@ struct CodexAppServerProtocol {
             responsePayload,
             expectedID: expectedID,
             method: .threadResume,
+            resultType: CodexWireThreadStartResponse.self
+        )
+    }
+
+    func decodeThreadForkResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadStartResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadFork,
             resultType: CodexWireThreadStartResponse.self
         )
     }
