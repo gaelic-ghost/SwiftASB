@@ -264,11 +264,11 @@ Chosen shape:
 - `Minimap` may mirror only the latest approval or elicitation state if that
   turns out to be useful for UI consumers, but approval mirroring is optional
   rather than mandatory for the first pass
-- `Minimap` may later mirror richer in-flight work state for UI consumers, such
-  as a stable array of tool, MCP, or file-edit call snapshots with display
-  name plus a small lifecycle enum like `inProgress`, `completed`, or `error`
-  when that provides a clearer "calls made during this turn" surface than raw
-  event playback
+- `Minimap` may mirror richer in-flight work state for UI consumers, such as a
+  stable array of tool, MCP, or file-edit call snapshots with display name
+  plus a small lifecycle enum like `inProgress`, `completed`, or `error` when
+  that provides a clearer "calls made during this turn" surface than raw event
+  playback
 - turn-scoped streams should buffer the early interactive request and
   resolution events that can arrive before a consumer starts iterating the
   handle-owned stream returned by `startTurn(...)`
@@ -332,14 +332,14 @@ That keeps one canonical lifecycle path:
 - observable companions answer "what is the latest useful state for UI right
   now"
 
-Examples worth exploring in a later promotion pass:
+Observable summaries now shipped from that plan:
 
-- `CodexTurnHandle.Minimap.toolCallSnapshots` for a stable per-turn list of
-  tool, MCP, and file-edit activity summaries
+- `CodexTurnHandle.Minimap.callSnapshots` for a stable per-turn list of tool,
+  MCP, and file-edit activity summaries
 - `CodexThread.Dashboard.isCompactingThreadContext` when context compaction is
   actively blocking normal forward progress
-- aggregate thread-level status such as tool-calling or MCP-calling activity
-  when the implementation can define a trustworthy summary model
+- aggregate thread-level tool-calling and MCP-calling status through
+  `CodexThread.Dashboard`
 
 Near-term adjacent public surfaces worth planning now:
 
@@ -358,16 +358,23 @@ Open design question worth deciding before that thread-management pass lands:
   retention remain explicitly consumer-owned until `thread/read` exists as the
   authoritative fetch path?
 
-- protocol event
-- public typed event
-- optional observable mirror update
+Status update after the current observable pass:
 
-instead of creating two equivalent public control systems.
+- this repo now ships the core version of that design
+- `CodexTurnHandle.Minimap` is attached when the handle is created
+- the shipped minimap now exposes `callSnapshots` for command, file-edit,
+  dynamic-tool, collab-tool, and MCP activity
+- `CodexThread.Dashboard` now exposes aggregate tool and MCP activity plus
+  `isCompactingThreadContext`
+- the remaining design gap is no longer "should we have current-state mirrors
+  at all?" but "how much richer progress detail should escape the current
+  summary mirrors?"
 
 ## Draft Unified Observable Model
 
-This is a concrete draft for the next observable-shaping pass. It is still a
-design sketch, not a committed public API.
+This section began as a draft for the next observable-shaping pass. Its core
+shape is now shipped, so the notes below should be read as a record of the
+intended model plus the remaining open refinement questions.
 
 ### Minimap draft
 
@@ -384,11 +391,11 @@ Review-driven ownership correction:
 - this avoids losing early item activity that starts before a consumer asks for
   a minimap and makes `callSnapshots` an honest per-turn current-state mirror.
 
-Proposed shape:
+Shipped shape:
 
 - `callSnapshots: [CallSnapshot]`
 
-Proposed `CallSnapshot` fields:
+Current `CallSnapshot` fields:
 
 - `id: String`
 - `kind: CallKind`
@@ -398,9 +405,13 @@ Proposed `CallSnapshot` fields:
 - `filePath: String?`
 - `toolName: String?`
 - `serverName: String?`
-- `isBlockingForwardProgress: Bool`
 
-Proposed `CallKind` cases:
+Still-open field question:
+
+- whether we need a stronger public blocked-progress flag or richer progress
+  payload rather than the current summary-oriented shape
+
+Current `CallKind` cases:
 
 - `command`
 - `mcp`
@@ -408,7 +419,7 @@ Proposed `CallKind` cases:
 - `collabTool`
 - `fileEdit`
 
-Proposed `CallStatus` cases:
+Current `CallStatus` cases:
 
 - `inProgress`
 - `completed`
@@ -446,7 +457,7 @@ Review-driven correction:
   active in-flight work should win over stale error residue when both are
   present.
 
-Proposed fields:
+Current fields:
 
 - `isCompactingThreadContext: Bool`
 - `toolCallingStatus: ActivityStatus`
@@ -464,6 +475,12 @@ Design note:
   it carries better meaning than immediately falling back to `idle`
 - if one tool or MCP call has errored but another is still running, aggregate
   status should remain `inProgress` until no relevant work is active
+
+Status update:
+
+- the shipped dashboard now follows that rule
+- remaining work is about whether we need richer compaction detail or more
+  specific blocked-state explanations beyond the current aggregate statuses
 
 ### Reroute handling draft
 

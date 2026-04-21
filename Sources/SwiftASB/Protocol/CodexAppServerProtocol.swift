@@ -4,7 +4,9 @@ struct CodexAppServerProtocol {
     enum Method: String, Sendable, Codable {
         case initialize = "initialize"
         case initialized = "initialized"
+        case threadRead = "thread/read"
         case threadStart = "thread/start"
+        case threadTurnsList = "thread/turns/list"
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
@@ -45,6 +47,26 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadStart, params: params),
             method: .threadStart
+        )
+    }
+
+    func makeThreadReadRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadReadParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadRead, params: params),
+            method: .threadRead
+        )
+    }
+
+    func makeThreadTurnsListRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadTurnsListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadTurnsList, params: params),
+            method: .threadTurnsList
         )
     }
 
@@ -125,6 +147,30 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .turnStart,
             resultType: CodexWireTurnStartResponse.self
+        )
+    }
+
+    func decodeThreadReadResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadReadResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadRead,
+            resultType: CodexProtocolThreadReadResponse.self
+        )
+    }
+
+    func decodeThreadTurnsListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadTurnsListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadTurnsList,
+            resultType: CodexProtocolThreadTurnsListResponse.self
         )
     }
 

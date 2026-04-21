@@ -165,6 +165,54 @@ public actor CodexAppServer {
         public let updatedAt: Int
     }
 
+    public struct ThreadReadRequest: Sendable, Equatable {
+        public var includeTurns: Bool
+        public var threadID: String
+
+        public init(
+            threadID: String,
+            includeTurns: Bool = false
+        ) {
+            self.threadID = threadID
+            self.includeTurns = includeTurns
+        }
+    }
+
+    public struct ThreadReadResult: Sendable, Equatable {
+        public let thread: ThreadInfo
+        public let turns: [TurnInfo]
+    }
+
+    public enum ThreadTurnsSortDirection: String, Sendable, Equatable {
+        case asc
+        case desc
+    }
+
+    public struct ThreadTurnsListRequest: Sendable, Equatable {
+        public var cursor: String?
+        public var limit: Int?
+        public var sortDirection: ThreadTurnsSortDirection?
+        public var threadID: String
+
+        public init(
+            threadID: String,
+            limit: Int? = nil,
+            cursor: String? = nil,
+            sortDirection: ThreadTurnsSortDirection? = nil
+        ) {
+            self.threadID = threadID
+            self.limit = limit
+            self.cursor = cursor
+            self.sortDirection = sortDirection
+        }
+    }
+
+    public struct ThreadTurnsPage: Sendable, Equatable {
+        public let backwardsCursor: String?
+        public let nextCursor: String?
+        public let turns: [TurnInfo]
+    }
+
     public struct ThreadStatus: Sendable, Equatable {
         public let type: ThreadStatusType
         public let activeFlags: [ThreadActiveFlag]
@@ -391,6 +439,8 @@ public actor CodexAppServer {
 
     private let transport: any CodexAppServerTransporting
     private let protocolLayer: CodexAppServerProtocol
+    private let historyStore: ThreadHistoryStore?
+    private let historyStoreInitializationError: Error?
     private var serverEventTask: Task<Void, Never>?
     private var threadStatuses: [String: ThreadStatus] = [:]
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
@@ -418,14 +468,34 @@ public actor CodexAppServer {
             )
         )
         self.protocolLayer = CodexAppServerProtocol()
+        do {
+            self.historyStore = try ThreadHistoryStore()
+            self.historyStoreInitializationError = nil
+        } catch {
+            self.historyStore = nil
+            self.historyStoreInitializationError = error
+        }
     }
 
     internal init(
         transport: any CodexAppServerTransporting,
-        protocolLayer: CodexAppServerProtocol = CodexAppServerProtocol()
+        protocolLayer: CodexAppServerProtocol = CodexAppServerProtocol(),
+        historyStore: ThreadHistoryStore? = nil
     ) {
         self.transport = transport
         self.protocolLayer = protocolLayer
+        if let historyStore {
+            self.historyStore = historyStore
+            self.historyStoreInitializationError = nil
+        } else {
+            do {
+                self.historyStore = try ThreadHistoryStore(configuration: .inMemory())
+                self.historyStoreInitializationError = nil
+            } catch {
+                self.historyStore = nil
+                self.historyStoreInitializationError = error
+            }
+        }
     }
 
     public func start() async throws {
@@ -517,15 +587,99 @@ public actor CodexAppServer {
                 responsePayload,
                 expectedID: requestID
             )
+            let session = ThreadSession(wireValue: response)
             threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
+            try await requireHistoryStore(for: "thread/start").recordThreadStarted(session: session)
 
             return CodexThread(
                 appServer: self,
-                session: ThreadSession(wireValue: response),
+                session: session,
                 events: makeThreadEventStream(threadID: response.thread.id)
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/start")
+        }
+    }
+
+    public func readThread(_ request: ThreadReadRequest) async throws -> ThreadReadResult {
+        try requireInitialized(for: "thread/read")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadReadRequest(
+                id: requestID,
+                params: .init(
+                    includeTurns: request.includeTurns ? true : nil,
+                    threadID: request.threadID
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadReadResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            let thread = ThreadInfo(wireValue: response.thread)
+            let turns = response.thread.turns.map(TurnInfo.init(wireValue:))
+            if request.includeTurns {
+                try await requireHistoryStore(for: "thread/read").hydrateThreadRead(
+                    thread: thread,
+                    turns: response.thread.turns.map {
+                        .init(
+                            turn: .init(wireValue: $0),
+                            items: $0.items.map(CodexTurnItem.init(wireValue:))
+                        )
+                    }
+                )
+            } else {
+                try await requireHistoryStore(for: "thread/read").recordThreadMetadataUpdated(thread)
+            }
+
+            return .init(thread: thread, turns: turns)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/read")
+        }
+    }
+
+    public func listThreadTurns(_ request: ThreadTurnsListRequest) async throws -> ThreadTurnsPage {
+        try requireInitialized(for: "thread/turns/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadTurnsListRequest(
+                id: requestID,
+                params: .init(
+                    cursor: request.cursor,
+                    limit: request.limit,
+                    sortDirection: request.sortDirection.map(CodexProtocolThreadTurnsSortDirection.init),
+                    threadID: request.threadID
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadTurnsListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            try await requireHistoryStore(for: "thread/turns/list").hydrateHistoricalTurns(
+                threadID: request.threadID,
+                turns: response.data.map {
+                    .init(
+                        turn: .init(wireValue: $0),
+                        items: $0.items.map(CodexTurnItem.init(wireValue:))
+                    )
+                }
+            )
+
+            return .init(
+                backwardsCursor: response.backwardsCursor,
+                nextCursor: response.nextCursor,
+                turns: response.data.map(TurnInfo.init(wireValue:))
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/turns/list")
         }
     }
 
@@ -548,6 +702,7 @@ public actor CodexAppServer {
 
             let turn = TurnInfo(wireValue: response.turn)
             markThreadTurnActive(threadID: request.threadID, turnID: turn.id)
+            try await requireHistoryStore(for: "turn/start").recordTurnStarted(threadID: request.threadID, turn: turn)
             let eventStream = makeTurnEventStream(turnID: turn.id)
             let minimapStream = makeTurnEventStream(turnID: turn.id)
             let minimap = await MainActor.run {
@@ -658,6 +813,12 @@ public actor CodexAppServer {
             hasToolErrorResidue: state.hasToolErrorResidue,
             isCompactingThreadContext: state.isCompactingThreadContext
         )
+    }
+
+    internal func debugThreadHistorySnapshot(
+        threadID: String
+    ) async throws -> ThreadHistoryStore.ThreadSnapshot? {
+        try await requireHistoryStore(for: "thread history snapshot").snapshot(threadID: threadID)
     }
 
     internal func respond(
@@ -836,7 +997,7 @@ public actor CodexAppServer {
         }
     }
 
-    private func handleProtocolEvent(_ event: CodexAppServerProtocolEvent) {
+    private func handleProtocolEvent(_ event: CodexAppServerProtocolEvent) async {
         switch event {
         case let .threadStarted(notification):
             threadStatuses[notification.thread.id] = .init(wireValue: notification.thread.status)
@@ -844,6 +1005,7 @@ public actor CodexAppServer {
                 .init(thread: .init(wireValue: notification.thread))
             )
             publishThreadEvent(threadEvent, for: notification.thread.id, isTerminal: false)
+            try? await historyStore?.recordThreadMetadataUpdated(.init(wireValue: notification.thread))
         case let .threadStatusChanged(notification):
             threadStatuses[notification.threadID] = .init(wireValue: notification.status)
             let threadEvent = CodexThreadEvent.statusChanged(
@@ -853,17 +1015,24 @@ public actor CodexAppServer {
                 )
             )
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordThreadStatusChanged(
+                threadID: notification.threadID,
+                status: .init(wireValue: notification.status)
+            )
         case let .threadArchived(notification):
             let threadEvent = CodexThreadEvent.archived(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordThreadArchived(threadID: notification.threadID, isArchived: true)
         case let .threadUnarchived(notification):
             let threadEvent = CodexThreadEvent.unarchived(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordThreadArchived(threadID: notification.threadID, isArchived: false)
         case let .threadClosed(notification):
             threadStatuses.removeValue(forKey: notification.threadID)
             clearTurnActivities(threadID: notification.threadID)
             let threadEvent = CodexThreadEvent.closed(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: true)
+            try? await historyStore?.recordThreadClosed(threadID: notification.threadID)
         case let .threadNameUpdated(notification):
             let threadEvent = CodexThreadEvent.nameUpdated(
                 .init(
@@ -872,24 +1041,37 @@ public actor CodexAppServer {
                 )
             )
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordThreadNameUpdated(
+                threadID: notification.threadID,
+                name: notification.threadName
+            )
         case let .threadTokenUsageUpdated(notification):
+            let lastUsage = CodexThreadTokenUsageUpdated.Usage(wireValue: notification.tokenUsage.last)
             let threadEvent = CodexThreadEvent.tokenUsageUpdated(
                 .init(
                     threadID: notification.threadID,
                     turnID: notification.turnID,
-                    last: .init(wireValue: notification.tokenUsage.last),
+                    last: lastUsage,
                     modelContextWindow: notification.tokenUsage.modelContextWindow,
                     total: .init(wireValue: notification.tokenUsage.total)
                 )
             )
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordTurnTokenUsageUpdated(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                usage: lastUsage,
+                modelContextWindow: notification.tokenUsage.modelContextWindow
+            )
         case let .turnStarted(notification):
             markThreadTurnActive(threadID: notification.threadID, turnID: notification.turn.id)
+            let turn = TurnInfo(wireValue: notification.turn)
             let started = CodexTurnStarted(
                 threadID: notification.threadID,
-                turn: TurnInfo(wireValue: notification.turn)
+                turn: turn
             )
             publishTurnEvent(.started(started), for: notification.turn.id, isTerminal: false)
+            try? await historyStore?.recordTurnStarted(threadID: notification.threadID, turn: turn)
         case let .turnDiffUpdated(notification):
             let diffUpdate = CodexTurnDiffUpdate(
                 threadID: notification.threadID,
@@ -897,22 +1079,35 @@ public actor CodexAppServer {
                 diff: notification.diff
             )
             publishTurnEvent(.diffUpdated(diffUpdate), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordTurnDiffUpdated(turnID: notification.turnID, diff: notification.diff)
         case let .itemStarted(notification):
             updateThreadObservableActivityForItemStarted(notification.item, threadID: notification.threadID)
+            let item = CodexTurnItem(wireValue: notification.item)
             let itemStarted = CodexTurnItemStarted(
                 threadID: notification.threadID,
                 turnID: notification.turnID,
-                item: .init(wireValue: notification.item)
+                item: item
             )
             publishTurnEvent(.itemStarted(itemStarted), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemStarted(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                item: item
+            )
         case let .itemCompleted(notification):
             updateThreadObservableActivityForItemCompleted(notification.item, threadID: notification.threadID)
+            let item = CodexTurnItem(wireValue: notification.item)
             let itemCompleted = CodexTurnItemCompleted(
                 threadID: notification.threadID,
                 turnID: notification.turnID,
-                item: .init(wireValue: notification.item)
+                item: item
             )
             publishTurnEvent(.itemCompleted(itemCompleted), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemCompleted(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                item: item
+            )
         case let .planDelta(notification):
             let planDelta = CodexTurnPlanDelta(
                 threadID: notification.threadID,
@@ -921,6 +1116,11 @@ public actor CodexAppServer {
                 delta: notification.delta
             )
             publishTurnEvent(.planDelta(planDelta), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
         case let .turnPlanUpdated(notification):
             let planUpdate = CodexTurnPlanUpdate(
                 threadID: notification.threadID,
@@ -937,6 +1137,11 @@ public actor CodexAppServer {
                 delta: notification.delta
             )
             publishTurnEvent(.agentMessageDelta(delta), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
         case let .reasoningSummaryPartAdded(notification):
             let partAdded = CodexTurnReasoningSummaryPartAdded(
                 threadID: notification.threadID,
@@ -954,6 +1159,11 @@ public actor CodexAppServer {
                 delta: notification.delta
             )
             publishTurnEvent(.reasoningSummaryTextDelta(delta), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
         case let .reasoningTextDelta(notification):
             let delta = CodexTurnReasoningTextDelta(
                 threadID: notification.threadID,
@@ -963,6 +1173,11 @@ public actor CodexAppServer {
                 delta: notification.delta
             )
             publishTurnEvent(.reasoningTextDelta(delta), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
         case let .commandExecutionApprovalRequested(request):
             handleInteractiveApprovalRequest(request.publicValue)
         case let .fileChangeApprovalRequested(request):
@@ -978,12 +1193,17 @@ public actor CodexAppServer {
         case let .turnCompleted(notification):
             clearTurnActivity(turnID: notification.turn.id)
             threadObservableActivityStates[notification.threadID] = .init()
+            let turn = TurnInfo(wireValue: notification.turn)
             let completion = CodexTurnCompletion(
                 threadID: notification.threadID,
-                turn: TurnInfo(wireValue: notification.turn)
+                turn: turn
             )
             let turnEvent = CodexTurnEvent.completed(completion)
             publishTurnEvent(turnEvent, for: notification.turn.id, isTerminal: true)
+            try? await historyStore?.recordTurnCompleted(
+                threadID: notification.threadID,
+                turn: turn
+            )
         }
     }
 
@@ -1291,6 +1511,28 @@ public actor CodexAppServer {
         default:
             false
         }
+    }
+
+    private func requireHistoryStore(for operation: String) throws -> ThreadHistoryStore {
+        if let historyStore {
+            return historyStore
+        }
+
+        let reason: String
+        if let historyStoreInitializationError {
+            reason = """
+            SwiftASB could not initialize the internal thread history store for \(operation). \
+            The Core Data-backed history database failed to open or create successfully: \
+            \(historyStoreInitializationError.localizedDescription)
+            """
+        } else {
+            reason = """
+            SwiftASB could not initialize the internal thread history store for \(operation). \
+            No history store instance is currently available.
+            """
+        }
+
+        throw CodexAppServerError.invalidState(reason: reason)
     }
 
     private func requireOutstandingInteractiveRequest(
@@ -2325,6 +2567,17 @@ private extension CodexAppServer.ThreadStatusType {
             self = .notLoaded
         case .systemError:
             self = .systemError
+        }
+    }
+}
+
+private extension CodexProtocolThreadTurnsSortDirection {
+    init(_ direction: CodexAppServer.ThreadTurnsSortDirection) {
+        switch direction {
+        case .asc:
+            self = .asc
+        case .desc:
+            self = .desc
         }
     }
 }

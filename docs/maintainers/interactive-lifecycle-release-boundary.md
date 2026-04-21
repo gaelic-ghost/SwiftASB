@@ -113,12 +113,20 @@ belongs in the release boundary:
 
 ### Observable-only for now
 
-None yet, but this category is allowed when used deliberately.
+This category is now in real use.
 
-`Dashboard` and `Minimap` currently mirror selected latest-state summaries from
-already-public thread and turn events. They do not presently introduce any
-extra lifecycle family that exists only through Observation and not through the
-typed public streams.
+`Dashboard` and `Minimap` still derive their current-state summaries from the
+typed public lifecycle, but they now also expose a deliberate observable-only
+summary slice that is not represented as standalone public event cases.
+
+Current observable-only families:
+
+| Family | Current public surface | Why it is observable-only for now |
+| --- | --- | --- |
+| Per-turn tool, file-edit, and MCP activity summaries | `CodexTurnHandle.Minimap.callSnapshots` | Consumers often need a stable "calls made during this turn" list more than they need every raw progress delta as a first-class event enum. |
+| Thread-level aggregate tool activity | `CodexThread.Dashboard.toolCallingStatus` | This is a current-state blocked-or-busy summary, not canonical event history. |
+| Thread-level aggregate MCP activity | `CodexThread.Dashboard.mcpCallingStatus` | Same reason as tool activity: useful UI summary, but not a separate public event family yet. |
+| Thread-level compaction status | `CodexThread.Dashboard.isCompactingThreadContext` | Current blocked-thread state matters to consumers, but the package does not yet expose full compaction progress as a public event stream. |
 
 Future observable-only families are acceptable when all of the following are
 true:
@@ -133,16 +141,6 @@ true:
 - the docs say plainly that the observable surface is a current-state mirror,
   not the canonical event history
 
-Current likely examples for future consideration:
-
-- `CodexTurnHandle.Minimap` mirroring tool, MCP, and file-edit activity as a
-  list of per-call snapshots suitable for "calls made during this turn" UI
-- `CodexThread.Dashboard` mirroring thread-level blocked-state summaries such
-  as whether context compaction is currently active
-- thread- or turn-level aggregate tool-calling or MCP-calling status when that
-  helps UI consumers understand whether forward progress is waiting on an
-  external operation
-
 Current implementation intent for those mirrors:
 
 - a turn-scoped minimap is a handle-owned current-state companion and should be
@@ -152,13 +150,23 @@ Current implementation intent for those mirrors:
   retain an unbounded backlog of thread-level turn activity solely to serve a
   dashboard that may never be created
 
+Remaining gap inside the observable-only slice:
+
+- `Minimap.callSnapshots` currently summarizes call start and completion state,
+  plus a few display-oriented fields, but it does not yet expose richer
+  progress detail from command-output, file-change-output, or MCP-progress
+  notifications.
+- `Dashboard` currently summarizes whether tool work, MCP work, or thread
+  compaction is active or left error residue behind, but it does not yet expose
+  richer blocked-state reasons or compaction detail.
+
 ### Internal-only for now
 
 | Family | Why it remains internal |
 | --- | --- |
-| Command output delta notifications | Useful for future richer command/tool surfaces, but not yet part of the first supported public event contract. |
-| File-change output delta notifications | Same reason as command output deltas: generated and compiled, but not yet promoted with a deliberate public model. |
-| MCP tool-call progress notifications | Relevant for future richer tool-progress APIs, but intentionally deferred until a stronger public progress model is chosen. |
+| Command output delta notifications | The current minimap can already summarize command activity without them, so these remain internal until we decide whether richer command progress belongs as public events or as extra call-snapshot detail. |
+| File-change output delta notifications | The current minimap can already summarize file-edit activity without them, so these remain internal until we decide whether richer edit progress belongs as public events or as extra call-snapshot detail. |
+| MCP tool-call progress notifications | The current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
 | Model-rerouted notifications | Operationally interesting, but not yet part of the stable public lifecycle promised to consumers. |
 | Hook started / completed notifications | Internal runtime detail for now; no public wrapper model has been chosen. |
 | Raw response item completed notifications | Too low-level and transport-adjacent for the current public lifecycle boundary. |
@@ -220,6 +228,14 @@ notification families at all:
 That means the first interactive lifecycle boundary is defined by both
 notification promotion and server-request routing, not by notifications alone.
 
+It is also now defined partly by deliberate observable-only summaries:
+
+- `CodexTurnHandle.Minimap.callSnapshots` gives consumers a stable per-turn
+  list of command, file-edit, dynamic-tool, collab-tool, and MCP activity.
+- `CodexThread.Dashboard` gives consumers current-state thread summaries for
+  aggregate tool activity, aggregate MCP activity, and whether thread
+  compaction is currently active.
+
 ## What To Promote Next
 
 Only promote another internal family when all of the following are true:
@@ -235,6 +251,15 @@ Only promote another internal family when all of the following are true:
 If the destination is a companion surface, the design should state why the
 family works better as a current-state observable mirror than as a canonical
 typed event case.
+
+The current remaining promotion questions are therefore narrower than before:
+
+1. should richer command, file-edit, or MCP progress stay inside the existing
+   observable summaries, or graduate into additional public event cases?
+2. should context compaction remain a dashboard-only blocked-state summary, or
+   gain a stronger public event or state model?
+3. which thread-management methods must land next so the current interactive
+   slice is not trapped inside `thread/start`-only workflows?
 
 Until those conditions are met, the generated wire layer should remain broader
 than the public API on purpose.

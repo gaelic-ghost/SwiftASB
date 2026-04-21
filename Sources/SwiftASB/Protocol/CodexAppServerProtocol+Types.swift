@@ -44,6 +44,45 @@ struct CodexProtocolTurnInterruptParams: Encodable, Equatable, Sendable {
 	}
 }
 
+struct CodexProtocolThreadReadParams: Encodable, Equatable, Sendable {
+    let includeTurns: Bool?
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case includeTurns
+        case threadID = "threadId"
+    }
+}
+
+struct CodexProtocolThreadReadResponse: Decodable, Equatable, Sendable {
+    let thread: CodexWireThread
+}
+
+struct CodexProtocolThreadTurnsListParams: Encodable, Equatable, Sendable {
+    let cursor: String?
+    let limit: Int?
+    let sortDirection: CodexProtocolThreadTurnsSortDirection?
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case cursor
+        case limit
+        case sortDirection
+        case threadID = "threadId"
+    }
+}
+
+enum CodexProtocolThreadTurnsSortDirection: String, Codable, Equatable, Sendable {
+    case asc
+    case desc
+}
+
+struct CodexProtocolThreadTurnsListResponse: Decodable, Equatable, Sendable {
+    let backwardsCursor: String?
+    let data: [CodexWireTurn]
+    let nextCursor: String?
+}
+
 struct CodexProtocolTurnSteerParams: Encodable, Equatable, Sendable {
 	let expectedTurnID: String
 	let input: [CodexWireUserInput]
