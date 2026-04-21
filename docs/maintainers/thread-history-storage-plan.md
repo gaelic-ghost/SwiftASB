@@ -610,11 +610,14 @@ Once the local database has reached `serverParity` or `richerThanServer` for a
 thread, the public history surface should prefer local reads and searches by
 default.
 
-Recommended first public history helpers:
+Recommended next public history helpers:
 
-- `loadRecentTurns(limit:)`
-- `loadTurns(before:limit:)`
-- `loadTurns(after:limit:)`
+- a deliberate non-UI local-history surface that can read recent turns without
+  requiring a live `RecentTurns` observable
+- directional whole-turn paging helpers that mirror the current observable
+  paging model but return plain values instead of resident observable state
+- a public cursor contract only after we decide how much cursor lifetime and
+  stability we really want to promise outside the current thread-scoped cache
 
 Recommended later public search helpers:
 
@@ -745,6 +748,20 @@ Current status:
   - automatic edge prefetch when the consumer binds scroll position and
     visibility information into the observable
 - richer policy tuning and deeper item-budget heuristics are still open
+
+Recommended next steps:
+
+- keep tuning `RecentTurns` policy now that the first end-to-end resident cache
+  behavior is real:
+  - add a few intentional policy presets for different UI shapes
+  - decide whether item kinds should have weighted eviction cost instead of
+    plain item-count pressure
+  - decide whether very thin turns should be allowed to remain resident longer
+    than heavier turns under the same budget
+- add the first deliberate public history-reading helpers outside the
+  observable surface
+- flesh out archive-aware retention and eviction after the non-archived hot
+  cache feels stable
 
 ## Remaining Open Questions
 

@@ -90,8 +90,9 @@ The package can now:
 That means the current priority order is:
 
 1. Tighten the observable slice we just shipped by deciding whether any richer command-output, file-change-output, MCP-progress, or compaction detail belongs as additional public events or as further `Dashboard` and `Minimap` mirror state.
-2. Extend the new recent-turn observable beyond the first resident window so consumers can call explicit `loadOlderTurns(limit:)` and `loadNewerTurns(limit:)` over whole-turn windows, preferring local history before app-server fallback.
-3. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
+2. Keep tuning `RecentTurns` now that the first resident-window, scroll-aware cache policy, and item-budget eviction are shipped. The remaining work there is policy presets, smarter heuristics than raw item count, and deciding whether different item kinds should count differently toward eviction pressure.
+3. Add the first deliberate public history-reading helpers beyond the observable surface so callers who are not binding UI can still read local turn history intentionally.
+4. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
 5. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
 6. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
 7. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
