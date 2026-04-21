@@ -4,6 +4,7 @@ struct CodexAppServerProtocol {
     enum Method: String, Sendable, Codable {
         case initialize = "initialize"
         case initialized = "initialized"
+        case threadCompactStart = "thread/compact/start"
         case threadFork = "thread/fork"
         case threadList = "thread/list"
         case threadRead = "thread/read"
@@ -50,6 +51,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadStart, params: params),
             method: .threadStart
+        )
+    }
+
+    func makeThreadCompactStartRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadCompactStartParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadCompactStart, params: params),
+            method: .threadCompactStart
         )
     }
 
@@ -168,6 +179,18 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadStart,
             resultType: CodexWireThreadStartResponse.self
+        )
+    }
+
+    func decodeThreadCompactStartResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadCompactStartResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadCompactStart,
+            resultType: CodexProtocolThreadCompactStartResponse.self
         )
     }
 
@@ -376,6 +399,30 @@ struct CodexAppServerProtocol {
                         payload,
                         method: method,
                         resultType: CodexWireThreadTokenUsageUpdatedNotification.self
+                    )
+                )
+            case "hook/started":
+                return .hookStarted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireHookStartedNotification.self
+                    )
+                )
+            case "hook/completed":
+                return .hookCompleted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireHookCompletedNotification.self
+                    )
+                )
+            case "model/rerouted":
+                return .modelRerouted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireModelReroutedNotification.self
                     )
                 )
             case "turn/started":

@@ -71,8 +71,13 @@ The current public lifecycle contract is intentionally narrow and explicit:
   streams rather than a second control path.
 - `CodexTurnHandle.Minimap.callSnapshots` already gives a stable per-turn view
   of command, file-edit, dynamic-tool, collab-tool, and MCP activity.
+- `CodexTurnHandle.Minimap` now also exposes
+  `isCompactingThreadContext` so per-turn UI can show when context compaction
+  is actively running.
 - `CodexThread.Dashboard` already summarizes aggregate tool activity, aggregate
-  MCP activity, and whether thread compaction is currently active.
+  MCP activity, active hook runs plus their latest live status, and whether
+  thread compaction is currently active.
+- `CodexThread.compactContext()` now wraps `thread/compact/start` directly.
 - `CodexThread.makeRecentTurns(limit:)` now vends a thread-scoped recent-turns
   observable that prewarms from the local history store, supports explicit
   older/newer whole-turn window expansion, seeds upstream paging cursors even
@@ -135,9 +140,11 @@ Current non-goals and intentionally deferred areas are also explicit:
   and command detail, and the package now persists explicit fork lineage plus
   thread-scoped copied fork history, but a broader public history-reading API
   is still open.
-- Richer command-output, file-change-output, MCP-progress, and compaction detail
-  still remain internal while the package decides whether those belong as new
-  event cases or as deeper observable summary state.
+- Richer command-output, file-change-output, and MCP-progress detail still
+  remain internal while the package decides whether those belong as new event
+  cases or as deeper observable summary state.
+- Model reroute notifications remain internal and are currently logged
+  operationally rather than exposed as a public lifecycle surface.
 - The live approval-path probe is best-effort runtime observation, not a
   deterministic release gate, because the current Codex runtime does not
   reliably force an approval request on command.

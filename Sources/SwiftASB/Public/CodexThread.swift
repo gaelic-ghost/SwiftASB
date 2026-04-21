@@ -686,6 +686,68 @@ public struct CodexThread: Sendable {
     @MainActor
     @Observable
     public final class Dashboard {
+        public struct HookRun: Sendable, Equatable, Identifiable {
+            public struct Entry: Sendable, Equatable {
+                public enum Kind: String, Sendable, Equatable {
+                    case context
+                    case error
+                    case feedback
+                    case stop
+                    case warning
+                }
+
+                public let kind: Kind
+                public let text: String
+            }
+
+            public enum EventName: String, Sendable, Equatable {
+                case postToolUse
+                case preToolUse
+                case sessionStart
+                case stop
+                case userPromptSubmit
+            }
+
+            public enum ExecutionMode: String, Sendable, Equatable {
+                case async
+                case sync
+            }
+
+            public enum HandlerType: String, Sendable, Equatable {
+                case agent
+                case command
+                case prompt
+            }
+
+            public enum Scope: String, Sendable, Equatable {
+                case thread
+                case turn
+            }
+
+            public enum Status: String, Sendable, Equatable {
+                case blocked
+                case completed
+                case failed
+                case running
+                case stopped
+            }
+
+            public let id: String
+            public let completedAt: Int?
+            public let displayOrder: Int
+            public let durationMS: Int?
+            public let entries: [Entry]
+            public let eventName: EventName
+            public let executionMode: ExecutionMode
+            public let handlerType: HandlerType
+            public let scope: Scope
+            public let sourcePath: String
+            public let startedAt: Int
+            public let status: Status
+            public let statusMessage: String?
+            public let turnID: String?
+        }
+
         public enum ActivityStatus: String, Sendable, Equatable {
             case errored
             case idle
@@ -696,6 +758,7 @@ public struct CodexThread: Sendable {
             var activeMcpItemIDs: Set<String> = []
             var activeToolLikeItemIDs: Set<String> = []
             var hasMcpErrorResidue = false
+            var hookRuns: [HookRun] = []
             var hasToolErrorResidue = false
             var isCompactingThreadContext = false
         }
@@ -710,12 +773,13 @@ public struct CodexThread: Sendable {
         public private(set) var preview: String
         public private(set) var status: CodexAppServer.ThreadStatus
         public private(set) var toolCallingStatus: ActivityStatus
+        public private(set) var hookRuns: [HookRun]
 
         @ObservationIgnored
         private var eventTask: Task<Void, Never>?
 
         @ObservationIgnored
-        private var turnActivityTask: Task<Void, Never>?
+        private var activityTask: Task<Void, Never>?
 
         @ObservationIgnored
         private var activityState: ActivityState
@@ -725,7 +789,7 @@ public struct CodexThread: Sendable {
             initialInfo: CodexAppServer.ThreadInfo,
             events: AsyncThrowingStream<CodexThreadEvent, Error>,
             initialActivityState: ActivityState,
-            turnEvents: AsyncThrowingStream<CodexTurnEvent, Error>
+            activityUpdates: AsyncStream<ActivityState>
         ) {
             self.threadID = threadID
             self.isArchived = false
@@ -735,6 +799,7 @@ public struct CodexThread: Sendable {
             self.preview = initialInfo.preview
             self.status = initialInfo.status
             self.activityState = initialActivityState
+            self.hookRuns = initialActivityState.hookRuns
             self.isCompactingThreadContext = initialActivityState.isCompactingThreadContext
             self.mcpCallingStatus = Self.activityStatus(
                 activeIDs: initialActivityState.activeMcpItemIDs,
@@ -759,24 +824,18 @@ public struct CodexThread: Sendable {
                 }
             }
 
-            turnActivityTask = Task { [weak self] in
+            activityTask = Task { [weak self] in
                 guard let self else { return }
 
-                do {
-                    for try await event in turnEvents {
-                        self.apply(turnEvent: event)
-                    }
-                } catch is CancellationError {
-                    return
-                } catch {
-                    return
+                for await state in activityUpdates {
+                    self.apply(activityState: state)
                 }
             }
         }
 
         deinit {
             eventTask?.cancel()
-            turnActivityTask?.cancel()
+            activityTask?.cancel()
         }
 
         private func apply(_ event: CodexThreadEvent) {
@@ -806,55 +865,13 @@ public struct CodexThread: Sendable {
             }
         }
 
-        private func apply(turnEvent: CodexTurnEvent) {
-            switch turnEvent {
-            case let .itemStarted(itemStarted):
-                handleItemStarted(itemStarted.item)
-            case let .itemCompleted(itemCompleted):
-                handleItemCompleted(itemCompleted.item)
-            case .completed:
-                activityState = .init()
-                syncActivityPresentation()
-            default:
-                return
-            }
-        }
-
-        private func handleItemStarted(_ item: CodexTurnItem) {
-            switch item.kind {
-            case .commandExecution, .dynamicToolCall, .collabAgentToolCall, .fileChange:
-                activityState.activeToolLikeItemIDs.insert(item.id)
-            case .mcpToolCall:
-                activityState.activeMcpItemIDs.insert(item.id)
-            case .contextCompaction:
-                activityState.isCompactingThreadContext = true
-            default:
-                return
-            }
-            syncActivityPresentation()
-        }
-
-        private func handleItemCompleted(_ item: CodexTurnItem) {
-            switch item.kind {
-            case .commandExecution, .dynamicToolCall, .collabAgentToolCall, .fileChange:
-                activityState.activeToolLikeItemIDs.remove(item.id)
-                if item.isErrored {
-                    activityState.hasToolErrorResidue = true
-                }
-            case .mcpToolCall:
-                activityState.activeMcpItemIDs.remove(item.id)
-                if item.isErrored {
-                    activityState.hasMcpErrorResidue = true
-                }
-            case .contextCompaction:
-                activityState.isCompactingThreadContext = false
-            default:
-                return
-            }
+        private func apply(activityState: ActivityState) {
+            self.activityState = activityState
             syncActivityPresentation()
         }
 
         private func syncActivityPresentation() {
+            hookRuns = activityState.hookRuns
             isCompactingThreadContext = activityState.isCompactingThreadContext
             toolCallingStatus = Self.activityStatus(
                 activeIDs: activityState.activeToolLikeItemIDs,
@@ -1002,14 +1019,18 @@ public struct CodexThread: Sendable {
     public func makeDashboard() async -> Dashboard {
         let events = await appServer.threadEventStream(threadID: id)
         let initialActivityState = await appServer.threadObservableActivityState(threadID: id)
-        let turnEvents = await appServer.threadTurnEventStream(threadID: id)
+        let activityUpdates = await appServer.threadObservableActivityStream(threadID: id)
         return Dashboard(
             threadID: id,
             initialInfo: info,
             events: events,
             initialActivityState: initialActivityState,
-            turnEvents: turnEvents
+            activityUpdates: activityUpdates
         )
+    }
+
+    public func compactContext() async throws {
+        try await appServer.compactThread(.init(threadID: id))
     }
 
     @MainActor

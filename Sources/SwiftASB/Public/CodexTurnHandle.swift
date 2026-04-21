@@ -113,6 +113,7 @@ public struct CodexTurnHandle: Sendable {
         public let turnID: String
         public private(set) var callSnapshots: [CallSnapshot]
         public private(set) var currentTurn: CodexAppServer.TurnInfo
+        public private(set) var isCompactingThreadContext: Bool
         public private(set) var latestApprovalRequest: CodexApprovalRequest?
         public private(set) var latestAgentMessageDelta: CodexTurnAgentMessageDelta?
         public private(set) var latestCompletedItem: CodexTurnItemCompleted?
@@ -140,6 +141,7 @@ public struct CodexTurnHandle: Sendable {
             self.turnID = initialTurn.id
             self.callSnapshots = []
             self.currentTurn = initialTurn
+            self.isCompactingThreadContext = false
             self.latestApprovalRequest = nil
             self.latestAgentMessageDelta = nil
             self.latestCompletedItem = nil
@@ -199,9 +201,17 @@ public struct CodexTurnHandle: Sendable {
                 }
             case let .itemStarted(itemStarted):
                 latestStartedItem = itemStarted
+                if itemStarted.item.kind == .contextCompaction {
+                    isCompactingThreadContext = true
+                    return
+                }
                 upsertCallSnapshot(from: itemStarted.item, status: .inProgress)
             case let .itemCompleted(itemCompleted):
                 latestCompletedItem = itemCompleted
+                if itemCompleted.item.kind == .contextCompaction {
+                    isCompactingThreadContext = false
+                    return
+                }
                 upsertCallSnapshot(
                     from: itemCompleted.item,
                     status: Self.callSnapshotStatus(for: itemCompleted.item)
@@ -217,6 +227,7 @@ public struct CodexTurnHandle: Sendable {
             case let .completed(completion):
                 latestCompletion = completion
                 currentTurn = completion.turn
+                isCompactingThreadContext = false
             }
         }
 

@@ -23,7 +23,8 @@ snapshot." Generated schema breadth is not itself the release boundary.
 The first interactive lifecycle release supports:
 
 - `CodexAppServer` startup, shutdown, initialize, thread start, turn start,
-  turn steering, and turn interruption
+  turn steering, turn interruption, thread management, and manual thread
+  context compaction start
 - `CodexThread` as the conversation-scoped public handle
 - `CodexTurnHandle` as the active-turn public handle
 - typed thread and turn event streams as the canonical lifecycle surface
@@ -34,9 +35,8 @@ The first interactive lifecycle release supports:
 The first interactive lifecycle release does not support:
 
 - public exposure of generated `CodexWire...` types
-- public APIs for `thread/resume`, `thread/fork`, `thread/read`,
-  `thread/rollback`, or broader thread-management endpoints not yet wrapped by
-  the package
+- public APIs for `thread/rollback` or every broader thread-management endpoint
+  not yet wrapped by the package
 - public APIs for every generated notification family just because the schema
   already contains them
 - an accidental "second event system" where observable companions drift into a
@@ -124,8 +124,10 @@ Current observable-only families:
 | Family | Current public surface | Why it is observable-only for now |
 | --- | --- | --- |
 | Per-turn tool, file-edit, and MCP activity summaries | `CodexTurnHandle.Minimap.callSnapshots` | Consumers often need a stable "calls made during this turn" list more than they need every raw progress delta as a first-class event enum. |
+| Per-turn compaction status | `CodexTurnHandle.Minimap.isCompactingThreadContext` | Turn-scoped UI often needs to know when the current turn is blocked on context compaction, but the package still does not expose raw compaction notifications as first-class public events. |
 | Thread-level aggregate tool activity | `CodexThread.Dashboard.toolCallingStatus` | This is a current-state blocked-or-busy summary, not canonical event history. |
 | Thread-level aggregate MCP activity | `CodexThread.Dashboard.mcpCallingStatus` | Same reason as tool activity: useful UI summary, but not a separate public event family yet. |
+| Thread-level active hook runs | `CodexThread.Dashboard.hookRuns` | Consumers need a stable current-state view of which hooks are running or have just completed more than they need raw hook notifications as first-class event enums. |
 | Thread-level compaction status | `CodexThread.Dashboard.isCompactingThreadContext` | Current blocked-thread state matters to consumers, but the package does not yet expose full compaction progress as a public event stream. |
 
 Future observable-only families are acceptable when all of the following are
@@ -157,8 +159,9 @@ Remaining gap inside the observable-only slice:
   progress detail from command-output, file-change-output, or MCP-progress
   notifications.
 - `Dashboard` currently summarizes whether tool work, MCP work, or thread
-  compaction is active or left error residue behind, but it does not yet expose
-  richer blocked-state reasons or compaction detail.
+  compaction is active or left error residue behind, and it now mirrors active
+  hook runs plus their latest status, but it does not yet expose richer command
+  or file progress detail.
 
 ### Internal-only for now
 
@@ -167,10 +170,10 @@ Remaining gap inside the observable-only slice:
 | Command output delta notifications | The current minimap can already summarize command activity without them, so these remain internal until we decide whether richer command progress belongs as public events or as extra call-snapshot detail. |
 | File-change output delta notifications | The current minimap can already summarize file-edit activity without them, so these remain internal until we decide whether richer edit progress belongs as public events or as extra call-snapshot detail. |
 | MCP tool-call progress notifications | The current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
-| Model-rerouted notifications | Operationally interesting, but not yet part of the stable public lifecycle promised to consumers. |
-| Hook started / completed notifications | Internal runtime detail for now; no public wrapper model has been chosen. |
+| Model-rerouted notifications | Operationally interesting, but not yet part of the stable public lifecycle promised to consumers. These currently stay internal and are logged for operator diagnostics. |
+| Hook started / completed notifications | The raw notifications remain internal; consumers see their current-state effect through `CodexThread.Dashboard.hookRuns` instead of through new event-enum cases. |
 | Raw response item completed notifications | Too low-level and transport-adjacent for the current public lifecycle boundary. |
-| Context compacted notifications | Interesting for diagnostics, but not yet surfaced as part of the supported public Swift API. |
+| Context compacted notifications | Interesting for diagnostics, but still not surfaced as a first-class public event; consumers currently see compaction through `Dashboard` and `Minimap` state plus explicit `compactContext()` control. |
 | Error notifications | The current public contract keeps lifecycle failures unified under `CodexAppServerError` instead of streaming raw protocol error-notification payloads. |
 | Guardian approval review started / completed notifications | The generated wire comments already mark these payloads as unstable, so they should stay internal until upstream stabilizes them and the package decides on a real public model. |
 
@@ -205,8 +208,8 @@ families break down like this:
 | `FileChangeOutputDeltaNotification` | `Internal-only for now` |
 | `McpToolCallProgressNotification` | `Internal-only for now` |
 | `ModelReroutedNotification` | `Internal-only for now` |
-| `HookStartedNotification` | `Internal-only for now` |
-| `HookCompletedNotification` | `Internal-only for now` |
+| `HookStartedNotification` | `Observable-only for now` |
+| `HookCompletedNotification` | `Observable-only for now` |
 | `RawResponseItemCompletedNotification` | `Internal-only for now` |
 | `ContextCompactedNotification` | `Internal-only for now` |
 | `ErrorNotification` | `Internal-only for now` |
@@ -232,9 +235,11 @@ It is also now defined partly by deliberate observable-only summaries:
 
 - `CodexTurnHandle.Minimap.callSnapshots` gives consumers a stable per-turn
   list of command, file-edit, dynamic-tool, collab-tool, and MCP activity.
+- `CodexTurnHandle.Minimap.isCompactingThreadContext` gives consumers a stable
+  per-turn answer to whether context compaction is currently active.
 - `CodexThread.Dashboard` gives consumers current-state thread summaries for
-  aggregate tool activity, aggregate MCP activity, and whether thread
-  compaction is currently active.
+  aggregate tool activity, aggregate MCP activity, active hook runs, and
+  whether thread compaction is currently active.
 
 ## What To Promote Next
 
@@ -256,8 +261,8 @@ The current remaining promotion questions are therefore narrower than before:
 
 1. should richer command, file-edit, or MCP progress stay inside the existing
    observable summaries, or graduate into additional public event cases?
-2. should context compaction remain a dashboard-only blocked-state summary, or
-   gain a stronger public event or state model?
+2. should command and file detail become dedicated companion observables rather
+   than widening the existing event enums?
 3. which thread-management methods must land next so the current interactive
    slice is not trapped inside `thread/start`-only workflows?
 

@@ -96,6 +96,8 @@ build_batch \
   InitializeParams \
   ThreadStartParams \
   ThreadStartResponse \
+  ThreadCompactStartParams \
+  ThreadCompactStartResponse \
   ThreadStartedNotification \
   ThreadStatusChangedNotification \
   ThreadNameUpdatedNotification \

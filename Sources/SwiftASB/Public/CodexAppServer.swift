@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 public actor CodexAppServer {
     public struct CLIExecutableDiagnostics: Sendable, Equatable {
@@ -277,6 +278,14 @@ public actor CodexAppServer {
     public struct ThreadReadResult: Sendable, Equatable {
         public let thread: ThreadInfo
         public let turns: [TurnInfo]
+    }
+
+    public struct ThreadCompactRequest: Sendable, Equatable {
+        public var threadID: String
+
+        public init(threadID: String) {
+            self.threadID = threadID
+        }
     }
 
     public enum ThreadListSortKey: String, Sendable, Equatable {
@@ -576,6 +585,7 @@ public actor CodexAppServer {
         var activeMcpItemIDs: Set<String> = []
         var hasToolErrorResidue = false
         var hasMcpErrorResidue = false
+        var hookRuns: [CodexThread.Dashboard.HookRun] = []
         var isCompactingThreadContext = false
     }
 
@@ -598,11 +608,16 @@ public actor CodexAppServer {
 
     private let transport: any CodexAppServerTransporting
     private let protocolLayer: CodexAppServerProtocol
+    private static let logger = Logger(
+        subsystem: "com.gaelic-ghost.SwiftASB",
+        category: "CodexAppServer"
+    )
     private let historyStore: ThreadHistoryStore?
     private let historyStoreInitializationError: Error?
     private var serverEventTask: Task<Void, Never>?
     private var threadStatuses: [String: ThreadStatus] = [:]
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
+    private var threadObservableActivityContinuations: [String: [UUID: AsyncStream<CodexThread.Dashboard.ActivityState>.Continuation]] = [:]
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var threadTurnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
@@ -674,6 +689,7 @@ public actor CodexAppServer {
         serverEventTask?.cancel()
         serverEventTask = nil
         finishAllThreadEventStreams(throwing: nil)
+        finishAllThreadObservableActivityStreams()
         finishAllTurnEventStreams(throwing: nil)
         await transport.stop()
         hasStarted = false
@@ -835,6 +851,26 @@ public actor CodexAppServer {
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/fork")
+        }
+    }
+
+    public func compactThread(_ request: ThreadCompactRequest) async throws {
+        try requireInitialized(for: "thread/compact/start")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let payload = try protocolLayer.makeThreadCompactStartRequest(
+                id: requestID,
+                params: .init(threadID: request.threadID)
+            )
+            let response = try await transport.send(payload, id: requestID)
+            _ = try protocolLayer.decodeThreadCompactStartResponse(
+                response,
+                expectedID: requestID
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/compact/start")
         }
     }
 
@@ -1097,9 +1133,32 @@ public actor CodexAppServer {
             activeMcpItemIDs: state.activeMcpItemIDs,
             activeToolLikeItemIDs: state.activeToolLikeItemIDs,
             hasMcpErrorResidue: state.hasMcpErrorResidue,
+            hookRuns: state.hookRuns,
             hasToolErrorResidue: state.hasToolErrorResidue,
             isCompactingThreadContext: state.isCompactingThreadContext
         )
+    }
+
+    internal func threadObservableActivityStream(
+        threadID: String
+    ) -> AsyncStream<CodexThread.Dashboard.ActivityState> {
+        let streamID = UUID()
+
+        return AsyncStream { continuation in
+            var continuations = threadObservableActivityContinuations[threadID] ?? [:]
+            continuations[streamID] = continuation
+            threadObservableActivityContinuations[threadID] = continuations
+            continuation.yield(threadObservableActivityState(threadID: threadID))
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeThreadObservableActivityContinuation(
+                        streamID: streamID,
+                        threadID: threadID
+                    )
+                }
+            }
+        }
     }
 
     internal func debugThreadHistorySnapshot(
@@ -1423,8 +1482,26 @@ public actor CodexAppServer {
 
     private func clearTurnActivities(threadID: String) {
         threadTurnActivities.removeValue(forKey: threadID)
-        threadObservableActivityStates.removeValue(forKey: threadID)
         turnThreadIDs = turnThreadIDs.filter { $0.value != threadID }
+    }
+
+    private func settleThreadObservableActivity(threadID: String) {
+        var state = threadObservableActivityStates[threadID] ?? .init()
+        state.activeMcpItemIDs.removeAll()
+        state.activeToolLikeItemIDs.removeAll()
+        state.isCompactingThreadContext = false
+        threadObservableActivityStates[threadID] = state
+        publishThreadObservableActivityState(threadID: threadID)
+    }
+
+    private func finishThreadObservableActivityStreams(threadID: String) {
+        guard let continuations = threadObservableActivityContinuations.removeValue(forKey: threadID)?.values else {
+            return
+        }
+
+        for continuation in continuations {
+            continuation.finish()
+        }
     }
 
     private func startServerEventLoop() {
@@ -1488,6 +1565,8 @@ public actor CodexAppServer {
         case let .threadClosed(notification):
             threadStatuses.removeValue(forKey: notification.threadID)
             clearTurnActivities(threadID: notification.threadID)
+            settleThreadObservableActivity(threadID: notification.threadID)
+            finishThreadObservableActivityStreams(threadID: notification.threadID)
             let threadEvent = CodexThreadEvent.closed(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: true)
             try? await historyStore?.recordThreadClosed(threadID: notification.threadID)
@@ -1565,6 +1644,22 @@ public actor CodexAppServer {
                 threadID: notification.threadID,
                 turnID: notification.turnID,
                 item: item
+            )
+        case let .hookStarted(notification):
+            updateThreadObservableActivityForHookRun(
+                notification.run,
+                turnID: notification.turnID,
+                threadID: notification.threadID
+            )
+        case let .hookCompleted(notification):
+            updateThreadObservableActivityForHookRun(
+                notification.run,
+                turnID: notification.turnID,
+                threadID: notification.threadID
+            )
+        case let .modelRerouted(notification):
+            Self.logger.notice(
+                "Model rerouted for thread \(notification.threadID, privacy: .public) turn \(notification.turnID, privacy: .public): \(notification.fromModel, privacy: .public) -> \(notification.toModel, privacy: .public) because \(notification.reason.rawValue, privacy: .public)"
             )
         case let .planDelta(notification):
             let planDelta = CodexTurnPlanDelta(
@@ -1650,7 +1745,7 @@ public actor CodexAppServer {
             handleServerRequestResolved(notification)
         case let .turnCompleted(notification):
             clearTurnActivity(turnID: notification.turn.id)
-            threadObservableActivityStates[notification.threadID] = .init()
+            settleThreadObservableActivity(threadID: notification.threadID)
             let turn = TurnInfo(wireValue: notification.turn)
             try? await historyStore?.recordTurnCompleted(
                 threadID: notification.threadID,
@@ -1670,6 +1765,7 @@ public actor CodexAppServer {
 
         guard hasStarted, !isStopping else {
             finishAllThreadEventStreams(throwing: nil)
+            finishAllThreadObservableActivityStreams()
             finishAllTurnEventStreams(throwing: nil)
             return
         }
@@ -1680,6 +1776,7 @@ public actor CodexAppServer {
                 reason: "Codex app-server stopped delivering thread notifications before pending thread streams finished."
             )
         )
+        finishAllThreadObservableActivityStreams()
         finishAllTurnEventStreams(
             throwing: CodexAppServerError.transportFailure(
                 operation: "server events",
@@ -1819,6 +1916,16 @@ public actor CodexAppServer {
         }
     }
 
+    private func removeThreadObservableActivityContinuation(streamID: UUID, threadID: String) {
+        guard var continuations = threadObservableActivityContinuations[threadID] else { return }
+        continuations.removeValue(forKey: streamID)
+        if continuations.isEmpty {
+            threadObservableActivityContinuations.removeValue(forKey: threadID)
+        } else {
+            threadObservableActivityContinuations[threadID] = continuations
+        }
+    }
+
     private func registerThreadTurnEventContinuation(
         _ continuation: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation,
         streamID: UUID,
@@ -1862,6 +1969,17 @@ public actor CodexAppServer {
             if isTerminal {
                 continuation.finish()
             }
+        }
+    }
+
+    private func publishThreadObservableActivityState(threadID: String) {
+        guard let continuations = threadObservableActivityContinuations[threadID], !continuations.isEmpty else {
+            return
+        }
+
+        let state = threadObservableActivityState(threadID: threadID)
+        for continuation in continuations.values {
+            continuation.yield(state)
         }
     }
 
@@ -1929,6 +2047,15 @@ public actor CodexAppServer {
         }
     }
 
+    private func finishAllThreadObservableActivityStreams() {
+        let activeContinuations = threadObservableActivityContinuations.values.flatMap(\.values)
+        threadObservableActivityContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            continuation.finish()
+        }
+    }
+
     private func updateThreadObservableActivityForItemStarted(
         _ item: CodexWireThreadItem,
         threadID: String
@@ -1945,6 +2072,7 @@ public actor CodexAppServer {
             break
         }
         threadObservableActivityStates[threadID] = state
+        publishThreadObservableActivityState(threadID: threadID)
     }
 
     private func updateThreadObservableActivityForItemCompleted(
@@ -1969,6 +2097,34 @@ public actor CodexAppServer {
             break
         }
         threadObservableActivityStates[threadID] = state
+        publishThreadObservableActivityState(threadID: threadID)
+    }
+
+    private func updateThreadObservableActivityForHookRun(
+        _ run: CodexWireHookRunSummary,
+        turnID: String?,
+        threadID: String
+    ) {
+        var state = threadObservableActivityStates[threadID] ?? .init()
+        let hookRun = CodexThread.Dashboard.HookRun(
+            wireValue: run,
+            turnID: turnID
+        )
+
+        if let index = state.hookRuns.firstIndex(where: { $0.id == hookRun.id }) {
+            state.hookRuns[index] = hookRun
+        } else {
+            state.hookRuns.append(hookRun)
+        }
+        state.hookRuns.sort { lhs, rhs in
+            if lhs.displayOrder == rhs.displayOrder {
+                return lhs.startedAt < rhs.startedAt
+            }
+            return lhs.displayOrder < rhs.displayOrder
+        }
+
+        threadObservableActivityStates[threadID] = state
+        publishThreadObservableActivityState(threadID: threadID)
     }
 
     private func itemHasError(status: String?) -> Bool {
@@ -3063,6 +3219,125 @@ private extension CodexAppServer.ThreadStatus {
             type: .init(wireValue: wireValue.type),
             activeFlags: (wireValue.activeFlags ?? []).map { CodexAppServer.ThreadActiveFlag(wireValue: $0) }
         )
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun {
+    init(
+        wireValue: CodexWireHookRunSummary,
+        turnID: String?
+    ) {
+        self.init(
+            id: wireValue.id,
+            completedAt: wireValue.completedAt,
+            displayOrder: wireValue.displayOrder,
+            durationMS: wireValue.durationMS,
+            entries: wireValue.entries.map(Entry.init(wireValue:)),
+            eventName: .init(wireValue: wireValue.eventName),
+            executionMode: .init(wireValue: wireValue.executionMode),
+            handlerType: .init(wireValue: wireValue.handlerType),
+            scope: .init(wireValue: wireValue.scope),
+            sourcePath: wireValue.sourcePath,
+            startedAt: wireValue.startedAt,
+            status: .init(wireValue: wireValue.status),
+            statusMessage: wireValue.statusMessage,
+            turnID: turnID
+        )
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.Entry {
+    init(wireValue: CodexWireHookOutputEntry) {
+        self.init(
+            kind: .init(wireValue: wireValue.kind),
+            text: wireValue.text
+        )
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.Entry.Kind {
+    init(wireValue: CodexWireHookOutputEntryKind) {
+        switch wireValue {
+        case .context:
+            self = .context
+        case .error:
+            self = .error
+        case .feedback:
+            self = .feedback
+        case .stop:
+            self = .stop
+        case .warning:
+            self = .warning
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.EventName {
+    init(wireValue: CodexWireHookEventName) {
+        switch wireValue {
+        case .postToolUse:
+            self = .postToolUse
+        case .preToolUse:
+            self = .preToolUse
+        case .sessionStart:
+            self = .sessionStart
+        case .stop:
+            self = .stop
+        case .userPromptSubmit:
+            self = .userPromptSubmit
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.ExecutionMode {
+    init(wireValue: CodexWireHookExecutionMode) {
+        switch wireValue {
+        case .async:
+            self = .async
+        case .sync:
+            self = .sync
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.HandlerType {
+    init(wireValue: CodexWireHookHandlerType) {
+        switch wireValue {
+        case .agent:
+            self = .agent
+        case .command:
+            self = .command
+        case .prompt:
+            self = .prompt
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.Scope {
+    init(wireValue: CodexWireHookScope) {
+        switch wireValue {
+        case .thread:
+            self = .thread
+        case .turn:
+            self = .turn
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.Status {
+    init(wireValue: CodexWireHookRunStatus) {
+        switch wireValue {
+        case .blocked:
+            self = .blocked
+        case .completed:
+            self = .completed
+        case .failed:
+            self = .failed
+        case .running:
+            self = .running
+        case .stopped:
+            self = .stopped
+        }
     }
 }
 

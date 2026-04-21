@@ -513,26 +513,11 @@ struct CodexAppServerTests {
                 "nextCursor": "cursor-next",
             ]
         )
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -617,6 +602,7 @@ struct CodexAppServerTests {
         #expect(activeThread.statusType == "idle")
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("resumes a stored thread and hydrates resumed history into the local history store")
@@ -669,26 +655,11 @@ struct CodexAppServerTests {
                 ],
             ]
         )
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -736,6 +707,7 @@ struct CodexAppServerTests {
         #expect(threadSnapshot.state.completeness == "serverParity")
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("forks a stored thread and persists fork lineage plus copied history")
@@ -789,26 +761,11 @@ struct CodexAppServerTests {
                 ],
             ]
         )
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -847,6 +804,7 @@ struct CodexAppServerTests {
         #expect(threadSnapshot.state.completeness == "serverParity")
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("builds a recent-turns observable from the local history store")
@@ -920,26 +878,11 @@ struct CodexAppServerTests {
     @Test("loads older recent turns from the local history store before app-server fallback")
     func loadsOlderRecentTurnsLocallyFirst() async throws {
         let transport = FakeCodexAppServerTransport()
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -988,6 +931,7 @@ struct CodexAppServerTests {
         #expect(methodsBeforeOlderLoad == methodsAfterOlderLoad)
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("seeds remote older cursors for recent turns even when the initial window is local")
@@ -1026,26 +970,11 @@ struct CodexAppServerTests {
                 ],
             ]
         )
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -1139,6 +1068,7 @@ struct CodexAppServerTests {
         #expect(await MainActor.run { recentTurns.nextOlderCursor } == nil)
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("bound scroll position triggers automatic older-turn prefetch near the resident edge")
@@ -1177,26 +1107,11 @@ struct CodexAppServerTests {
                 ],
             ]
         )
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -1291,6 +1206,7 @@ struct CodexAppServerTests {
         )
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("visible turn updates protect the visible resident turn during cache trimming")
@@ -1652,26 +1568,11 @@ struct CodexAppServerTests {
                 "nextCursor": "cursor-older-1",
             ]
         )
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -1721,6 +1622,7 @@ struct CodexAppServerTests {
         #expect(residentItemCost == 12)
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("low-value items are slimmed before completed turns are evicted")
@@ -1961,26 +1863,11 @@ struct CodexAppServerTests {
     @Test("reads a stored thread and hydrates returned turns into the local history store")
     func readsStoredThreadAndHydratesHistory() async throws {
         let transport = FakeCodexAppServerTransport()
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -2027,6 +1914,7 @@ struct CodexAppServerTests {
         #expect(threadSnapshot.state.completeness == "serverParity")
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("preserves richer local item detail when thread/read returns a thinner overlapping turn")
@@ -2064,26 +1952,11 @@ struct CodexAppServerTests {
                 ],
             ]
         )
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -2156,6 +2029,7 @@ struct CodexAppServerTests {
         #expect(threadSnapshot.state.completeness == "richerThanServer")
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("promotes overlapping item status to terminal server state without dropping richer local detail")
@@ -2193,26 +2067,11 @@ struct CodexAppServerTests {
                 ],
             ]
         )
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -2283,31 +2142,17 @@ struct CodexAppServerTests {
         #expect(threadSnapshot.state.completeness == "richerThanServer")
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("lists stored thread turns and hydrates paged history into the local history store")
     func listsStoredThreadTurnsAndHydratesHistory() async throws {
         let transport = FakeCodexAppServerTransport()
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -2351,31 +2196,17 @@ struct CodexAppServerTests {
         #expect(threadSnapshot.turns[1].id == "turn-newer")
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("lists stored thread turns for a thread that has not been hydrated locally yet")
     func listsStoredThreadTurnsForUnknownLocalThread() async throws {
         let transport = FakeCodexAppServerTransport()
-        let temporaryDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: temporaryDirectory,
-            withIntermediateDirectories: true
-        )
-        let historyStore = try ThreadHistoryStore(
-            configuration: .init(
-                inMemory: false,
-                storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
-            )
-        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
         let client = CodexAppServer(
             transport: transport,
             historyStore: historyStore
         )
-
-        defer {
-            try? FileManager.default.removeItem(at: temporaryDirectory)
-        }
 
         try await client.start()
         _ = try await client.initialize(
@@ -2405,6 +2236,7 @@ struct CodexAppServerTests {
         #expect(threadSnapshot.turns.count == 2)
 
         await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
     @Test("streams thread lifecycle notifications through CodexThread.events")
@@ -2613,6 +2445,45 @@ struct CodexAppServerTests {
         #expect(input.count == 1)
         #expect(input.first?["type"] as? String == "text")
         #expect(input.first?["text"] as? String == "Please make it shorter and more direct.")
+
+        await client.stop()
+    }
+
+    @Test("compacts thread context through CodexThread")
+    func compactsThreadContextThroughThreadHandle() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        try await thread.compactContext()
+
+        let recordedMethods = await transport.recordedMethods
+        #expect(recordedMethods == ["initialize", "initialized", "thread/start", "thread/compact/start"])
+
+        let compactRequest = try #require(await transport.recordedRequestPayload(for: "thread/compact/start"))
+        let requestObject = try #require(
+            try JSONSerialization.jsonObject(with: compactRequest) as? [String: Any]
+        )
+        let params = try #require(requestObject["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
 
         await client.stop()
     }
@@ -3006,15 +2877,28 @@ struct CodexAppServerTests {
         #expect(dashboard.isClosed == false)
         #expect(dashboard.latestTokenUsage == nil)
 
+        await transport.emitHookStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id
+        )
+
+        try await waitForCondition {
+            await client.threadObservableActivityState(threadID: thread.id).hookRuns.count == 1
+        }
+
         await waitForObservableState {
             dashboard.toolCallingStatus == .inProgress
                 && dashboard.mcpCallingStatus == .inProgress
                 && dashboard.isCompactingThreadContext
+                && dashboard.hookRuns.count == 1
         }
 
         #expect(dashboard.toolCallingStatus == .inProgress)
         #expect(dashboard.mcpCallingStatus == .inProgress)
         #expect(dashboard.isCompactingThreadContext == true)
+        #expect(dashboard.hookRuns.count == 1)
+        #expect(dashboard.hookRuns[0].status == .running)
+        #expect(dashboard.hookRuns[0].turnID == turnHandle.turn.id)
 
         await transport.emitItemCompleted(
             threadID: thread.id,
@@ -3049,11 +2933,21 @@ struct CodexAppServerTests {
                 "type": "contextCompaction",
             ]
         )
+        await transport.emitHookCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            status: "completed"
+        )
+        await transport.emitModelRerouted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id
+        )
 
         await waitForObservableState {
             dashboard.toolCallingStatus == .errored
                 && dashboard.mcpCallingStatus == .idle
                 && dashboard.isCompactingThreadContext == false
+                && dashboard.hookRuns.first?.status == .completed
         }
 
         await transport.emitThreadStarted(threadID: thread.id)
@@ -3077,6 +2971,9 @@ struct CodexAppServerTests {
         #expect(dashboard.isArchived == true)
         #expect(dashboard.isClosed == true)
         #expect(dashboard.isCompactingThreadContext == false)
+        #expect(dashboard.hookRuns.count == 1)
+        #expect(dashboard.hookRuns[0].status == .completed)
+        #expect(dashboard.hookRuns[0].entries.first?.kind == .feedback)
         #expect(dashboard.latestTokenUsage?.turnID == "turn-123")
         #expect(dashboard.latestTokenUsage?.total.totalTokens == 650)
         #expect(dashboard.toolCallingStatus == .errored)
@@ -3151,6 +3048,15 @@ struct CodexAppServerTests {
                 "type": "mcpToolCall",
             ]
         )
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-compact-1",
+            item: [
+                "id": "item-compact-1",
+                "type": "contextCompaction",
+            ]
+        )
         await transport.emitPlanDelta(
             threadID: thread.id,
             turnID: turnHandle.turn.id,
@@ -3206,6 +3112,16 @@ struct CodexAppServerTests {
                 "type": "mcpToolCall",
             ]
         )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-compact-1",
+            item: [
+                "id": "item-compact-1",
+                "status": "completed",
+                "type": "contextCompaction",
+            ]
+        )
         await transport.emitTurnCompleted(
             threadID: thread.id,
             turnID: turnHandle.turn.id
@@ -3222,6 +3138,7 @@ struct CodexAppServerTests {
                 && minimap.latestReasoningTextDelta != nil
                 && minimap.latestCompletion != nil
                 && minimap.callSnapshots.count == 3
+                && minimap.isCompactingThreadContext == false
                 && minimap.currentTurn.status == .completed
         }
 
@@ -3231,6 +3148,7 @@ struct CodexAppServerTests {
         #expect(minimap.latestAgentMessageDelta?.itemID == "item-agent-1")
         #expect(minimap.latestReasoningTextDelta?.itemID == "item-reasoning-1")
         #expect(minimap.latestCompletion?.turn.id == turnHandle.turn.id)
+        #expect(minimap.isCompactingThreadContext == false)
         #expect(minimap.currentTurn.status == .completed)
         #expect(minimap.callSnapshots.count == 3)
         #expect(minimap.callSnapshots[0].kind == .command)
@@ -3263,7 +3181,7 @@ private func waitForObservableState(
 
 private func waitForCondition(
     maxAttempts: Int = 200,
-    predicate: () async throws -> Bool
+    predicate: @Sendable () async throws -> Bool
 ) async throws {
     for _ in 0..<maxAttempts {
         if try await predicate() {
@@ -3450,6 +3368,11 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                         "updatedAt": 1713350005,
                     ],
                 ]
+            )
+        case "thread/compact/start":
+            return responsePayload(
+                id: id,
+                result: [:]
             )
         case "thread/fork":
             return responsePayload(
@@ -3899,6 +3822,92 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
     }
 
+    func emitHookStarted(
+        threadID: String,
+        turnID: String?,
+        hookID: String = "hook-1",
+        status: String = "running"
+    ) {
+        let payload = payloadObject([
+            "run": [
+                "displayOrder": 1,
+                "entries": [],
+                "eventName": "preToolUse",
+                "executionMode": "sync",
+                "handlerType": "command",
+                "id": hookID,
+                "scope": "turn",
+                "sourcePath": "/tmp/project/.codex/hooks/pre-tool-use.sh",
+                "startedAt": 1713350003,
+                "status": status,
+                "statusMessage": NSNull(),
+            ],
+            "threadId": threadID,
+            "turnId": turnID ?? NSNull(),
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "hook/started", payload: payload)
+        )
+    }
+
+    func emitHookCompleted(
+        threadID: String,
+        turnID: String?,
+        hookID: String = "hook-1",
+        status: String = "completed",
+        statusMessage: String? = nil
+    ) {
+        let jsonStatusMessage: Any = statusMessage ?? NSNull()
+        let payload = payloadObject([
+            "run": [
+                "completedAt": 1713350004,
+                "displayOrder": 1,
+                "durationMs": 150,
+                "entries": [
+                    [
+                        "kind": "feedback",
+                        "text": "Hook finished.",
+                    ]
+                ],
+                "eventName": "preToolUse",
+                "executionMode": "sync",
+                "handlerType": "command",
+                "id": hookID,
+                "scope": "turn",
+                "sourcePath": "/tmp/project/.codex/hooks/pre-tool-use.sh",
+                "startedAt": 1713350003,
+                "status": status,
+                "statusMessage": jsonStatusMessage,
+            ],
+            "threadId": threadID,
+            "turnId": turnID ?? NSNull(),
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "hook/completed", payload: payload)
+        )
+    }
+
+    func emitModelRerouted(
+        threadID: String,
+        turnID: String,
+        fromModel: String = "gpt-5.4",
+        toModel: String = "gpt-5.4-safe"
+    ) {
+        let payload = payloadObject([
+            "fromModel": fromModel,
+            "reason": "highRiskCyberActivity",
+            "threadId": threadID,
+            "toModel": toModel,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "model/rerouted", payload: payload)
+        )
+    }
+
     func emitTurnStarted(threadID: String, turnID: String) {
         let payload = payloadObject([
             "threadId": threadID,
@@ -4128,6 +4137,30 @@ private func threadEvents(
     }
 
     return events
+}
+
+private func temporarySQLiteHistoryStore() throws -> (ThreadHistoryStore, URL) {
+    let temporaryDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(
+        at: temporaryDirectory,
+        withIntermediateDirectories: true
+    )
+    let historyStore = try ThreadHistoryStore(
+        configuration: .init(
+            inMemory: false,
+            storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
+        )
+    )
+    return (historyStore, temporaryDirectory)
+}
+
+private func tearDownTemporarySQLiteHistoryStore(
+    _ historyStore: ThreadHistoryStore,
+    directory: URL
+) async {
+    try? await historyStore.detachPersistentStoresForTeardown()
+    try? FileManager.default.removeItem(at: directory)
 }
 
 private extension CodexRPCRequestID {

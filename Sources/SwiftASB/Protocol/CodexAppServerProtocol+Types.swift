@@ -15,6 +15,9 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case threadClosed(CodexWireThreadClosedNotification)
 	case threadNameUpdated(CodexWireThreadNameUpdatedNotification)
 	case threadTokenUsageUpdated(CodexWireThreadTokenUsageUpdatedNotification)
+	case hookStarted(CodexWireHookStartedNotification)
+	case hookCompleted(CodexWireHookCompletedNotification)
+	case modelRerouted(CodexWireModelReroutedNotification)
 	case turnStarted(CodexWireTurnStartedNotification)
 	case turnDiffUpdated(CodexWireTurnDiffUpdatedNotification)
 	case turnPlanUpdated(CodexWireTurnPlanUpdatedNotification)
@@ -33,6 +36,8 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case mcpServerElicitationRequested(CodexProtocolMCPServerElicitationRequest)
 	case serverRequestResolved(CodexWireServerRequestResolvedNotification)
 }
+
+struct CodexProtocolThreadCompactStartResponse: Decodable, Equatable, Sendable {}
 
 struct CodexProtocolTurnInterruptParams: Encodable, Equatable, Sendable {
 	let threadID: String

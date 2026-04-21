@@ -201,6 +201,22 @@ struct CodexAppServerProtocolTests {
         #expect(config["temperature"] as? Double == 0.2)
     }
 
+    @Test("encodes thread/compact/start requests with the expected method and params payload")
+    func encodesThreadCompactStartRequest() throws {
+        let payload = try protocolLayer.makeThreadCompactStartRequest(
+            id: .string("thread-compact-1"),
+            params: .init(threadID: "thread-123")
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/compact/start")
+        #expect(object["id"] as? String == "thread-compact-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+    }
+
     @Test("encodes turn/start requests with the expected method and params payload")
     func encodesTurnStartRequest() throws {
         let payload = try protocolLayer.makeTurnStartRequest(
@@ -358,6 +374,20 @@ struct CodexAppServerProtocolTests {
         #expect(response.thread.id == "thread-123")
         #expect(response.thread.preview == "Hello")
         #expect(response.thread.turns.isEmpty)
+    }
+
+    @Test("decodes thread/compact/start responses and honors the expected request ID")
+    func decodesThreadCompactStartResponse() throws {
+        let payload = Data(
+            #"{"id":"thread-compact-1","result":{}}"#.utf8
+        )
+
+        let response = try protocolLayer.decodeThreadCompactStartResponse(
+            payload,
+            expectedID: .string("thread-compact-1")
+        )
+
+        #expect(response == .init())
     }
 
     @Test("decodes thread/list responses and honors the expected request ID")

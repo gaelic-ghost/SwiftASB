@@ -154,6 +154,17 @@ actor ThreadHistoryStore {
         self.container = try Self.makePersistentContainer(configuration: configuration)
     }
 
+    func detachPersistentStoresForTeardown() throws {
+        container.viewContext.performAndWait {
+            container.viewContext.reset()
+        }
+
+        let coordinator = container.persistentStoreCoordinator
+        for store in coordinator.persistentStores {
+            try coordinator.remove(store)
+        }
+    }
+
     func recordThreadStarted(session: CodexAppServer.ThreadSession) throws {
         let context = container.newBackgroundContext()
         try context.performAndWaitReturning {
