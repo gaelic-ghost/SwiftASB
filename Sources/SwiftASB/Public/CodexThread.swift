@@ -2337,6 +2337,28 @@ public struct CodexThread: Sendable {
         try await readNewerTurnHistoryWindow(newerThan: turnID, limit: limit).turns
     }
 
+    public func windowAroundTurn(
+        _ turnID: String,
+        limit: Int = 12
+    ) async throws -> HistoryWindow {
+        try await appServer.closedTurnWindowAroundTurn(
+            threadID: id,
+            turnID: turnID,
+            limit: limit
+        )
+    }
+
+    public func windowAroundItem(
+        _ itemID: String,
+        limit: Int = 12
+    ) async throws -> HistoryWindow {
+        try await appServer.closedTurnWindowAroundItem(
+            threadID: id,
+            itemID: itemID,
+            limit: limit
+        )
+    }
+
     @MainActor
     public func makeRecentTurns(
         limit: Int = 12,

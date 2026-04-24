@@ -1037,6 +1037,16 @@ struct CodexAppServerTests {
         let newerTurns = try await thread.readNewerTurnHistory(newerThan: "turn-middle", limit: 1)
         #expect(newerTurns.map(\.id) == ["turn-newer"])
 
+        let turnCenteredWindow = try await thread.windowAroundTurn("turn-middle", limit: 3)
+        #expect(turnCenteredWindow.turns.map(\.id) == ["turn-newer", "turn-middle", "turn-older"])
+        #expect(turnCenteredWindow.hasNewerTurns)
+        #expect(turnCenteredWindow.hasOlderTurns == false)
+
+        let itemCenteredWindow = try await thread.windowAroundItem("item-middle", limit: 2)
+        #expect(itemCenteredWindow.turns.map(\.id) == ["turn-middle", "turn-older"])
+        #expect(itemCenteredWindow.hasNewerTurns)
+        #expect(itemCenteredWindow.hasOlderTurns == false)
+
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
@@ -1075,6 +1085,12 @@ struct CodexAppServerTests {
 
         await #expect(throws: CodexAppServerError.self) {
             try await thread.readOlderTurnHistory(olderThan: "missing-turn", limit: 1)
+        }
+        await #expect(throws: CodexAppServerError.self) {
+            try await thread.windowAroundTurn("missing-turn", limit: 1)
+        }
+        await #expect(throws: CodexAppServerError.self) {
+            try await thread.windowAroundItem("missing-item", limit: 1)
         }
 
         await client.stop()
