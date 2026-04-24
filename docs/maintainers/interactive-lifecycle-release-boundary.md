@@ -279,8 +279,9 @@ The current remaining promotion questions are therefore narrower than before:
    `RecentFiles` and `RecentCommands` are the shipped file-centric and
    command-centric surfaces, and a later `RecentActivity` feed should stay
    separate instead of swallowing those narrower models.
-3. which non-UI public history-reading helpers must land next so the local
-   history store is not only reachable through UI-oriented companions?
+3. how far should the non-UI public history-reading surface go beyond the
+   first shipped `ClosedTurn` helpers before the package commits to a broader
+   cursor or search contract?
 
 ## Decided Next Companion Shape
 

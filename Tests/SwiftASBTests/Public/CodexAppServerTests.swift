@@ -875,6 +875,172 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("reads non-UI recent and directional local turn history through CodexThread")
+    func readsNonUIThreadHistory() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadTurnsListResult: [
+                "backwardsCursor": NSNull(),
+                "data": [],
+                "nextCursor": NSNull(),
+            ]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        try await historyStore.hydrateHistoricalTurns(
+            threadID: thread.id,
+            turns: [
+                ThreadHistoryStore.HydratedTurn(
+                    turn: CodexAppServer.TurnInfo(
+                        completedAt: 1713350005,
+                        durationMS: 2500,
+                        errorMessage: nil,
+                        id: "turn-older",
+                        startedAt: 1713350000,
+                        status: .completed
+                    ),
+                    items: [
+                        .init(
+                            id: "item-older",
+                            kind: .agentMessage,
+                            command: nil,
+                            path: nil,
+                            serverName: nil,
+                            text: "Older turn",
+                            status: "completed",
+                            toolName: nil
+                        ),
+                    ]
+                ),
+                ThreadHistoryStore.HydratedTurn(
+                    turn: CodexAppServer.TurnInfo(
+                        completedAt: 1713350105,
+                        durationMS: 2500,
+                        errorMessage: nil,
+                        id: "turn-middle",
+                        startedAt: 1713350100,
+                        status: .completed
+                    ),
+                    items: [
+                        .init(
+                            id: "item-middle",
+                            kind: .agentMessage,
+                            command: nil,
+                            path: nil,
+                            serverName: nil,
+                            text: "Middle turn",
+                            status: "completed",
+                            toolName: nil
+                        ),
+                    ]
+                ),
+                ThreadHistoryStore.HydratedTurn(
+                    turn: CodexAppServer.TurnInfo(
+                        completedAt: 1713350205,
+                        durationMS: 2500,
+                        errorMessage: nil,
+                        id: "turn-newer",
+                        startedAt: 1713350200,
+                        status: .completed
+                    ),
+                    items: [
+                        .init(
+                            id: "item-newer",
+                            kind: .agentMessage,
+                            command: nil,
+                            path: nil,
+                            serverName: nil,
+                            text: "Newer turn",
+                            status: "completed",
+                            toolName: nil
+                        ),
+                    ]
+                ),
+            ]
+        )
+
+        let recentTurns = try await thread.readRecentTurnHistory(limit: 2)
+        #expect(recentTurns.map(\.id) == ["turn-newer", "turn-middle"])
+
+        let readTurn = try await thread.readTurnHistory(turnID: "turn-middle")
+        #expect(readTurn?.id == "turn-middle")
+        #expect(readTurn?.items.first?.text == "Middle turn")
+
+        let olderTurns = try await thread.readOlderTurnHistory(olderThan: "turn-middle", limit: 2)
+        #expect(olderTurns.map(\.id) == ["turn-older"])
+
+        let newerTurns = try await thread.readNewerTurnHistory(newerThan: "turn-middle", limit: 2)
+        #expect(newerTurns.map(\.id) == ["turn-newer"])
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @Test("directional non-UI turn history requires a known local boundary turn")
+    func nonUIThreadHistoryRequiresKnownBoundaryTurn() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let historyStore = try ThreadHistoryStore(configuration: .inMemory())
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        await #expect(throws: CodexAppServerError.self) {
+            try await thread.readOlderTurnHistory(olderThan: "missing-turn", limit: 1)
+        }
+
+        await client.stop()
+    }
+
     @Test("builds a recent-files observable from the local history store")
     func buildsRecentFilesObservable() async throws {
         let transport = FakeCodexAppServerTransport()

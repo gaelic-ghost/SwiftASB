@@ -2262,6 +2262,38 @@ public struct CodexThread: Sendable {
         try await appServer.compactThread(.init(threadID: id))
     }
 
+    public func readTurnHistory(turnID: String) async throws -> CodexTurnHandle.ClosedTurn? {
+        try await appServer.closedTurn(threadID: id, turnID: turnID)
+    }
+
+    public func readRecentTurnHistory(
+        limit: Int = 12
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        try await appServer.recentClosedTurns(threadID: id, limit: limit)
+    }
+
+    public func readOlderTurnHistory(
+        olderThan turnID: String,
+        limit: Int = 12
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        try await appServer.olderClosedTurns(
+            threadID: id,
+            olderThan: turnID,
+            limit: limit
+        )
+    }
+
+    public func readNewerTurnHistory(
+        newerThan turnID: String,
+        limit: Int = 12
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        try await appServer.newerClosedTurns(
+            threadID: id,
+            newerThan: turnID,
+            limit: limit
+        )
+    }
+
     @MainActor
     public func makeRecentTurns(
         limit: Int = 12,

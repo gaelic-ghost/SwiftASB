@@ -863,6 +863,22 @@ Recommended next steps:
 - flesh out archive-aware retention and eviction after the non-archived hot
   cache feels stable
 
+Current status for that non-UI history surface:
+
+- first pass shipped
+- `CodexThread.readTurnHistory(turnID:)` now reads one sealed local turn by id
+- `CodexThread.readRecentTurnHistory(limit:)` now reads a recent local window
+  of sealed turns without requiring `RecentTurns`
+- `CodexThread.readOlderTurnHistory(olderThan:limit:)` and
+  `readNewerTurnHistory(newerThan:limit:)` now page local sealed turns around
+  a known boundary turn id without introducing a broader public cursor type yet
+- the first non-UI surface intentionally reuses `CodexTurnHandle.ClosedTurn`
+  instead of introducing a second public transcript value type
+- directional non-UI paging currently requires the boundary turn to already be
+  present in the local history store for that thread
+- broader cursor semantics, transcript search, and richer non-UI history query
+  helpers still remain open follow-on work
+
 ## Remaining Open Questions
 
 - How much streamed command output or reasoning detail should be retained in

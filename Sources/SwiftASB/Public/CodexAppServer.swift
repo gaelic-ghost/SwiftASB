@@ -1273,6 +1273,62 @@ public actor CodexAppServer {
         return snapshots.map { .init(threadID: threadID, snapshot: $0) }
     }
 
+    internal func olderClosedTurns(
+        threadID: String,
+        olderThan turnID: String,
+        limit: Int
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        let historyStore = try requireHistoryStore(for: "older turn history")
+        guard let threadSnapshot = try await historyStore.snapshot(threadID: threadID) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read older turn history before turn \(turnID) because thread \(threadID) does not currently have a readable local history snapshot. Load recent or stored history for the thread before paging older local history around a boundary turn.
+                """
+            )
+        }
+        let orderedTurns = orderedClosedTurnSnapshots(from: threadSnapshot.turns)
+        guard let boundaryIndex = orderedTurns.firstIndex(where: { $0.id == turnID }) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read older turn history before turn \(turnID) because that turn is not currently present in the local history store for thread \(threadID). Load recent or stored history that includes the boundary turn before paging older local history around it.
+                """
+            )
+        }
+
+        return orderedTurns
+            .suffix(from: orderedTurns.index(after: boundaryIndex))
+            .prefix(limit)
+            .map { .init(threadID: threadID, snapshot: $0) }
+    }
+
+    internal func newerClosedTurns(
+        threadID: String,
+        newerThan turnID: String,
+        limit: Int
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        let historyStore = try requireHistoryStore(for: "newer turn history")
+        guard let threadSnapshot = try await historyStore.snapshot(threadID: threadID) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read newer turn history after turn \(turnID) because thread \(threadID) does not currently have a readable local history snapshot. Load recent or stored history for the thread before paging newer local history around a boundary turn.
+                """
+            )
+        }
+        let orderedTurns = orderedClosedTurnSnapshots(from: threadSnapshot.turns)
+        guard let boundaryIndex = orderedTurns.firstIndex(where: { $0.id == turnID }) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read newer turn history after turn \(turnID) because that turn is not currently present in the local history store for thread \(threadID). Load recent or stored history that includes the boundary turn before paging newer local history around it.
+                """
+            )
+        }
+
+        return orderedTurns
+            .prefix(boundaryIndex)
+            .prefix(limit)
+            .map { .init(threadID: threadID, snapshot: $0) }
+    }
+
     internal func recentTurnSnapshots(
         threadID: String,
         limit: Int
@@ -2749,6 +2805,30 @@ public actor CodexAppServer {
         }
 
         return String(firstNonEmptyLine.prefix(160))
+    }
+
+    private func orderedClosedTurnSnapshots(
+        from turns: [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot]
+    ) -> [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot] {
+        turns.sorted { lhs, rhs in
+            let lhsStartedAt = lhs.startedAt ?? Int.min
+            let rhsStartedAt = rhs.startedAt ?? Int.min
+            if lhsStartedAt != rhsStartedAt {
+                return lhsStartedAt > rhsStartedAt
+            }
+
+            let lhsCompletedAt = lhs.completedAt ?? Int.min
+            let rhsCompletedAt = rhs.completedAt ?? Int.min
+            if lhsCompletedAt != rhsCompletedAt {
+                return lhsCompletedAt > rhsCompletedAt
+            }
+
+            if lhs.orderIndex != rhs.orderIndex {
+                return lhs.orderIndex > rhs.orderIndex
+            }
+
+            return lhs.id > rhs.id
+        }
     }
 
     private func seedRemoteOlderCursor(
