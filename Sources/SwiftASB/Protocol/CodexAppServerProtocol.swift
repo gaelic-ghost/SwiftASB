@@ -4,7 +4,13 @@ struct CodexAppServerProtocol {
     enum Method: String, Sendable, Codable {
         case initialize = "initialize"
         case initialized = "initialized"
+        case threadCompactStart = "thread/compact/start"
+        case threadFork = "thread/fork"
+        case threadList = "thread/list"
+        case threadRead = "thread/read"
+        case threadResume = "thread/resume"
         case threadStart = "thread/start"
+        case threadTurnsList = "thread/turns/list"
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
@@ -45,6 +51,66 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadStart, params: params),
             method: .threadStart
+        )
+    }
+
+    func makeThreadCompactStartRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadCompactStartParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadCompactStart, params: params),
+            method: .threadCompactStart
+        )
+    }
+
+    func makeThreadReadRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadReadParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadRead, params: params),
+            method: .threadRead
+        )
+    }
+
+    func makeThreadResumeRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadResumeParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadResume, params: params),
+            method: .threadResume
+        )
+    }
+
+    func makeThreadForkRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadForkParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadFork, params: params),
+            method: .threadFork
+        )
+    }
+
+    func makeThreadListRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadList, params: params),
+            method: .threadList
+        )
+    }
+
+    func makeThreadTurnsListRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadTurnsListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadTurnsList, params: params),
+            method: .threadTurnsList
         )
     }
 
@@ -116,6 +182,18 @@ struct CodexAppServerProtocol {
         )
     }
 
+    func decodeThreadCompactStartResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadCompactStartResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadCompactStart,
+            resultType: CodexProtocolThreadCompactStartResponse.self
+        )
+    }
+
     func decodeTurnStartResponse(
         _ responsePayload: Data,
         expectedID: CodexRPCRequestID
@@ -125,6 +203,66 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .turnStart,
             resultType: CodexWireTurnStartResponse.self
+        )
+    }
+
+    func decodeThreadReadResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadReadResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadRead,
+            resultType: CodexProtocolThreadReadResponse.self
+        )
+    }
+
+    func decodeThreadResumeResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadStartResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadResume,
+            resultType: CodexWireThreadStartResponse.self
+        )
+    }
+
+    func decodeThreadForkResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadStartResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadFork,
+            resultType: CodexWireThreadStartResponse.self
+        )
+    }
+
+    func decodeThreadListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadList,
+            resultType: CodexProtocolThreadListResponse.self
+        )
+    }
+
+    func decodeThreadTurnsListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadTurnsListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadTurnsList,
+            resultType: CodexProtocolThreadTurnsListResponse.self
         )
     }
 
@@ -263,6 +401,30 @@ struct CodexAppServerProtocol {
                         resultType: CodexWireThreadTokenUsageUpdatedNotification.self
                     )
                 )
+            case "hook/started":
+                return .hookStarted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireHookStartedNotification.self
+                    )
+                )
+            case "hook/completed":
+                return .hookCompleted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireHookCompletedNotification.self
+                    )
+                )
+            case "model/rerouted":
+                return .modelRerouted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireModelReroutedNotification.self
+                    )
+                )
             case "turn/started":
                 return .turnStarted(
                     try decodeNotification(
@@ -309,6 +471,14 @@ struct CodexAppServerProtocol {
                         payload,
                         method: method,
                         resultType: CodexWireItemCompletedNotification.self
+                    )
+                )
+            case "item/fileChange/outputDelta":
+                return .fileChangeOutputDelta(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireFileChangeOutputDeltaNotification.self
                     )
                 )
             case "item/agentMessage/delta":

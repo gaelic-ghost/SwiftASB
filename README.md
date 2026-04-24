@@ -44,7 +44,9 @@ If you just want to explore the package repo itself, start with the commands in 
 
 The package assumes a local Codex CLI runtime. The currently shipped public surface includes:
 
-- `CodexAppServer` for process ownership, initialize, thread start, and turn start.
+- `CodexAppServer` for process ownership, initialize, thread start,
+  `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, paged
+  turn-history reads, and turn start.
 - `CodexThread` for thread-scoped turn creation plus a live `Dashboard` companion.
 - `CodexTurnHandle` for typed turn events plus a live `Minimap` companion.
 - typed approval and elicitation request models, with explicit response APIs on
@@ -54,8 +56,9 @@ The package assumes a local Codex CLI runtime. The currently shipped public surf
 
 The current public lifecycle contract is intentionally narrow and explicit:
 
-- `CodexAppServer` owns the local subprocess plus initialize, thread start, and
-  turn start.
+- `CodexAppServer` owns the local subprocess plus initialize, thread start,
+  `thread/list`, `thread/read`, `thread/resume`, `thread/fork`,
+  `thread/turns/list`, and turn start.
 - `CodexThread` owns thread-scoped turn creation and thread-scoped fallback
   responses for unroutable interactive requests.
 - `CodexTurnHandle` owns the active turn stream plus turn-scoped control
@@ -66,6 +69,64 @@ The current public lifecycle contract is intentionally narrow and explicit:
   generated wire payloads.
 - `Dashboard` and `Minimap` are current-state mirrors of the typed public event
   streams rather than a second control path.
+- `CodexTurnHandle.Minimap.callSnapshots` already gives a stable per-turn view
+  of command, file-edit, dynamic-tool, collab-tool, and MCP activity.
+- `CodexTurnHandle.Minimap` now also exposes
+  `isCompactingThreadContext` so per-turn UI can show when context compaction
+  is actively running.
+- `CodexThread.Dashboard` already summarizes aggregate tool activity, aggregate
+  MCP activity, active hook runs plus their latest live status, and whether
+  thread compaction is currently active.
+- `CodexThread.compactContext()` now wraps `thread/compact/start` directly.
+- `CodexThread.makeRecentTurns(limit:)` now vends a thread-scoped recent-turns
+  observable that prewarms from the local history store, supports explicit
+  older/newer whole-turn window expansion, seeds upstream paging cursors even
+  when the visible initial window came from local history, and can fall back to
+  paged stored-turn reads when local recent history is not resident yet.
+- `CodexThread.RecentTurns` now owns a first-pass in-memory cache policy too:
+  it surfaces load-state flags, trims its resident turn window around bound
+  scroll or visibility context, tracks both resident item counts and weighted
+  resident item cost, ships named presets for chat UIs, full transcript or
+  inspector UIs, and compact history rails, slims low-value item payloads out
+  of older non-visible completed turns before evicting whole turns, rehydrates
+  slimmed turns when they become visible again, and can automatically prefetch
+  older or newer windows when a SwiftUI consumer binds the visible turn id
+  through `scrollPosition(id:anchor:)` and visibility through
+  `onScrollTargetVisibilityChange(idType:threshold:_:)`.
+- `CodexThread.makeRecentFiles(limit:)` now vends a thread-scoped recent-files
+  observable that is file-centric rather than event-centric: it hydrates from
+  persisted file-change items in the local history store, keeps one resident
+  entry per file-change item, enriches live entries from file-change output
+  deltas, can load older file entries from the same turn before moving on to
+  older turns, and now supports selection-aware shell-versus-payload slimming
+  plus automatic payload rehydration when a protected file becomes visible or
+  selected again. Its resident payload pressure now accounts for diff
+  structure and line volume, and its retained shell summary now prefers
+  concise edit summaries such as additions, deletions, and hunk counts over
+  raw status strings when sealed payload is available.
+- `CodexTurnHandle.close()` now seals a completed turn into a caller-owned
+  value snapshot and releases per-turn observation bookkeeping explicitly.
+- `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate
+  the internal history store so stored-thread reads can enrich the same local
+  persistence layer as live item-stream assembly.
+- `thread/resume(...)` now restores thread defaults, clears stale archived
+  state for the reopened thread, and hydrates any resumed persisted turns back
+  into that same local history store instead of treating a resumed thread like
+  a fresh conversation.
+- `thread/fork(...)` now creates typed forked-thread sessions, persists copied
+  fork history into thread-scoped local turn records, and records both the
+  source thread id and the last shared turn id as explicit local lineage data.
+- `thread/list(...)` now returns typed stored-thread pages and reconciles local
+  thread metadata and archive state from list results, which gives the package a
+  first list-driven path for archive-drift correction.
+- overlapping stored-history hydration now reconciles against live-built local
+  turns instead of blindly overwriting them, preserving richer local item detail
+  when upstream stored history is thinner while still accepting canonical
+  terminal status from upstream.
+- the internal history store now tracks conservative completeness state for each
+  thread, with `serverParity` for clean stored-history hydration and
+  `richerThanServer` when local item-stream assembly has preserved detail that
+  upstream stored reads did not return.
 
 Current concurrency behavior is also explicit:
 
@@ -78,6 +139,23 @@ Current non-goals and intentionally deferred areas are also explicit:
 
 - The generated wire layer stays internal.
 - There is not yet a one-shot `run(...)` convenience API.
+- The current history-reading API is still intentionally narrow: there is not
+  yet a broader public search, recent-history, or consumer-friendly cursor
+  helper surface over the local store.
+- The broader history-reading API is still intentionally incomplete even though
+  the first recent-turns observable and explicit `CodexTurnHandle.close()` path
+  now exist: there is not yet a fuller public cursor model, search surface, or
+  scroll-driven history-window API over the local store.
+- The current reconciliation policy is intentionally conservative and still
+  internal: merge rules now distinguish terminal status from richer local text
+  and command detail, and the package now persists explicit fork lineage plus
+  thread-scoped copied fork history, but a broader public history-reading API
+  is still open.
+- Richer command-output, file-change-output, and MCP-progress detail still
+  remain internal while the package decides whether those belong as new event
+  cases or as deeper observable summary state.
+- Model reroute notifications remain internal and are currently logged
+  operationally rather than exposed as a public lifecycle surface.
 - The live approval-path probe is best-effort runtime observation, not a
   deterministic release gate, because the current Codex runtime does not
   reliably force an approval request on command.

@@ -15,12 +15,16 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case threadClosed(CodexWireThreadClosedNotification)
 	case threadNameUpdated(CodexWireThreadNameUpdatedNotification)
 	case threadTokenUsageUpdated(CodexWireThreadTokenUsageUpdatedNotification)
+	case hookStarted(CodexWireHookStartedNotification)
+	case hookCompleted(CodexWireHookCompletedNotification)
+	case modelRerouted(CodexWireModelReroutedNotification)
 	case turnStarted(CodexWireTurnStartedNotification)
 	case turnDiffUpdated(CodexWireTurnDiffUpdatedNotification)
 	case turnPlanUpdated(CodexWireTurnPlanUpdatedNotification)
 	case turnCompleted(CodexWireTurnCompletedNotification)
 	case itemStarted(CodexWireItemStartedNotification)
 	case itemCompleted(CodexWireItemCompletedNotification)
+	case fileChangeOutputDelta(CodexWireFileChangeOutputDeltaNotification)
 	case agentMessageDelta(CodexWireAgentMessageDeltaNotification)
 	case planDelta(CodexWirePlanDeltaNotification)
 	case reasoningSummaryPartAdded(CodexWireReasoningSummaryPartAddedNotification)
@@ -34,6 +38,8 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case serverRequestResolved(CodexWireServerRequestResolvedNotification)
 }
 
+struct CodexProtocolThreadCompactStartResponse: Decodable, Equatable, Sendable {}
+
 struct CodexProtocolTurnInterruptParams: Encodable, Equatable, Sendable {
 	let threadID: String
 	let turnID: String
@@ -42,6 +48,158 @@ struct CodexProtocolTurnInterruptParams: Encodable, Equatable, Sendable {
 		case threadID = "threadId"
 		case turnID = "turnId"
 	}
+}
+
+struct CodexProtocolThreadReadParams: Encodable, Equatable, Sendable {
+    let includeTurns: Bool?
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case includeTurns
+        case threadID = "threadId"
+    }
+}
+
+struct CodexProtocolThreadReadResponse: Decodable, Equatable, Sendable {
+    let thread: CodexWireThread
+}
+
+struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
+    let approvalPolicy: CodexWireApprovalPolicyUnion?
+    let approvalsReviewer: CodexWireApprovalsReviewer?
+    let baseInstructions: String?
+    let config: [String: CodexWireJSONValue]?
+    let cwd: String?
+    let developerInstructions: String?
+    let model: String?
+    let modelProvider: String?
+    let personality: CodexWirePersonality?
+    let sandbox: CodexWireSandboxMode?
+    let serviceName: String?
+    let serviceTier: CodexWireServiceTier?
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case approvalPolicy
+        case approvalsReviewer
+        case baseInstructions
+        case config
+        case cwd
+        case developerInstructions
+        case model
+        case modelProvider
+        case personality
+        case sandbox
+        case serviceName
+        case serviceTier
+        case threadID = "threadId"
+    }
+}
+
+struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
+    let approvalPolicy: CodexWireApprovalPolicyUnion?
+    let approvalsReviewer: CodexWireApprovalsReviewer?
+    let baseInstructions: String?
+    let config: [String: CodexWireJSONValue]?
+    let cwd: String?
+    let developerInstructions: String?
+    let ephemeral: Bool?
+    let model: String?
+    let modelProvider: String?
+    let personality: CodexWirePersonality?
+    let sandbox: CodexWireSandboxMode?
+    let serviceName: String?
+    let serviceTier: CodexWireServiceTier?
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case approvalPolicy
+        case approvalsReviewer
+        case baseInstructions
+        case config
+        case cwd
+        case developerInstructions
+        case ephemeral
+        case model
+        case modelProvider
+        case personality
+        case sandbox
+        case serviceName
+        case serviceTier
+        case threadID = "threadId"
+    }
+}
+
+struct CodexProtocolThreadListParams: Encodable, Equatable, Sendable {
+    let archived: Bool?
+    let cursor: String?
+    let cwd: String?
+    let limit: Int?
+    let modelProviders: [String]?
+    let searchTerm: String?
+    let sortDirection: CodexProtocolThreadListSortDirection?
+    let sortKey: CodexProtocolThreadListSortKey?
+    let sourceKinds: [CodexProtocolThreadListSourceKind]?
+
+    enum CodingKeys: String, CodingKey {
+        case archived
+        case cursor
+        case cwd
+        case limit
+        case modelProviders
+        case searchTerm
+        case sortDirection
+        case sortKey
+        case sourceKinds
+    }
+}
+
+enum CodexProtocolThreadListSortDirection: String, Codable, Equatable, Sendable {
+    case asc
+    case desc
+}
+
+enum CodexProtocolThreadListSortKey: String, Codable, Equatable, Sendable {
+    case createdAt = "created_at"
+    case updatedAt = "updated_at"
+}
+
+enum CodexProtocolThreadListSourceKind: String, Codable, Equatable, Sendable {
+    case appServer = "appServer"
+    case cli
+    case exec
+    case unknown
+    case vscode
+}
+
+struct CodexProtocolThreadListResponse: Decodable, Equatable, Sendable {
+    let data: [CodexWireThread]
+    let nextCursor: String?
+}
+
+struct CodexProtocolThreadTurnsListParams: Encodable, Equatable, Sendable {
+    let cursor: String?
+    let limit: Int?
+    let sortDirection: CodexProtocolThreadTurnsSortDirection?
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case cursor
+        case limit
+        case sortDirection
+        case threadID = "threadId"
+    }
+}
+
+enum CodexProtocolThreadTurnsSortDirection: String, Codable, Equatable, Sendable {
+    case asc
+    case desc
+}
+
+struct CodexProtocolThreadTurnsListResponse: Decodable, Equatable, Sendable {
+    let backwardsCursor: String?
+    let data: [CodexWireTurn]
+    let nextCursor: String?
 }
 
 struct CodexProtocolTurnSteerParams: Encodable, Equatable, Sendable {

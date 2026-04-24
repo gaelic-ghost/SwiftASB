@@ -20,22 +20,30 @@
 | Promoted generated v2 wire snapshot | `Shipped internally` | `Sources/SwiftASB/Generated/CodexWire/Latest/` now contains a wider lifecycle batch covering bootstrap plus many thread, turn, item, reasoning, and tool-progress notifications, alongside the hand-owned `CodexWireInitializeResponse` shim. |
 | Stdio subprocess transport | `Shipped internally` | The transport launches `codex app-server --listen stdio://`, frames newline-delimited JSON, correlates request IDs, and captures stderr for diagnostics. |
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
-| Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, and `turn/start` are encoded through the protocol layer. |
-| Typed protocol response decoding | `Shipped internally` | `initialize`, `thread/start`, and `turn/start` responses are decoded and validated against request IDs. |
-| Typed protocol notification decoding | `Partially shipped` | The protocol layer now maps a broader batch of thread, turn, item, and reasoning notifications that feed both public event streams and live observable companions. |
+| Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/turns/list`, and `turn/start` are encoded through the protocol layer. |
+| Typed protocol response decoding | `Shipped internally` | `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/turns/list`, and `turn/start` responses are decoded and validated against request IDs. |
+| Typed protocol notification decoding | `Partially shipped` | The protocol layer now maps a broader batch of thread, turn, item, reasoning, hook, and reroute notifications, plus the item lifecycle needed to drive the current observable tool, MCP, file-edit, hook, and compaction summaries. |
 | Public owning client actor | `Shipped` | `CodexAppServer` owns transport plus protocol and exposes startup, shutdown, initialize, thread start, and turn start. |
 | Public value-typed request and result models | `Shipped` | Public API uses hand-owned Swift value types rather than exposing `CodexWire...` directly. |
 | Initialize handshake | `Shipped` | `initialize(...)` automatically sends the follow-up `initialized` notification. |
 | Thread start flow | `Shipped` | `startThread(...)` returns `CodexThread`, which carries thread metadata plus a back-reference to the shared app-server owner. |
+| Stored thread list flow | `Shipped` | `listThreads(...)` wraps `thread/list`, returns typed stored-thread pages, and now reconciles local thread metadata plus explicit archived or unarchived list results back into the internal history store. |
+| Stored thread read flow | `Shipped` | `readThread(...)` wraps `thread/read`, returns typed thread and turn values, and hydrates the internal history store when turns are requested. |
+| Stored thread resume flow | `Shipped` | `resumeThread(...)` wraps `thread/resume`, returns a normal `CodexThread`, restores thread defaults, clears stale archived state for the reopened thread, and hydrates any resumed persisted turns into the same local history store without resetting completeness to a fresh-thread state. |
+| Stored thread fork flow | `Shipped` | `forkThread(...)` wraps `thread/fork`, returns a normal `CodexThread`, persists copied fork history into thread-scoped local turn rows, and records explicit fork lineage through the source thread id plus the last shared turn id. |
+| Paged turn-history flow | `Shipped` | `listThreadTurns(...)` wraps `thread/turns/list`, returns typed paged turn values, and can now seed the local history cache even before that thread has been loaded locally. |
 | Typed async thread event stream | `Partially shipped` | `CodexThread.events` now streams `thread/started`, `thread/status/changed`, `thread/archived`, `thread/unarchived`, `thread/name/updated`, `thread/tokenUsage/updated`, and `thread/closed`, but broader thread lifecycle coverage is still pending. |
 | Turn start flow | `Shipped` | `startTurn(...)` returns `CodexTurnHandle`. |
 | Typed async turn event stream | `Partially shipped` | `CodexTurnHandle.events` now streams `turn/started`, `turn/plan/updated`, `turn/diff/updated`, item lifecycle updates, message deltas, reasoning deltas, and `turn/completed`, but broader item and thread events still remain internal. |
 | Multiple active threads per app-server | `Shipped` | One `CodexAppServer` now supports many concurrently held `CodexThread` handles, and the package tests plus live probes treat cross-thread concurrency as a supported model. |
 | Multiple simultaneous turns on one thread | `Resolved for now` | Live probing showed that same-thread overlap is not independently routable at the app-server layer today, so `SwiftASB` rejects overlapping same-thread turns client-side with `CodexAppServerError.invalidState`. |
-| `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, includes a `startTextTurn(...)` happy-path helper, exposes a typed thread event stream, and can now vend a live `Dashboard` observable mirror via `makeDashboard()`. |
-| `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` can now vend a live `Minimap` observable mirror via `makeMinimap()`, seeded from the initial turn snapshot and updated from the turn event stream. |
-| Additional turn event mapping | `Partially started` | The generated wire layer now includes many relevant notification types, but most are not yet promoted into protocol/public event enums. |
+| `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, includes a `startTextTurn(...)` happy-path helper, exposes a typed thread event stream, wraps `compactContext()`, and can now vend a live `Dashboard` observable mirror with aggregate tool-calling, MCP-calling, hook-run, and thread-compaction state. |
+| Thread-scoped recent-turn observable | `Partially shipped` | `CodexThread.makeRecentTurns(limit:)` now vends a bounded recent-turn observable that prewarms from the local history store, supports explicit older/newer whole-turn window expansion, seeds upstream paging cursors even when the visible initial window came from local history, and falls back to `thread/turns/list` when needed. `RecentTurns` now ships named cache-policy presets for chat UIs, full inspectors, and compact history rails; tracks both resident item counts and weighted resident item cost; slims low-value payloads out of older non-visible completed turns before evicting whole turns; rehydrates slimmed turns when they become visible again; and uses scroll-position, visibility, phase, and velocity signals to drive protected residency plus earlier prefetch. Richer weighting heuristics and deeper policy tuning are still open. |
+| Thread-scoped recent-file observable | `Partially shipped` | `CodexThread.makeRecentFiles(limit:)` now vends a file-centric recent-files observable that hydrates from persisted file-change items, keeps one resident entry per file-change item, enriches live entries from `item/fileChange/outputDelta`, can load older file entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-payload slimming with automatic payload rehydration for protected files. The current weighting now accounts for diff structure and line volume, and shell summaries prefer concise edit summaries over raw terminal status when sealed payload is available. The remaining open work is mostly deeper weighting and the later mixed `RecentActivity` feed. |
+| `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `close()` handoff into a caller-owned sealed turn snapshot. |
+| Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Richer command-output and MCP-progress detail still remain internal; file-change output deltas now stay internal as transport detail but drive the shipped `RecentFiles` companion. Model reroutes also remain internal and are currently logged rather than exposed. |
 | Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, and request resolution is tracked by JSON-RPC request id, but broader live coverage and more server-request families are still open. |
+| Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list`, seeds previously unknown local threads from paged history, widens persisted turn identity to stay thread-scoped across forks, and records explicit fork lineage while preserving conservative reconciliation that keeps richer local detail when upstream stored history is thinner. Public history paging/search helpers and archive-retention policy are still open. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a rolling support window of the latest public Codex CLI release plus the prior two minor versions, and transport startup now checks PATH, common Homebrew paths, and the npm global prefix on macOS, but richer discovery diagnostics are still open. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current rolling Codex CLI compatibility window, but richer examples are still open. |
@@ -54,11 +62,15 @@
 
 ## Current Maintainer Priority
 
-The next meaningful package step is still not "more API surface."
+The next meaningful package step is no longer proving that history hydration is
+possible. That slice now exists.
 
-The interactive lifecycle now has a written release boundary, so the next
-meaningful work is to validate that boundary against binary compatibility and
-the remaining promotion gaps.
+The next meaningful work is no longer basic hydration or first-pass
+reconciliation. That slice now exists.
+
+The next meaningful work is to extend reconciliation into the remaining thread
+management flows and then expose a deliberate public history-reading surface
+without making the stored-history contract sound richer than it really is.
 
 The package can now:
 
@@ -67,17 +79,25 @@ The package can now:
 - answer approval and elicitation requests through typed public models
 - steer an active turn
 - interrupt an active turn
+- mirror per-turn command, file-edit, and MCP activity through `CodexTurnHandle.Minimap.callSnapshots`
+- mirror thread-level tool, MCP, hook, and compaction status through `CodexThread.Dashboard`
+- read a stored thread through `thread/read`
+- list stored threads through `thread/list`
+- page stored turn history through `thread/turns/list`
+- hydrate the internal history store from both live item streams and upstream stored-history reads
 - document the supported lifecycle in the README without sending consumers into
   the tests
 
 That means the current priority order is:
 
-1. Widen promotion for the next real consumer slice, especially unified tool, MCP, file-edit, and compaction state that can drive ergonomic `Dashboard` and `Minimap` surfaces without forcing consumers down to raw payloads.
-2. Promote the near-term thread-management surface that upstream already documents as core workflow, namely `thread/list`, `thread/resume`, `thread/fork`, and `thread/read`.
-3. Decide whether completed turn results from `turn/completed` should be cached by `SwiftASB` as a consumer convenience or whether completed-turn retention should remain a caller responsibility until broader thread read APIs land.
-4. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
-5. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
-6. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
+1. Decide the command-side companion that should sit next to `RecentFiles`, likely as a dedicated recent-command observable rather than as raw event promotion.
+2. Keep tuning `RecentTurns` now that the first resident-window, scroll-aware cache policy, named presets, weighted item-cost budgeting, and payload-slimming path are shipped. The remaining work there is better weight calibration, smarter shell-vs-payload heuristics, and deciding whether some item kinds deserve stickier retention than the current first-pass rules.
+3. Keep tuning `RecentFiles` now that the first selection-aware shell-versus-payload slimming pass is shipped. The remaining work there is better payload-cost calibration at the margins and deciding how much of that model should later feed a mixed `RecentActivity` timeline.
+4. Add the first deliberate public history-reading helpers beyond the observable surface so callers who are not binding UI can still read local turn history intentionally.
+5. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
+6. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
+7. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
+8. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
 
 ## Proposed Next Release Slice
 
@@ -90,10 +110,10 @@ as a convenience-API release.
 - A unified observable current-state model for in-flight call activity and blocked thread state so UI consumers can show "what is happening right now" without replaying raw deltas themselves.
 - A written release boundary that says what is public, what stays internal scaffolding, and what is intentionally unsupported.
 - A maintainer-facing classification of generated notification families as public now, observable-only for now, or internal-only for now.
-- The first deliberate public thread-management expansion beyond `thread/start`, with `thread/list`, `thread/resume`, `thread/fork`, and `thread/read` treated as the intended next wrapped upstream surfaces.
+- The first deliberate public thread-management expansion beyond `thread/start`, with `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list` now landed.
 - Version-compatibility guidance and any remaining discovery diagnostics for the local Codex CLI runtime.
-- Any remaining protocol/event promotion work that is actually required to support the release boundary we claim.
-- A written decision about whether completed turn results should be cached by the package after `turn/completed` or intentionally left to consumers.
+- Any remaining protocol/event promotion work that is actually required to support the release boundary we claim, especially deciding how much richer tool, file-edit, and MCP detail should escape the current summary mirrors or instead feed future companion observables.
+- A written and implemented boundary for recent completed turns: thread-scoped recent-turn observables for UI, plus explicit `CodexTurnHandle.close(...)` for caller-owned sealed turn values.
 
 ### Explicitly defer unless one of the above forces it
 
@@ -231,7 +251,7 @@ Exit criteria:
 - [x] `CodexThread` exists as a public ergonomic wrapper with a clear ownership model.
 - [x] The documented concurrency model is explicit for both cross-thread and same-thread turn starts.
 - [x] The remaining open questions for Milestone 4 are narrow enough that Milestone 5 can build on the current handles without likely reshaping them again.
-- [ ] Thread and turn handles plus their observable companions feel like the real public surface rather than transitional wrappers.
+- [x] Thread and turn handles plus their observable companions feel like the real public surface rather than transitional wrappers.
 
 ## Milestone 5: Approvals, Richer Notifications, And Broader Protocol Coverage
 
@@ -239,7 +259,7 @@ Scope:
 
 - [x] Add typed protocol mapping for an initial batch of generated thread, turn, item, and reasoning notifications beyond `turn/completed`.
 - [x] Audit the generated lifecycle batch and explicitly mark which notification families matter for the first interactive public lifecycle.
-- [ ] Expand typed protocol mapping to the remaining generated notifications that matter for the first public interactive lifecycle.
+- [ ] Expand typed protocol mapping to the remaining generated notifications that matter for the first public interactive lifecycle, or deliberately classify them as companion-only or internal-only.
 - [x] Decide how to surface `ThreadItem`-level activity in the public API.
   Decision: stream-first, with observable companions limited to selected latest-state mirrors for UI-oriented summaries.
 - [x] Add a public model for server-originated approval and elicitation requests.
@@ -255,7 +275,7 @@ Exit criteria:
 - [x] The repo has a deliberate answer for where approval requests, elicitation requests, and item-level activity belong in the public model.
 - [x] The public API can represent the most important server-driven lifecycle events without dropping back to raw payloads.
 - [x] Approval and user-input request handling has a deliberate public model.
-- [ ] The package covers a meaningful multi-turn interactive lifecycle rather than only the happy-path bootstrap.
+- [ ] The package covers a meaningful multi-turn interactive lifecycle rather than only the happy-path bootstrap, including the remaining thread-management and richer-progress gaps beyond the current observable summaries.
 
 ## Milestone 6: Public Docs, Examples, And Release Readiness
 

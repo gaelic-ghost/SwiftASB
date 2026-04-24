@@ -38,6 +38,8 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let serverRequestResolvedNotification: CodexWireServerRequestResolvedNotification?
     let threadArchivedNotification: CodexWireThreadArchivedNotification?
     let threadClosedNotification: CodexWireThreadClosedNotification?
+    let threadCompactStartParams: CodexWireThreadCompactStartParams?
+    let threadCompactStartResponse: [String: CodexWireJSONValue]?
     let threadNameUpdatedNotification: CodexWireThreadNameUpdatedNotification?
     let threadStartedNotification: CodexWireThreadStartedNotification?
     let threadStartParams: CodexWireThreadStartParams?
@@ -1570,6 +1572,21 @@ struct CodexWireThreadArchivedNotification: Codable, Equatable, Sendable {
 
 // MARK: - CodexWireThreadClosedNotification
 struct CodexWireThreadClosedNotification: Codable, Equatable, Sendable {
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case threadID = "threadId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadCompactStartParams
+struct CodexWireThreadCompactStartParams: Codable, Equatable, Sendable {
     let threadID: String
 
     enum CodingKeys: String, CodingKey {

@@ -79,6 +79,8 @@ It now includes:
   - `InitializeParams`
   - `ThreadStartParams`
   - `ThreadStartResponse`
+  - `ThreadCompactStartParams`
+  - `ThreadCompactStartResponse`
   - `TurnStartParams`
   - `TurnStartResponse`
 - thread lifecycle notifications:

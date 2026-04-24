@@ -90,6 +90,133 @@ struct CodexAppServerProtocolTests {
         #expect(config["temperature"] as? Double == 0.25)
     }
 
+    @Test("encodes thread/list requests with the expected method and params payload")
+    func encodesThreadListRequest() throws {
+        let payload = try protocolLayer.makeThreadListRequest(
+            id: .string("thread-list-1"),
+            params: .init(
+                archived: false,
+                cursor: "cursor-older",
+                cwd: "/tmp/project",
+                limit: 25,
+                modelProviders: ["openai", "azure"],
+                searchTerm: "release work",
+                sortDirection: .asc,
+                sortKey: .updatedAt,
+                sourceKinds: [.cli, .vscode]
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/list")
+        #expect(object["id"] as? String == "thread-list-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["archived"] as? Bool == false)
+        #expect(params["cursor"] as? String == "cursor-older")
+        #expect(params["cwd"] as? String == "/tmp/project")
+        #expect(params["limit"] as? Int == 25)
+        #expect(params["modelProviders"] as? [String] == ["openai", "azure"])
+        #expect(params["searchTerm"] as? String == "release work")
+        #expect(params["sortDirection"] as? String == "asc")
+        #expect(params["sortKey"] as? String == "updated_at")
+        #expect(params["sourceKinds"] as? [String] == ["cli", "vscode"])
+    }
+
+    @Test("encodes thread/resume requests with the expected method and params payload")
+    func encodesThreadResumeRequest() throws {
+        let payload = try protocolLayer.makeThreadResumeRequest(
+            id: .string("thread-resume-1"),
+            params: .init(
+                approvalPolicy: .enumeration(.onFailure),
+                approvalsReviewer: .guardianSubagent,
+                baseInstructions: "Carry forward the working style.",
+                config: ["temperature": .double(0.15)],
+                cwd: "/tmp/project",
+                developerInstructions: "Keep the answer concise.",
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                personality: .friendly,
+                sandbox: .workspaceWrite,
+                serviceName: "codex",
+                serviceTier: .fast,
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/resume")
+        #expect(object["id"] as? String == "thread-resume-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["cwd"] as? String == "/tmp/project")
+        #expect(params["model"] as? String == "gpt-5.4")
+        #expect(params["modelProvider"] as? String == "openai")
+        #expect(params["personality"] as? String == "friendly")
+        #expect(params["serviceTier"] as? String == "fast")
+
+        let config = try #require(params["config"] as? [String: Any])
+        #expect(config["temperature"] as? Double == 0.15)
+    }
+
+    @Test("encodes thread/fork requests with the expected method and params payload")
+    func encodesThreadForkRequest() throws {
+        let payload = try protocolLayer.makeThreadForkRequest(
+            id: .string("thread-fork-1"),
+            params: .init(
+                approvalPolicy: .enumeration(.onRequest),
+                approvalsReviewer: .user,
+                baseInstructions: "Branch from the existing work.",
+                config: ["temperature": .double(0.2)],
+                cwd: "/tmp/project",
+                developerInstructions: "Keep the fork focused.",
+                ephemeral: true,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                personality: .pragmatic,
+                sandbox: .workspaceWrite,
+                serviceName: "codex",
+                serviceTier: .fast,
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/fork")
+        #expect(object["id"] as? String == "thread-fork-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["cwd"] as? String == "/tmp/project")
+        #expect(params["ephemeral"] as? Bool == true)
+        #expect(params["model"] as? String == "gpt-5.4")
+        #expect(params["personality"] as? String == "pragmatic")
+        #expect(params["serviceTier"] as? String == "fast")
+
+        let config = try #require(params["config"] as? [String: Any])
+        #expect(config["temperature"] as? Double == 0.2)
+    }
+
+    @Test("encodes thread/compact/start requests with the expected method and params payload")
+    func encodesThreadCompactStartRequest() throws {
+        let payload = try protocolLayer.makeThreadCompactStartRequest(
+            id: .string("thread-compact-1"),
+            params: .init(threadID: "thread-123")
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/compact/start")
+        #expect(object["id"] as? String == "thread-compact-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+    }
+
     @Test("encodes turn/start requests with the expected method and params payload")
     func encodesTurnStartRequest() throws {
         let payload = try protocolLayer.makeTurnStartRequest(
@@ -247,6 +374,69 @@ struct CodexAppServerProtocolTests {
         #expect(response.thread.id == "thread-123")
         #expect(response.thread.preview == "Hello")
         #expect(response.thread.turns.isEmpty)
+    }
+
+    @Test("decodes thread/compact/start responses and honors the expected request ID")
+    func decodesThreadCompactStartResponse() throws {
+        let payload = Data(
+            #"{"id":"thread-compact-1","result":{}}"#.utf8
+        )
+
+        let response = try protocolLayer.decodeThreadCompactStartResponse(
+            payload,
+            expectedID: .string("thread-compact-1")
+        )
+
+        #expect(response == .init())
+    }
+
+    @Test("decodes thread/list responses and honors the expected request ID")
+    func decodesThreadListResponse() throws {
+        let payload = Data(
+            #"""
+            {"id":"thread-list-1","result":{"data":[{"cliVersion":"0.121.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","name":"Release prep","preview":"Summarize the release notes","source":"cli","status":{"type":"notLoaded"},"turns":[],"updatedAt":1713350005}],"nextCursor":"cursor-next"}}
+            """#.utf8
+        )
+
+        let response = try protocolLayer.decodeThreadListResponse(payload, expectedID: .string("thread-list-1"))
+
+        #expect(response.data.count == 1)
+        #expect(response.data[0].id == "thread-123")
+        #expect(response.data[0].name == "Release prep")
+        #expect(response.nextCursor == "cursor-next")
+    }
+
+    @Test("decodes thread/resume responses and honors the expected request ID")
+    func decodesThreadResumeResponse() throws {
+        let payload = Data(
+            #"""
+            {"id":"thread-resume-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.121.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","name":"Resumed Thread","preview":"Hydrated resume preview","source":"cli","status":{"type":"idle"},"turns":[{"completedAt":1713350005,"durationMs":3000,"error":null,"id":"turn-hydrated-1","items":[{"id":"item-agent-1","status":"completed","text":"Resumed reply.","type":"agentMessage"}],"startedAt":1713350002,"status":"completed"}],"updatedAt":1713350005}}}
+            """#.utf8
+        )
+
+        let response = try protocolLayer.decodeThreadResumeResponse(payload, expectedID: .string("thread-resume-1"))
+
+        #expect(response.thread.id == "thread-123")
+        #expect(response.thread.name == "Resumed Thread")
+        #expect(response.thread.turns.count == 1)
+        #expect(response.thread.turns[0].items.count == 1)
+    }
+
+    @Test("decodes thread/fork responses and honors the expected request ID")
+    func decodesThreadForkResponse() throws {
+        let payload = Data(
+            #"""
+            {"id":"thread-fork-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.121.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":true,"forkedFromId":"thread-123","id":"thread-456","modelProvider":"openai","name":"Forked Thread","preview":"Hydrated fork preview","source":"cli","status":{"type":"idle"},"turns":[{"completedAt":1713350005,"durationMs":3000,"error":null,"id":"turn-hydrated-1","items":[{"id":"item-agent-1","status":"completed","text":"Forked reply.","type":"agentMessage"}],"startedAt":1713350002,"status":"completed"}],"updatedAt":1713350005}}}
+            """#.utf8
+        )
+
+        let response = try protocolLayer.decodeThreadForkResponse(payload, expectedID: .string("thread-fork-1"))
+
+        #expect(response.thread.id == "thread-456")
+        #expect(response.thread.forkedFromID == "thread-123")
+        #expect(response.thread.ephemeral == true)
+        #expect(response.thread.turns.count == 1)
+        #expect(response.thread.turns[0].items.count == 1)
     }
 
     @Test("decodes turn/start responses and honors the expected request ID")
@@ -556,6 +746,24 @@ struct CodexAppServerProtocolTests {
             #expect(notification.turnID == "turn-123")
         default:
             Issue.record("Expected item/plan/delta to decode into .planDelta.")
+        }
+
+        let fileChangeDeltaPayload = Data(
+            #"{"delta":"@@ -1 +1 @@\n-Hello\n+Hello, world\n","itemId":"item-file-1","threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let fileChangeDeltaEvent = try #require(
+            try decodeEvent(method: "item/fileChange/outputDelta", payload: fileChangeDeltaPayload)
+        )
+
+        switch fileChangeDeltaEvent {
+        case let .fileChangeOutputDelta(notification):
+            #expect(notification.delta.contains("+Hello, world"))
+            #expect(notification.itemID == "item-file-1")
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+        default:
+            Issue.record("Expected item/fileChange/outputDelta to decode into .fileChangeOutputDelta.")
         }
     }
 

@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 public actor CodexAppServer {
     public struct CLIExecutableDiagnostics: Sendable, Equatable {
@@ -139,6 +140,101 @@ public actor CodexAppServer {
         }
     }
 
+    public struct ThreadResumeRequest: Sendable, Equatable {
+        public var approvalPolicy: ApprovalPolicy?
+        public var approvalsReviewer: ApprovalsReviewer?
+        public var baseInstructions: String?
+        public var config: [String: JSONValue]?
+        public var currentDirectoryPath: String?
+        public var developerInstructions: String?
+        public var model: String?
+        public var modelProvider: String?
+        public var personality: Personality?
+        public var sandboxMode: SandboxMode?
+        public var serviceName: String?
+        public var serviceTier: ServiceTier?
+        public var threadID: String
+
+        public init(
+            threadID: String,
+            approvalPolicy: ApprovalPolicy? = nil,
+            approvalsReviewer: ApprovalsReviewer? = nil,
+            baseInstructions: String? = nil,
+            config: [String: JSONValue]? = nil,
+            currentDirectoryPath: String? = nil,
+            developerInstructions: String? = nil,
+            model: String? = nil,
+            modelProvider: String? = nil,
+            personality: Personality? = nil,
+            sandboxMode: SandboxMode? = nil,
+            serviceName: String? = nil,
+            serviceTier: ServiceTier? = nil
+        ) {
+            self.threadID = threadID
+            self.approvalPolicy = approvalPolicy
+            self.approvalsReviewer = approvalsReviewer
+            self.baseInstructions = baseInstructions
+            self.config = config
+            self.currentDirectoryPath = currentDirectoryPath
+            self.developerInstructions = developerInstructions
+            self.model = model
+            self.modelProvider = modelProvider
+            self.personality = personality
+            self.sandboxMode = sandboxMode
+            self.serviceName = serviceName
+            self.serviceTier = serviceTier
+        }
+    }
+
+    public struct ThreadForkRequest: Sendable, Equatable {
+        public var approvalPolicy: ApprovalPolicy?
+        public var approvalsReviewer: ApprovalsReviewer?
+        public var baseInstructions: String?
+        public var config: [String: JSONValue]?
+        public var currentDirectoryPath: String?
+        public var developerInstructions: String?
+        public var ephemeral: Bool?
+        public var model: String?
+        public var modelProvider: String?
+        public var personality: Personality?
+        public var sandboxMode: SandboxMode?
+        public var serviceName: String?
+        public var serviceTier: ServiceTier?
+        public var threadID: String
+
+        public init(
+            threadID: String,
+            approvalPolicy: ApprovalPolicy? = nil,
+            approvalsReviewer: ApprovalsReviewer? = nil,
+            baseInstructions: String? = nil,
+            config: [String: JSONValue]? = nil,
+            currentDirectoryPath: String? = nil,
+            developerInstructions: String? = nil,
+            ephemeral: Bool? = nil,
+            model: String? = nil,
+            modelProvider: String? = nil,
+            personality: Personality? = nil,
+            sandboxMode: SandboxMode? = nil,
+            serviceName: String? = nil,
+            serviceTier: ServiceTier? = nil
+        ) {
+            self.threadID = threadID
+            self.approvalPolicy = approvalPolicy
+            self.approvalsReviewer = approvalsReviewer
+            self.baseInstructions = baseInstructions
+            self.config = config
+            self.currentDirectoryPath = currentDirectoryPath
+            self.developerInstructions = developerInstructions
+            self.ephemeral = ephemeral
+            self.model = model
+            self.modelProvider = modelProvider
+            self.personality = personality
+            self.sandboxMode = sandboxMode
+            self.serviceName = serviceName
+            self.serviceTier = serviceTier
+        }
+    }
+
     public struct ThreadSession: Sendable, Equatable {
         public let approvalPolicy: ApprovalPolicy
         public let approvalsReviewer: ApprovalsReviewer
@@ -158,11 +254,125 @@ public actor CodexAppServer {
         public let createdAt: Int
         public let currentDirectoryPath: String
         public let ephemeral: Bool
+        public let forkedFromThreadID: String?
         public let modelProvider: String
         public let name: String?
         public let preview: String
         public let status: ThreadStatus
         public let updatedAt: Int
+    }
+
+    public struct ThreadReadRequest: Sendable, Equatable {
+        public var includeTurns: Bool
+        public var threadID: String
+
+        public init(
+            threadID: String,
+            includeTurns: Bool = false
+        ) {
+            self.threadID = threadID
+            self.includeTurns = includeTurns
+        }
+    }
+
+    public struct ThreadReadResult: Sendable, Equatable {
+        public let thread: ThreadInfo
+        public let turns: [TurnInfo]
+    }
+
+    public struct ThreadCompactRequest: Sendable, Equatable {
+        public var threadID: String
+
+        public init(threadID: String) {
+            self.threadID = threadID
+        }
+    }
+
+    public enum ThreadListSortKey: String, Sendable, Equatable {
+        case createdAt
+        case updatedAt
+    }
+
+    public enum ThreadListSortDirection: String, Sendable, Equatable {
+        case asc
+        case desc
+    }
+
+    public enum ThreadListSourceKind: String, Sendable, Equatable {
+        case appServer
+        case cli
+        case exec
+        case unknown
+        case vscode
+    }
+
+    public struct ThreadListRequest: Sendable, Equatable {
+        public var archived: Bool?
+        public var cursor: String?
+        public var currentDirectoryPath: String?
+        public var limit: Int?
+        public var modelProviders: [String]?
+        public var searchTerm: String?
+        public var sortDirection: ThreadListSortDirection?
+        public var sortKey: ThreadListSortKey?
+        public var sourceKinds: [ThreadListSourceKind]?
+
+        public init(
+            cursor: String? = nil,
+            limit: Int? = nil,
+            sortKey: ThreadListSortKey? = nil,
+            sortDirection: ThreadListSortDirection? = nil,
+            modelProviders: [String]? = nil,
+            sourceKinds: [ThreadListSourceKind]? = nil,
+            archived: Bool? = nil,
+            currentDirectoryPath: String? = nil,
+            searchTerm: String? = nil
+        ) {
+            self.archived = archived
+            self.cursor = cursor
+            self.currentDirectoryPath = currentDirectoryPath
+            self.limit = limit
+            self.modelProviders = modelProviders
+            self.searchTerm = searchTerm
+            self.sortDirection = sortDirection
+            self.sortKey = sortKey
+            self.sourceKinds = sourceKinds
+        }
+    }
+
+    public struct ThreadListPage: Sendable, Equatable {
+        public let nextCursor: String?
+        public let threads: [ThreadInfo]
+    }
+
+    public enum ThreadTurnsSortDirection: String, Sendable, Equatable {
+        case asc
+        case desc
+    }
+
+    public struct ThreadTurnsListRequest: Sendable, Equatable {
+        public var cursor: String?
+        public var limit: Int?
+        public var sortDirection: ThreadTurnsSortDirection?
+        public var threadID: String
+
+        public init(
+            threadID: String,
+            limit: Int? = nil,
+            cursor: String? = nil,
+            sortDirection: ThreadTurnsSortDirection? = nil
+        ) {
+            self.threadID = threadID
+            self.limit = limit
+            self.cursor = cursor
+            self.sortDirection = sortDirection
+        }
+    }
+
+    public struct ThreadTurnsPage: Sendable, Equatable {
+        public let backwardsCursor: String?
+        public let nextCursor: String?
+        public let turns: [TurnInfo]
     }
 
     public struct ThreadStatus: Sendable, Equatable {
@@ -375,7 +585,40 @@ public actor CodexAppServer {
         var activeMcpItemIDs: Set<String> = []
         var hasToolErrorResidue = false
         var hasMcpErrorResidue = false
+        var hookRuns: [CodexThread.Dashboard.HookRun] = []
         var isCompactingThreadContext = false
+    }
+
+    internal struct RecentTurnWindowResult: Sendable {
+        let turns: [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot]
+        let nextOlderCursor: String?
+        let nextNewerCursor: String?
+    }
+
+    internal struct RecentFileSnapshot: Sendable, Equatable, Identifiable {
+        let id: String
+        let itemID: String
+        let latestStatusText: String?
+        let path: String?
+        let payloadText: String?
+        let status: String?
+        let threadID: String
+        let turnID: String
+        let turnOrderIndex: Int
+        let itemOrderIndex: Int
+        let turnStartedAt: Int?
+    }
+
+    internal struct RecentFileWindowResult: Sendable {
+        let files: [RecentFileSnapshot]
+        let nextOlderCursor: String?
+    }
+
+    internal struct FileChangeOutputDeltaEvent: Sendable, Equatable {
+        let delta: String
+        let itemID: String
+        let threadID: String
+        let turnID: String
     }
 
     private enum InteractiveRequestDestination: Sendable, Equatable {
@@ -391,9 +634,17 @@ public actor CodexAppServer {
 
     private let transport: any CodexAppServerTransporting
     private let protocolLayer: CodexAppServerProtocol
+    private static let logger = Logger(
+        subsystem: "com.gaelic-ghost.SwiftASB",
+        category: "CodexAppServer"
+    )
+    private let historyStore: ThreadHistoryStore?
+    private let historyStoreInitializationError: Error?
     private var serverEventTask: Task<Void, Never>?
     private var threadStatuses: [String: ThreadStatus] = [:]
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
+    private var threadObservableActivityContinuations: [String: [UUID: AsyncStream<CodexThread.Dashboard.ActivityState>.Continuation]] = [:]
+    private var threadFileDeltaContinuations: [String: [UUID: AsyncStream<FileChangeOutputDeltaEvent>.Continuation]] = [:]
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var threadTurnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
@@ -418,14 +669,34 @@ public actor CodexAppServer {
             )
         )
         self.protocolLayer = CodexAppServerProtocol()
+        do {
+            self.historyStore = try ThreadHistoryStore()
+            self.historyStoreInitializationError = nil
+        } catch {
+            self.historyStore = nil
+            self.historyStoreInitializationError = error
+        }
     }
 
     internal init(
         transport: any CodexAppServerTransporting,
-        protocolLayer: CodexAppServerProtocol = CodexAppServerProtocol()
+        protocolLayer: CodexAppServerProtocol = CodexAppServerProtocol(),
+        historyStore: ThreadHistoryStore? = nil
     ) {
         self.transport = transport
         self.protocolLayer = protocolLayer
+        if let historyStore {
+            self.historyStore = historyStore
+            self.historyStoreInitializationError = nil
+        } else {
+            do {
+                self.historyStore = try ThreadHistoryStore(configuration: .inMemory())
+                self.historyStoreInitializationError = nil
+            } catch {
+                self.historyStore = nil
+                self.historyStoreInitializationError = error
+            }
+        }
     }
 
     public func start() async throws {
@@ -445,6 +716,8 @@ public actor CodexAppServer {
         serverEventTask?.cancel()
         serverEventTask = nil
         finishAllThreadEventStreams(throwing: nil)
+        finishAllThreadObservableActivityStreams()
+        finishAllThreadFileDeltaStreams()
         finishAllTurnEventStreams(throwing: nil)
         await transport.stop()
         hasStarted = false
@@ -517,15 +790,238 @@ public actor CodexAppServer {
                 responsePayload,
                 expectedID: requestID
             )
+            let session = ThreadSession(wireValue: response)
             threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
+            try await requireHistoryStore(for: "thread/start").recordThreadStarted(session: session)
 
             return CodexThread(
                 appServer: self,
-                session: ThreadSession(wireValue: response),
+                session: session,
                 events: makeThreadEventStream(threadID: response.thread.id)
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/start")
+        }
+    }
+
+    public func resumeThread(_ request: ThreadResumeRequest) async throws -> CodexThread {
+        try requireInitialized(for: "thread/resume")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadResumeRequest(
+                id: requestID,
+                params: request.wireValue
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadResumeResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            let session = ThreadSession(wireValue: response)
+            threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
+            let historyStore = try requireHistoryStore(for: "thread/resume")
+            try await historyStore.recordThreadResumed(
+                session: session,
+                turns: response.thread.turns.map {
+                    .init(
+                        turn: .init(wireValue: $0),
+                        items: $0.items.map(CodexTurnItem.init(wireValue:))
+                    )
+                }
+            )
+            try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
+
+            return CodexThread(
+                appServer: self,
+                session: session,
+                events: makeThreadEventStream(threadID: response.thread.id)
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/resume")
+        }
+    }
+
+    public func forkThread(_ request: ThreadForkRequest) async throws -> CodexThread {
+        try requireInitialized(for: "thread/fork")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadForkRequest(
+                id: requestID,
+                params: request.wireValue
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadForkResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            let session = ThreadSession(wireValue: response)
+            threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
+            let historyStore = try requireHistoryStore(for: "thread/fork")
+            try await historyStore.recordThreadForked(
+                session: session,
+                turns: response.thread.turns.map {
+                    .init(
+                        turn: .init(wireValue: $0),
+                        items: $0.items.map(CodexTurnItem.init(wireValue:))
+                    )
+                }
+            )
+            try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
+
+            return CodexThread(
+                appServer: self,
+                session: session,
+                events: makeThreadEventStream(threadID: response.thread.id)
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/fork")
+        }
+    }
+
+    public func compactThread(_ request: ThreadCompactRequest) async throws {
+        try requireInitialized(for: "thread/compact/start")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let payload = try protocolLayer.makeThreadCompactStartRequest(
+                id: requestID,
+                params: .init(threadID: request.threadID)
+            )
+            let response = try await transport.send(payload, id: requestID)
+            _ = try protocolLayer.decodeThreadCompactStartResponse(
+                response,
+                expectedID: requestID
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/compact/start")
+        }
+    }
+
+    public func listThreads(_ request: ThreadListRequest = .init()) async throws -> ThreadListPage {
+        try requireInitialized(for: "thread/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadListRequest(
+                id: requestID,
+                params: .init(
+                    archived: request.archived,
+                    cursor: request.cursor,
+                    cwd: request.currentDirectoryPath,
+                    limit: request.limit,
+                    modelProviders: request.modelProviders,
+                    searchTerm: request.searchTerm,
+                    sortDirection: request.sortDirection.map(CodexProtocolThreadListSortDirection.init),
+                    sortKey: request.sortKey.map(CodexProtocolThreadListSortKey.init),
+                    sourceKinds: request.sourceKinds?.map(CodexProtocolThreadListSourceKind.init)
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            let threads = response.data.map(ThreadInfo.init(wireValue:))
+            try await requireHistoryStore(for: "thread/list").reconcileThreadListPage(
+                threads,
+                archived: request.archived
+            )
+
+            return .init(
+                nextCursor: response.nextCursor,
+                threads: threads
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/list")
+        }
+    }
+
+    public func readThread(_ request: ThreadReadRequest) async throws -> ThreadReadResult {
+        try requireInitialized(for: "thread/read")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadReadRequest(
+                id: requestID,
+                params: .init(
+                    includeTurns: request.includeTurns ? true : nil,
+                    threadID: request.threadID
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadReadResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            let thread = ThreadInfo(wireValue: response.thread)
+            let turns = response.thread.turns.map(TurnInfo.init(wireValue:))
+            if request.includeTurns {
+                try await requireHistoryStore(for: "thread/read").hydrateThreadRead(
+                    thread: thread,
+                    turns: response.thread.turns.map {
+                        .init(
+                            turn: .init(wireValue: $0),
+                            items: $0.items.map(CodexTurnItem.init(wireValue:))
+                        )
+                    }
+                )
+            } else {
+                try await requireHistoryStore(for: "thread/read").recordThreadMetadataUpdated(thread)
+            }
+
+            return .init(thread: thread, turns: turns)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/read")
+        }
+    }
+
+    public func listThreadTurns(_ request: ThreadTurnsListRequest) async throws -> ThreadTurnsPage {
+        try requireInitialized(for: "thread/turns/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadTurnsListRequest(
+                id: requestID,
+                params: .init(
+                    cursor: request.cursor,
+                    limit: request.limit,
+                    sortDirection: request.sortDirection.map(CodexProtocolThreadTurnsSortDirection.init),
+                    threadID: request.threadID
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadTurnsListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            try await requireHistoryStore(for: "thread/turns/list").hydrateHistoricalTurns(
+                threadID: request.threadID,
+                turns: response.data.map {
+                    .init(
+                        turn: .init(wireValue: $0),
+                        items: $0.items.map(CodexTurnItem.init(wireValue:))
+                    )
+                }
+            )
+
+            return .init(
+                backwardsCursor: response.backwardsCursor,
+                nextCursor: response.nextCursor,
+                turns: response.data.map(TurnInfo.init(wireValue:))
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/turns/list")
         }
     }
 
@@ -548,6 +1044,7 @@ public actor CodexAppServer {
 
             let turn = TurnInfo(wireValue: response.turn)
             markThreadTurnActive(threadID: request.threadID, turnID: turn.id)
+            try await requireHistoryStore(for: "turn/start").recordTurnStarted(threadID: request.threadID, turn: turn)
             let eventStream = makeTurnEventStream(turnID: turn.id)
             let minimapStream = makeTurnEventStream(turnID: turn.id)
             let minimap = await MainActor.run {
@@ -649,15 +1146,360 @@ public actor CodexAppServer {
         makeThreadTurnEventStream(threadID: threadID)
     }
 
+    internal func unresolvedInteractiveTurnIDs(threadID: String) -> Set<String> {
+        Set(
+            outstandingInteractiveRequests.values.compactMap { request in
+                guard request.threadID == threadID else { return nil }
+                return request.turnID
+            }
+        )
+    }
+
     internal func threadObservableActivityState(threadID: String) -> CodexThread.Dashboard.ActivityState {
         let state = threadObservableActivityStates[threadID] ?? .init()
         return .init(
             activeMcpItemIDs: state.activeMcpItemIDs,
             activeToolLikeItemIDs: state.activeToolLikeItemIDs,
             hasMcpErrorResidue: state.hasMcpErrorResidue,
+            hookRuns: state.hookRuns,
             hasToolErrorResidue: state.hasToolErrorResidue,
             isCompactingThreadContext: state.isCompactingThreadContext
         )
+    }
+
+    internal func threadObservableActivityStream(
+        threadID: String
+    ) -> AsyncStream<CodexThread.Dashboard.ActivityState> {
+        let streamID = UUID()
+
+        return AsyncStream { continuation in
+            var continuations = threadObservableActivityContinuations[threadID] ?? [:]
+            continuations[streamID] = continuation
+            threadObservableActivityContinuations[threadID] = continuations
+            continuation.yield(threadObservableActivityState(threadID: threadID))
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeThreadObservableActivityContinuation(
+                        streamID: streamID,
+                        threadID: threadID
+                    )
+                }
+            }
+        }
+    }
+
+    internal func threadFileChangeOutputDeltaStream(
+        threadID: String
+    ) -> AsyncStream<FileChangeOutputDeltaEvent> {
+        let streamID = UUID()
+
+        return AsyncStream { continuation in
+            var continuations = threadFileDeltaContinuations[threadID] ?? [:]
+            continuations[streamID] = continuation
+            threadFileDeltaContinuations[threadID] = continuations
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeThreadFileDeltaContinuation(
+                        streamID: streamID,
+                        threadID: threadID
+                    )
+                }
+            }
+        }
+    }
+
+    internal func debugThreadHistorySnapshot(
+        threadID: String
+    ) async throws -> ThreadHistoryStore.ThreadSnapshot? {
+        try await requireHistoryStore(for: "thread history snapshot").snapshot(threadID: threadID)
+    }
+
+    internal func recentClosedTurns(
+        threadID: String,
+        limit: Int
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        let snapshots = try await recentTurnWindow(threadID: threadID, limit: limit).turns
+        return snapshots.map { .init(threadID: threadID, snapshot: $0) }
+    }
+
+    internal func recentTurnSnapshots(
+        threadID: String,
+        limit: Int
+    ) async throws -> [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot] {
+        try await recentTurnWindow(threadID: threadID, limit: limit).turns
+    }
+
+    internal func recentTurnWindow(
+        threadID: String,
+        limit: Int
+    ) async throws -> RecentTurnWindowResult {
+        let historyStore = try requireHistoryStore(for: "recent turn history")
+        let localTurns = try await historyStore.recentTurnSnapshots(threadID: threadID, limit: limit)
+        if !localTurns.isEmpty {
+            let seededRemotePage = try? await listThreadTurns(
+                .init(
+                    threadID: threadID,
+                    limit: limit,
+                    sortDirection: .desc
+                )
+            )
+            return .init(
+                turns: localTurns,
+                nextOlderCursor: seededRemotePage?.nextCursor,
+                nextNewerCursor: seededRemotePage?.backwardsCursor
+            )
+        }
+
+        let page = try await listThreadTurns(
+            .init(
+                threadID: threadID,
+                limit: limit,
+                sortDirection: .desc
+            )
+        )
+
+        return .init(
+            turns: try await historyStore.turnSnapshots(
+                threadID: threadID,
+                turnIDs: page.turns.map(\.id)
+            ),
+            nextOlderCursor: page.nextCursor,
+            nextNewerCursor: page.backwardsCursor
+        )
+    }
+
+    internal func olderTurnWindow(
+        threadID: String,
+        olderThanOrderIndex: Int,
+        cursor: String?,
+        limit: Int
+    ) async throws -> RecentTurnWindowResult {
+        let historyStore = try requireHistoryStore(for: "older turn window")
+        let localTurns = try await historyStore.olderTurnSnapshots(
+            threadID: threadID,
+            olderThanOrderIndex: olderThanOrderIndex,
+            limit: limit
+        )
+        if !localTurns.isEmpty {
+            return .init(
+                turns: localTurns,
+                nextOlderCursor: cursor,
+                nextNewerCursor: nil
+            )
+        }
+
+        let page = try await listThreadTurns(
+            .init(
+                threadID: threadID,
+                limit: limit,
+                cursor: cursor,
+                sortDirection: .desc
+            )
+        )
+
+        return .init(
+            turns: try await historyStore.turnSnapshots(
+                threadID: threadID,
+                turnIDs: page.turns.map(\.id)
+            ),
+            nextOlderCursor: page.nextCursor,
+            nextNewerCursor: page.backwardsCursor
+        )
+    }
+
+    internal func newerTurnWindow(
+        threadID: String,
+        newerThanOrderIndex: Int,
+        cursor: String?,
+        limit: Int
+    ) async throws -> RecentTurnWindowResult {
+        let historyStore = try requireHistoryStore(for: "newer turn window")
+        let localTurns = try await historyStore.newerTurnSnapshots(
+            threadID: threadID,
+            newerThanOrderIndex: newerThanOrderIndex,
+            limit: limit
+        )
+        if !localTurns.isEmpty {
+            return .init(
+                turns: localTurns,
+                nextOlderCursor: nil,
+                nextNewerCursor: cursor
+            )
+        }
+
+        guard let cursor else {
+            return .init(turns: [], nextOlderCursor: nil, nextNewerCursor: nil)
+        }
+
+        let page = try await listThreadTurns(
+            .init(
+                threadID: threadID,
+                limit: limit,
+                cursor: cursor,
+                sortDirection: .desc
+            )
+        )
+
+        return .init(
+            turns: try await historyStore.turnSnapshots(
+                threadID: threadID,
+                turnIDs: page.turns.map(\.id)
+            ),
+            nextOlderCursor: page.nextCursor,
+            nextNewerCursor: page.backwardsCursor
+        )
+    }
+
+    internal func recentFileWindow(
+        threadID: String,
+        limit: Int
+    ) async throws -> RecentFileWindowResult {
+        guard limit > 0 else {
+            return .init(files: [], nextOlderCursor: nil)
+        }
+
+        let turnBatchLimit = max(limit, 12)
+        let historyStore = try requireHistoryStore(for: "recent file history")
+        let localTurns = try await historyStore.recentTurnSnapshots(threadID: threadID, limit: turnBatchLimit)
+
+        if !localTurns.isEmpty {
+            var collected = makeRecentFileSnapshots(from: localTurns, threadID: threadID)
+            var oldestTurnOrderIndex = localTurns.last?.orderIndex
+
+            while collected.count < limit, let currentOldestTurnOrderIndex = oldestTurnOrderIndex {
+                let olderTurns = try await historyStore.olderTurnSnapshots(
+                    threadID: threadID,
+                    olderThanOrderIndex: currentOldestTurnOrderIndex,
+                    limit: turnBatchLimit
+                )
+
+                if olderTurns.isEmpty {
+                    break
+                }
+
+                collected.append(contentsOf: makeRecentFileSnapshots(from: olderTurns, threadID: threadID))
+                oldestTurnOrderIndex = olderTurns.last?.orderIndex
+            }
+
+            return .init(
+                files: Array(collected.prefix(limit)),
+                nextOlderCursor: nil
+            )
+        }
+
+        var page = try await recentTurnWindow(threadID: threadID, limit: turnBatchLimit)
+        var collected = makeRecentFileSnapshots(from: page.turns, threadID: threadID)
+        var nextOlderCursor = page.nextOlderCursor
+
+        while collected.count < limit,
+              let cursor = nextOlderCursor,
+              let oldestTurnOrderIndex = page.turns.last?.orderIndex {
+            page = try await olderTurnWindow(
+                threadID: threadID,
+                olderThanOrderIndex: oldestTurnOrderIndex,
+                cursor: cursor,
+                limit: turnBatchLimit
+            )
+
+            if page.turns.isEmpty {
+                nextOlderCursor = page.nextOlderCursor
+                break
+            }
+
+            collected.append(contentsOf: makeRecentFileSnapshots(from: page.turns, threadID: threadID))
+            nextOlderCursor = page.nextOlderCursor
+        }
+
+        return .init(
+            files: Array(collected.prefix(limit)),
+            nextOlderCursor: nextOlderCursor
+        )
+    }
+
+    internal func olderFileWindow(
+        threadID: String,
+        olderThan oldestFile: RecentFileSnapshot,
+        cursor: String?,
+        limit: Int
+    ) async throws -> RecentFileWindowResult {
+        guard limit > 0 else {
+            return .init(files: [], nextOlderCursor: cursor)
+        }
+
+        var collected: [RecentFileSnapshot] = []
+        if let sameTurnSnapshot = try await turnSnapshot(threadID: threadID, turnID: oldestFile.turnID) {
+            let olderFilesInSameTurn = makeRecentFileSnapshots(
+                from: sameTurnSnapshot,
+                threadID: threadID
+            ).filter {
+                $0.itemOrderIndex < oldestFile.itemOrderIndex
+            }
+            collected.append(contentsOf: olderFilesInSameTurn.prefix(limit))
+        }
+
+        var nextOlderCursor = cursor
+        var oldestTurnOrderIndex = oldestFile.turnOrderIndex
+        let turnBatchLimit = max(limit, 12)
+
+        while collected.count < limit {
+            let page = try await olderTurnWindow(
+                threadID: threadID,
+                olderThanOrderIndex: oldestTurnOrderIndex,
+                cursor: nextOlderCursor,
+                limit: turnBatchLimit
+            )
+
+            if page.turns.isEmpty {
+                nextOlderCursor = page.nextOlderCursor
+                break
+            }
+
+            collected.append(contentsOf: makeRecentFileSnapshots(from: page.turns, threadID: threadID))
+            nextOlderCursor = page.nextOlderCursor
+            oldestTurnOrderIndex = page.turns.last?.orderIndex ?? oldestTurnOrderIndex
+        }
+
+        return .init(
+            files: Array(collected.prefix(limit)),
+            nextOlderCursor: nextOlderCursor
+        )
+    }
+
+    internal func turnSnapshot(
+        threadID: String,
+        turnID: String
+    ) async throws -> ThreadHistoryStore.ThreadSnapshot.TurnSnapshot? {
+        try await requireHistoryStore(for: "turn snapshot").turnSnapshot(threadID: threadID, turnID: turnID)
+    }
+
+    internal func closedTurn(
+        threadID: String,
+        turnID: String
+    ) async throws -> CodexTurnHandle.ClosedTurn {
+        let historyStore = try requireHistoryStore(for: "closed turn snapshot")
+        guard let snapshot = try await historyStore.turnSnapshot(threadID: threadID, turnID: turnID) else {
+            let reason = """
+            SwiftASB could not close turn \(turnID) for thread \(threadID) because no persisted turn snapshot is available yet.
+            Wait for `turn/completed` to arrive before closing the turn handle.
+            """
+            throw CodexAppServerError.invalidState(reason: reason)
+        }
+
+        guard snapshot.status == TurnStatus.completed.rawValue
+            || snapshot.status == TurnStatus.failed.rawValue
+            || snapshot.status == TurnStatus.interrupted.rawValue
+        else {
+            let reason = """
+            SwiftASB cannot close turn \(turnID) for thread \(threadID) while it is still \(snapshot.status).
+            Wait for a terminal turn status before calling `close()`.
+            """
+            throw CodexAppServerError.invalidState(reason: reason)
+        }
+
+        releaseTurnObservation(turnID: turnID)
+        return .init(threadID: threadID, snapshot: snapshot)
     }
 
     internal func respond(
@@ -804,8 +1646,36 @@ public actor CodexAppServer {
 
     private func clearTurnActivities(threadID: String) {
         threadTurnActivities.removeValue(forKey: threadID)
-        threadObservableActivityStates.removeValue(forKey: threadID)
         turnThreadIDs = turnThreadIDs.filter { $0.value != threadID }
+    }
+
+    private func settleThreadObservableActivity(threadID: String) {
+        var state = threadObservableActivityStates[threadID] ?? .init()
+        state.activeMcpItemIDs.removeAll()
+        state.activeToolLikeItemIDs.removeAll()
+        state.isCompactingThreadContext = false
+        threadObservableActivityStates[threadID] = state
+        publishThreadObservableActivityState(threadID: threadID)
+    }
+
+    private func finishThreadObservableActivityStreams(threadID: String) {
+        guard let continuations = threadObservableActivityContinuations.removeValue(forKey: threadID)?.values else {
+            return
+        }
+
+        for continuation in continuations {
+            continuation.finish()
+        }
+    }
+
+    private func finishThreadFileDeltaStreams(threadID: String) {
+        guard let continuations = threadFileDeltaContinuations.removeValue(forKey: threadID)?.values else {
+            return
+        }
+
+        for continuation in continuations {
+            continuation.finish()
+        }
     }
 
     private func startServerEventLoop() {
@@ -836,7 +1706,7 @@ public actor CodexAppServer {
         }
     }
 
-    private func handleProtocolEvent(_ event: CodexAppServerProtocolEvent) {
+    private func handleProtocolEvent(_ event: CodexAppServerProtocolEvent) async {
         switch event {
         case let .threadStarted(notification):
             threadStatuses[notification.thread.id] = .init(wireValue: notification.thread.status)
@@ -844,6 +1714,7 @@ public actor CodexAppServer {
                 .init(thread: .init(wireValue: notification.thread))
             )
             publishThreadEvent(threadEvent, for: notification.thread.id, isTerminal: false)
+            try? await historyStore?.recordThreadMetadataUpdated(.init(wireValue: notification.thread))
         case let .threadStatusChanged(notification):
             threadStatuses[notification.threadID] = .init(wireValue: notification.status)
             let threadEvent = CodexThreadEvent.statusChanged(
@@ -853,17 +1724,27 @@ public actor CodexAppServer {
                 )
             )
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordThreadStatusChanged(
+                threadID: notification.threadID,
+                status: .init(wireValue: notification.status)
+            )
         case let .threadArchived(notification):
             let threadEvent = CodexThreadEvent.archived(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordThreadArchived(threadID: notification.threadID, isArchived: true)
         case let .threadUnarchived(notification):
             let threadEvent = CodexThreadEvent.unarchived(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordThreadArchived(threadID: notification.threadID, isArchived: false)
         case let .threadClosed(notification):
             threadStatuses.removeValue(forKey: notification.threadID)
             clearTurnActivities(threadID: notification.threadID)
+            settleThreadObservableActivity(threadID: notification.threadID)
+            finishThreadObservableActivityStreams(threadID: notification.threadID)
+            finishThreadFileDeltaStreams(threadID: notification.threadID)
             let threadEvent = CodexThreadEvent.closed(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: true)
+            try? await historyStore?.recordThreadClosed(threadID: notification.threadID)
         case let .threadNameUpdated(notification):
             let threadEvent = CodexThreadEvent.nameUpdated(
                 .init(
@@ -872,24 +1753,37 @@ public actor CodexAppServer {
                 )
             )
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordThreadNameUpdated(
+                threadID: notification.threadID,
+                name: notification.threadName
+            )
         case let .threadTokenUsageUpdated(notification):
+            let lastUsage = CodexThreadTokenUsageUpdated.Usage(wireValue: notification.tokenUsage.last)
             let threadEvent = CodexThreadEvent.tokenUsageUpdated(
                 .init(
                     threadID: notification.threadID,
                     turnID: notification.turnID,
-                    last: .init(wireValue: notification.tokenUsage.last),
+                    last: lastUsage,
                     modelContextWindow: notification.tokenUsage.modelContextWindow,
                     total: .init(wireValue: notification.tokenUsage.total)
                 )
             )
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
+            try? await historyStore?.recordTurnTokenUsageUpdated(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                usage: lastUsage,
+                modelContextWindow: notification.tokenUsage.modelContextWindow
+            )
         case let .turnStarted(notification):
             markThreadTurnActive(threadID: notification.threadID, turnID: notification.turn.id)
+            let turn = TurnInfo(wireValue: notification.turn)
             let started = CodexTurnStarted(
                 threadID: notification.threadID,
-                turn: TurnInfo(wireValue: notification.turn)
+                turn: turn
             )
             publishTurnEvent(.started(started), for: notification.turn.id, isTerminal: false)
+            try? await historyStore?.recordTurnStarted(threadID: notification.threadID, turn: turn)
         case let .turnDiffUpdated(notification):
             let diffUpdate = CodexTurnDiffUpdate(
                 threadID: notification.threadID,
@@ -897,22 +1791,64 @@ public actor CodexAppServer {
                 diff: notification.diff
             )
             publishTurnEvent(.diffUpdated(diffUpdate), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordTurnDiffUpdated(turnID: notification.turnID, diff: notification.diff)
         case let .itemStarted(notification):
             updateThreadObservableActivityForItemStarted(notification.item, threadID: notification.threadID)
+            let item = CodexTurnItem(wireValue: notification.item)
             let itemStarted = CodexTurnItemStarted(
                 threadID: notification.threadID,
                 turnID: notification.turnID,
-                item: .init(wireValue: notification.item)
+                item: item
             )
             publishTurnEvent(.itemStarted(itemStarted), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemStarted(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                item: item
+            )
         case let .itemCompleted(notification):
             updateThreadObservableActivityForItemCompleted(notification.item, threadID: notification.threadID)
+            let item = CodexTurnItem(wireValue: notification.item)
             let itemCompleted = CodexTurnItemCompleted(
                 threadID: notification.threadID,
                 turnID: notification.turnID,
-                item: .init(wireValue: notification.item)
+                item: item
             )
             publishTurnEvent(.itemCompleted(itemCompleted), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemCompleted(
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                item: item
+            )
+        case let .hookStarted(notification):
+            updateThreadObservableActivityForHookRun(
+                notification.run,
+                turnID: notification.turnID,
+                threadID: notification.threadID
+            )
+        case let .hookCompleted(notification):
+            updateThreadObservableActivityForHookRun(
+                notification.run,
+                turnID: notification.turnID,
+                threadID: notification.threadID
+            )
+        case let .modelRerouted(notification):
+            Self.logger.notice(
+                "Model rerouted for thread \(notification.threadID, privacy: .public) turn \(notification.turnID, privacy: .public): \(notification.fromModel, privacy: .public) -> \(notification.toModel, privacy: .public) because \(notification.reason.rawValue, privacy: .public)"
+            )
+        case let .fileChangeOutputDelta(notification):
+            let deltaEvent = FileChangeOutputDeltaEvent(
+                delta: notification.delta,
+                itemID: notification.itemID,
+                threadID: notification.threadID,
+                turnID: notification.turnID
+            )
+            publishThreadFileDelta(deltaEvent, for: notification.threadID)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
         case let .planDelta(notification):
             let planDelta = CodexTurnPlanDelta(
                 threadID: notification.threadID,
@@ -921,6 +1857,11 @@ public actor CodexAppServer {
                 delta: notification.delta
             )
             publishTurnEvent(.planDelta(planDelta), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
         case let .turnPlanUpdated(notification):
             let planUpdate = CodexTurnPlanUpdate(
                 threadID: notification.threadID,
@@ -937,6 +1878,11 @@ public actor CodexAppServer {
                 delta: notification.delta
             )
             publishTurnEvent(.agentMessageDelta(delta), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
         case let .reasoningSummaryPartAdded(notification):
             let partAdded = CodexTurnReasoningSummaryPartAdded(
                 threadID: notification.threadID,
@@ -954,6 +1900,11 @@ public actor CodexAppServer {
                 delta: notification.delta
             )
             publishTurnEvent(.reasoningSummaryTextDelta(delta), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
         case let .reasoningTextDelta(notification):
             let delta = CodexTurnReasoningTextDelta(
                 threadID: notification.threadID,
@@ -963,6 +1914,11 @@ public actor CodexAppServer {
                 delta: notification.delta
             )
             publishTurnEvent(.reasoningTextDelta(delta), for: notification.turnID, isTerminal: false)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
+            )
         case let .commandExecutionApprovalRequested(request):
             handleInteractiveApprovalRequest(request.publicValue)
         case let .fileChangeApprovalRequested(request):
@@ -977,10 +1933,15 @@ public actor CodexAppServer {
             handleServerRequestResolved(notification)
         case let .turnCompleted(notification):
             clearTurnActivity(turnID: notification.turn.id)
-            threadObservableActivityStates[notification.threadID] = .init()
+            settleThreadObservableActivity(threadID: notification.threadID)
+            let turn = TurnInfo(wireValue: notification.turn)
+            try? await historyStore?.recordTurnCompleted(
+                threadID: notification.threadID,
+                turn: turn
+            )
             let completion = CodexTurnCompletion(
                 threadID: notification.threadID,
-                turn: TurnInfo(wireValue: notification.turn)
+                turn: turn
             )
             let turnEvent = CodexTurnEvent.completed(completion)
             publishTurnEvent(turnEvent, for: notification.turn.id, isTerminal: true)
@@ -992,6 +1953,8 @@ public actor CodexAppServer {
 
         guard hasStarted, !isStopping else {
             finishAllThreadEventStreams(throwing: nil)
+            finishAllThreadObservableActivityStreams()
+            finishAllThreadFileDeltaStreams()
             finishAllTurnEventStreams(throwing: nil)
             return
         }
@@ -1002,6 +1965,8 @@ public actor CodexAppServer {
                 reason: "Codex app-server stopped delivering thread notifications before pending thread streams finished."
             )
         )
+        finishAllThreadObservableActivityStreams()
+        finishAllThreadFileDeltaStreams()
         finishAllTurnEventStreams(
             throwing: CodexAppServerError.transportFailure(
                 operation: "server events",
@@ -1111,6 +2076,16 @@ public actor CodexAppServer {
         }
     }
 
+    private func releaseTurnObservation(turnID: String) {
+        bufferedTurnEvents.removeValue(forKey: turnID)
+        bufferedTerminalTurnEvents.removeValue(forKey: turnID)
+        if let continuations = turnEventContinuations.removeValue(forKey: turnID)?.values {
+            for continuation in continuations {
+                continuation.finish()
+            }
+        }
+    }
+
     private func registerThreadEventContinuation(
         _ continuation: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation,
         streamID: UUID,
@@ -1128,6 +2103,26 @@ public actor CodexAppServer {
             threadEventContinuations.removeValue(forKey: threadID)
         } else {
             threadEventContinuations[threadID] = continuations
+        }
+    }
+
+    private func removeThreadObservableActivityContinuation(streamID: UUID, threadID: String) {
+        guard var continuations = threadObservableActivityContinuations[threadID] else { return }
+        continuations.removeValue(forKey: streamID)
+        if continuations.isEmpty {
+            threadObservableActivityContinuations.removeValue(forKey: threadID)
+        } else {
+            threadObservableActivityContinuations[threadID] = continuations
+        }
+    }
+
+    private func removeThreadFileDeltaContinuation(streamID: UUID, threadID: String) {
+        guard var continuations = threadFileDeltaContinuations[threadID] else { return }
+        continuations.removeValue(forKey: streamID)
+        if continuations.isEmpty {
+            threadFileDeltaContinuations.removeValue(forKey: threadID)
+        } else {
+            threadFileDeltaContinuations[threadID] = continuations
         }
     }
 
@@ -1174,6 +2169,30 @@ public actor CodexAppServer {
             if isTerminal {
                 continuation.finish()
             }
+        }
+    }
+
+    private func publishThreadObservableActivityState(threadID: String) {
+        guard let continuations = threadObservableActivityContinuations[threadID], !continuations.isEmpty else {
+            return
+        }
+
+        let state = threadObservableActivityState(threadID: threadID)
+        for continuation in continuations.values {
+            continuation.yield(state)
+        }
+    }
+
+    private func publishThreadFileDelta(
+        _ event: FileChangeOutputDeltaEvent,
+        for threadID: String
+    ) {
+        guard let continuations = threadFileDeltaContinuations[threadID], !continuations.isEmpty else {
+            return
+        }
+
+        for continuation in continuations.values {
+            continuation.yield(event)
         }
     }
 
@@ -1241,6 +2260,24 @@ public actor CodexAppServer {
         }
     }
 
+    private func finishAllThreadObservableActivityStreams() {
+        let activeContinuations = threadObservableActivityContinuations.values.flatMap(\.values)
+        threadObservableActivityContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            continuation.finish()
+        }
+    }
+
+    private func finishAllThreadFileDeltaStreams() {
+        let activeContinuations = threadFileDeltaContinuations.values.flatMap(\.values)
+        threadFileDeltaContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            continuation.finish()
+        }
+    }
+
     private func updateThreadObservableActivityForItemStarted(
         _ item: CodexWireThreadItem,
         threadID: String
@@ -1257,6 +2294,7 @@ public actor CodexAppServer {
             break
         }
         threadObservableActivityStates[threadID] = state
+        publishThreadObservableActivityState(threadID: threadID)
     }
 
     private func updateThreadObservableActivityForItemCompleted(
@@ -1281,6 +2319,134 @@ public actor CodexAppServer {
             break
         }
         threadObservableActivityStates[threadID] = state
+        publishThreadObservableActivityState(threadID: threadID)
+    }
+
+    private func updateThreadObservableActivityForHookRun(
+        _ run: CodexWireHookRunSummary,
+        turnID: String?,
+        threadID: String
+    ) {
+        var state = threadObservableActivityStates[threadID] ?? .init()
+        let hookRun = CodexThread.Dashboard.HookRun(
+            wireValue: run,
+            turnID: turnID
+        )
+
+        if let index = state.hookRuns.firstIndex(where: { $0.id == hookRun.id }) {
+            state.hookRuns[index] = hookRun
+        } else {
+            state.hookRuns.append(hookRun)
+        }
+        state.hookRuns.sort { lhs, rhs in
+            if lhs.displayOrder == rhs.displayOrder {
+                return lhs.startedAt < rhs.startedAt
+            }
+            return lhs.displayOrder < rhs.displayOrder
+        }
+
+        threadObservableActivityStates[threadID] = state
+        publishThreadObservableActivityState(threadID: threadID)
+    }
+
+    private func makeRecentFileSnapshots(
+        from turns: [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot],
+        threadID: String
+    ) -> [RecentFileSnapshot] {
+        turns.flatMap { makeRecentFileSnapshots(from: $0, threadID: threadID) }
+    }
+
+    private func makeRecentFileSnapshots(
+        from turn: ThreadHistoryStore.ThreadSnapshot.TurnSnapshot,
+        threadID: String
+    ) -> [RecentFileSnapshot] {
+        turn.items
+            .filter { $0.kind == CodexTurnItem.Kind.fileChange.rawValue }
+            .sorted { $0.orderIndex > $1.orderIndex }
+            .map {
+                RecentFileSnapshot(
+                    id: Self.recentFileSnapshotID(turnID: turn.id, itemID: $0.id),
+                    itemID: $0.id,
+                    latestStatusText: Self.recentFileStatusSummary(
+                        status: $0.status,
+                        text: $0.streamedText ?? $0.text
+                    ),
+                    path: $0.path,
+                    payloadText: $0.streamedText ?? $0.text,
+                    status: $0.status,
+                    threadID: threadID,
+                    turnID: turn.id,
+                    turnOrderIndex: turn.orderIndex,
+                    itemOrderIndex: $0.orderIndex,
+                    turnStartedAt: turn.startedAt
+                )
+            }
+    }
+
+    private static func recentFileSnapshotID(turnID: String, itemID: String) -> String {
+        "\(turnID):\(itemID)"
+    }
+
+    private static func recentFileStatusSummary(status: String?, text: String?) -> String? {
+        let normalizedStatus = status?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lowercasedStatus = normalizedStatus?.lowercased()
+
+        if lowercasedStatus == "completed", let payloadSummary = recentFilePayloadSummary(text: text) {
+            return payloadSummary
+        }
+
+        if let normalizedStatus, !normalizedStatus.isEmpty {
+            return normalizedStatus
+        }
+
+        return recentFilePayloadSummary(text: text)
+    }
+
+    private static func recentFilePayloadSummary(text: String?) -> String? {
+        guard let text, !text.isEmpty else { return nil }
+
+        var additions = 0
+        var deletions = 0
+        var hunkCount = 0
+        var nonEmptyLineCount = 0
+
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+            let lineString = String(line)
+            if !lineString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                nonEmptyLineCount += 1
+            }
+
+            if lineString.hasPrefix("@@") {
+                hunkCount += 1
+            } else if lineString.hasPrefix("+"), !lineString.hasPrefix("+++") {
+                additions += 1
+            } else if lineString.hasPrefix("-"), !lineString.hasPrefix("---") {
+                deletions += 1
+            }
+        }
+
+        if additions > 0 || deletions > 0 || hunkCount > 0 {
+            var parts: [String] = []
+            if additions > 0 {
+                parts.append("\(additions) additions")
+            }
+            if deletions > 0 {
+                parts.append("\(deletions) deletions")
+            }
+            if hunkCount > 1 {
+                parts.append("\(hunkCount) hunks")
+            }
+            if !parts.isEmpty {
+                return parts.joined(separator: ", ")
+            }
+        }
+
+        if nonEmptyLineCount > 1 {
+            return "\(nonEmptyLineCount) lines changed"
+        }
+
+        let firstLine = text.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? text
+        return String(firstLine.prefix(160))
     }
 
     private func itemHasError(status: String?) -> Bool {
@@ -1291,6 +2457,28 @@ public actor CodexAppServer {
         default:
             false
         }
+    }
+
+    private func requireHistoryStore(for operation: String) throws -> ThreadHistoryStore {
+        if let historyStore {
+            return historyStore
+        }
+
+        let reason: String
+        if let historyStoreInitializationError {
+            reason = """
+            SwiftASB could not initialize the internal thread history store for \(operation). \
+            The Core Data-backed history database failed to open or create successfully: \
+            \(historyStoreInitializationError.localizedDescription)
+            """
+        } else {
+            reason = """
+            SwiftASB could not initialize the internal thread history store for \(operation). \
+            No history store instance is currently available.
+            """
+        }
+
+        throw CodexAppServerError.invalidState(reason: reason)
     }
 
     private func requireOutstandingInteractiveRequest(
@@ -1860,6 +3048,47 @@ private extension CodexAppServer.ThreadStartRequest {
     }
 }
 
+private extension CodexAppServer.ThreadResumeRequest {
+    var wireValue: CodexProtocolThreadResumeParams {
+        .init(
+            approvalPolicy: approvalPolicy?.wireValue,
+            approvalsReviewer: approvalsReviewer?.wireValue,
+            baseInstructions: baseInstructions,
+            config: config?.mapValues(\.wireValue),
+            cwd: currentDirectoryPath,
+            developerInstructions: developerInstructions,
+            model: model,
+            modelProvider: modelProvider,
+            personality: personality?.wireValue,
+            sandbox: sandboxMode?.wireValue,
+            serviceName: serviceName,
+            serviceTier: serviceTier?.wireValue,
+            threadID: threadID
+        )
+    }
+}
+
+private extension CodexAppServer.ThreadForkRequest {
+    var wireValue: CodexProtocolThreadForkParams {
+        .init(
+            approvalPolicy: approvalPolicy?.wireValue,
+            approvalsReviewer: approvalsReviewer?.wireValue,
+            baseInstructions: baseInstructions,
+            config: config?.mapValues(\.wireValue),
+            cwd: currentDirectoryPath,
+            developerInstructions: developerInstructions,
+            ephemeral: ephemeral,
+            model: model,
+            modelProvider: modelProvider,
+            personality: personality?.wireValue,
+            sandbox: sandboxMode?.wireValue,
+            serviceName: serviceName,
+            serviceTier: serviceTier?.wireValue,
+            threadID: threadID
+        )
+    }
+}
+
 private extension CodexAppServer.TurnStartRequest {
     var wireValue: CodexWireTurnStartParams {
         CodexWireTurnStartParams(
@@ -2255,6 +3484,7 @@ private extension CodexAppServer.ThreadInfo {
             createdAt: wireValue.createdAt,
             currentDirectoryPath: wireValue.cwd,
             ephemeral: wireValue.ephemeral,
+            forkedFromThreadID: wireValue.forkedFromID,
             modelProvider: wireValue.modelProvider,
             name: wireValue.name,
             preview: wireValue.preview,
@@ -2314,6 +3544,125 @@ private extension CodexAppServer.ThreadStatus {
     }
 }
 
+private extension CodexThread.Dashboard.HookRun {
+    init(
+        wireValue: CodexWireHookRunSummary,
+        turnID: String?
+    ) {
+        self.init(
+            id: wireValue.id,
+            completedAt: wireValue.completedAt,
+            displayOrder: wireValue.displayOrder,
+            durationMS: wireValue.durationMS,
+            entries: wireValue.entries.map(Entry.init(wireValue:)),
+            eventName: .init(wireValue: wireValue.eventName),
+            executionMode: .init(wireValue: wireValue.executionMode),
+            handlerType: .init(wireValue: wireValue.handlerType),
+            scope: .init(wireValue: wireValue.scope),
+            sourcePath: wireValue.sourcePath,
+            startedAt: wireValue.startedAt,
+            status: .init(wireValue: wireValue.status),
+            statusMessage: wireValue.statusMessage,
+            turnID: turnID
+        )
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.Entry {
+    init(wireValue: CodexWireHookOutputEntry) {
+        self.init(
+            kind: .init(wireValue: wireValue.kind),
+            text: wireValue.text
+        )
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.Entry.Kind {
+    init(wireValue: CodexWireHookOutputEntryKind) {
+        switch wireValue {
+        case .context:
+            self = .context
+        case .error:
+            self = .error
+        case .feedback:
+            self = .feedback
+        case .stop:
+            self = .stop
+        case .warning:
+            self = .warning
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.EventName {
+    init(wireValue: CodexWireHookEventName) {
+        switch wireValue {
+        case .postToolUse:
+            self = .postToolUse
+        case .preToolUse:
+            self = .preToolUse
+        case .sessionStart:
+            self = .sessionStart
+        case .stop:
+            self = .stop
+        case .userPromptSubmit:
+            self = .userPromptSubmit
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.ExecutionMode {
+    init(wireValue: CodexWireHookExecutionMode) {
+        switch wireValue {
+        case .async:
+            self = .async
+        case .sync:
+            self = .sync
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.HandlerType {
+    init(wireValue: CodexWireHookHandlerType) {
+        switch wireValue {
+        case .agent:
+            self = .agent
+        case .command:
+            self = .command
+        case .prompt:
+            self = .prompt
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.Scope {
+    init(wireValue: CodexWireHookScope) {
+        switch wireValue {
+        case .thread:
+            self = .thread
+        case .turn:
+            self = .turn
+        }
+    }
+}
+
+private extension CodexThread.Dashboard.HookRun.Status {
+    init(wireValue: CodexWireHookRunStatus) {
+        switch wireValue {
+        case .blocked:
+            self = .blocked
+        case .completed:
+            self = .completed
+        case .failed:
+            self = .failed
+        case .running:
+            self = .running
+        case .stopped:
+            self = .stopped
+        }
+    }
+}
+
 private extension CodexAppServer.ThreadStatusType {
     init(wireValue: CodexWireThreadStatusType) {
         switch wireValue {
@@ -2325,6 +3674,56 @@ private extension CodexAppServer.ThreadStatusType {
             self = .notLoaded
         case .systemError:
             self = .systemError
+        }
+    }
+}
+
+private extension CodexProtocolThreadTurnsSortDirection {
+    init(_ direction: CodexAppServer.ThreadTurnsSortDirection) {
+        switch direction {
+        case .asc:
+            self = .asc
+        case .desc:
+            self = .desc
+        }
+    }
+}
+
+private extension CodexProtocolThreadListSortKey {
+    init(_ key: CodexAppServer.ThreadListSortKey) {
+        switch key {
+        case .createdAt:
+            self = .createdAt
+        case .updatedAt:
+            self = .updatedAt
+        }
+    }
+}
+
+private extension CodexProtocolThreadListSortDirection {
+    init(_ direction: CodexAppServer.ThreadListSortDirection) {
+        switch direction {
+        case .asc:
+            self = .asc
+        case .desc:
+            self = .desc
+        }
+    }
+}
+
+private extension CodexProtocolThreadListSourceKind {
+    init(_ sourceKind: CodexAppServer.ThreadListSourceKind) {
+        switch sourceKind {
+        case .appServer:
+            self = .appServer
+        case .cli:
+            self = .cli
+        case .exec:
+            self = .exec
+        case .unknown:
+            self = .unknown
+        case .vscode:
+            self = .vscode
         }
     }
 }
