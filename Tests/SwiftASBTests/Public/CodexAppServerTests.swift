@@ -43,6 +43,83 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("lists app-wide models through the public client")
+    func listsAppWideModels() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let page = try await client.listModels(
+            .init(cursor: "cursor-start", limit: 2, includeHidden: true)
+        )
+
+        #expect(page.nextCursor == "cursor-models-next")
+        #expect(page.models.count == 1)
+        #expect(page.models[0].id == "gpt-5.4")
+        #expect(page.models[0].displayName == "GPT-5.4")
+        #expect(page.models[0].defaultReasoningEffort == .medium)
+        #expect(page.models[0].supportedReasoningEfforts.map(\.reasoningEffort) == [.low, .medium, .high])
+        #expect(page.models[0].inputModalities == [.text, .image])
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "model/list"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["cursor"] as? String == "cursor-start")
+        #expect(params["limit"] as? Int == 2)
+        #expect(params["includeHidden"] as? Bool == true)
+
+        await client.stop()
+    }
+
+    @Test("lists app-wide MCP server status through the public client")
+    func listsAppWideMcpServerStatus() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let page = try await client.listMcpServerStatuses(
+            .init(cursor: "cursor-start", limit: 4, detail: .toolsAndAuthOnly)
+        )
+
+        #expect(page.nextCursor == nil)
+        #expect(page.servers.count == 1)
+        #expect(page.servers[0].name == "calendar")
+        #expect(page.servers[0].authStatus == .oAuth)
+        #expect(page.servers[0].resources[0].uri == "calendar://events/today")
+        #expect(page.servers[0].resourceTemplates[0].uriTemplate == "calendar://events/{date}")
+        #expect(page.servers[0].tools["list_events"]?.title == "List Events")
+        #expect(page.servers[0].tools["list_events"]?.inputSchema == .object(["type": .string("object")]))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "mcpServerStatus/list"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["cursor"] as? String == "cursor-start")
+        #expect(params["limit"] as? Int == 4)
+        #expect(params["detail"] as? String == "toolsAndAuthOnly")
+
+        await client.stop()
+    }
+
     @Test("runs initialize, thread/start, and turn/start through the public client")
     func runsInitializeAndFirstLifecycleRequests() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -4990,6 +5067,94 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "platformFamily": "unix",
                     "platformOs": "macos",
                     "userAgent": "codex-cli/0.121.0",
+                ]
+            )
+        case "model/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "additionalSpeedTiers": ["fast", "flex"],
+                            "availabilityNux": [
+                                "message": "Available for this workspace.",
+                            ],
+                            "defaultReasoningEffort": "medium",
+                            "description": "Balanced general-purpose model.",
+                            "displayName": "GPT-5.4",
+                            "hidden": false,
+                            "id": "gpt-5.4",
+                            "inputModalities": ["text", "image"],
+                            "isDefault": true,
+                            "model": "gpt-5.4",
+                            "supportedReasoningEfforts": [
+                                [
+                                    "description": "Faster responses.",
+                                    "reasoningEffort": "low",
+                                ],
+                                [
+                                    "description": "Balanced responses.",
+                                    "reasoningEffort": "medium",
+                                ],
+                                [
+                                    "description": "Deeper reasoning.",
+                                    "reasoningEffort": "high",
+                                ],
+                            ],
+                            "supportsPersonality": true,
+                            "upgrade": NSNull(),
+                            "upgradeInfo": NSNull(),
+                        ],
+                    ],
+                    "nextCursor": "cursor-models-next",
+                ]
+            )
+        case "mcpServerStatus/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "authStatus": "oAuth",
+                            "name": "calendar",
+                            "resources": [
+                                [
+                                    "_meta": ["source": "fixture"],
+                                    "annotations": NSNull(),
+                                    "description": "Today's events.",
+                                    "icons": [],
+                                    "mimeType": "application/json",
+                                    "name": "today",
+                                    "size": 128,
+                                    "title": "Today",
+                                    "uri": "calendar://events/today",
+                                ],
+                            ],
+                            "resourceTemplates": [
+                                [
+                                    "annotations": NSNull(),
+                                    "description": "Events by date.",
+                                    "mimeType": "application/json",
+                                    "name": "events-by-date",
+                                    "title": "Events By Date",
+                                    "uriTemplate": "calendar://events/{date}",
+                                ],
+                            ],
+                            "tools": [
+                                "list_events": [
+                                    "_meta": ["source": "fixture"],
+                                    "annotations": NSNull(),
+                                    "description": "List calendar events.",
+                                    "icons": [],
+                                    "inputSchema": ["type": "object"],
+                                    "name": "list_events",
+                                    "outputSchema": ["type": "object"],
+                                    "title": "List Events",
+                                ],
+                            ],
+                        ],
+                    ],
+                    "nextCursor": NSNull(),
                 ]
             )
         case "thread/start":

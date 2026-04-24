@@ -21,11 +21,12 @@
 | Codex CLI `v0.124.0` schema review | `Shipped internally` | The local `codex-schemas/v0.124.0/` dump has been compared against `v0.121.0`, the default codegen path now targets `v0.124.0`, the promoted lifecycle snapshot has been refreshed, and the public compatibility window now spans `0.122.x` through `0.124.x`. New additive families are classified in the maintainer release-boundary notes before any public widening. |
 | Stdio subprocess transport | `Shipped internally` | The transport launches `codex app-server --listen stdio://`, frames newline-delimited JSON, correlates request IDs, and captures stderr for diagnostics. |
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
-| Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/turns/list`, and `turn/start` are encoded through the protocol layer. |
-| Typed protocol response decoding | `Shipped internally` | `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/turns/list`, and `turn/start` responses are decoded and validated against request IDs. |
+| Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/turns/list`, `model/list`, `mcpServerStatus/list`, and `turn/start` are encoded through the protocol layer. |
+| Typed protocol response decoding | `Shipped internally` | `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/turns/list`, `model/list`, `mcpServerStatus/list`, and `turn/start` responses are decoded and validated against request IDs. |
 | Typed protocol notification decoding | `Partially shipped` | The protocol layer now maps a broader batch of thread, turn, item, reasoning, hook, and reroute notifications, plus the item lifecycle needed to drive the current observable tool, MCP, file-edit, hook, and compaction summaries. |
 | Public owning client actor | `Shipped` | `CodexAppServer` owns transport plus protocol and exposes startup, shutdown, initialize, thread start, and turn start. |
 | Public value-typed request and result models | `Shipped` | Public API uses hand-owned Swift value types rather than exposing `CodexWire...` directly. |
+| App-wide capability surfaces | `Partially shipped` | `CodexAppServer.listModels(...)` and `CodexAppServer.listMcpServerStatuses(...)` now wrap `model/list` and `mcpServerStatus/list` with hand-owned Swift models. These are connection-wide capability snapshots rather than thread-owned lifecycle actions. Broader app-wide settings and actions still need deliberate public models before promotion. |
 | Initialize handshake | `Shipped` | `initialize(...)` automatically sends the follow-up `initialized` notification. |
 | Thread start flow | `Shipped` | `startThread(...)` returns `CodexThread`, which carries thread metadata plus a back-reference to the shared app-server owner. |
 | Stored thread list flow | `Shipped` | `listThreads(...)` wraps `thread/list`, returns typed stored-thread pages, and now reconciles local thread metadata plus explicit archived or unarchived list results back into the internal history store. |
@@ -92,6 +93,8 @@ The package can now:
 - hydrate the internal history store from both live item streams and upstream stored-history reads
 - read centered local history windows around a known turn or item through
   `windowAroundTurn(...)` and `windowAroundItem(...)`
+- list app-wide model and MCP-server capability snapshots through
+  `CodexAppServer`
 - document the supported lifecycle in the README without sending consumers into
   the tests
 
@@ -100,7 +103,7 @@ That means the current priority order is:
 1. Keep tuning `RecentTurns` now that the first resident-window, scroll-aware cache policy, named presets, weighted item-cost budgeting, payload-slimming path, and centered non-UI history windows are shipped. The remaining work there is better weight calibration, smarter shell-vs-payload heuristics, and deciding whether some item kinds deserve stickier retention than the current first-pass rules.
 2. Keep tuning `RecentFiles` now that the first selection-aware shell-versus-payload slimming pass is shipped. The remaining work there is better payload-cost calibration at the margins and deciding whether `FileChangePatchUpdatedNotification` should enrich the observable with structured patch previews. `RecentFiles` remains a dedicated file-centric companion rather than feeding a near-term mixed activity type.
 3. Keep tuning `RecentCommands` now that the first command-side shell-versus-output slimming pass is shipped. The remaining work there is better output-cost calibration and sharper shell-summary heuristics. `RecentCommands` remains a dedicated command-centric companion rather than feeding a near-term mixed activity type.
-4. Keep the v0.124 additions classified before public promotion: `autoReview` is public as an approval reviewer option, `permissionProfile` remains generated/internal until a deliberate Swift model replaces or complements `sandbox`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian action families stay internal until their consumer job is clear.
+4. Keep the v0.124 additions classified before public promotion: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `permissionProfile` remains generated/internal until a deliberate Swift model replaces or complements `sandbox`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian action families stay internal until their consumer job is clear.
 5. Do not add `RecentActivity` for v1. The separate `RecentTurns`, `RecentFiles`, and `RecentCommands` types are the clearer consumer surface, and a mixed feed would add more confusion than value right now.
 6. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
 7. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
@@ -176,6 +179,14 @@ without needing raw JSON-RPC access or generated wire types.
 - Keep public lifecycle failures unified under `CodexAppServerError`.
 - Defer a one-shot `run(...)` API until the lower-level interactive lifecycle is complete enough to hide honestly.
 - Do not add a `CodexSession` type at this layer; the package should keep connection ownership on `CodexAppServer` and conversation ownership on `CodexThread`.
+- Keep app-wide configuration, settings, and actions on `CodexAppServer` when
+  they describe the shared app-server connection rather than one thread or one
+  turn. `CodexAppServer.Configuration` remains local process-launch
+  configuration, not a remote settings model.
+- Do not add a new top-level `CodexApp`, `CodexSettings`, or app-wide session
+  owner for v1. Split `CodexAppServer` source files by responsibility during
+  API curation if the file size gets in the way, but preserve one
+  connection-wide public owner.
 - If reusable execution knobs need a shared public value type later, prefer a narrow thread-scoped shape such as `CodexThreadDefaults` instead of a new top-level owner or a vague global config wrapper.
 - Treat app-level defaults as inputs to new thread creation, and treat later user changes as persisted thread-scoped overrides so one thread's settings do not silently affect another.
 

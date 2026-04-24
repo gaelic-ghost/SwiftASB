@@ -46,7 +46,8 @@ The package assumes a local Codex CLI runtime. The currently shipped public surf
 
 - `CodexAppServer` for process ownership, initialize, thread start,
   `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, paged
-  turn-history reads, and turn start.
+  turn-history reads, app-wide model and MCP-server status listing, and turn
+  start.
 - `CodexThread` for thread-scoped turn creation plus a live `Dashboard` companion.
 - `CodexTurnHandle` for typed turn events plus a live `Minimap` companion.
 - typed approval and elicitation request models, with explicit response APIs on
@@ -58,7 +59,10 @@ The current public lifecycle contract is intentionally narrow and explicit:
 
 - `CodexAppServer` owns the local subprocess plus initialize, thread start,
   `thread/list`, `thread/read`, `thread/resume`, `thread/fork`,
-  `thread/turns/list`, and turn start.
+  `thread/turns/list`, `model/list`, `mcpServerStatus/list`, and turn start.
+- `CodexAppServer.listModels(...)` and
+  `CodexAppServer.listMcpServerStatuses(...)` expose app-wide capability
+  snapshots that are not owned by one conversation thread.
 - `CodexThread` owns thread-scoped turn creation and thread-scoped fallback
   responses for unroutable interactive requests.
 - `CodexTurnHandle` owns the active turn stream plus turn-scoped control
