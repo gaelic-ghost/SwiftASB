@@ -2,6 +2,29 @@ import Foundation
 import Observation
 
 public struct CodexThread: Sendable {
+    public struct HistoryWindow: Sendable, Equatable {
+        public let threadID: String
+        public let turns: [CodexTurnHandle.ClosedTurn]
+        public let hasOlderTurns: Bool
+        public let hasNewerTurns: Bool
+        public let oldestTurnID: String?
+        public let newestTurnID: String?
+
+        internal init(
+            threadID: String,
+            turns: [CodexTurnHandle.ClosedTurn],
+            hasOlderTurns: Bool,
+            hasNewerTurns: Bool
+        ) {
+            self.threadID = threadID
+            self.turns = turns
+            self.hasOlderTurns = hasOlderTurns
+            self.hasNewerTurns = hasNewerTurns
+            self.oldestTurnID = turns.last?.id
+            self.newestTurnID = turns.first?.id
+        }
+    }
+
     @MainActor
     @Observable
     public final class RecentTurns {
@@ -2266,19 +2289,43 @@ public struct CodexThread: Sendable {
         try await appServer.closedTurn(threadID: id, turnID: turnID)
     }
 
+    public func readRecentTurnHistoryWindow(
+        limit: Int = 12
+    ) async throws -> HistoryWindow {
+        try await appServer.recentClosedTurnWindow(threadID: id, limit: limit)
+    }
+
     public func readRecentTurnHistory(
         limit: Int = 12
     ) async throws -> [CodexTurnHandle.ClosedTurn] {
-        try await appServer.recentClosedTurns(threadID: id, limit: limit)
+        try await readRecentTurnHistoryWindow(limit: limit).turns
+    }
+
+    public func readOlderTurnHistoryWindow(
+        olderThan turnID: String,
+        limit: Int = 12
+    ) async throws -> HistoryWindow {
+        try await appServer.olderClosedTurnWindow(
+            threadID: id,
+            olderThan: turnID,
+            limit: limit
+        )
     }
 
     public func readOlderTurnHistory(
         olderThan turnID: String,
         limit: Int = 12
     ) async throws -> [CodexTurnHandle.ClosedTurn] {
-        try await appServer.olderClosedTurns(
+        try await readOlderTurnHistoryWindow(olderThan: turnID, limit: limit).turns
+    }
+
+    public func readNewerTurnHistoryWindow(
+        newerThan turnID: String,
+        limit: Int = 12
+    ) async throws -> HistoryWindow {
+        try await appServer.newerClosedTurnWindow(
             threadID: id,
-            olderThan: turnID,
+            newerThan: turnID,
             limit: limit
         )
     }
@@ -2287,11 +2334,7 @@ public struct CodexThread: Sendable {
         newerThan turnID: String,
         limit: Int = 12
     ) async throws -> [CodexTurnHandle.ClosedTurn] {
-        try await appServer.newerClosedTurns(
-            threadID: id,
-            newerThan: turnID,
-            limit: limit
-        )
+        try await readNewerTurnHistoryWindow(newerThan: turnID, limit: limit).turns
     }
 
     @MainActor

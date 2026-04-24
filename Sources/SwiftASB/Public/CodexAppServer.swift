@@ -1265,19 +1265,47 @@ public actor CodexAppServer {
         try await requireHistoryStore(for: "thread history snapshot").snapshot(threadID: threadID)
     }
 
+    internal func recentClosedTurnWindow(
+        threadID: String,
+        limit: Int
+    ) async throws -> CodexThread.HistoryWindow {
+        let historyStore = try requireHistoryStore(for: "recent turn history")
+        if let threadSnapshot = try await historyStore.snapshot(threadID: threadID) {
+            let orderedTurns = orderedClosedTurnSnapshots(from: threadSnapshot.turns)
+            if !orderedTurns.isEmpty {
+                let turns = orderedTurns
+                    .prefix(max(1, limit))
+                    .map { CodexTurnHandle.ClosedTurn(threadID: threadID, snapshot: $0) }
+                return CodexThread.HistoryWindow(
+                    threadID: threadID,
+                    turns: turns,
+                    hasOlderTurns: orderedTurns.count > turns.count,
+                    hasNewerTurns: false
+                )
+            }
+        }
+
+        let window = try await recentTurnWindow(threadID: threadID, limit: limit)
+        return CodexThread.HistoryWindow(
+            threadID: threadID,
+            turns: window.turns.map { .init(threadID: threadID, snapshot: $0) },
+            hasOlderTurns: window.nextOlderCursor != nil,
+            hasNewerTurns: window.nextNewerCursor != nil
+        )
+    }
+
     internal func recentClosedTurns(
         threadID: String,
         limit: Int
     ) async throws -> [CodexTurnHandle.ClosedTurn] {
-        let snapshots = try await recentTurnWindow(threadID: threadID, limit: limit).turns
-        return snapshots.map { .init(threadID: threadID, snapshot: $0) }
+        try await recentClosedTurnWindow(threadID: threadID, limit: limit).turns
     }
 
-    internal func olderClosedTurns(
+    internal func olderClosedTurnWindow(
         threadID: String,
         olderThan turnID: String,
         limit: Int
-    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+    ) async throws -> CodexThread.HistoryWindow {
         let historyStore = try requireHistoryStore(for: "older turn history")
         guard let threadSnapshot = try await historyStore.snapshot(threadID: threadID) else {
             throw CodexAppServerError.invalidState(
@@ -1295,17 +1323,31 @@ public actor CodexAppServer {
             )
         }
 
-        return orderedTurns
+        let turns = orderedTurns
             .suffix(from: orderedTurns.index(after: boundaryIndex))
             .prefix(limit)
-            .map { .init(threadID: threadID, snapshot: $0) }
+            .map { CodexTurnHandle.ClosedTurn(threadID: threadID, snapshot: $0) }
+        return CodexThread.HistoryWindow(
+            threadID: threadID,
+            turns: turns,
+            hasOlderTurns: orderedTurns.index(boundaryIndex, offsetBy: turns.count + 1) < orderedTurns.endIndex,
+            hasNewerTurns: true
+        )
     }
 
-    internal func newerClosedTurns(
+    internal func olderClosedTurns(
+        threadID: String,
+        olderThan turnID: String,
+        limit: Int
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        try await olderClosedTurnWindow(threadID: threadID, olderThan: turnID, limit: limit).turns
+    }
+
+    internal func newerClosedTurnWindow(
         threadID: String,
         newerThan turnID: String,
         limit: Int
-    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+    ) async throws -> CodexThread.HistoryWindow {
         let historyStore = try requireHistoryStore(for: "newer turn history")
         guard let threadSnapshot = try await historyStore.snapshot(threadID: threadID) else {
             throw CodexAppServerError.invalidState(
@@ -1323,10 +1365,24 @@ public actor CodexAppServer {
             )
         }
 
-        return orderedTurns
-            .prefix(boundaryIndex)
-            .prefix(limit)
-            .map { .init(threadID: threadID, snapshot: $0) }
+        let newerCandidates = orderedTurns.prefix(boundaryIndex)
+        let turns = newerCandidates
+            .suffix(limit)
+            .map { CodexTurnHandle.ClosedTurn(threadID: threadID, snapshot: $0) }
+        return CodexThread.HistoryWindow(
+            threadID: threadID,
+            turns: turns,
+            hasOlderTurns: true,
+            hasNewerTurns: newerCandidates.count > turns.count
+        )
+    }
+
+    internal func newerClosedTurns(
+        threadID: String,
+        newerThan turnID: String,
+        limit: Int
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        try await newerClosedTurnWindow(threadID: threadID, newerThan: turnID, limit: limit).turns
     }
 
     internal func recentTurnSnapshots(

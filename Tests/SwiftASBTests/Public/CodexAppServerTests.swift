@@ -875,7 +875,7 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
-    @Test("reads non-UI recent and directional local turn history through CodexThread")
+    @Test("reads non-UI recent and directional local turn history windows through CodexThread")
     func readsNonUIThreadHistory() async throws {
         let transport = FakeCodexAppServerTransport(
             threadTurnsListResult: [
@@ -962,6 +962,28 @@ struct CodexAppServerTests {
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
+                        completedAt: 1713350255,
+                        durationMS: 2500,
+                        errorMessage: nil,
+                        id: "turn-newest",
+                        startedAt: 1713350250,
+                        status: .completed
+                    ),
+                    items: [
+                        .init(
+                            id: "item-newest",
+                            kind: .agentMessage,
+                            command: nil,
+                            path: nil,
+                            serverName: nil,
+                            text: "Newest turn",
+                            status: "completed",
+                            toolName: nil
+                        ),
+                    ]
+                ),
+                ThreadHistoryStore.HydratedTurn(
+                    turn: CodexAppServer.TurnInfo(
                         completedAt: 1713350205,
                         durationMS: 2500,
                         errorMessage: nil,
@@ -985,17 +1007,34 @@ struct CodexAppServerTests {
             ]
         )
 
+        let recentWindow = try await thread.readRecentTurnHistoryWindow(limit: 2)
+        #expect(recentWindow.turns.map(\.id) == ["turn-newest", "turn-newer"])
+        #expect(recentWindow.newestTurnID == "turn-newest")
+        #expect(recentWindow.oldestTurnID == "turn-newer")
+        #expect(recentWindow.hasNewerTurns == false)
+        #expect(recentWindow.hasOlderTurns)
+
         let recentTurns = try await thread.readRecentTurnHistory(limit: 2)
-        #expect(recentTurns.map(\.id) == ["turn-newer", "turn-middle"])
+        #expect(recentTurns.map(\.id) == ["turn-newest", "turn-newer"])
 
         let readTurn = try await thread.readTurnHistory(turnID: "turn-middle")
         #expect(readTurn?.id == "turn-middle")
         #expect(readTurn?.items.first?.text == "Middle turn")
 
+        let olderWindow = try await thread.readOlderTurnHistoryWindow(olderThan: "turn-middle", limit: 2)
+        #expect(olderWindow.turns.map(\.id) == ["turn-older"])
+        #expect(olderWindow.hasNewerTurns)
+        #expect(olderWindow.hasOlderTurns == false)
+
         let olderTurns = try await thread.readOlderTurnHistory(olderThan: "turn-middle", limit: 2)
         #expect(olderTurns.map(\.id) == ["turn-older"])
 
-        let newerTurns = try await thread.readNewerTurnHistory(newerThan: "turn-middle", limit: 2)
+        let newerWindow = try await thread.readNewerTurnHistoryWindow(newerThan: "turn-middle", limit: 1)
+        #expect(newerWindow.turns.map(\.id) == ["turn-newer"])
+        #expect(newerWindow.hasOlderTurns)
+        #expect(newerWindow.hasNewerTurns)
+
+        let newerTurns = try await thread.readNewerTurnHistory(newerThan: "turn-middle", limit: 1)
         #expect(newerTurns.map(\.id) == ["turn-newer"])
 
         await client.stop()

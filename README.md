@@ -115,10 +115,14 @@ The current public lifecycle contract is intentionally narrow and explicit:
   shell summaries prefer command status and concise output summaries, and its
   resident output pressure is weighted by output size and line structure
   rather than by raw entry count alone.
-- `CodexThread.readTurnHistory(turnID:)`, `readRecentTurnHistory(limit:)`,
-  `readOlderTurnHistory(olderThan:limit:)`, and
-  `readNewerTurnHistory(newerThan:limit:)` now expose the first deliberate
-  non-UI local-history reads over sealed `ClosedTurn` values.
+- `CodexThread.HistoryWindow` now gives non-UI callers a lightweight
+  thread-scoped page shape with sealed `ClosedTurn` values plus
+  `hasOlderTurns` and `hasNewerTurns`.
+- `CodexThread.readTurnHistory(turnID:)`, `readRecentTurnHistoryWindow(limit:)`,
+  `readOlderTurnHistoryWindow(olderThan:limit:)`, and
+  `readNewerTurnHistoryWindow(newerThan:limit:)` now expose the first
+  deliberate non-UI local-history reads, while the matching array-returning
+  helpers remain convenience wrappers over those windows.
 - `CodexTurnHandle.close()` now seals a completed turn into a caller-owned
   value snapshot and releases per-turn observation bookkeeping explicitly.
 - `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate
@@ -155,8 +159,8 @@ Current non-goals and intentionally deferred areas are also explicit:
 - The generated wire layer stays internal.
 - There is not yet a one-shot `run(...)` convenience API.
 - The current history-reading API is still intentionally narrow: the package
-  now exposes direct thread-scoped reads for one sealed turn, a recent window,
-  and local older or newer windows around a known boundary turn, but there is
+  now exposes direct thread-scoped reads for one sealed turn plus lightweight
+  local history windows around recent or boundary-based queries, but there is
   not yet a broader public search or consumer-friendly cursor helper surface
   over the local store.
 - The broader history-reading API is still intentionally incomplete even though

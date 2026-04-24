@@ -867,15 +867,23 @@ Current status for that non-UI history surface:
 
 - first pass shipped
 - `CodexThread.readTurnHistory(turnID:)` now reads one sealed local turn by id
-- `CodexThread.readRecentTurnHistory(limit:)` now reads a recent local window
-  of sealed turns without requiring `RecentTurns`
-- `CodexThread.readOlderTurnHistory(olderThan:limit:)` and
-  `readNewerTurnHistory(newerThan:limit:)` now page local sealed turns around
-  a known boundary turn id without introducing a broader public cursor type yet
+- `CodexThread.HistoryWindow` now gives that surface a lightweight page type
+  with sealed `ClosedTurn` values plus `hasOlderTurns` and `hasNewerTurns`
+- `CodexThread.readRecentTurnHistoryWindow(limit:)` now reads a recent local
+  window of sealed turns without requiring `RecentTurns`
+- `CodexThread.readOlderTurnHistoryWindow(olderThan:limit:)` and
+  `readNewerTurnHistoryWindow(newerThan:limit:)` now page local sealed turns
+  around a known boundary turn id without introducing a broader public cursor
+  type yet
+- the older and newer array-returning helpers now remain convenience wrappers
+  over those windows instead of being separate behavior paths
 - the first non-UI surface intentionally reuses `CodexTurnHandle.ClosedTurn`
   instead of introducing a second public transcript value type
 - directional non-UI paging currently requires the boundary turn to already be
   present in the local history store for that thread
+- the next intended thread-scoped additions are `windowAroundTurn(...)` and
+  `windowAroundItem(...)` before any broader public cursor contract or search
+  surface is introduced
 - broader cursor semantics, transcript search, and richer non-UI history query
   helpers still remain open follow-on work
 
