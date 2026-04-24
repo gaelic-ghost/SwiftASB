@@ -24,6 +24,7 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case turnCompleted(CodexWireTurnCompletedNotification)
 	case itemStarted(CodexWireItemStartedNotification)
 	case itemCompleted(CodexWireItemCompletedNotification)
+	case fileChangeOutputDelta(CodexWireFileChangeOutputDeltaNotification)
 	case agentMessageDelta(CodexWireAgentMessageDeltaNotification)
 	case planDelta(CodexWirePlanDeltaNotification)
 	case reasoningSummaryPartAdded(CodexWireReasoningSummaryPartAddedNotification)

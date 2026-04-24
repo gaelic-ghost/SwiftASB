@@ -685,6 +685,257 @@ public struct CodexThread: Sendable {
 
     @MainActor
     @Observable
+    public final class RecentFiles {
+        public struct FileSnapshot: Sendable, Equatable, Identifiable {
+            public enum Status: String, Sendable, Equatable {
+                case completed
+                case errored
+                case inProgress
+            }
+
+            public let id: String
+            public let itemID: String
+            public private(set) var displayName: String
+            public private(set) var latestStatusText: String?
+            public private(set) var path: String?
+            public private(set) var payloadText: String?
+            public private(set) var status: Status
+            public let turnID: String
+
+            var itemOrderIndex: Int?
+            var turnOrderIndex: Int?
+            var turnStartedAt: Int?
+
+            fileprivate mutating func apply(delta: String) {
+                payloadText = (payloadText ?? "") + delta
+                latestStatusText = latestStatusText ?? "Streaming file change"
+                status = .inProgress
+            }
+
+            fileprivate mutating func apply(_ item: CodexTurnItem, status: Status) {
+                displayName = Self.makeDisplayName(path: item.path)
+                latestStatusText = item.status ?? item.text ?? latestStatusText
+                path = item.path
+                payloadText = item.text ?? payloadText
+                self.status = status
+            }
+
+            fileprivate static func makeDisplayName(path: String?) -> String {
+                guard let path, !path.isEmpty else { return "File edit" }
+                return URL(fileURLWithPath: path).lastPathComponent
+            }
+        }
+
+        public let residentLimit: Int
+        public let threadID: String
+        public private(set) var files: [FileSnapshot]
+        public private(set) var isLoadingOlderFiles: Bool
+        public private(set) var lastLoadErrorDescription: String?
+        public private(set) var nextOlderCursor: String?
+
+        @ObservationIgnored
+        private let appServer: CodexAppServer
+
+        @ObservationIgnored
+        private var fileDeltaTask: Task<Void, Never>?
+
+        @ObservationIgnored
+        private var turnEventTask: Task<Void, Never>?
+
+        internal init(
+            threadID: String,
+            residentLimit: Int,
+            nextOlderCursor: String?,
+            initialFiles: [FileSnapshot],
+            turnEvents: AsyncThrowingStream<CodexTurnEvent, Error>,
+            fileDeltaEvents: AsyncStream<CodexAppServer.FileChangeOutputDeltaEvent>,
+            appServer: CodexAppServer
+        ) {
+            self.threadID = threadID
+            self.residentLimit = residentLimit
+            self.nextOlderCursor = nextOlderCursor
+            self.files = initialFiles
+            self.isLoadingOlderFiles = false
+            self.lastLoadErrorDescription = nil
+            self.appServer = appServer
+
+            turnEventTask = Task { [weak self] in
+                guard let self else { return }
+
+                do {
+                    for try await event in turnEvents {
+                        await self.apply(event)
+                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    return
+                }
+            }
+
+            fileDeltaTask = Task { [weak self] in
+                guard let self else { return }
+
+                for await event in fileDeltaEvents {
+                    self.apply(event)
+                }
+            }
+        }
+
+        deinit {
+            turnEventTask?.cancel()
+            fileDeltaTask?.cancel()
+        }
+
+        public func loadOlderFiles(limit: Int? = nil) async throws {
+            guard !isLoadingOlderFiles else { return }
+            guard let oldestFile = files.last else { return }
+            guard oldestFile.turnOrderIndex != nil, oldestFile.itemOrderIndex != nil else { return }
+
+            isLoadingOlderFiles = true
+            defer { isLoadingOlderFiles = false }
+
+            do {
+                let window = try await appServer.olderFileWindow(
+                    threadID: threadID,
+                    olderThan: oldestFile.appServerSnapshot,
+                    cursor: nextOlderCursor,
+                    limit: limit ?? residentLimit
+                )
+                mergeOlder(window.files.map(FileSnapshot.init))
+                nextOlderCursor = window.nextOlderCursor
+                lastLoadErrorDescription = nil
+            } catch {
+                lastLoadErrorDescription = error.localizedDescription
+                throw error
+            }
+        }
+
+        private func apply(_ event: CodexTurnEvent) async {
+            switch event {
+            case let .itemStarted(started):
+                guard started.item.kind == .fileChange else { return }
+                upsertLiveFile(from: started.item, turnID: started.turnID, status: .inProgress)
+            case let .itemCompleted(completed):
+                guard completed.item.kind == .fileChange else { return }
+                upsertLiveFile(
+                    from: completed.item,
+                    turnID: completed.turnID,
+                    status: completed.item.isErrored ? .errored : .completed
+                )
+            case let .completed(completion):
+                await refreshFiles(for: completion.turn.id)
+            default:
+                return
+            }
+        }
+
+        private func apply(_ event: CodexAppServer.FileChangeOutputDeltaEvent) {
+            let fileID = Self.fileSnapshotID(turnID: event.turnID, itemID: event.itemID)
+            guard let index = files.firstIndex(where: { $0.id == fileID }) else { return }
+            files[index].apply(delta: event.delta)
+        }
+
+        private func refreshFiles(for turnID: String) async {
+            guard let snapshot = try? await appServer.turnSnapshot(threadID: threadID, turnID: turnID) else {
+                return
+            }
+
+            let refreshedFiles = snapshot.items
+                .filter { $0.kind == CodexTurnItem.Kind.fileChange.rawValue }
+                .sorted { $0.orderIndex > $1.orderIndex }
+                .map { item in
+                    FileSnapshot(
+                        id: Self.fileSnapshotID(turnID: turnID, itemID: item.id),
+                        itemID: item.id,
+                        displayName: FileSnapshot.makeDisplayName(path: item.path),
+                        latestStatusText: item.status ?? item.text,
+                        path: item.path,
+                        payloadText: item.streamedText ?? item.text,
+                        status: Self.status(from: item.status),
+                        turnID: turnID,
+                        itemOrderIndex: item.orderIndex,
+                        turnOrderIndex: snapshot.orderIndex,
+                        turnStartedAt: snapshot.startedAt
+                    )
+                }
+
+            mergeOrPrepend(refreshedFiles)
+        }
+
+        private func mergeOlder(_ incoming: [FileSnapshot]) {
+            var existingIDs = Set(files.map(\.id))
+            for file in incoming where !existingIDs.contains(file.id) {
+                files.append(file)
+                existingIDs.insert(file.id)
+            }
+        }
+
+        private func mergeOrPrepend(_ incoming: [FileSnapshot]) {
+            for file in incoming.reversed() {
+                if let index = files.firstIndex(where: { $0.id == file.id }) {
+                    files[index] = file
+                } else {
+                    files.insert(file, at: 0)
+                }
+            }
+
+            if files.count > residentLimit {
+                files = Array(files.prefix(residentLimit))
+            }
+        }
+
+        private func upsertLiveFile(
+            from item: CodexTurnItem,
+            turnID: String,
+            status: FileSnapshot.Status
+        ) {
+            let snapshotID = Self.fileSnapshotID(turnID: turnID, itemID: item.id)
+
+            if let index = files.firstIndex(where: { $0.id == snapshotID }) {
+                files[index].apply(item, status: status)
+            } else {
+                files.insert(
+                    .init(
+                        id: snapshotID,
+                        itemID: item.id,
+                        displayName: FileSnapshot.makeDisplayName(path: item.path),
+                        latestStatusText: item.status ?? item.text,
+                        path: item.path,
+                        payloadText: item.text,
+                        status: status,
+                        turnID: turnID,
+                        itemOrderIndex: nil,
+                        turnOrderIndex: nil,
+                        turnStartedAt: nil
+                    ),
+                    at: 0
+                )
+                if files.count > residentLimit {
+                    files = Array(files.prefix(residentLimit))
+                }
+            }
+        }
+
+        private static func fileSnapshotID(turnID: String, itemID: String) -> String {
+            "\(turnID):\(itemID)"
+        }
+
+        private static func status(from persistedStatus: String?) -> FileSnapshot.Status {
+            guard let persistedStatus else { return .completed }
+            switch persistedStatus.lowercased() {
+            case "error", "errored", "failed", "interrupted":
+                return .errored
+            case "in_progress", "inprogress", "running":
+                return .inProgress
+            default:
+                return .completed
+            }
+        }
+    }
+
+    @MainActor
+    @Observable
     public final class Dashboard {
         public struct HookRun: Sendable, Equatable, Identifiable {
             public struct Entry: Sendable, Equatable {
@@ -1052,6 +1303,22 @@ public struct CodexThread: Sendable {
         )
     }
 
+    @MainActor
+    public func makeRecentFiles(limit: Int = 12) async throws -> RecentFiles {
+        let window = try await appServer.recentFileWindow(threadID: id, limit: limit)
+        let turnEvents = await appServer.threadTurnEventStream(threadID: id)
+        let fileDeltaEvents = await appServer.threadFileChangeOutputDeltaStream(threadID: id)
+        return RecentFiles(
+            threadID: id,
+            residentLimit: limit,
+            nextOlderCursor: window.nextOlderCursor,
+            initialFiles: window.files.map(RecentFiles.FileSnapshot.init),
+            turnEvents: turnEvents,
+            fileDeltaEvents: fileDeltaEvents,
+            appServer: appServer
+        )
+    }
+
     public func respond(
         to request: CodexApprovalRequest,
         with response: CodexApprovalResponse
@@ -1232,5 +1499,51 @@ private extension CodexThread.RecentTurns.TurnSnapshot {
                 )
             }
         )
+    }
+}
+
+private extension CodexThread.RecentFiles.FileSnapshot {
+    init(_ snapshot: CodexAppServer.RecentFileSnapshot) {
+        self.init(
+            id: snapshot.id,
+            itemID: snapshot.itemID,
+            displayName: Self.makeDisplayName(path: snapshot.path),
+            latestStatusText: snapshot.latestStatusText,
+            path: snapshot.path,
+            payloadText: snapshot.payloadText,
+            status: Self.snapshotStatus(from: snapshot.status),
+            turnID: snapshot.turnID,
+            itemOrderIndex: snapshot.itemOrderIndex,
+            turnOrderIndex: snapshot.turnOrderIndex,
+            turnStartedAt: snapshot.turnStartedAt
+        )
+    }
+
+    var appServerSnapshot: CodexAppServer.RecentFileSnapshot {
+        .init(
+            id: id,
+            itemID: itemID,
+            latestStatusText: latestStatusText,
+            path: path,
+            payloadText: payloadText,
+            status: status.rawValue,
+            threadID: "",
+            turnID: turnID,
+            turnOrderIndex: turnOrderIndex ?? 0,
+            itemOrderIndex: itemOrderIndex ?? 0,
+            turnStartedAt: turnStartedAt
+        )
+    }
+
+    private static func snapshotStatus(from persistedStatus: String?) -> CodexThread.RecentFiles.FileSnapshot.Status {
+        guard let persistedStatus else { return .completed }
+        switch persistedStatus.lowercased() {
+        case "error", "errored", "failed", "interrupted":
+            return .errored
+        case "in_progress", "inprogress", "running":
+            return .inProgress
+        default:
+            return .completed
+        }
     }
 }

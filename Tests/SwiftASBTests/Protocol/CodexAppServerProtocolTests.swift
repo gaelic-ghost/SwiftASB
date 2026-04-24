@@ -747,6 +747,24 @@ struct CodexAppServerProtocolTests {
         default:
             Issue.record("Expected item/plan/delta to decode into .planDelta.")
         }
+
+        let fileChangeDeltaPayload = Data(
+            #"{"delta":"@@ -1 +1 @@\n-Hello\n+Hello, world\n","itemId":"item-file-1","threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let fileChangeDeltaEvent = try #require(
+            try decodeEvent(method: "item/fileChange/outputDelta", payload: fileChangeDeltaPayload)
+        )
+
+        switch fileChangeDeltaEvent {
+        case let .fileChangeOutputDelta(notification):
+            #expect(notification.delta.contains("+Hello, world"))
+            #expect(notification.itemID == "item-file-1")
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+        default:
+            Issue.record("Expected item/fileChange/outputDelta to decode into .fileChangeOutputDelta.")
+        }
     }
 
     @Test("decodes server-originated approval and elicitation requests into typed protocol events")

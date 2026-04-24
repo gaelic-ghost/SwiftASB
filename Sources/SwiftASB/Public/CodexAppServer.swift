@@ -595,6 +595,32 @@ public actor CodexAppServer {
         let nextNewerCursor: String?
     }
 
+    internal struct RecentFileSnapshot: Sendable, Equatable, Identifiable {
+        let id: String
+        let itemID: String
+        let latestStatusText: String?
+        let path: String?
+        let payloadText: String?
+        let status: String?
+        let threadID: String
+        let turnID: String
+        let turnOrderIndex: Int
+        let itemOrderIndex: Int
+        let turnStartedAt: Int?
+    }
+
+    internal struct RecentFileWindowResult: Sendable {
+        let files: [RecentFileSnapshot]
+        let nextOlderCursor: String?
+    }
+
+    internal struct FileChangeOutputDeltaEvent: Sendable, Equatable {
+        let delta: String
+        let itemID: String
+        let threadID: String
+        let turnID: String
+    }
+
     private enum InteractiveRequestDestination: Sendable, Equatable {
         case thread(threadID: String), turn(turnID: String)
     }
@@ -618,6 +644,7 @@ public actor CodexAppServer {
     private var threadStatuses: [String: ThreadStatus] = [:]
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
     private var threadObservableActivityContinuations: [String: [UUID: AsyncStream<CodexThread.Dashboard.ActivityState>.Continuation]] = [:]
+    private var threadFileDeltaContinuations: [String: [UUID: AsyncStream<FileChangeOutputDeltaEvent>.Continuation]] = [:]
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var threadTurnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
@@ -690,6 +717,7 @@ public actor CodexAppServer {
         serverEventTask = nil
         finishAllThreadEventStreams(throwing: nil)
         finishAllThreadObservableActivityStreams()
+        finishAllThreadFileDeltaStreams()
         finishAllTurnEventStreams(throwing: nil)
         await transport.stop()
         hasStarted = false
@@ -1161,6 +1189,27 @@ public actor CodexAppServer {
         }
     }
 
+    internal func threadFileChangeOutputDeltaStream(
+        threadID: String
+    ) -> AsyncStream<FileChangeOutputDeltaEvent> {
+        let streamID = UUID()
+
+        return AsyncStream { continuation in
+            var continuations = threadFileDeltaContinuations[threadID] ?? [:]
+            continuations[streamID] = continuation
+            threadFileDeltaContinuations[threadID] = continuations
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeThreadFileDeltaContinuation(
+                        streamID: streamID,
+                        threadID: threadID
+                    )
+                }
+            }
+        }
+    }
+
     internal func debugThreadHistorySnapshot(
         threadID: String
     ) async throws -> ThreadHistoryStore.ThreadSnapshot? {
@@ -1300,6 +1349,121 @@ public actor CodexAppServer {
             ),
             nextOlderCursor: page.nextCursor,
             nextNewerCursor: page.backwardsCursor
+        )
+    }
+
+    internal func recentFileWindow(
+        threadID: String,
+        limit: Int
+    ) async throws -> RecentFileWindowResult {
+        guard limit > 0 else {
+            return .init(files: [], nextOlderCursor: nil)
+        }
+
+        let turnBatchLimit = max(limit, 12)
+        let historyStore = try requireHistoryStore(for: "recent file history")
+        let localTurns = try await historyStore.recentTurnSnapshots(threadID: threadID, limit: turnBatchLimit)
+
+        if !localTurns.isEmpty {
+            var collected = makeRecentFileSnapshots(from: localTurns, threadID: threadID)
+            var oldestTurnOrderIndex = localTurns.last?.orderIndex
+
+            while collected.count < limit, let currentOldestTurnOrderIndex = oldestTurnOrderIndex {
+                let olderTurns = try await historyStore.olderTurnSnapshots(
+                    threadID: threadID,
+                    olderThanOrderIndex: currentOldestTurnOrderIndex,
+                    limit: turnBatchLimit
+                )
+
+                if olderTurns.isEmpty {
+                    break
+                }
+
+                collected.append(contentsOf: makeRecentFileSnapshots(from: olderTurns, threadID: threadID))
+                oldestTurnOrderIndex = olderTurns.last?.orderIndex
+            }
+
+            return .init(
+                files: Array(collected.prefix(limit)),
+                nextOlderCursor: nil
+            )
+        }
+
+        var page = try await recentTurnWindow(threadID: threadID, limit: turnBatchLimit)
+        var collected = makeRecentFileSnapshots(from: page.turns, threadID: threadID)
+        var nextOlderCursor = page.nextOlderCursor
+
+        while collected.count < limit,
+              let cursor = nextOlderCursor,
+              let oldestTurnOrderIndex = page.turns.last?.orderIndex {
+            page = try await olderTurnWindow(
+                threadID: threadID,
+                olderThanOrderIndex: oldestTurnOrderIndex,
+                cursor: cursor,
+                limit: turnBatchLimit
+            )
+
+            if page.turns.isEmpty {
+                nextOlderCursor = page.nextOlderCursor
+                break
+            }
+
+            collected.append(contentsOf: makeRecentFileSnapshots(from: page.turns, threadID: threadID))
+            nextOlderCursor = page.nextOlderCursor
+        }
+
+        return .init(
+            files: Array(collected.prefix(limit)),
+            nextOlderCursor: nextOlderCursor
+        )
+    }
+
+    internal func olderFileWindow(
+        threadID: String,
+        olderThan oldestFile: RecentFileSnapshot,
+        cursor: String?,
+        limit: Int
+    ) async throws -> RecentFileWindowResult {
+        guard limit > 0 else {
+            return .init(files: [], nextOlderCursor: cursor)
+        }
+
+        var collected: [RecentFileSnapshot] = []
+        if let sameTurnSnapshot = try await turnSnapshot(threadID: threadID, turnID: oldestFile.turnID) {
+            let olderFilesInSameTurn = makeRecentFileSnapshots(
+                from: sameTurnSnapshot,
+                threadID: threadID
+            ).filter {
+                $0.itemOrderIndex < oldestFile.itemOrderIndex
+            }
+            collected.append(contentsOf: olderFilesInSameTurn.prefix(limit))
+        }
+
+        var nextOlderCursor = cursor
+        var oldestTurnOrderIndex = oldestFile.turnOrderIndex
+        let turnBatchLimit = max(limit, 12)
+
+        while collected.count < limit {
+            let page = try await olderTurnWindow(
+                threadID: threadID,
+                olderThanOrderIndex: oldestTurnOrderIndex,
+                cursor: nextOlderCursor,
+                limit: turnBatchLimit
+            )
+
+            if page.turns.isEmpty {
+                nextOlderCursor = page.nextOlderCursor
+                break
+            }
+
+            collected.append(contentsOf: makeRecentFileSnapshots(from: page.turns, threadID: threadID))
+            nextOlderCursor = page.nextOlderCursor
+            oldestTurnOrderIndex = page.turns.last?.orderIndex ?? oldestTurnOrderIndex
+        }
+
+        return .init(
+            files: Array(collected.prefix(limit)),
+            nextOlderCursor: nextOlderCursor
         )
     }
 
@@ -1504,6 +1668,16 @@ public actor CodexAppServer {
         }
     }
 
+    private func finishThreadFileDeltaStreams(threadID: String) {
+        guard let continuations = threadFileDeltaContinuations.removeValue(forKey: threadID)?.values else {
+            return
+        }
+
+        for continuation in continuations {
+            continuation.finish()
+        }
+    }
+
     private func startServerEventLoop() {
         serverEventTask?.cancel()
         let transport = self.transport
@@ -1567,6 +1741,7 @@ public actor CodexAppServer {
             clearTurnActivities(threadID: notification.threadID)
             settleThreadObservableActivity(threadID: notification.threadID)
             finishThreadObservableActivityStreams(threadID: notification.threadID)
+            finishThreadFileDeltaStreams(threadID: notification.threadID)
             let threadEvent = CodexThreadEvent.closed(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: true)
             try? await historyStore?.recordThreadClosed(threadID: notification.threadID)
@@ -1660,6 +1835,19 @@ public actor CodexAppServer {
         case let .modelRerouted(notification):
             Self.logger.notice(
                 "Model rerouted for thread \(notification.threadID, privacy: .public) turn \(notification.turnID, privacy: .public): \(notification.fromModel, privacy: .public) -> \(notification.toModel, privacy: .public) because \(notification.reason.rawValue, privacy: .public)"
+            )
+        case let .fileChangeOutputDelta(notification):
+            let deltaEvent = FileChangeOutputDeltaEvent(
+                delta: notification.delta,
+                itemID: notification.itemID,
+                threadID: notification.threadID,
+                turnID: notification.turnID
+            )
+            publishThreadFileDelta(deltaEvent, for: notification.threadID)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
             )
         case let .planDelta(notification):
             let planDelta = CodexTurnPlanDelta(
@@ -1766,6 +1954,7 @@ public actor CodexAppServer {
         guard hasStarted, !isStopping else {
             finishAllThreadEventStreams(throwing: nil)
             finishAllThreadObservableActivityStreams()
+            finishAllThreadFileDeltaStreams()
             finishAllTurnEventStreams(throwing: nil)
             return
         }
@@ -1777,6 +1966,7 @@ public actor CodexAppServer {
             )
         )
         finishAllThreadObservableActivityStreams()
+        finishAllThreadFileDeltaStreams()
         finishAllTurnEventStreams(
             throwing: CodexAppServerError.transportFailure(
                 operation: "server events",
@@ -1926,6 +2116,16 @@ public actor CodexAppServer {
         }
     }
 
+    private func removeThreadFileDeltaContinuation(streamID: UUID, threadID: String) {
+        guard var continuations = threadFileDeltaContinuations[threadID] else { return }
+        continuations.removeValue(forKey: streamID)
+        if continuations.isEmpty {
+            threadFileDeltaContinuations.removeValue(forKey: threadID)
+        } else {
+            threadFileDeltaContinuations[threadID] = continuations
+        }
+    }
+
     private func registerThreadTurnEventContinuation(
         _ continuation: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation,
         streamID: UUID,
@@ -1980,6 +2180,19 @@ public actor CodexAppServer {
         let state = threadObservableActivityState(threadID: threadID)
         for continuation in continuations.values {
             continuation.yield(state)
+        }
+    }
+
+    private func publishThreadFileDelta(
+        _ event: FileChangeOutputDeltaEvent,
+        for threadID: String
+    ) {
+        guard let continuations = threadFileDeltaContinuations[threadID], !continuations.isEmpty else {
+            return
+        }
+
+        for continuation in continuations.values {
+            continuation.yield(event)
         }
     }
 
@@ -2056,6 +2269,15 @@ public actor CodexAppServer {
         }
     }
 
+    private func finishAllThreadFileDeltaStreams() {
+        let activeContinuations = threadFileDeltaContinuations.values.flatMap(\.values)
+        threadFileDeltaContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            continuation.finish()
+        }
+    }
+
     private func updateThreadObservableActivityForItemStarted(
         _ item: CodexWireThreadItem,
         threadID: String
@@ -2125,6 +2347,41 @@ public actor CodexAppServer {
 
         threadObservableActivityStates[threadID] = state
         publishThreadObservableActivityState(threadID: threadID)
+    }
+
+    private func makeRecentFileSnapshots(
+        from turns: [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot],
+        threadID: String
+    ) -> [RecentFileSnapshot] {
+        turns.flatMap { makeRecentFileSnapshots(from: $0, threadID: threadID) }
+    }
+
+    private func makeRecentFileSnapshots(
+        from turn: ThreadHistoryStore.ThreadSnapshot.TurnSnapshot,
+        threadID: String
+    ) -> [RecentFileSnapshot] {
+        turn.items
+            .filter { $0.kind == CodexTurnItem.Kind.fileChange.rawValue }
+            .sorted { $0.orderIndex > $1.orderIndex }
+            .map {
+                RecentFileSnapshot(
+                    id: Self.recentFileSnapshotID(turnID: turn.id, itemID: $0.id),
+                    itemID: $0.id,
+                    latestStatusText: $0.status ?? $0.text,
+                    path: $0.path,
+                    payloadText: $0.streamedText ?? $0.text,
+                    status: $0.status,
+                    threadID: threadID,
+                    turnID: turn.id,
+                    turnOrderIndex: turn.orderIndex,
+                    itemOrderIndex: $0.orderIndex,
+                    turnStartedAt: turn.startedAt
+                )
+            }
+    }
+
+    private static func recentFileSnapshotID(turnID: String, itemID: String) -> String {
+        "\(turnID):\(itemID)"
     }
 
     private func itemHasError(status: String?) -> Bool {

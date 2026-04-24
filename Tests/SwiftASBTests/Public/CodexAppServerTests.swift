@@ -875,6 +875,276 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("builds a recent-files observable from the local history store")
+    func buildsRecentFilesObservable() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        let turn = try await thread.startTextTurn("Edit the README.")
+        let eventTask = Task {
+            try await turnEvents(from: turn.events, count: 4)
+        }
+
+        await transport.emitTurnStarted(threadID: thread.id, turnID: turn.turn.id)
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-file-1",
+            item: [
+                "id": "item-file-1",
+                "path": "/tmp/project/README.md",
+                "type": "fileChange",
+            ]
+        )
+        await transport.emitFileChangeOutputDelta(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-file-1",
+            delta: "@@ -1 +1 @@\n-Hello\n+Hello, world\n"
+        )
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-file-1",
+            item: [
+                "id": "item-file-1",
+                "path": "/tmp/project/README.md",
+                "status": "completed",
+                "type": "fileChange",
+            ]
+        )
+        await transport.emitTurnCompleted(threadID: thread.id, turnID: turn.turn.id)
+        _ = try await eventTask.value
+
+        let recentFiles = try await thread.makeRecentFiles(limit: 4)
+        let fileSnapshots = await MainActor.run { recentFiles.files }
+
+        #expect(fileSnapshots.count == 1)
+        #expect(fileSnapshots[0].turnID == turn.turn.id)
+        #expect(fileSnapshots[0].path == "/tmp/project/README.md")
+        #expect(fileSnapshots[0].status == .completed)
+        #expect(fileSnapshots[0].payloadText?.contains("+Hello, world") == true)
+
+        await client.stop()
+    }
+
+    @MainActor
+    @Test("keeps a recent-files observable live with file item updates")
+    func recentFilesObservableStaysLive() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        let turn = try await thread.startTextTurn("Edit the package.")
+        let recentFiles = try await thread.makeRecentFiles(limit: 3)
+
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-file-1",
+            item: [
+                "id": "item-file-1",
+                "path": "/tmp/project/Package.swift",
+                "type": "fileChange",
+            ]
+        )
+
+        await waitForObservableState {
+            recentFiles.files.count == 1
+                && recentFiles.files[0].status == .inProgress
+                && recentFiles.files[0].path == "/tmp/project/Package.swift"
+        }
+
+        await transport.emitFileChangeOutputDelta(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-file-1",
+            delta: "dependencies: [\n"
+        )
+        await transport.emitFileChangeOutputDelta(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-file-1",
+            delta: "    .package(url: \"https://example.com\")\n"
+        )
+
+        await waitForObservableState {
+            recentFiles.files[0].payloadText?.contains("https://example.com") == true
+        }
+
+        await transport.emitItemCompleted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-file-1",
+            item: [
+                "id": "item-file-1",
+                "path": "/tmp/project/Package.swift",
+                "status": "completed",
+                "type": "fileChange",
+            ]
+        )
+
+        await waitForObservableState {
+            recentFiles.files[0].status == .completed
+        }
+
+        #expect(recentFiles.files.count == 1)
+        #expect(recentFiles.files[0].displayName == "Package.swift")
+        #expect(recentFiles.files[0].status == .completed)
+        #expect(recentFiles.files[0].payloadText?.contains("https://example.com") == true)
+
+        await client.stop()
+    }
+
+    @Test("loads older recent files from the same turn before older turns")
+    func loadsOlderRecentFilesFromSameTurnFirst() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadTurnsListResultQueue: [
+                [
+                    "backwardsCursor": NSNull(),
+                    "data": [
+                        [
+                            "completedAt": 1713350400,
+                            "durationMs": 500,
+                            "error": NSNull(),
+                            "id": "turn-newer",
+                            "items": [
+                                [
+                                    "id": "item-file-newer-1",
+                                    "path": "/tmp/project/Package.swift",
+                                    "status": "completed",
+                                    "type": "fileChange",
+                                ],
+                                [
+                                    "id": "item-file-newer-2",
+                                    "path": "/tmp/project/Sources/App.swift",
+                                    "status": "completed",
+                                    "type": "fileChange",
+                                ],
+                            ],
+                            "startedAt": 1713350300,
+                            "status": "completed",
+                        ],
+                        [
+                            "completedAt": 1713349400,
+                            "durationMs": 500,
+                            "error": NSNull(),
+                            "id": "turn-older",
+                            "items": [
+                                [
+                                    "id": "item-file-older",
+                                    "path": "/tmp/project/README.md",
+                                    "status": "completed",
+                                    "type": "fileChange",
+                                ],
+                            ],
+                            "startedAt": 1713349300,
+                            "status": "completed",
+                        ],
+                    ],
+                    "nextCursor": NSNull(),
+                ]
+            ]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                approvalPolicy: .onRequest,
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false,
+                model: "gpt-5.4",
+                modelProvider: "openai",
+                sandboxMode: .workspaceWrite,
+                serviceTier: .fast
+            )
+        )
+
+        _ = try await client.listThreadTurns(
+            .init(
+                threadID: thread.id,
+                limit: 2,
+                sortDirection: .desc
+            )
+        )
+
+        let recentFiles = try await thread.makeRecentFiles(limit: 1)
+        let initialFiles = await MainActor.run { recentFiles.files }
+        #expect(initialFiles.count == 1)
+        #expect(initialFiles[0].path == "/tmp/project/Sources/App.swift")
+
+        try await recentFiles.loadOlderFiles(limit: 2)
+        let expandedFiles = await MainActor.run { recentFiles.files }
+
+        #expect(expandedFiles.count == 3)
+        #expect(expandedFiles[0].path == "/tmp/project/Sources/App.swift")
+        #expect(expandedFiles[1].path == "/tmp/project/Package.swift")
+        #expect(expandedFiles[2].path == "/tmp/project/README.md")
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
     @Test("loads older recent turns from the local history store before app-server fallback")
     func loadsOlderRecentTurnsLocallyFirst() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -3979,6 +4249,24 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
         serverEventContinuation?.yield(
             .notification(method: "item/agentMessage/delta", payload: payload)
+        )
+    }
+
+    func emitFileChangeOutputDelta(
+        threadID: String,
+        turnID: String,
+        itemID: String,
+        delta: String
+    ) {
+        let payload = payloadObject([
+            "delta": delta,
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/fileChange/outputDelta", payload: payload)
         )
     }
 

@@ -93,6 +93,12 @@ The current public lifecycle contract is intentionally narrow and explicit:
   older or newer windows when a SwiftUI consumer binds the visible turn id
   through `scrollPosition(id:anchor:)` and visibility through
   `onScrollTargetVisibilityChange(idType:threshold:_:)`.
+- `CodexThread.makeRecentFiles(limit:)` now vends a thread-scoped recent-files
+  observable that is file-centric rather than event-centric: it hydrates from
+  persisted file-change items in the local history store, keeps one resident
+  entry per file-change item, enriches live entries from file-change output
+  deltas, and can load older file entries from the same turn before moving on
+  to older turns.
 - `CodexTurnHandle.close()` now seals a completed turn into a caller-owned
   value snapshot and releases per-turn observation bookkeeping explicitly.
 - `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate

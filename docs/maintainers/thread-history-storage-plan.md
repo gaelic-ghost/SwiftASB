@@ -784,6 +784,30 @@ Current status:
 
 Recommended next steps:
 
+- add `CodexThread.RecentFiles` as the next thread-scoped observable companion:
+  - one resident file-entry window per thread
+  - one entry per file-change item in the first pass, not path-level
+    coalescing
+  - seed from the same local history store snapshots that already retain
+    file-change items and their accumulated streamed text
+  - enrich live resident entries from file-change output deltas while the item
+    is active
+  - keep lightweight file-entry shells resident longer than heavier payload
+    text, and rehydrate payload when an entry becomes visible or selected again
+  - keep a later mixed `RecentActivity` timeline separate from the file-centric
+    model instead of making `RecentFiles` a subtype of a generalized activity
+    feed
+- current status for that file companion:
+  - started
+  - `CodexThread.makeRecentFiles(limit:)` now exists
+  - initial file-entry hydration now comes from the same local history store
+    snapshots that already retain file-change items and accumulated streamed
+    text
+  - live file entries now enrich themselves from
+    `item/fileChange/outputDelta` notifications without promoting those raw
+    notifications into new public event-enum cases
+  - older file loading now checks the same persisted turn first for older file
+    items before moving on to older turns
 - keep tuning `RecentTurns` policy now that the first end-to-end resident cache
   behavior is real:
   - calibrate the weighted residency cost rules against real transcript shapes

@@ -473,6 +473,14 @@ struct CodexAppServerProtocol {
                         resultType: CodexWireItemCompletedNotification.self
                     )
                 )
+            case "item/fileChange/outputDelta":
+                return .fileChangeOutputDelta(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireFileChangeOutputDeltaNotification.self
+                    )
+                )
             case "item/agentMessage/delta":
                 return .agentMessageDelta(
                     try decodeNotification(

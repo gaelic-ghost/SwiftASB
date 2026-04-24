@@ -127,6 +127,7 @@ Current observable-only families:
 | Per-turn compaction status | `CodexTurnHandle.Minimap.isCompactingThreadContext` | Turn-scoped UI often needs to know when the current turn is blocked on context compaction, but the package still does not expose raw compaction notifications as first-class public events. |
 | Thread-level aggregate tool activity | `CodexThread.Dashboard.toolCallingStatus` | This is a current-state blocked-or-busy summary, not canonical event history. |
 | Thread-level aggregate MCP activity | `CodexThread.Dashboard.mcpCallingStatus` | Same reason as tool activity: useful UI summary, but not a separate public event family yet. |
+| Thread-level recent file edits | `CodexThread.RecentFiles` | File viewers and diff panels need file-centric current state, not raw file-change delta notifications as a top-level event enum. |
 | Thread-level active hook runs | `CodexThread.Dashboard.hookRuns` | Consumers need a stable current-state view of which hooks are running or have just completed more than they need raw hook notifications as first-class event enums. |
 | Thread-level compaction status | `CodexThread.Dashboard.isCompactingThreadContext` | Current blocked-thread state matters to consumers, but the package does not yet expose full compaction progress as a public event stream. |
 
@@ -158,6 +159,9 @@ Remaining gap inside the observable-only slice:
   plus a few display-oriented fields, but it does not yet expose richer
   progress detail from command-output, file-change-output, or MCP-progress
   notifications.
+- `RecentFiles` now gives file-change output deltas a concrete current-state
+  destination, but it is still intentionally file-centric rather than being a
+  mixed recent-activity feed.
 - `Dashboard` currently summarizes whether tool work, MCP work, or thread
   compaction is active or left error residue behind, and it now mirrors active
   hook runs plus their latest status, but it does not yet expose richer command
@@ -168,7 +172,7 @@ Remaining gap inside the observable-only slice:
 | Family | Why it remains internal |
 | --- | --- |
 | Command output delta notifications | The current minimap can already summarize command activity without them, so these remain internal until we decide whether richer command progress belongs as public events or as extra call-snapshot detail. |
-| File-change output delta notifications | The current minimap can already summarize file-edit activity without them, so these remain internal until we decide whether richer edit progress belongs as public events or as extra call-snapshot detail. |
+| File-change output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentFiles` as a file-centric observable companion instead of becoming new top-level public event cases. |
 | MCP tool-call progress notifications | The current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
 | Model-rerouted notifications | Operationally interesting, but not yet part of the stable public lifecycle promised to consumers. These currently stay internal and are logged for operator diagnostics. |
 | Hook started / completed notifications | The raw notifications remain internal; consumers see their current-state effect through `CodexThread.Dashboard.hookRuns` instead of through new event-enum cases. |
@@ -205,7 +209,7 @@ families break down like this:
 | `ServerRequestResolvedNotification` | `Public now` |
 | `CommandExecutionOutputDeltaNotification` | `Internal-only for now` |
 | `CommandExecOutputDeltaNotification` | `Internal-only for now` |
-| `FileChangeOutputDeltaNotification` | `Internal-only for now` |
+| `FileChangeOutputDeltaNotification` | `Observable-only for now` |
 | `McpToolCallProgressNotification` | `Internal-only for now` |
 | `ModelReroutedNotification` | `Internal-only for now` |
 | `HookStartedNotification` | `Observable-only for now` |
@@ -237,6 +241,9 @@ It is also now defined partly by deliberate observable-only summaries:
   list of command, file-edit, dynamic-tool, collab-tool, and MCP activity.
 - `CodexTurnHandle.Minimap.isCompactingThreadContext` gives consumers a stable
   per-turn answer to whether context compaction is currently active.
+- `CodexThread.RecentFiles` gives consumers a stable thread-scoped list of
+  recent file edits, hydrated from the same persisted turn history and enriched
+  by live file-change output deltas while an edit is still in progress.
 - `CodexThread.Dashboard` gives consumers current-state thread summaries for
   aggregate tool activity, aggregate MCP activity, active hook runs, and
   whether thread compaction is currently active.
@@ -261,10 +268,33 @@ The current remaining promotion questions are therefore narrower than before:
 
 1. should richer command, file-edit, or MCP progress stay inside the existing
    observable summaries, or graduate into additional public event cases?
-2. should command and file detail become dedicated companion observables rather
-   than widening the existing event enums?
+2. file detail is now treated as a dedicated companion observable rather than
+   as widened event enums:
+   `RecentFiles` is the shipped file-centric surface, and a later
+   `RecentActivity` feed should stay separate instead of swallowing that
+   file-specific model.
 3. which thread-management methods must land next so the current interactive
    slice is not trapped inside `thread/start`-only workflows?
+
+## Decided Next Companion Shape
+
+The file companion shape is now considered decided and started:
+
+- add `CodexThread.RecentFiles` as a file-centric observable
+- keep `RecentFiles` item-scoped in the first pass:
+  one observable entry per file-change item, not path-level coalescing
+- derive file identity and metadata from item lifecycle plus persisted turn
+  history, and use file-change output deltas only to enrich the current
+  payload
+- keep file-entry shells resident longer than heavier payload text, and
+  rehydrate payload when a file becomes visible or selected again
+- treat a later `RecentActivity` surface as a separate mixed timeline for
+  commands, files, MCP work, and other recent activity rather than as a base
+  type that owns `RecentFiles`
+
+This means file-change output deltas remain internal transport detail, but they
+are now earmarked for a specific public destination: `CodexThread.RecentFiles`
+as a current-state observable companion.
 
 Until those conditions are met, the generated wire layer should remain broader
 than the public API on purpose.
