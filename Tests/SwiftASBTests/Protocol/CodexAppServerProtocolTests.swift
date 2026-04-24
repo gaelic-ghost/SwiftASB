@@ -765,6 +765,24 @@ struct CodexAppServerProtocolTests {
         default:
             Issue.record("Expected item/fileChange/outputDelta to decode into .fileChangeOutputDelta.")
         }
+
+        let commandDeltaPayload = Data(
+            #"{"delta":"Cloning into 'SwiftASB'...\n","itemId":"item-command-1","threadId":"thread-123","turnId":"turn-123"}"#.utf8
+        )
+
+        let commandDeltaEvent = try #require(
+            try decodeEvent(method: "item/commandExecution/outputDelta", payload: commandDeltaPayload)
+        )
+
+        switch commandDeltaEvent {
+        case let .commandExecutionOutputDelta(notification):
+            #expect(notification.delta.contains("Cloning into"))
+            #expect(notification.itemID == "item-command-1")
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+        default:
+            Issue.record("Expected item/commandExecution/outputDelta to decode into .commandExecutionOutputDelta.")
+        }
     }
 
     @Test("decodes server-originated approval and elicitation requests into typed protocol events")

@@ -128,6 +128,7 @@ Current observable-only families:
 | Thread-level aggregate tool activity | `CodexThread.Dashboard.toolCallingStatus` | This is a current-state blocked-or-busy summary, not canonical event history. |
 | Thread-level aggregate MCP activity | `CodexThread.Dashboard.mcpCallingStatus` | Same reason as tool activity: useful UI summary, but not a separate public event family yet. |
 | Thread-level recent file edits | `CodexThread.RecentFiles` | File viewers and diff panels need file-centric current state, not raw file-change delta notifications as a top-level event enum. |
+| Thread-level recent command activity | `CodexThread.RecentCommands` | Terminal-style inspectors need command-centric current state, not raw command-output delta notifications as a top-level event enum. |
 | Thread-level active hook runs | `CodexThread.Dashboard.hookRuns` | Consumers need a stable current-state view of which hooks are running or have just completed more than they need raw hook notifications as first-class event enums. |
 | Thread-level compaction status | `CodexThread.Dashboard.isCompactingThreadContext` | Current blocked-thread state matters to consumers, but the package does not yet expose full compaction progress as a public event stream. |
 
@@ -157,8 +158,10 @@ Remaining gap inside the observable-only slice:
 
 - `Minimap.callSnapshots` currently summarizes call start and completion state,
   plus a few display-oriented fields, but it does not yet expose richer
-  progress detail from command-output, file-change-output, or MCP-progress
-  notifications.
+  progress detail from MCP-progress notifications.
+- `RecentCommands` now gives command-output deltas a concrete current-state
+  destination, but it is still intentionally command-centric rather than being
+  a mixed recent-activity feed.
 - `RecentFiles` now gives file-change output deltas a concrete current-state
   destination, but it is still intentionally file-centric rather than being a
   mixed recent-activity feed.
@@ -171,7 +174,7 @@ Remaining gap inside the observable-only slice:
 
 | Family | Why it remains internal |
 | --- | --- |
-| Command output delta notifications | The current minimap can already summarize command activity without them, so these remain internal until we decide whether richer command progress belongs as public events or as extra call-snapshot detail. |
+| Command output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentCommands` as a command-centric observable companion instead of becoming new top-level public event cases. |
 | File-change output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentFiles` as a file-centric observable companion instead of becoming new top-level public event cases. |
 | MCP tool-call progress notifications | The current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
 | Model-rerouted notifications | Operationally interesting, but not yet part of the stable public lifecycle promised to consumers. These currently stay internal and are logged for operator diagnostics. |
@@ -207,7 +210,7 @@ families break down like this:
 | `ReasoningSummaryTextDeltaNotification` | `Public now` |
 | `AgentMessageDeltaNotification` | `Public now` |
 | `ServerRequestResolvedNotification` | `Public now` |
-| `CommandExecutionOutputDeltaNotification` | `Internal-only for now` |
+| `CommandExecutionOutputDeltaNotification` | `Observable-only for now` |
 | `CommandExecOutputDeltaNotification` | `Internal-only for now` |
 | `FileChangeOutputDeltaNotification` | `Observable-only for now` |
 | `McpToolCallProgressNotification` | `Internal-only for now` |
@@ -244,6 +247,9 @@ It is also now defined partly by deliberate observable-only summaries:
 - `CodexThread.RecentFiles` gives consumers a stable thread-scoped list of
   recent file edits, hydrated from the same persisted turn history and enriched
   by live file-change output deltas while an edit is still in progress.
+- `CodexThread.RecentCommands` gives consumers a stable thread-scoped list of
+  recent command activity, hydrated from the same persisted turn history and
+  enriched by live command-output deltas while a command is still in progress.
 - `CodexThread.Dashboard` gives consumers current-state thread summaries for
   aggregate tool activity, aggregate MCP activity, active hook runs, and
   whether thread compaction is currently active.
@@ -266,19 +272,20 @@ typed event case.
 
 The current remaining promotion questions are therefore narrower than before:
 
-1. should richer command, file-edit, or MCP progress stay inside the existing
-   observable summaries, or graduate into additional public event cases?
-2. file detail is now treated as a dedicated companion observable rather than
-   as widened event enums:
-   `RecentFiles` is the shipped file-centric surface, and a later
-   `RecentActivity` feed should stay separate instead of swallowing that
-   file-specific model.
-3. which thread-management methods must land next so the current interactive
-   slice is not trapped inside `thread/start`-only workflows?
+1. should richer MCP progress stay inside the existing observable summaries, or
+   graduate into additional public event cases?
+2. file and command detail are now both treated as dedicated companion
+   observables rather than as widened event enums:
+   `RecentFiles` and `RecentCommands` are the shipped file-centric and
+   command-centric surfaces, and a later `RecentActivity` feed should stay
+   separate instead of swallowing those narrower models.
+3. how far should the non-UI public history-reading surface go beyond the
+   first shipped `ClosedTurn` helpers before the package commits to a broader
+   cursor or search contract?
 
 ## Decided Next Companion Shape
 
-The file companion shape is now considered decided and started:
+The file and command companion shapes are now considered decided and started:
 
 - add `CodexThread.RecentFiles` as a file-centric observable
 - keep `RecentFiles` item-scoped in the first pass:
@@ -288,13 +295,21 @@ The file companion shape is now considered decided and started:
   payload
 - keep file-entry shells resident longer than heavier payload text, and
   rehydrate payload when a file becomes visible or selected again
+- add `CodexThread.RecentCommands` as a command-centric observable
+- keep `RecentCommands` item-scoped in the first pass:
+  one observable entry per `commandExecution` item
+- derive command identity and metadata from item lifecycle plus persisted turn
+  history, and use command-output deltas only to enrich the current output
+- keep command-entry shells resident longer than heavier output text, and
+  rehydrate output when a command becomes visible or selected again
 - treat a later `RecentActivity` surface as a separate mixed timeline for
   commands, files, MCP work, and other recent activity rather than as a base
-  type that owns `RecentFiles`
+  type that owns `RecentFiles` or `RecentCommands`
 
-This means file-change output deltas remain internal transport detail, but they
-are now earmarked for a specific public destination: `CodexThread.RecentFiles`
-as a current-state observable companion.
+This means file-change and command-output deltas remain internal transport
+detail, but they are now earmarked for specific public destinations:
+`CodexThread.RecentFiles` and `CodexThread.RecentCommands` as current-state
+observable companions.
 
 Until those conditions are met, the generated wire layer should remain broader
 than the public API on purpose.

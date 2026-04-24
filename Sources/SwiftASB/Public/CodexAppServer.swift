@@ -609,9 +609,35 @@ public actor CodexAppServer {
         let turnStartedAt: Int?
     }
 
+    internal struct RecentCommandSnapshot: Sendable, Equatable, Identifiable {
+        let id: String
+        let itemID: String
+        let command: String?
+        let latestStatusText: String?
+        let outputText: String?
+        let status: String?
+        let threadID: String
+        let turnID: String
+        let turnOrderIndex: Int
+        let itemOrderIndex: Int
+        let turnStartedAt: Int?
+    }
+
     internal struct RecentFileWindowResult: Sendable {
         let files: [RecentFileSnapshot]
         let nextOlderCursor: String?
+    }
+
+    internal struct RecentCommandWindowResult: Sendable {
+        let commands: [RecentCommandSnapshot]
+        let nextOlderCursor: String?
+    }
+
+    internal struct CommandExecutionOutputDeltaEvent: Sendable, Equatable {
+        let delta: String
+        let itemID: String
+        let threadID: String
+        let turnID: String
     }
 
     internal struct FileChangeOutputDeltaEvent: Sendable, Equatable {
@@ -644,6 +670,7 @@ public actor CodexAppServer {
     private var threadStatuses: [String: ThreadStatus] = [:]
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
     private var threadObservableActivityContinuations: [String: [UUID: AsyncStream<CodexThread.Dashboard.ActivityState>.Continuation]] = [:]
+    private var threadCommandDeltaContinuations: [String: [UUID: AsyncStream<CommandExecutionOutputDeltaEvent>.Continuation]] = [:]
     private var threadFileDeltaContinuations: [String: [UUID: AsyncStream<FileChangeOutputDeltaEvent>.Continuation]] = [:]
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
@@ -717,6 +744,7 @@ public actor CodexAppServer {
         serverEventTask = nil
         finishAllThreadEventStreams(throwing: nil)
         finishAllThreadObservableActivityStreams()
+        finishAllThreadCommandDeltaStreams()
         finishAllThreadFileDeltaStreams()
         finishAllTurnEventStreams(throwing: nil)
         await transport.stop()
@@ -1210,18 +1238,151 @@ public actor CodexAppServer {
         }
     }
 
+    internal func threadCommandExecutionOutputDeltaStream(
+        threadID: String
+    ) -> AsyncStream<CommandExecutionOutputDeltaEvent> {
+        let streamID = UUID()
+
+        return AsyncStream { continuation in
+            var continuations = threadCommandDeltaContinuations[threadID] ?? [:]
+            continuations[streamID] = continuation
+            threadCommandDeltaContinuations[threadID] = continuations
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeThreadCommandDeltaContinuation(
+                        streamID: streamID,
+                        threadID: threadID
+                    )
+                }
+            }
+        }
+    }
+
     internal func debugThreadHistorySnapshot(
         threadID: String
     ) async throws -> ThreadHistoryStore.ThreadSnapshot? {
         try await requireHistoryStore(for: "thread history snapshot").snapshot(threadID: threadID)
     }
 
+    internal func recentClosedTurnWindow(
+        threadID: String,
+        limit: Int
+    ) async throws -> CodexThread.HistoryWindow {
+        let historyStore = try requireHistoryStore(for: "recent turn history")
+        if let threadSnapshot = try await historyStore.snapshot(threadID: threadID) {
+            let orderedTurns = orderedClosedTurnSnapshots(from: threadSnapshot.turns)
+            if !orderedTurns.isEmpty {
+                let turns = orderedTurns
+                    .prefix(max(1, limit))
+                    .map { CodexTurnHandle.ClosedTurn(threadID: threadID, snapshot: $0) }
+                return CodexThread.HistoryWindow(
+                    threadID: threadID,
+                    turns: turns,
+                    hasOlderTurns: orderedTurns.count > turns.count,
+                    hasNewerTurns: false
+                )
+            }
+        }
+
+        let window = try await recentTurnWindow(threadID: threadID, limit: limit)
+        return CodexThread.HistoryWindow(
+            threadID: threadID,
+            turns: window.turns.map { .init(threadID: threadID, snapshot: $0) },
+            hasOlderTurns: window.nextOlderCursor != nil,
+            hasNewerTurns: window.nextNewerCursor != nil
+        )
+    }
+
     internal func recentClosedTurns(
         threadID: String,
         limit: Int
     ) async throws -> [CodexTurnHandle.ClosedTurn] {
-        let snapshots = try await recentTurnWindow(threadID: threadID, limit: limit).turns
-        return snapshots.map { .init(threadID: threadID, snapshot: $0) }
+        try await recentClosedTurnWindow(threadID: threadID, limit: limit).turns
+    }
+
+    internal func olderClosedTurnWindow(
+        threadID: String,
+        olderThan turnID: String,
+        limit: Int
+    ) async throws -> CodexThread.HistoryWindow {
+        let historyStore = try requireHistoryStore(for: "older turn history")
+        guard let threadSnapshot = try await historyStore.snapshot(threadID: threadID) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read older turn history before turn \(turnID) because thread \(threadID) does not currently have a readable local history snapshot. Load recent or stored history for the thread before paging older local history around a boundary turn.
+                """
+            )
+        }
+        let orderedTurns = orderedClosedTurnSnapshots(from: threadSnapshot.turns)
+        guard let boundaryIndex = orderedTurns.firstIndex(where: { $0.id == turnID }) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read older turn history before turn \(turnID) because that turn is not currently present in the local history store for thread \(threadID). Load recent or stored history that includes the boundary turn before paging older local history around it.
+                """
+            )
+        }
+
+        let turns = orderedTurns
+            .suffix(from: orderedTurns.index(after: boundaryIndex))
+            .prefix(limit)
+            .map { CodexTurnHandle.ClosedTurn(threadID: threadID, snapshot: $0) }
+        return CodexThread.HistoryWindow(
+            threadID: threadID,
+            turns: turns,
+            hasOlderTurns: orderedTurns.index(boundaryIndex, offsetBy: turns.count + 1) < orderedTurns.endIndex,
+            hasNewerTurns: true
+        )
+    }
+
+    internal func olderClosedTurns(
+        threadID: String,
+        olderThan turnID: String,
+        limit: Int
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        try await olderClosedTurnWindow(threadID: threadID, olderThan: turnID, limit: limit).turns
+    }
+
+    internal func newerClosedTurnWindow(
+        threadID: String,
+        newerThan turnID: String,
+        limit: Int
+    ) async throws -> CodexThread.HistoryWindow {
+        let historyStore = try requireHistoryStore(for: "newer turn history")
+        guard let threadSnapshot = try await historyStore.snapshot(threadID: threadID) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read newer turn history after turn \(turnID) because thread \(threadID) does not currently have a readable local history snapshot. Load recent or stored history for the thread before paging newer local history around a boundary turn.
+                """
+            )
+        }
+        let orderedTurns = orderedClosedTurnSnapshots(from: threadSnapshot.turns)
+        guard let boundaryIndex = orderedTurns.firstIndex(where: { $0.id == turnID }) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read newer turn history after turn \(turnID) because that turn is not currently present in the local history store for thread \(threadID). Load recent or stored history that includes the boundary turn before paging newer local history around it.
+                """
+            )
+        }
+
+        let newerCandidates = orderedTurns.prefix(boundaryIndex)
+        let turns = newerCandidates
+            .suffix(limit)
+            .map { CodexTurnHandle.ClosedTurn(threadID: threadID, snapshot: $0) }
+        return CodexThread.HistoryWindow(
+            threadID: threadID,
+            turns: turns,
+            hasOlderTurns: true,
+            hasNewerTurns: newerCandidates.count > turns.count
+        )
+    }
+
+    internal func newerClosedTurns(
+        threadID: String,
+        newerThan turnID: String,
+        limit: Int
+    ) async throws -> [CodexTurnHandle.ClosedTurn] {
+        try await newerClosedTurnWindow(threadID: threadID, newerThan: turnID, limit: limit).turns
     }
 
     internal func recentTurnSnapshots(
@@ -1385,7 +1546,10 @@ public actor CodexAppServer {
 
             return .init(
                 files: Array(collected.prefix(limit)),
-                nextOlderCursor: nil
+                nextOlderCursor: try? await seedRemoteOlderCursor(
+                    threadID: threadID,
+                    limit: turnBatchLimit
+                )
             )
         }
 
@@ -1414,6 +1578,75 @@ public actor CodexAppServer {
 
         return .init(
             files: Array(collected.prefix(limit)),
+            nextOlderCursor: nextOlderCursor
+        )
+    }
+
+    internal func recentCommandWindow(
+        threadID: String,
+        limit: Int
+    ) async throws -> RecentCommandWindowResult {
+        guard limit > 0 else {
+            return .init(commands: [], nextOlderCursor: nil)
+        }
+
+        let turnBatchLimit = max(limit, 12)
+        let historyStore = try requireHistoryStore(for: "recent command history")
+        let localTurns = try await historyStore.recentTurnSnapshots(threadID: threadID, limit: turnBatchLimit)
+
+        if !localTurns.isEmpty {
+            var collected = makeRecentCommandSnapshots(from: localTurns, threadID: threadID)
+            var oldestTurnOrderIndex = localTurns.last?.orderIndex
+
+            while collected.count < limit, let currentOldestTurnOrderIndex = oldestTurnOrderIndex {
+                let olderTurns = try await historyStore.olderTurnSnapshots(
+                    threadID: threadID,
+                    olderThanOrderIndex: currentOldestTurnOrderIndex,
+                    limit: turnBatchLimit
+                )
+
+                if olderTurns.isEmpty {
+                    break
+                }
+
+                collected.append(contentsOf: makeRecentCommandSnapshots(from: olderTurns, threadID: threadID))
+                oldestTurnOrderIndex = olderTurns.last?.orderIndex
+            }
+
+            return .init(
+                commands: Array(collected.prefix(limit)),
+                nextOlderCursor: try? await seedRemoteOlderCursor(
+                    threadID: threadID,
+                    limit: turnBatchLimit
+                )
+            )
+        }
+
+        var page = try await recentTurnWindow(threadID: threadID, limit: turnBatchLimit)
+        var collected = makeRecentCommandSnapshots(from: page.turns, threadID: threadID)
+        var nextOlderCursor = page.nextOlderCursor
+
+        while collected.count < limit,
+              let cursor = nextOlderCursor,
+              let oldestTurnOrderIndex = page.turns.last?.orderIndex {
+            page = try await olderTurnWindow(
+                threadID: threadID,
+                olderThanOrderIndex: oldestTurnOrderIndex,
+                cursor: cursor,
+                limit: turnBatchLimit
+            )
+
+            if page.turns.isEmpty {
+                nextOlderCursor = page.nextOlderCursor
+                break
+            }
+
+            collected.append(contentsOf: makeRecentCommandSnapshots(from: page.turns, threadID: threadID))
+            nextOlderCursor = page.nextOlderCursor
+        }
+
+        return .init(
+            commands: Array(collected.prefix(limit)),
             nextOlderCursor: nextOlderCursor
         )
     }
@@ -1463,6 +1696,55 @@ public actor CodexAppServer {
 
         return .init(
             files: Array(collected.prefix(limit)),
+            nextOlderCursor: nextOlderCursor
+        )
+    }
+
+    internal func olderCommandWindow(
+        threadID: String,
+        olderThan oldestCommand: RecentCommandSnapshot,
+        cursor: String?,
+        limit: Int
+    ) async throws -> RecentCommandWindowResult {
+        guard limit > 0 else {
+            return .init(commands: [], nextOlderCursor: cursor)
+        }
+
+        var collected: [RecentCommandSnapshot] = []
+        if let sameTurnSnapshot = try await turnSnapshot(threadID: threadID, turnID: oldestCommand.turnID) {
+            let olderCommandsInSameTurn = makeRecentCommandSnapshots(
+                from: sameTurnSnapshot,
+                threadID: threadID
+            ).filter {
+                $0.itemOrderIndex < oldestCommand.itemOrderIndex
+            }
+            collected.append(contentsOf: olderCommandsInSameTurn.prefix(limit))
+        }
+
+        var nextOlderCursor = cursor
+        var oldestTurnOrderIndex = oldestCommand.turnOrderIndex
+        let turnBatchLimit = max(limit, 12)
+
+        while collected.count < limit {
+            let page = try await olderTurnWindow(
+                threadID: threadID,
+                olderThanOrderIndex: oldestTurnOrderIndex,
+                cursor: nextOlderCursor,
+                limit: turnBatchLimit
+            )
+
+            if page.turns.isEmpty {
+                nextOlderCursor = page.nextOlderCursor
+                break
+            }
+
+            collected.append(contentsOf: makeRecentCommandSnapshots(from: page.turns, threadID: threadID))
+            nextOlderCursor = page.nextOlderCursor
+            oldestTurnOrderIndex = page.turns.last?.orderIndex ?? oldestTurnOrderIndex
+        }
+
+        return .init(
+            commands: Array(collected.prefix(limit)),
             nextOlderCursor: nextOlderCursor
         )
     }
@@ -1678,6 +1960,16 @@ public actor CodexAppServer {
         }
     }
 
+    private func finishThreadCommandDeltaStreams(threadID: String) {
+        guard let continuations = threadCommandDeltaContinuations.removeValue(forKey: threadID)?.values else {
+            return
+        }
+
+        for continuation in continuations {
+            continuation.finish()
+        }
+    }
+
     private func startServerEventLoop() {
         serverEventTask?.cancel()
         let transport = self.transport
@@ -1741,6 +2033,7 @@ public actor CodexAppServer {
             clearTurnActivities(threadID: notification.threadID)
             settleThreadObservableActivity(threadID: notification.threadID)
             finishThreadObservableActivityStreams(threadID: notification.threadID)
+            finishThreadCommandDeltaStreams(threadID: notification.threadID)
             finishThreadFileDeltaStreams(threadID: notification.threadID)
             let threadEvent = CodexThreadEvent.closed(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: true)
@@ -1819,6 +2112,19 @@ public actor CodexAppServer {
                 threadID: notification.threadID,
                 turnID: notification.turnID,
                 item: item
+            )
+        case let .commandExecutionOutputDelta(notification):
+            let deltaEvent = CommandExecutionOutputDeltaEvent(
+                delta: notification.delta,
+                itemID: notification.itemID,
+                threadID: notification.threadID,
+                turnID: notification.turnID
+            )
+            publishThreadCommandDelta(deltaEvent, for: notification.threadID)
+            try? await historyStore?.recordItemDelta(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                delta: notification.delta
             )
         case let .hookStarted(notification):
             updateThreadObservableActivityForHookRun(
@@ -1954,6 +2260,7 @@ public actor CodexAppServer {
         guard hasStarted, !isStopping else {
             finishAllThreadEventStreams(throwing: nil)
             finishAllThreadObservableActivityStreams()
+            finishAllThreadCommandDeltaStreams()
             finishAllThreadFileDeltaStreams()
             finishAllTurnEventStreams(throwing: nil)
             return
@@ -1966,6 +2273,7 @@ public actor CodexAppServer {
             )
         )
         finishAllThreadObservableActivityStreams()
+        finishAllThreadCommandDeltaStreams()
         finishAllThreadFileDeltaStreams()
         finishAllTurnEventStreams(
             throwing: CodexAppServerError.transportFailure(
@@ -2126,6 +2434,16 @@ public actor CodexAppServer {
         }
     }
 
+    private func removeThreadCommandDeltaContinuation(streamID: UUID, threadID: String) {
+        guard var continuations = threadCommandDeltaContinuations[threadID] else { return }
+        continuations.removeValue(forKey: streamID)
+        if continuations.isEmpty {
+            threadCommandDeltaContinuations.removeValue(forKey: threadID)
+        } else {
+            threadCommandDeltaContinuations[threadID] = continuations
+        }
+    }
+
     private func registerThreadTurnEventContinuation(
         _ continuation: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation,
         streamID: UUID,
@@ -2188,6 +2506,19 @@ public actor CodexAppServer {
         for threadID: String
     ) {
         guard let continuations = threadFileDeltaContinuations[threadID], !continuations.isEmpty else {
+            return
+        }
+
+        for continuation in continuations.values {
+            continuation.yield(event)
+        }
+    }
+
+    private func publishThreadCommandDelta(
+        _ event: CommandExecutionOutputDeltaEvent,
+        for threadID: String
+    ) {
+        guard let continuations = threadCommandDeltaContinuations[threadID], !continuations.isEmpty else {
             return
         }
 
@@ -2263,6 +2594,15 @@ public actor CodexAppServer {
     private func finishAllThreadObservableActivityStreams() {
         let activeContinuations = threadObservableActivityContinuations.values.flatMap(\.values)
         threadObservableActivityContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            continuation.finish()
+        }
+    }
+
+    private func finishAllThreadCommandDeltaStreams() {
+        let activeContinuations = threadCommandDeltaContinuations.values.flatMap(\.values)
+        threadCommandDeltaContinuations.removeAll()
 
         for continuation in activeContinuations {
             continuation.finish()
@@ -2383,7 +2723,46 @@ public actor CodexAppServer {
             }
     }
 
+    private func makeRecentCommandSnapshots(
+        from turns: [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot],
+        threadID: String
+    ) -> [RecentCommandSnapshot] {
+        turns.flatMap { makeRecentCommandSnapshots(from: $0, threadID: threadID) }
+    }
+
+    private func makeRecentCommandSnapshots(
+        from turn: ThreadHistoryStore.ThreadSnapshot.TurnSnapshot,
+        threadID: String
+    ) -> [RecentCommandSnapshot] {
+        turn.items
+            .filter { $0.kind == CodexTurnItem.Kind.commandExecution.rawValue }
+            .sorted { $0.orderIndex > $1.orderIndex }
+            .map {
+                RecentCommandSnapshot(
+                    id: Self.recentCommandSnapshotID(turnID: turn.id, itemID: $0.id),
+                    itemID: $0.id,
+                    command: $0.command,
+                    latestStatusText: Self.recentCommandStatusSummary(
+                        command: $0.command,
+                        status: $0.status,
+                        text: $0.streamedText ?? $0.text
+                    ),
+                    outputText: $0.streamedText ?? $0.text,
+                    status: $0.status,
+                    threadID: threadID,
+                    turnID: turn.id,
+                    turnOrderIndex: turn.orderIndex,
+                    itemOrderIndex: $0.orderIndex,
+                    turnStartedAt: turn.startedAt
+                )
+            }
+    }
+
     private static func recentFileSnapshotID(turnID: String, itemID: String) -> String {
+        "\(turnID):\(itemID)"
+    }
+
+    private static func recentCommandSnapshotID(turnID: String, itemID: String) -> String {
         "\(turnID):\(itemID)"
     }
 
@@ -2447,6 +2826,78 @@ public actor CodexAppServer {
 
         let firstLine = text.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? text
         return String(firstLine.prefix(160))
+    }
+
+    private static func recentCommandStatusSummary(command: String?, status: String?, text: String?) -> String? {
+        let normalizedStatus = status?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lowercasedStatus = normalizedStatus?.lowercased()
+
+        if lowercasedStatus == "completed", let payloadSummary = recentCommandOutputSummary(text: text) {
+            return payloadSummary
+        }
+
+        if let normalizedStatus, !normalizedStatus.isEmpty {
+            return normalizedStatus
+        }
+
+        if let payloadSummary = recentCommandOutputSummary(text: text) {
+            return payloadSummary
+        }
+
+        return command
+    }
+
+    private static func recentCommandOutputSummary(text: String?) -> String? {
+        guard let text, !text.isEmpty else { return nil }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let nonEmptyLines = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+        if nonEmptyLines.count > 1 {
+            return "\(nonEmptyLines.count) output lines"
+        }
+
+        guard let firstNonEmptyLine = nonEmptyLines.first else {
+            return nil
+        }
+
+        return String(firstNonEmptyLine.prefix(160))
+    }
+
+    private func orderedClosedTurnSnapshots(
+        from turns: [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot]
+    ) -> [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot] {
+        turns.sorted { lhs, rhs in
+            let lhsStartedAt = lhs.startedAt ?? Int.min
+            let rhsStartedAt = rhs.startedAt ?? Int.min
+            if lhsStartedAt != rhsStartedAt {
+                return lhsStartedAt > rhsStartedAt
+            }
+
+            let lhsCompletedAt = lhs.completedAt ?? Int.min
+            let rhsCompletedAt = rhs.completedAt ?? Int.min
+            if lhsCompletedAt != rhsCompletedAt {
+                return lhsCompletedAt > rhsCompletedAt
+            }
+
+            if lhs.orderIndex != rhs.orderIndex {
+                return lhs.orderIndex > rhs.orderIndex
+            }
+
+            return lhs.id > rhs.id
+        }
+    }
+
+    private func seedRemoteOlderCursor(
+        threadID: String,
+        limit: Int
+    ) async throws -> String? {
+        try await listThreadTurns(
+            .init(
+                threadID: threadID,
+                limit: limit,
+                sortDirection: .desc
+            )
+        ).nextCursor
     }
 
     private func itemHasError(status: String?) -> Bool {

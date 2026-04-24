@@ -784,7 +784,7 @@ Current status:
 
 Recommended next steps:
 
-- add `CodexThread.RecentFiles` as the next thread-scoped observable companion:
+- keep `RecentFiles` as a dedicated thread-scoped observable companion:
   - one resident file-entry window per thread
   - one entry per file-change item in the first pass, not path-level
     coalescing
@@ -825,10 +825,67 @@ Recommended next steps:
     low-value-item slimming rules
   - decide whether very thin turn shells should remain resident longer than
     heavier turns under the same weighted budget
+- keep `RecentCommands` as a dedicated thread-scoped observable companion:
+  - one resident command-entry window per thread
+  - one entry per `commandExecution` item in the first pass
+  - seed from the same local history store snapshots that already retain
+    command items and their accumulated streamed output
+  - enrich live resident entries from command-output deltas while the item is
+    active
+  - keep lightweight command shells resident longer than heavier output text,
+    and rehydrate output when an entry becomes visible or selected again
+  - keep a later mixed `RecentActivity` timeline separate from the
+    command-centric model instead of making `RecentCommands` a subtype of a
+    generalized activity feed
+- current status for that command companion:
+  - selection-aware first pass shipped
+  - `CodexThread.makeRecentCommands(limit:)` now exists
+  - initial command-entry hydration now comes from the same local history
+    store snapshots that already retain command items and accumulated streamed
+    output
+  - live command entries now enrich themselves from
+    `item/commandExecution/outputDelta` notifications without promoting those
+    raw notifications into new public event-enum cases
+  - older command loading now checks the same persisted turn first for older
+    command items before moving on to older turns
+  - `RecentCommands` now owns a command-specific cache policy with selection
+    and visibility protection, lightweight shell retention, output-cost
+    trimming, and on-demand output rehydration from the persisted turn
+    snapshot when a protected command becomes visible or selected again
+  - command shells now keep stable identity, command string, status, ordering,
+    and concise status summary even after the heavier output text has been
+    slimmed away
+  - command output weighting now uses output size and line structure rather
+    than raw character count alone, and sealed completed output now prefers
+    concise output summaries over a bare terminal `completed` shell label
 - add the first deliberate public history-reading helpers outside the
   observable surface
 - flesh out archive-aware retention and eviction after the non-archived hot
   cache feels stable
+
+Current status for that non-UI history surface:
+
+- first pass shipped
+- `CodexThread.readTurnHistory(turnID:)` now reads one sealed local turn by id
+- `CodexThread.HistoryWindow` now gives that surface a lightweight page type
+  with sealed `ClosedTurn` values plus `hasOlderTurns` and `hasNewerTurns`
+- `CodexThread.readRecentTurnHistoryWindow(limit:)` now reads a recent local
+  window of sealed turns without requiring `RecentTurns`
+- `CodexThread.readOlderTurnHistoryWindow(olderThan:limit:)` and
+  `readNewerTurnHistoryWindow(newerThan:limit:)` now page local sealed turns
+  around a known boundary turn id without introducing a broader public cursor
+  type yet
+- the older and newer array-returning helpers now remain convenience wrappers
+  over those windows instead of being separate behavior paths
+- the first non-UI surface intentionally reuses `CodexTurnHandle.ClosedTurn`
+  instead of introducing a second public transcript value type
+- directional non-UI paging currently requires the boundary turn to already be
+  present in the local history store for that thread
+- the next intended thread-scoped additions are `windowAroundTurn(...)` and
+  `windowAroundItem(...)` before any broader public cursor contract or search
+  surface is introduced
+- broader cursor semantics, transcript search, and richer non-UI history query
+  helpers still remain open follow-on work
 
 ## Remaining Open Questions
 

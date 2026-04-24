@@ -104,6 +104,25 @@ The current public lifecycle contract is intentionally narrow and explicit:
   structure and line volume, and its retained shell summary now prefers
   concise edit summaries such as additions, deletions, and hunk counts over
   raw status strings when sealed payload is available.
+- `CodexThread.makeRecentCommands(limit:)` now vends a thread-scoped
+  recent-commands observable that is command-centric rather than
+  event-centric: it hydrates from persisted `commandExecution` items in the
+  local history store, keeps one resident entry per command item, enriches
+  live entries from command-output deltas, can load older command entries from
+  the same turn before moving on to older turns, and now supports
+  selection-aware shell-versus-output slimming plus automatic output
+  rehydration when a protected command becomes visible or selected again. Its
+  shell summaries prefer command status and concise output summaries, and its
+  resident output pressure is weighted by output size and line structure
+  rather than by raw entry count alone.
+- `CodexThread.HistoryWindow` now gives non-UI callers a lightweight
+  thread-scoped page shape with sealed `ClosedTurn` values plus
+  `hasOlderTurns` and `hasNewerTurns`.
+- `CodexThread.readTurnHistory(turnID:)`, `readRecentTurnHistoryWindow(limit:)`,
+  `readOlderTurnHistoryWindow(olderThan:limit:)`, and
+  `readNewerTurnHistoryWindow(newerThan:limit:)` now expose the first
+  deliberate non-UI local-history reads, while the matching array-returning
+  helpers remain convenience wrappers over those windows.
 - `CodexTurnHandle.close()` now seals a completed turn into a caller-owned
   value snapshot and releases per-turn observation bookkeeping explicitly.
 - `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate
@@ -139,21 +158,26 @@ Current non-goals and intentionally deferred areas are also explicit:
 
 - The generated wire layer stays internal.
 - There is not yet a one-shot `run(...)` convenience API.
-- The current history-reading API is still intentionally narrow: there is not
-  yet a broader public search, recent-history, or consumer-friendly cursor
-  helper surface over the local store.
+- The current history-reading API is still intentionally narrow: the package
+  now exposes direct thread-scoped reads for one sealed turn plus lightweight
+  local history windows around recent or boundary-based queries, but there is
+  not yet a broader public search or consumer-friendly cursor helper surface
+  over the local store.
 - The broader history-reading API is still intentionally incomplete even though
-  the first recent-turns observable and explicit `CodexTurnHandle.close()` path
-  now exist: there is not yet a fuller public cursor model, search surface, or
-  scroll-driven history-window API over the local store.
+  `RecentTurns`, explicit `CodexTurnHandle.close()`, and the first non-UI
+  `ClosedTurn` helpers now exist: there is not yet a fuller public cursor
+  model, search surface, or scroll-driven history-window API over the local
+  store.
 - The current reconciliation policy is intentionally conservative and still
   internal: merge rules now distinguish terminal status from richer local text
   and command detail, and the package now persists explicit fork lineage plus
   thread-scoped copied fork history, but a broader public history-reading API
   is still open.
-- Richer command-output, file-change-output, and MCP-progress detail still
-  remain internal while the package decides whether those belong as new event
-  cases or as deeper observable summary state.
+- Raw command-output and file-change-output deltas still remain internal as
+  transport detail, but they now feed `RecentCommands` and `RecentFiles`
+  respectively instead of becoming new top-level public event cases. Richer
+  MCP-progress detail still remains internal while the package decides whether
+  that belongs as new event cases or as deeper observable summary state.
 - Model reroute notifications remain internal and are currently logged
   operationally rather than exposed as a public lifecycle surface.
 - The live approval-path probe is best-effort runtime observation, not a
