@@ -18,7 +18,7 @@
 | --- | --- | --- |
 | Bundled schema-driven wire generation | `Shipped internally` | `scripts/generate-wire-types.sh` derives from the bundled v2 schema, patches dynamic JSON to `CodexWireJSONValue`, and validates the staged Swift output. |
 | Promoted generated v2 wire snapshot | `Shipped internally` | `Sources/SwiftASB/Generated/CodexWire/Latest/` now contains a wider lifecycle batch covering bootstrap plus many thread, turn, item, reasoning, and tool-progress notifications, alongside the hand-owned `CodexWireInitializeResponse` shim. |
-| Codex CLI `v0.124.0` schema review | `Started` | The local `codex-schemas/v0.124.0/` dump is present and has been compared against `v0.121.0`. The existing codegen script can derive, quicktype, patch, and typecheck the promoted lifecycle batch against `v0.124.0`, but the promoted generated snapshot and public compatibility window still need a deliberate update pass. |
+| Codex CLI `v0.124.0` schema review | `Shipped internally` | The local `codex-schemas/v0.124.0/` dump has been compared against `v0.121.0`, the default codegen path now targets `v0.124.0`, the promoted lifecycle snapshot has been refreshed, and the public compatibility window now spans `0.122.x` through `0.124.x`. New additive families are classified in the maintainer release-boundary notes before any public widening. |
 | Stdio subprocess transport | `Shipped internally` | The transport launches `codex app-server --listen stdio://`, frames newline-delimited JSON, correlates request IDs, and captures stderr for diagnostics. |
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
 | Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/turns/list`, and `turn/start` are encoded through the protocol layer. |
@@ -46,7 +46,7 @@
 | Public API curation | `Not started` | The public surface is useful but concentrated in large files. Before v1, split public API source by responsibility, review names and default arguments, add symbol documentation for the supported lifecycle, and make sure helper APIs read as one coherent Swift package rather than accumulated release slices. |
 | DocC documentation | `Not started` | Add a `SwiftASB.docc` catalog with a package landing page, interactive lifecycle article, history/observable companion article, compatibility and generated-wire boundary notes, and topic groups that map the public API around `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, and the recent-history companions. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `close()` handoff into a caller-owned sealed turn snapshot. |
-| Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Raw command-output and file-change-output deltas now stay internal as transport detail but drive the shipped `RecentCommands` and `RecentFiles` companions. Richer MCP-progress detail still remains internal, and model reroutes are still logged rather than exposed. |
+| Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Raw command-output and file-change-output deltas now stay internal as transport detail but drive the shipped `RecentCommands` and `RecentFiles` companions, and streamed payloads are preserved when later completed snapshots are thinner. Richer MCP-progress detail still remains internal, and model reroutes plus v0.124 warning and model-verification notifications are still logged or retained internally rather than exposed. |
 | Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, and request resolution is tracked by JSON-RPC request id, but broader live coverage and more server-request families are still open. |
 | Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list`, seeds previously unknown local threads from paged history, widens persisted turn identity to stay thread-scoped across forks, and records explicit fork lineage while preserving conservative reconciliation that keeps richer local detail when upstream stored history is thinner. Public history paging/search helpers and archive-retention policy are still open. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
@@ -97,15 +97,15 @@ The package can now:
 
 That means the current priority order is:
 
-1. Refresh the wire snapshot and compatibility policy against the `v0.124.0` schema dump before widening any public API. The first comparison shows additive endpoint and notification families, plus field-level additions such as `permissionProfile`, `auto_review`, dynamic-tool `namespace`, MCP app resource URIs, and `cyberPolicy`; the existing lifecycle codegen path typechecks against `v0.124.0`, but the promoted source and docs still need a deliberate compatibility pass.
-2. Keep tuning `RecentTurns` now that the first resident-window, scroll-aware cache policy, named presets, weighted item-cost budgeting, payload-slimming path, and centered non-UI history windows are shipped. The remaining work there is better weight calibration, smarter shell-vs-payload heuristics, and deciding whether some item kinds deserve stickier retention than the current first-pass rules.
-3. Keep tuning `RecentFiles` now that the first selection-aware shell-versus-payload slimming pass is shipped. The remaining work there is better payload-cost calibration at the margins. `RecentFiles` remains a dedicated file-centric companion rather than feeding a near-term mixed activity type.
-4. Keep tuning `RecentCommands` now that the first command-side shell-versus-output slimming pass is shipped. The remaining work there is better output-cost calibration and sharper shell-summary heuristics. `RecentCommands` remains a dedicated command-centric companion rather than feeding a near-term mixed activity type.
+1. Keep tuning `RecentTurns` now that the first resident-window, scroll-aware cache policy, named presets, weighted item-cost budgeting, payload-slimming path, and centered non-UI history windows are shipped. The remaining work there is better weight calibration, smarter shell-vs-payload heuristics, and deciding whether some item kinds deserve stickier retention than the current first-pass rules.
+2. Keep tuning `RecentFiles` now that the first selection-aware shell-versus-payload slimming pass is shipped. The remaining work there is better payload-cost calibration at the margins and deciding whether `FileChangePatchUpdatedNotification` should enrich the observable with structured patch previews. `RecentFiles` remains a dedicated file-centric companion rather than feeding a near-term mixed activity type.
+3. Keep tuning `RecentCommands` now that the first command-side shell-versus-output slimming pass is shipped. The remaining work there is better output-cost calibration and sharper shell-summary heuristics. `RecentCommands` remains a dedicated command-centric companion rather than feeding a near-term mixed activity type.
+4. Keep the v0.124 additions classified before public promotion: `autoReview` is public as an approval reviewer option, `permissionProfile` remains generated/internal until a deliberate Swift model replaces or complements `sandbox`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian action families stay internal until their consumer job is clear.
 5. Do not add `RecentActivity` for v1. The separate `RecentTurns`, `RecentFiles`, and `RecentCommands` types are the clearer consumer surface, and a mixed feed would add more confusion than value right now.
 6. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
 7. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
-8. Curate the public API before v1: split large public files by responsibility, tighten names and defaults, add symbol documentation, and make the first-class package surface feel intentionally designed rather than merely accumulated.
-9. Add DocC before v1: start with a `SwiftASB.docc` landing page, conceptual articles for interactive lifecycle and history companions, topic groups for the public handles and models, and generated-wire/compatibility boundary notes.
+8. Curate the public API before v1: split large public files by responsibility, tighten names and defaults, add symbol documentation for the supported lifecycle and recent-history companions, and make the first-class package surface feel intentionally designed rather than merely accumulated.
+9. Add DocC before v1: start with a `SwiftASB.docc` landing page, conceptual articles for interactive lifecycle and history companions, topic groups for the public handles and models, generated-wire and compatibility boundary notes, and at least one copy-pasteable walkthrough for approvals plus streamed turn observation.
 10. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
 11. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
 
@@ -127,8 +127,8 @@ as a convenience-API release.
 - Centered local history reads through `windowAroundTurn(...)` and
   `windowAroundItem(...)` before any broader cursor or transcript-search
   contract.
-- A `v0.124.0` schema compatibility pass that promotes the refreshed generated
-  snapshot only after new endpoint, notification, and field additions are
+- A `v0.124.0` schema compatibility pass has promoted the refreshed generated
+  snapshot after new endpoint, notification, and field additions were
   classified as public now, observable-only, or internal-only.
 - API curation and DocC docs good enough that a Swift consumer can understand
   the supported package surface without reading maintainer notes.
@@ -291,7 +291,7 @@ Scope:
 - [x] Add fake-transport tests that prove approval and elicitation messages can be observed and answered through the chosen public shape.
 - [ ] Add opt-in live coverage for at least one approval or server-request path if the local Codex runtime exposes a stable repro.
 - [x] Add cancellation or interruption flows that are part of the intended first public lifecycle.
-- [ ] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
+- [x] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
 
 Exit criteria:
 
@@ -311,7 +311,7 @@ Scope:
 - [x] Add an explicit "Supported Today" section to `README.md` that mirrors the real public lifecycle and concurrency contract.
 - [x] Add a maintainer-facing note that clarifies which generated notification families intentionally remain internal for now.
 - [x] Add version-compatibility policy notes for the local Codex binary.
-- [ ] Refresh the compatibility window and promoted generated snapshot against the current `v0.124.0` schema dump once the added endpoint, notification, and field families have been classified.
+- [x] Refresh the compatibility window and promoted generated snapshot against the current `v0.124.0` schema dump once the added endpoint, notification, and field families have been classified.
 - [ ] Curate the public API before v1 by splitting large source files along existing responsibility boundaries, tightening public names/defaults, and adding source-level symbol documentation for the supported lifecycle.
 - [ ] Add DocC documentation before v1, including a package landing page, public-handle topic groups, and conceptual articles for the interactive lifecycle, history companions, and generated-wire boundary.
 - [x] Decide whether real subprocess integration tests are required before the first release.
@@ -343,7 +343,7 @@ Exit criteria:
 - [x] Add centered non-UI history windows with `windowAroundTurn(...)` and `windowAroundItem(...)`.
 - [x] Decide whether to add a mixed `RecentActivity` companion.
   Decision: no for v1. Keep `RecentTurns`, `RecentFiles`, and `RecentCommands` as separate, clearer public surfaces.
-- [ ] Classify and promote the `v0.124.0` schema changes deliberately instead of treating every additive generated type as public API.
+- [x] Classify and promote the `v0.124.0` schema changes deliberately instead of treating every additive generated type as public API.
 - [ ] Add API curation and DocC documentation as explicit v1-readiness work.
 - [ ] Add a one-shot `run(...)` convenience API once the handle model feels stable.
 - [x] Add consumer-facing examples for the supported interactive lifecycle before broadening the public API further.

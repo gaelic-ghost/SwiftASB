@@ -70,6 +70,12 @@ inspecting upstream schema changes or quicktype regressions.
 
 ## Current generated batch
 
+The default generated batch currently targets the local `v0.124.0` schema dump:
+
+- `SCHEMA_VERSION=v0.124.0`
+- promoted output:
+  `Sources/SwiftASB/Generated/CodexWire/Latest/CodexLifecycleV2Batch+JSONValue.swift`
+
 ### V2 lifecycle batch
 
 The current v2 lifecycle batch is no longer just the minimal bootstrap slice.
@@ -81,6 +87,8 @@ It now includes:
   - `ThreadStartResponse`
   - `ThreadCompactStartParams`
   - `ThreadCompactStartResponse`
+  - `ThreadTurnsListParams`
+  - `ThreadTurnsListResponse`
   - `TurnStartParams`
   - `TurnStartResponse`
 - thread lifecycle notifications:
@@ -110,17 +118,30 @@ It now includes:
   - `CommandExecutionOutputDeltaNotification`
   - `CommandExecOutputDeltaNotification`
   - `FileChangeOutputDeltaNotification`
+  - `FileChangePatchUpdatedNotification`
   - `McpToolCallProgressNotification`
+  - `ModelVerificationNotification`
   - `ModelReroutedNotification`
   - `ServerRequestResolvedNotification`
   - `HookStartedNotification`
   - `HookCompletedNotification`
   - `RawResponseItemCompletedNotification`
   - `ContextCompactedNotification`
+  - `ExternalAgentConfigImportCompletedNotification`
+  - `GuardianWarningNotification`
+  - `WarningNotification`
   - `ErrorNotification`
+- guardian action requests and responses:
+  - `ThreadApproveGuardianDeniedActionParams`
+  - `ThreadApproveGuardianDeniedActionResponse`
 
 `InitializeParams` is included here because it exists in the v2 bundle and is
 still useful as part of the consolidated lifecycle graph.
+
+The v0.124 dump also contains endpoint families that are intentionally not in
+the lifecycle batch yet, including device-key signing, marketplace removal, and
+add-credits email nudges. Those are app-management or account-management
+surfaces, not first interactive lifecycle surfaces.
 
 ### Hand-owned initialize compatibility shim
 
@@ -143,12 +164,13 @@ For the current widened lifecycle batch, the meaningful dynamic surfaces are
 still concentrated in a small number of fields:
 
 - `config`
+- hook `event`
 - tool-call `arguments`
+- tool-call `outputSchema`
 - plan-update `tools`
 - MCP result `meta`
 - MCP result `content`
 - MCP result `structuredContent`
-- `outputSchema`
 
 Those are now patched to `CodexWireJSONValue`.
 

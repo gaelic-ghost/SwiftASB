@@ -110,6 +110,7 @@ belongs in the release boundary:
 | Server-request resolution notifications | `CodexTurnEvent.serverRequestResolved`, `CodexThreadEvent.serverRequestResolved` | These are public because request cleanup is part of the supported interactive lifecycle. |
 | Approval request families | `CodexTurnEvent.approvalRequested`, `CodexThreadEvent.approvalRequested` | These are protocol-level server requests rather than generated notifications, but they are part of the supported public lifecycle. |
 | Elicitation request families | `CodexTurnEvent.elicitationRequested`, `CodexThreadEvent.elicitationRequested` | These are also protocol-level server requests and part of the supported public lifecycle. |
+| Approval reviewer options | `CodexAppServer.ApprovalsReviewer.autoReview` | v0.124 adds `auto_review`; this is a small public enum widening because callers already choose approval-review behavior through hand-owned request models. |
 
 ### Observable-only for now
 
@@ -131,6 +132,7 @@ Current observable-only families:
 | Thread-level recent command activity | `CodexThread.RecentCommands` | Terminal-style inspectors need command-centric current state, not raw command-output delta notifications as a top-level event enum. |
 | Thread-level active hook runs | `CodexThread.Dashboard.hookRuns` | Consumers need a stable current-state view of which hooks are running or have just completed more than they need raw hook notifications as first-class event enums. |
 | Thread-level compaction status | `CodexThread.Dashboard.isCompactingThreadContext` | Current blocked-thread state matters to consumers, but the package does not yet expose full compaction progress as a public event stream. |
+| Hook permission-request event names | `CodexThread.Dashboard.HookRun.EventName.permissionRequest` | v0.124 adds this hook event name. The hook-run mirror can display it, but raw hook notifications still are not public event cases. |
 
 Future observable-only families are acceptable when all of the following are
 true:
@@ -176,8 +178,13 @@ Remaining gap inside the observable-only slice:
 | --- | --- |
 | Command output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentCommands` as a command-centric observable companion instead of becoming new top-level public event cases. |
 | File-change output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentFiles` as a file-centric observable companion instead of becoming new top-level public event cases. |
+| File-change patch-updated notifications | Useful for richer `RecentFiles` previews later, but not yet wired into a stable public diff model. For now the generated type is internal scaffolding. |
 | MCP tool-call progress notifications | The current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
 | Model-rerouted notifications | Operationally interesting, but not yet part of the stable public lifecycle promised to consumers. These currently stay internal and are logged for operator diagnostics. |
+| Model-verification notifications | Operationally useful diagnostics, but no public consumer model has been chosen yet. |
+| Warning and guardian-warning notifications | These are important operator signals, but need a deliberate diagnostics surface rather than being exposed as raw event payloads. |
+| External-agent config import completed notifications | Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
+| Guardian denied-action approval endpoint | Generated internally because it appears in v0.124, but it needs a real guardian workflow model before it becomes public. |
 | Hook started / completed notifications | The raw notifications remain internal; consumers see their current-state effect through `CodexThread.Dashboard.hookRuns` instead of through new event-enum cases. |
 | Raw response item completed notifications | Too low-level and transport-adjacent for the current public lifecycle boundary. |
 | Context compacted notifications | Interesting for diagnostics, but still not surfaced as a first-class public event; consumers currently see compaction through `Dashboard` and `Minimap` state plus explicit `compactContext()` control. |
@@ -213,12 +220,17 @@ families break down like this:
 | `CommandExecutionOutputDeltaNotification` | `Observable-only for now` |
 | `CommandExecOutputDeltaNotification` | `Internal-only for now` |
 | `FileChangeOutputDeltaNotification` | `Observable-only for now` |
+| `FileChangePatchUpdatedNotification` | `Internal-only for now` |
 | `McpToolCallProgressNotification` | `Internal-only for now` |
+| `ModelVerificationNotification` | `Internal-only for now` |
 | `ModelReroutedNotification` | `Internal-only for now` |
 | `HookStartedNotification` | `Observable-only for now` |
 | `HookCompletedNotification` | `Observable-only for now` |
 | `RawResponseItemCompletedNotification` | `Internal-only for now` |
 | `ContextCompactedNotification` | `Internal-only for now` |
+| `ExternalAgentConfigImportCompletedNotification` | `Internal-only for now` |
+| `GuardianWarningNotification` | `Internal-only for now` |
+| `WarningNotification` | `Internal-only for now` |
 | `ErrorNotification` | `Internal-only for now` |
 | `ItemGuardianApprovalReviewStartedNotification` | `Internal-only for now` |
 | `ItemGuardianApprovalReviewCompletedNotification` | `Internal-only for now` |
@@ -234,6 +246,13 @@ notification families at all:
   `CodexThread` and `CodexTurnHandle`
 - turn interruption and steering are public control methods rather than event
   families
+- `thread/turns/list` is public through hand-owned history paging APIs even
+  though the generated params and response stay internal
+- `permissionProfile` is generated and decoded internally, but the public API
+  still accepts the existing hand-owned sandbox and approval settings until a
+  deliberate permission-profile model is designed
+- device-key, marketplace-removal, and add-credits email endpoints remain
+  outside the first lifecycle boundary
 
 That means the first interactive lifecycle boundary is defined by both
 notification promotion and server-request routing, not by notifications alone.
@@ -274,18 +293,26 @@ The current remaining promotion questions are therefore narrower than before:
 
 1. should richer MCP progress stay inside the existing observable summaries, or
    graduate into additional public event cases?
-2. file and command detail are now both treated as dedicated companion
+2. should `FileChangePatchUpdatedNotification` enrich `RecentFiles` with
+   structured patch previews, and if so, what stable file-diff model should the
+   package own instead of leaking generated wire shapes?
+3. should `permissionProfile` become a public request/defaults model, or stay
+   internal while the current sandbox and approval request models are enough?
+4. warning, guardian-warning, model-verification, and guardian denied-action
+   families need a diagnostics/control story before they graduate from internal
+   generated scaffolding.
+5. file and command detail are now both treated as dedicated companion
    observables rather than as widened event enums:
    `RecentFiles` and `RecentCommands` are the shipped file-centric and
    command-centric surfaces, and a later `RecentActivity` feed should stay
    separate instead of swallowing those narrower models.
-3. how far should the non-UI public history-reading surface go beyond the
+6. how far should the non-UI public history-reading surface go beyond the
    first shipped `ClosedTurn` helpers before the package commits to a broader
    cursor or search contract?
 
 ## Decided Next Companion Shape
 
-The file and command companion shapes are now considered decided and started:
+The file and command companion shapes are now considered decided and shipped:
 
 - add `CodexThread.RecentFiles` as a file-centric observable
 - keep `RecentFiles` item-scoped in the first pass:
@@ -295,6 +322,8 @@ The file and command companion shapes are now considered decided and started:
   payload
 - keep file-entry shells resident longer than heavier payload text, and
   rehydrate payload when a file becomes visible or selected again
+- preserve already-streamed file payload when a later completed snapshot is
+  thinner than the live observable state
 - add `CodexThread.RecentCommands` as a command-centric observable
 - keep `RecentCommands` item-scoped in the first pass:
   one observable entry per `commandExecution` item
@@ -302,6 +331,8 @@ The file and command companion shapes are now considered decided and started:
   history, and use command-output deltas only to enrich the current output
 - keep command-entry shells resident longer than heavier output text, and
   rehydrate output when a command becomes visible or selected again
+- preserve already-streamed command output when a later completed snapshot is
+  thinner than the live observable state
 - treat a later `RecentActivity` surface as a separate mixed timeline for
   commands, files, MCP work, and other recent activity rather than as a base
   type that owns `RecentFiles` or `RecentCommands`
