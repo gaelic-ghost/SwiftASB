@@ -188,6 +188,7 @@ Current Codex CLI compatibility policy is intentionally rolling:
 
 - `SwiftASB` aims to support the latest public Codex CLI release plus the prior
   two minor versions.
+- The current documented window is `0.122.x` through `0.124.x`.
 - When newer Codex CLI releases add protocol features without breaking existing
   behavior, `SwiftASB` may adopt those additions later or gate them behind
   newer-version-aware promotion work rather than treating every new upstream

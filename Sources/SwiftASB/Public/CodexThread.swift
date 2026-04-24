@@ -788,12 +788,12 @@ public struct CodexThread: Sendable {
                 latestStatusText = Self.makeStatusSummary(status: item.status, text: item.text) ?? latestStatusText
                 path = item.path
                 self.status = status
-                if let text = item.text {
+                if let text = item.text, !text.isEmpty {
                     payloadText = text
                     isPayloadComplete = status != .inProgress
                     omittedPayloadCharacterCount = 0
                 } else if status != .inProgress {
-                    isPayloadComplete = false
+                    isPayloadComplete = payloadText?.isEmpty == false
                 }
             }
 
@@ -809,11 +809,34 @@ public struct CodexThread: Sendable {
                 latestStatusText: String?,
                 status: Status
             ) {
-                payloadText = text
+                if let text, !text.isEmpty {
+                    payloadText = text
+                }
                 self.latestStatusText = latestStatusText ?? self.latestStatusText
                 self.status = status
-                isPayloadComplete = true
-                omittedPayloadCharacterCount = 0
+                if payloadText != nil {
+                    isPayloadComplete = true
+                    omittedPayloadCharacterCount = 0
+                } else {
+                    isPayloadComplete = false
+                }
+            }
+
+            fileprivate mutating func mergeNewerSnapshot(_ snapshot: Self) {
+                let existingPayloadText = payloadText
+                let existingPayloadComplete = isPayloadComplete
+                let existingOmittedPayloadCharacterCount = omittedPayloadCharacterCount
+
+                self = snapshot
+
+                if (payloadText == nil || payloadText?.isEmpty == true),
+                   let existingPayloadText,
+                   !existingPayloadText.isEmpty
+                {
+                    payloadText = existingPayloadText
+                    isPayloadComplete = existingPayloadComplete
+                    omittedPayloadCharacterCount = existingOmittedPayloadCharacterCount
+                }
             }
 
             fileprivate static func makeDisplayName(path: String?) -> String {
@@ -1079,7 +1102,7 @@ public struct CodexThread: Sendable {
         private func mergeOrPrepend(_ incoming: [FileSnapshot]) {
             for file in incoming.reversed() {
                 if let index = files.firstIndex(where: { $0.id == file.id }) {
-                    files[index] = file
+                    files[index].mergeNewerSnapshot(file)
                 } else {
                     files.insert(file, at: 0)
                 }
@@ -1412,12 +1435,12 @@ public struct CodexThread: Sendable {
                     text: item.text
                 ) ?? latestStatusText
                 self.status = status
-                if let text = item.text {
+                if let text = item.text, !text.isEmpty {
                     outputText = text
                     isOutputComplete = status != .inProgress
                     omittedOutputCharacterCount = 0
                 } else if status != .inProgress {
-                    isOutputComplete = false
+                    isOutputComplete = outputText?.isEmpty == false
                 }
             }
 
@@ -1436,11 +1459,34 @@ public struct CodexThread: Sendable {
             ) {
                 self.command = command
                 displayName = Self.makeDisplayName(command: command)
-                outputText = text
+                if let text, !text.isEmpty {
+                    outputText = text
+                }
                 self.latestStatusText = latestStatusText ?? self.latestStatusText
                 self.status = status
-                isOutputComplete = true
-                omittedOutputCharacterCount = 0
+                if outputText != nil {
+                    isOutputComplete = true
+                    omittedOutputCharacterCount = 0
+                } else {
+                    isOutputComplete = false
+                }
+            }
+
+            fileprivate mutating func mergeNewerSnapshot(_ snapshot: Self) {
+                let existingOutputText = outputText
+                let existingOutputComplete = isOutputComplete
+                let existingOmittedOutputCharacterCount = omittedOutputCharacterCount
+
+                self = snapshot
+
+                if (outputText == nil || outputText?.isEmpty == true),
+                   let existingOutputText,
+                   !existingOutputText.isEmpty
+                {
+                    outputText = existingOutputText
+                    isOutputComplete = existingOutputComplete
+                    omittedOutputCharacterCount = existingOmittedOutputCharacterCount
+                }
             }
 
             fileprivate static func makeDisplayName(command: String?) -> String {
@@ -1674,7 +1720,7 @@ public struct CodexThread: Sendable {
         private func mergeOrPrepend(_ incoming: [CommandSnapshot]) {
             for command in incoming.reversed() {
                 if let index = commands.firstIndex(where: { $0.id == command.id }) {
-                    commands[index] = command
+                    commands[index].mergeNewerSnapshot(command)
                 } else {
                     commands.insert(command, at: 0)
                 }
@@ -1953,6 +1999,7 @@ public struct CodexThread: Sendable {
             }
 
             public enum EventName: String, Sendable, Equatable {
+                case permissionRequest
                 case postToolUse
                 case preToolUse
                 case sessionStart

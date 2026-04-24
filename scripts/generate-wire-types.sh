@@ -2,7 +2,7 @@
 set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-SCHEMA_VERSION=${SCHEMA_VERSION:-v0.121.0}
+SCHEMA_VERSION=${SCHEMA_VERSION:-v0.124.0}
 SCHEMA_ROOT="$ROOT_DIR/codex-schemas/$SCHEMA_VERSION"
 DERIVED_DIR="$ROOT_DIR/tmp/derived-schemas/${SCHEMA_VERSION//./_}"
 OUT_DIR="$ROOT_DIR/tmp/quicktype-wire/${SCHEMA_VERSION//./_}"
@@ -98,6 +98,8 @@ build_batch \
   ThreadStartResponse \
   ThreadCompactStartParams \
   ThreadCompactStartResponse \
+  ThreadTurnsListParams \
+  ThreadTurnsListResponse \
   ThreadStartedNotification \
   ThreadStatusChangedNotification \
   ThreadNameUpdatedNotification \
@@ -123,14 +125,21 @@ build_batch \
   CommandExecutionOutputDeltaNotification \
   CommandExecOutputDeltaNotification \
   FileChangeOutputDeltaNotification \
+  FileChangePatchUpdatedNotification \
   McpToolCallProgressNotification \
   ModelReroutedNotification \
+  ModelVerificationNotification \
   ServerRequestResolvedNotification \
   HookStartedNotification \
   HookCompletedNotification \
+  ExternalAgentConfigImportCompletedNotification \
+  GuardianWarningNotification \
+  WarningNotification \
   RawResponseItemCompletedNotification \
   ContextCompactedNotification \
-  ErrorNotification
+  ErrorNotification \
+  ThreadApproveGuardianDeniedActionParams \
+  ThreadApproveGuardianDeniedActionResponse
 
 printf '\nDerived schemas: %s\n' "$DERIVED_DIR"
 printf 'Raw quicktype output: %s\n' "$RAW_DIR"

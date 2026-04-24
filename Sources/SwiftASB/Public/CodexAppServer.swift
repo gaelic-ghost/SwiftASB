@@ -504,7 +504,7 @@ public actor CodexAppServer {
     }
 
     public enum ApprovalsReviewer: String, Sendable, Equatable {
-        case guardianSubagent, user
+        case autoReview, guardianSubagent, user
     }
 
     public enum Personality: String, Sendable, Equatable {
@@ -3599,6 +3599,7 @@ private extension CodexAppServer.ThreadStartRequest {
             ephemeral: ephemeral,
             model: model,
             modelProvider: modelProvider,
+            permissionProfile: nil,
             personality: personality?.wireValue,
             sandbox: sandboxMode?.wireValue,
             serviceName: serviceName,
@@ -3659,6 +3660,7 @@ private extension CodexAppServer.TurnStartRequest {
             input: input.map(\.wireValue),
             model: model,
             outputSchema: outputSchema?.wireValue,
+            permissionProfile: nil,
             personality: personality?.wireValue,
             sandboxPolicy: nil,
             serviceTier: serviceTier?.wireValue,
@@ -3804,6 +3806,8 @@ private extension CodexAppServer.GranularApprovalPolicy {
 private extension CodexAppServer.ApprovalsReviewer {
     init(wireValue: CodexWireApprovalsReviewer) {
         switch wireValue {
+        case .autoReview:
+            self = .autoReview
         case .guardianSubagent:
             self = .guardianSubagent
         case .user:
@@ -3813,6 +3817,8 @@ private extension CodexAppServer.ApprovalsReviewer {
 
     var wireValue: CodexWireApprovalsReviewer {
         switch self {
+        case .autoReview:
+            .autoReview
         case .guardianSubagent:
             .guardianSubagent
         case .user:
@@ -4157,6 +4163,8 @@ private extension CodexThread.Dashboard.HookRun.Entry.Kind {
 private extension CodexThread.Dashboard.HookRun.EventName {
     init(wireValue: CodexWireHookEventName) {
         switch wireValue {
+        case .permissionRequest:
+            self = .permissionRequest
         case .postToolUse:
             self = .postToolUse
         case .preToolUse:
