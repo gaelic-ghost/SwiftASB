@@ -111,6 +111,8 @@ belongs in the release boundary:
 | Approval request families | `CodexTurnEvent.approvalRequested`, `CodexThreadEvent.approvalRequested` | These are protocol-level server requests rather than generated notifications, but they are part of the supported public lifecycle. |
 | Elicitation request families | `CodexTurnEvent.elicitationRequested`, `CodexThreadEvent.elicitationRequested` | These are also protocol-level server requests and part of the supported public lifecycle. |
 | Approval reviewer options | `CodexAppServer.ApprovalsReviewer.autoReview` | v0.124 adds `auto_review`; this is a small public enum widening because callers already choose approval-review behavior through hand-owned request models. |
+| App-wide model listing | `CodexAppServer.listModels(...)` | `model/list` describes shared runtime capabilities rather than one conversation thread, so the public API belongs on the connection-owning app-server actor. |
+| App-wide MCP-server status listing | `CodexAppServer.listMcpServerStatuses(...)` | `mcpServerStatus/list` is a connection-wide server capability snapshot, so it is public on `CodexAppServer` rather than `CodexThread` or `CodexTurnHandle`. |
 
 ### Observable-only for now
 
@@ -185,6 +187,7 @@ Remaining gap inside the observable-only slice:
 | Warning and guardian-warning notifications | These are important operator signals, but need a deliberate diagnostics surface rather than being exposed as raw event payloads. |
 | External-agent config import completed notifications | Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
 | Guardian denied-action approval endpoint | Generated internally because it appears in v0.124, but it needs a real guardian workflow model before it becomes public. |
+| Thread rollback / set-name / metadata-update endpoints | Generated internally so the wire snapshot can track v0.124, but public thread-management methods still need a deliberate API shape and local-history reconciliation behavior before promotion. |
 | Hook started / completed notifications | The raw notifications remain internal; consumers see their current-state effect through `CodexThread.Dashboard.hookRuns` instead of through new event-enum cases. |
 | Raw response item completed notifications | Too low-level and transport-adjacent for the current public lifecycle boundary. |
 | Context compacted notifications | Interesting for diagnostics, but still not surfaced as a first-class public event; consumers currently see compaction through `Dashboard` and `Minimap` state plus explicit `compactContext()` control. |
@@ -244,6 +247,9 @@ notification families at all:
 - elicitation requests are public through typed server-request decoding
 - approval and elicitation responses are public through explicit methods on
   `CodexThread` and `CodexTurnHandle`
+- app-wide model and MCP-server status listing is public through
+  `CodexAppServer` because those snapshots describe the shared app-server
+  connection, not one thread or one turn
 - turn interruption and steering are public control methods rather than event
   families
 - `thread/turns/list` is public through hand-owned history paging APIs even
@@ -256,6 +262,15 @@ notification families at all:
 
 That means the first interactive lifecycle boundary is defined by both
 notification promotion and server-request routing, not by notifications alone.
+
+App-wide configuration, settings, and actions should follow the same ownership
+rule: shared connection capability or settings queries belong on
+`CodexAppServer`; conversation-scoped defaults and persisted overrides belong on
+`CodexThread`; active-turn control belongs on `CodexTurnHandle`.
+`CodexAppServer.Configuration` stays local process-launch configuration rather
+than becoming a remote settings bag. If source curation needs smaller files
+before v1, split `CodexAppServer` by responsibility with extensions instead of
+adding a second top-level app owner.
 
 It is also now defined partly by deliberate observable-only summaries:
 
@@ -309,6 +324,9 @@ The current remaining promotion questions are therefore narrower than before:
 6. how far should the non-UI public history-reading surface go beyond the
    first shipped `ClosedTurn` helpers before the package commits to a broader
    cursor or search contract?
+7. what public thread-management shape should wrap rollback, set-name, and
+   metadata-update requests, and what local-history reconciliation should those
+   methods perform?
 
 ## Decided Next Companion Shape
 

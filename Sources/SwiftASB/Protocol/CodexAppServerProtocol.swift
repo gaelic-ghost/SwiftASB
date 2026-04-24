@@ -14,6 +14,8 @@ struct CodexAppServerProtocol {
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
+        case modelList = "model/list"
+        case mcpServerStatusList = "mcpServerStatus/list"
     }
 
     private let encoder: JSONEncoder
@@ -131,6 +133,26 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .turnInterrupt, params: params),
             method: .turnInterrupt
+        )
+    }
+
+    func makeModelListRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireModelListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .modelList, params: params),
+            method: .modelList
+        )
+    }
+
+    func makeMcpServerStatusListRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireListMCPServerStatusParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .mcpServerStatusList, params: params),
+            method: .mcpServerStatusList
         )
     }
 
@@ -287,6 +309,30 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .turnSteer,
             resultType: CodexProtocolTurnSteerResponse.self
+        )
+    }
+
+    func decodeModelListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireModelListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .modelList,
+            resultType: CodexWireModelListResponse.self
+        )
+    }
+
+    func decodeMcpServerStatusListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireListMCPServerStatusResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .mcpServerStatusList,
+            resultType: CodexWireListMCPServerStatusResponse.self
         )
     }
 

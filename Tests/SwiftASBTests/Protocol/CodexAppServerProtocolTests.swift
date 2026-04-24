@@ -218,6 +218,50 @@ struct CodexAppServerProtocolTests {
         #expect(params["threadId"] as? String == "thread-123")
     }
 
+    @Test("encodes model/list requests with the expected method and params payload")
+    func encodesModelListRequest() throws {
+        let payload = try protocolLayer.makeModelListRequest(
+            id: .string("model-list-1"),
+            params: .init(
+                cursor: "cursor-start",
+                includeHidden: true,
+                limit: 10
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "model/list")
+        #expect(object["id"] as? String == "model-list-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["cursor"] as? String == "cursor-start")
+        #expect(params["includeHidden"] as? Bool == true)
+        #expect(params["limit"] as? Int == 10)
+    }
+
+    @Test("encodes mcpServerStatus/list requests with the expected method and params payload")
+    func encodesMcpServerStatusListRequest() throws {
+        let payload = try protocolLayer.makeMcpServerStatusListRequest(
+            id: .string("mcp-status-1"),
+            params: .init(
+                cursor: "cursor-start",
+                detail: .toolsAndAuthOnly,
+                limit: 10
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "mcpServerStatus/list")
+        #expect(object["id"] as? String == "mcp-status-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["cursor"] as? String == "cursor-start")
+        #expect(params["detail"] as? String == "toolsAndAuthOnly")
+        #expect(params["limit"] as? Int == 10)
+    }
+
     @Test("encodes turn/start requests with the expected method and params payload")
     func encodesTurnStartRequest() throws {
         let payload = try protocolLayer.makeTurnStartRequest(

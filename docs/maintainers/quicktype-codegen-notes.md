@@ -87,10 +87,21 @@ It now includes:
   - `ThreadStartResponse`
   - `ThreadCompactStartParams`
   - `ThreadCompactStartResponse`
+  - `ThreadRollbackParams`
+  - `ThreadRollbackResponse`
+  - `ThreadSetNameParams`
+  - `ThreadSetNameResponse`
+  - `ThreadMetadataUpdateParams`
+  - `ThreadMetadataUpdateResponse`
   - `ThreadTurnsListParams`
   - `ThreadTurnsListResponse`
   - `TurnStartParams`
   - `TurnStartResponse`
+- app-wide capability requests and responses:
+  - `ModelListParams`
+  - `ModelListResponse`
+  - `ListMcpServerStatusParams`
+  - `ListMcpServerStatusResponse`
 - thread lifecycle notifications:
   - `ThreadStartedNotification`
   - `ThreadStatusChangedNotification`
@@ -139,9 +150,9 @@ It now includes:
 still useful as part of the consolidated lifecycle graph.
 
 The v0.124 dump also contains endpoint families that are intentionally not in
-the lifecycle batch yet, including device-key signing, marketplace removal, and
-add-credits email nudges. Those are app-management or account-management
-surfaces, not first interactive lifecycle surfaces.
+the promoted batch yet, including device-key signing, marketplace removal, and
+add-credits email nudges. Those are account-management or marketplace surfaces,
+not first interactive lifecycle or app-wide capability surfaces.
 
 ### Hand-owned initialize compatibility shim
 

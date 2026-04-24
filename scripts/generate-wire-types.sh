@@ -96,6 +96,12 @@ build_batch \
   InitializeParams \
   ThreadStartParams \
   ThreadStartResponse \
+  ThreadRollbackParams \
+  ThreadRollbackResponse \
+  ThreadSetNameParams \
+  ThreadSetNameResponse \
+  ThreadMetadataUpdateParams \
+  ThreadMetadataUpdateResponse \
   ThreadCompactStartParams \
   ThreadCompactStartResponse \
   ThreadTurnsListParams \
@@ -126,6 +132,10 @@ build_batch \
   CommandExecOutputDeltaNotification \
   FileChangeOutputDeltaNotification \
   FileChangePatchUpdatedNotification \
+  ModelListParams \
+  ModelListResponse \
+  ListMcpServerStatusParams \
+  ListMcpServerStatusResponse \
   McpToolCallProgressNotification \
   ModelReroutedNotification \
   ModelVerificationNotification \
