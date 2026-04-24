@@ -1385,6 +1385,70 @@ public actor CodexAppServer {
         try await newerClosedTurnWindow(threadID: threadID, newerThan: turnID, limit: limit).turns
     }
 
+    internal func closedTurnWindowAroundTurn(
+        threadID: String,
+        turnID: String,
+        limit: Int
+    ) async throws -> CodexThread.HistoryWindow {
+        let historyStore = try requireHistoryStore(for: "turn-centered history window")
+        guard let threadSnapshot = try await historyStore.snapshot(threadID: threadID) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read a local history window around turn \(turnID) because thread \(threadID) does not currently have a readable local history snapshot. Load recent or stored history for the thread before reading a centered local history window.
+                """
+            )
+        }
+
+        let orderedTurns = orderedClosedTurnSnapshots(from: threadSnapshot.turns)
+        guard let boundaryIndex = orderedTurns.firstIndex(where: { $0.id == turnID }) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read a local history window around turn \(turnID) because that turn is not currently present in the local history store for thread \(threadID). Load recent or stored history that includes the boundary turn before reading a centered local history window.
+                """
+            )
+        }
+
+        return closedTurnWindow(
+            threadID: threadID,
+            orderedTurns: orderedTurns,
+            around: boundaryIndex,
+            limit: limit
+        )
+    }
+
+    internal func closedTurnWindowAroundItem(
+        threadID: String,
+        itemID: String,
+        limit: Int
+    ) async throws -> CodexThread.HistoryWindow {
+        let historyStore = try requireHistoryStore(for: "item-centered history window")
+        guard let threadSnapshot = try await historyStore.snapshot(threadID: threadID) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read a local history window around item \(itemID) because thread \(threadID) does not currently have a readable local history snapshot. Load recent or stored history for the thread before reading a centered local history window.
+                """
+            )
+        }
+
+        let orderedTurns = orderedClosedTurnSnapshots(from: threadSnapshot.turns)
+        guard let boundaryIndex = orderedTurns.firstIndex(where: { turn in
+            turn.items.contains { $0.id == itemID }
+        }) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB could not read a local history window around item \(itemID) because that item is not currently present in the local history store for thread \(threadID). Load recent or stored history that includes the item before reading a centered local history window.
+                """
+            )
+        }
+
+        return closedTurnWindow(
+            threadID: threadID,
+            orderedTurns: orderedTurns,
+            around: boundaryIndex,
+            limit: limit
+        )
+    }
+
     internal func recentTurnSnapshots(
         threadID: String,
         limit: Int
@@ -2885,6 +2949,51 @@ public actor CodexAppServer {
 
             return lhs.id > rhs.id
         }
+    }
+
+    private func closedTurnWindow(
+        threadID: String,
+        orderedTurns: [ThreadHistoryStore.ThreadSnapshot.TurnSnapshot],
+        around boundaryIndex: Array<ThreadHistoryStore.ThreadSnapshot.TurnSnapshot>.Index,
+        limit: Int
+    ) -> CodexThread.HistoryWindow {
+        let normalizedLimit = max(1, limit)
+        let remainingSlots = normalizedLimit - 1
+        let preferredNewerCount = remainingSlots / 2
+        let preferredOlderCount = remainingSlots - preferredNewerCount
+
+        let availableNewerCount = boundaryIndex
+        let availableOlderCount = orderedTurns.distance(
+            from: orderedTurns.index(after: boundaryIndex),
+            to: orderedTurns.endIndex
+        )
+        var newerCount = min(preferredNewerCount, availableNewerCount)
+        var olderCount = min(preferredOlderCount, availableOlderCount)
+
+        let unfilledSlots = remainingSlots - newerCount - olderCount
+        if unfilledSlots > 0 {
+            let additionalNewerCount = min(unfilledSlots, availableNewerCount - newerCount)
+            newerCount += additionalNewerCount
+            olderCount += min(
+                unfilledSlots - additionalNewerCount,
+                availableOlderCount - olderCount
+            )
+        }
+
+        let startIndex = orderedTurns.index(boundaryIndex, offsetBy: -newerCount)
+        let endIndex = orderedTurns.index(
+            orderedTurns.index(after: boundaryIndex),
+            offsetBy: olderCount
+        )
+        let turns = orderedTurns[startIndex..<endIndex]
+            .map { CodexTurnHandle.ClosedTurn(threadID: threadID, snapshot: $0) }
+
+        return CodexThread.HistoryWindow(
+            threadID: threadID,
+            turns: turns,
+            hasOlderTurns: endIndex < orderedTurns.endIndex,
+            hasNewerTurns: startIndex > orderedTurns.startIndex
+        )
     }
 
     private func seedRemoteOlderCursor(
