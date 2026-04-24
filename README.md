@@ -104,6 +104,17 @@ The current public lifecycle contract is intentionally narrow and explicit:
   structure and line volume, and its retained shell summary now prefers
   concise edit summaries such as additions, deletions, and hunk counts over
   raw status strings when sealed payload is available.
+- `CodexThread.makeRecentCommands(limit:)` now vends a thread-scoped
+  recent-commands observable that is command-centric rather than
+  event-centric: it hydrates from persisted `commandExecution` items in the
+  local history store, keeps one resident entry per command item, enriches
+  live entries from command-output deltas, can load older command entries from
+  the same turn before moving on to older turns, and now supports
+  selection-aware shell-versus-output slimming plus automatic output
+  rehydration when a protected command becomes visible or selected again. Its
+  shell summaries prefer command status and concise output summaries, and its
+  resident output pressure is weighted by output size and line structure
+  rather than by raw entry count alone.
 - `CodexTurnHandle.close()` now seals a completed turn into a caller-owned
   value snapshot and releases per-turn observation bookkeeping explicitly.
 - `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate
@@ -151,9 +162,11 @@ Current non-goals and intentionally deferred areas are also explicit:
   and command detail, and the package now persists explicit fork lineage plus
   thread-scoped copied fork history, but a broader public history-reading API
   is still open.
-- Richer command-output, file-change-output, and MCP-progress detail still
-  remain internal while the package decides whether those belong as new event
-  cases or as deeper observable summary state.
+- Raw command-output and file-change-output deltas still remain internal as
+  transport detail, but they now feed `RecentCommands` and `RecentFiles`
+  respectively instead of becoming new top-level public event cases. Richer
+  MCP-progress detail still remains internal while the package decides whether
+  that belongs as new event cases or as deeper observable summary state.
 - Model reroute notifications remain internal and are currently logged
   operationally rather than exposed as a public lifecycle surface.
 - The live approval-path probe is best-effort runtime observation, not a
