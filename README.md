@@ -97,8 +97,13 @@ The current public lifecycle contract is intentionally narrow and explicit:
   observable that is file-centric rather than event-centric: it hydrates from
   persisted file-change items in the local history store, keeps one resident
   entry per file-change item, enriches live entries from file-change output
-  deltas, and can load older file entries from the same turn before moving on
-  to older turns.
+  deltas, can load older file entries from the same turn before moving on to
+  older turns, and now supports selection-aware shell-versus-payload slimming
+  plus automatic payload rehydration when a protected file becomes visible or
+  selected again. Its resident payload pressure now accounts for diff
+  structure and line volume, and its retained shell summary now prefers
+  concise edit summaries such as additions, deletions, and hunk counts over
+  raw status strings when sealed payload is available.
 - `CodexTurnHandle.close()` now seals a completed turn into a caller-owned
   value snapshot and releases per-turn observation bookkeeping explicitly.
 - `thread/read(includeTurns: true)` and `thread/turns/list(...)` now hydrate

@@ -2367,7 +2367,10 @@ public actor CodexAppServer {
                 RecentFileSnapshot(
                     id: Self.recentFileSnapshotID(turnID: turn.id, itemID: $0.id),
                     itemID: $0.id,
-                    latestStatusText: $0.status ?? $0.text,
+                    latestStatusText: Self.recentFileStatusSummary(
+                        status: $0.status,
+                        text: $0.streamedText ?? $0.text
+                    ),
                     path: $0.path,
                     payloadText: $0.streamedText ?? $0.text,
                     status: $0.status,
@@ -2382,6 +2385,68 @@ public actor CodexAppServer {
 
     private static func recentFileSnapshotID(turnID: String, itemID: String) -> String {
         "\(turnID):\(itemID)"
+    }
+
+    private static func recentFileStatusSummary(status: String?, text: String?) -> String? {
+        let normalizedStatus = status?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lowercasedStatus = normalizedStatus?.lowercased()
+
+        if lowercasedStatus == "completed", let payloadSummary = recentFilePayloadSummary(text: text) {
+            return payloadSummary
+        }
+
+        if let normalizedStatus, !normalizedStatus.isEmpty {
+            return normalizedStatus
+        }
+
+        return recentFilePayloadSummary(text: text)
+    }
+
+    private static func recentFilePayloadSummary(text: String?) -> String? {
+        guard let text, !text.isEmpty else { return nil }
+
+        var additions = 0
+        var deletions = 0
+        var hunkCount = 0
+        var nonEmptyLineCount = 0
+
+        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+            let lineString = String(line)
+            if !lineString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                nonEmptyLineCount += 1
+            }
+
+            if lineString.hasPrefix("@@") {
+                hunkCount += 1
+            } else if lineString.hasPrefix("+"), !lineString.hasPrefix("+++") {
+                additions += 1
+            } else if lineString.hasPrefix("-"), !lineString.hasPrefix("---") {
+                deletions += 1
+            }
+        }
+
+        if additions > 0 || deletions > 0 || hunkCount > 0 {
+            var parts: [String] = []
+            if additions > 0 {
+                parts.append("\(additions) additions")
+            }
+            if deletions > 0 {
+                parts.append("\(deletions) deletions")
+            }
+            if hunkCount > 1 {
+                parts.append("\(hunkCount) hunks")
+            }
+            if !parts.isEmpty {
+                return parts.joined(separator: ", ")
+            }
+        }
+
+        if nonEmptyLineCount > 1 {
+            return "\(nonEmptyLineCount) lines changed"
+        }
+
+        let firstLine = text.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? text
+        return String(firstLine.prefix(160))
     }
 
     private func itemHasError(status: String?) -> Bool {

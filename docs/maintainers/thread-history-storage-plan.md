@@ -798,7 +798,7 @@ Recommended next steps:
     model instead of making `RecentFiles` a subtype of a generalized activity
     feed
 - current status for that file companion:
-  - started
+  - selection-aware first pass shipped
   - `CodexThread.makeRecentFiles(limit:)` now exists
   - initial file-entry hydration now comes from the same local history store
     snapshots that already retain file-change items and accumulated streamed
@@ -808,6 +808,16 @@ Recommended next steps:
     notifications into new public event-enum cases
   - older file loading now checks the same persisted turn first for older file
     items before moving on to older turns
+  - `RecentFiles` now owns a file-specific cache policy with selection and
+    visibility protection, lightweight shell retention, payload-cost trimming,
+    and on-demand payload rehydration from the persisted turn snapshot when a
+    protected file becomes visible or selected again
+  - file shells now keep stable identity, path, status, ordering, and concise
+    status summary even after the heavier payload text has been slimmed away
+  - file payload weighting now uses diff structure and line volume rather than
+    raw character count alone, and sealed completed payloads now prefer edit
+    summaries such as additions, deletions, and hunk counts over a bare
+    terminal `completed` shell label
 - keep tuning `RecentTurns` policy now that the first end-to-end resident cache
   behavior is real:
   - calibrate the weighted residency cost rules against real transcript shapes
