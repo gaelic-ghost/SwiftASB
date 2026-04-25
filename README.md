@@ -383,6 +383,7 @@ swift build
 - Treat the live approval-path probe as best-effort coverage, not as a deterministic release gate; the current Codex runtime does not reliably force an approval request on command, so the same prompt may either raise approval or complete directly.
 - Keep generated wire code internal and treat the public wrappers as the actual package surface.
 - Keep temporary codegen artifacts under `codex-schemas/` and `tmp/` untracked unless a maintainer explicitly decides otherwise.
+- Keep `Sources/SwiftASB/SwiftASB.docc/` aligned with the supported public handles, thread lifecycle, local history helpers, and generated-wire boundary when the public API changes.
 
 ### Validation
 
@@ -418,6 +419,7 @@ The approval-path probe is especially non-deterministic today and should be read
 │       ├── Generated/
 │       ├── Protocol/
 │       ├── Public/
+│       ├── SwiftASB.docc/
 │       └── Transport/
 ├── Tests/
 │   └── SwiftASBTests/

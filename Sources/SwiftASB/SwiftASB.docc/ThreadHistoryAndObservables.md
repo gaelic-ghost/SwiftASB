@@ -1,0 +1,68 @@
+# Thread History And Observables
+
+Read completed local history and observe current thread activity without replaying raw protocol deltas.
+
+## Overview
+
+SwiftASB stores thread and turn history locally as it observes live turns and as it reads stored history from the app-server. Public callers can use that store through thread-scoped helpers and observable companions.
+
+There are two public shapes:
+
+- `HistoryWindow` helpers return sealed completed-turn snapshots for non-UI callers and inspectors.
+- Observable companions stay attached to live streams and update UI-facing state over time.
+
+## Local History Windows
+
+Use ``CodexThread/readRecentTurnHistoryWindow(limit:)`` for the newest known completed turns. Use older and newer window helpers when the caller already has a boundary turn. Use centered helpers when an inspector needs context around one turn or one item.
+
+```swift
+let window = try await thread.windowAroundTurn(
+    selectedTurnID,
+    before: 3,
+    after: 3
+)
+```
+
+The history helpers are intentionally local-history reads. They expose what SwiftASB has persisted and reconciled so far without promising a full transcript-search or remote cursor contract.
+
+## Recent Turns
+
+``CodexThread/RecentTurns`` is a turn-centric observable for chat UIs, inspectors, and history rails. It prewarms from local history, expands older or newer whole-turn windows, tracks visible turn IDs and scroll signals, and slims older low-value payloads when the cache needs room.
+
+Use the named cache-policy presets first:
+
+- ``CodexThread/RecentTurns/CachePolicy/chatUI(pageSize:)`` for ordinary chat surfaces
+- ``CodexThread/RecentTurns/CachePolicy/inspector(pageSize:)`` for detail-heavy views
+- ``CodexThread/RecentTurns/CachePolicy/historyRail(pageSize:)`` for compact rails
+
+## Recent Files And Commands
+
+``CodexThread/RecentFiles`` and ``CodexThread/RecentCommands`` are dedicated companions because file changes and command output have different display, selection, and cache behavior.
+
+`RecentFiles` keeps file-change entries enriched from file-change output deltas. `RecentCommands` keeps command entries enriched from command-output deltas. Both can keep lightweight shell summaries resident while rehydrating selected payloads when the caller needs detail.
+
+## Dashboard And Minimap
+
+``CodexThread/Dashboard`` summarizes thread-level current state such as active tool, MCP, hook, and compaction activity. ``CodexTurnHandle/Minimap`` summarizes one active turn's command, file-edit, MCP, dynamic-tool, and collab-tool activity.
+
+Use these for "what is happening now" UI. Use history windows or closed turns for completed transcript data.
+
+## Topics
+
+### History Reads
+
+- ``CodexThread/HistoryWindow``
+- ``CodexThread/readTurnHistory(turnID:)``
+- ``CodexThread/readRecentTurnHistoryWindow(limit:)``
+- ``CodexThread/readOlderTurnHistoryWindow(beforeTurnID:limit:)``
+- ``CodexThread/readNewerTurnHistoryWindow(afterTurnID:limit:)``
+- ``CodexThread/windowAroundTurn(_:before:after:)``
+- ``CodexThread/windowAroundItem(_:before:after:)``
+
+### Observable Companions
+
+- ``CodexThread/Dashboard``
+- ``CodexThread/RecentTurns``
+- ``CodexThread/RecentFiles``
+- ``CodexThread/RecentCommands``
+- ``CodexTurnHandle/Minimap``
