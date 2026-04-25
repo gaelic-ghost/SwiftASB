@@ -203,6 +203,8 @@ Contributor validation commands, live test flags, and the Xcode DocC build comma
 
 ```text
 .
+├── .github/
+│   └── workflows/
 ├── .spi.yml
 ├── CONTRIBUTING.md
 ├── Package.swift
@@ -222,6 +224,8 @@ Contributor validation commands, live test flags, and the Xcode DocC build comma
 │       ├── Public/
 │       └── Transport/
 └── scripts/
+    ├── generate-wire-types.sh
+    └── repo-maintenance/
 ```
 
 ## Release Notes
