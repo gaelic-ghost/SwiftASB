@@ -54,7 +54,7 @@
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a rolling support window of the latest public Codex CLI release plus the prior two minor versions, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current rolling Codex CLI compatibility window, but richer examples are still open. |
-| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including same-thread concurrency probing and a best-effort live approval-path probe, while the default test suite still relies on a deterministic fake transport seam because the current runtime does not reliably force an approval request on demand. |
+| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including app-wide capability snapshots, a thread-name smoke path, same-thread concurrency probing, and a best-effort live approval-path probe, while the default test suite still relies on a deterministic fake transport seam because the current runtime does not reliably force an approval request on demand. |
 | FSL-1.1-ALv2 licensing | `Shipped` | The repo now carries the `FSL-1.1-ALv2` license text, README references the live license surface, and each released version converts to Apache 2.0 two years after it is first made available. |
 
 ## Milestone Progress
@@ -303,6 +303,8 @@ Scope:
 - [x] Decide whether approval handling should be callback-based, stream-based, or both.
   Decision: stream-first. Approval and elicitation requests should arrive as typed public events, with answers sent through explicit public methods on the owning surface.
 - [x] Add fake-transport tests that prove approval and elicitation messages can be observed and answered through the chosen public shape.
+- [x] Add opt-in live coverage for app-wide capability snapshots and a straightforward thread-management smoke path.
+- [ ] Add opt-in live rollback coverage using a disposable thread with isolated harmless turns and explicit local rollback-marker assertions.
 - [ ] Add opt-in live coverage for at least one approval or server-request path if the local Codex runtime exposes a stable repro.
 - [x] Add cancellation or interruption flows that are part of the intended first public lifecycle.
 - [x] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
