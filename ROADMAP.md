@@ -1,5 +1,25 @@
 # Project Roadmap
 
+## Table of Contents
+
+- [Vision](#vision)
+- [Product Principles](#product-principles)
+- [Current Feature Matrix](#current-feature-matrix)
+- [Milestone Progress](#milestone-progress)
+- [Current Maintainer Priority](#current-maintainer-priority)
+- [Proposed Next Release Slice](#proposed-next-release-slice)
+- [Decisions Made For The First Interactive Lifecycle](#decisions-made-for-the-first-interactive-lifecycle)
+- [Milestone 0: Package And Repo Baseline](#milestone-0-package-and-repo-baseline)
+- [Milestone 1: Wire Model And Codegen Foundation](#milestone-1-wire-model-and-codegen-foundation)
+- [Milestone 2: Stdio Transport And Typed Protocol Slice](#milestone-2-stdio-transport-and-typed-protocol-slice)
+- [Milestone 3: Public Client Actor And First Lifecycle API](#milestone-3-public-client-actor-and-first-lifecycle-api)
+- [Milestone 4: Event Streams And Ergonomic Handles](#milestone-4-event-streams-and-ergonomic-handles)
+- [Milestone 5: Approvals, Richer Notifications, And Broader Protocol Coverage](#milestone-5-approvals-richer-notifications-and-broader-protocol-coverage)
+- [Milestone 6: Public Docs, Examples, And Release Readiness](#milestone-6-public-docs-examples-and-release-readiness)
+- [Open Tickets](#open-tickets)
+- [Backlog Candidates](#backlog-candidates)
+- [History](#history)
+
 ## Vision
 
 - Make `SwiftASB` a small, dependable Swift package for talking to the local Codex app-server with a public API that feels native to Swift rather than like a thin JSON-RPC dump.
@@ -48,6 +68,7 @@
 | Public API curation | `Partially shipped` | The first source-organization pass has split app-wide model, MCP, and thread-management value types into dedicated `CodexAppServer+...` files while preserving `CodexAppServer` as the single connection-wide owner. The first DocC catalog now maps the main handles and lifecycle concepts, but more source splitting, name review, default-argument review, and source-level symbol documentation remain before v1. |
 | DocC documentation | `Partially shipped` | `Sources/SwiftASB/SwiftASB.docc/` now contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, and generated-wire boundary notes. The catalog is validated through Xcode `docbuild`; deeper symbol comments and more examples still remain before v1. |
 | Swift Package Index readiness | `Partially shipped` | `.spi.yml` declares `SwiftASB` as the documentation target so Swift Package Index can build the intended DocC catalog. The actual listing still needs confirmation after the package is publicly indexed and tagged for the release slice. |
+| Contributor documentation split | `Shipped` | `README.md` is now focused on Swift and SwiftUI package users, while `CONTRIBUTING.md` owns contributor setup, validation, DocC, live-test flags, generated-wire refresh, and PR expectations. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `close()` handoff into a caller-owned sealed turn snapshot. |
 | Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Raw command-output and file-change-output deltas now stay internal as transport detail but drive the shipped `RecentCommands` and `RecentFiles` companions, and streamed payloads are preserved when later completed snapshots are thinner. Richer MCP-progress detail still remains internal, and model reroutes plus v0.124 warning and model-verification notifications are still logged or retained internally rather than exposed. |
 | Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, and request resolution is tracked by JSON-RPC request id, but broader live coverage and more server-request families are still open. |
@@ -60,13 +81,13 @@
 
 ## Milestone Progress
 
-- [x] Milestone 0: Package and repo baseline
-- [x] Milestone 1: Wire model and codegen foundation
-- [x] Milestone 2: Stdio transport and typed protocol slice
-- [x] Milestone 3: Public client actor and first lifecycle API
-- [ ] Milestone 4: Event streams and ergonomic handles
-- [ ] Milestone 5: Approvals, richer notifications, and broader protocol coverage
-- [ ] Milestone 6: Public docs, examples, and release readiness
+- Milestone 0: Package And Repo Baseline - Completed
+- Milestone 1: Wire Model And Codegen Foundation - Completed
+- Milestone 2: Stdio Transport And Typed Protocol Slice - Completed
+- Milestone 3: Public Client Actor And First Lifecycle API - Completed
+- Milestone 4: Event Streams And Ergonomic Handles - In Progress
+- Milestone 5: Approvals, Richer Notifications, And Broader Protocol Coverage - In Progress
+- Milestone 6: Public Docs, Examples, And Release Readiness - In Progress
 
 ## Current Maintainer Priority
 
@@ -196,7 +217,15 @@ without needing raw JSON-RPC access or generated wire types.
 
 ## Milestone 0: Package And Repo Baseline
 
-Scope:
+### Status
+
+Completed
+
+### Scope
+
+- [x] Establish the initial SwiftPM package, baseline guidance, and first smoke-testable public namespace.
+
+### Tickets
 
 - [x] Create the SwiftPM library package scaffold.
 - [x] Enable Swift 6 language mode.
@@ -204,14 +233,22 @@ Scope:
 - [x] Add a minimal public namespace and smoke-test coverage.
 - [x] Add root `ROADMAP.md` so project planning has a durable home.
 
-Exit criteria:
+### Exit Criteria
 
 - [x] `swift build` passes.
 - [x] `swift test` passes.
 
 ## Milestone 1: Wire Model And Codegen Foundation
 
-Scope:
+### Status
+
+Completed
+
+### Scope
+
+- [x] Make the bundled Codex app-server v2 schema the repeatable generated-wire source of truth while keeping generated models internal.
+
+### Tickets
 
 - [x] Decide that the bundled Codex app-server v2 schema is the primary generated-wire source of truth.
 - [x] Build a repeatable derivation flow that turns the bundled schema into a quicktype-friendly root.
@@ -220,7 +257,7 @@ Scope:
 - [x] Expand the generated v2 lifecycle batch to include a broader notification/event family rather than only the minimal bootstrap slice.
 - [x] Keep `CodexWireInitializeResponse` hand-owned until the upstream v2 schema exposes it directly.
 
-Exit criteria:
+### Exit Criteria
 
 - [x] `scripts/generate-wire-types.sh` regenerates the staged wire layer successfully.
 - [x] The promoted generated v2 batch compiles cleanly with the package.
@@ -228,7 +265,15 @@ Exit criteria:
 
 ## Milestone 2: Stdio Transport And Typed Protocol Slice
 
-Scope:
+### Status
+
+Completed
+
+### Scope
+
+- [x] Build the internal subprocess transport and typed protocol helpers needed for the first initialize, thread, and turn lifecycle.
+
+### Tickets
 
 - [x] Implement an internal stdio transport around `codex app-server --listen stdio://`.
 - [x] Correlate JSON-RPC responses by request ID.
@@ -236,7 +281,7 @@ Scope:
 - [x] Build typed protocol helpers for `initialize`, `initialized`, `thread/start`, and `turn/start`.
 - [x] Add focused tests that prove envelope classification and protocol encode/decode behavior.
 
-Exit criteria:
+### Exit Criteria
 
 - [x] Transport and protocol layers are buildable and covered by Swift Testing suites.
 - [x] Protocol errors are descriptive and carry method-specific context.
@@ -244,7 +289,15 @@ Exit criteria:
 
 ## Milestone 3: Public Client Actor And First Lifecycle API
 
-Scope:
+### Status
+
+Completed
+
+### Scope
+
+- [x] Expose the first hand-owned public Swift API around startup, initialize, thread start, and turn start.
+
+### Tickets
 
 - [x] Implement a public `CodexAppServer` actor that owns transport plus protocol.
 - [x] Keep the public request and response models hand-owned and Swift-shaped.
@@ -253,7 +306,7 @@ Scope:
 - [x] Map internal transport and protocol failures into public-facing `CodexAppServerError`.
 - [x] Add deterministic public-client tests using an internal fake transport seam.
 
-Exit criteria:
+### Exit Criteria
 
 - [x] The public client can complete initialize, thread start, and turn start in tests.
 - [x] The initialize handshake sends `initialized` automatically.
@@ -261,7 +314,15 @@ Exit criteria:
 
 ## Milestone 4: Event Streams And Ergonomic Handles
 
-Scope:
+### Status
+
+In Progress
+
+### Scope
+
+- [ ] Shape the ergonomic thread and turn handles, event streams, and observable companions that make the package usable for interactive Swift clients.
+
+### Tickets
 
 - [x] Return `CodexTurnHandle` from `startTurn(...)`.
 - [x] Expose a real `AsyncThrowingStream` for turn events.
@@ -283,7 +344,7 @@ Scope:
 - [x] Decide whether Milestone 4 is complete enough to freeze the current handle model before adding approval-driven surfaces above it.
   Decision: yes for ownership. `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`, and `Minimap` are the model Milestone 5 should build on.
 
-Exit criteria:
+### Exit Criteria
 
 - [x] A started turn can emit at least one typed async event through a handle-owned stream.
 - [x] `CodexThread` exists as a public ergonomic wrapper with a clear ownership model.
@@ -293,7 +354,15 @@ Exit criteria:
 
 ## Milestone 5: Approvals, Richer Notifications, And Broader Protocol Coverage
 
-Scope:
+### Status
+
+In Progress
+
+### Scope
+
+- [ ] Promote the interactive request, richer notification, and live subprocess coverage needed for a credible first interactive lifecycle release.
+
+### Tickets
 
 - [x] Add typed protocol mapping for an initial batch of generated thread, turn, item, and reasoning notifications beyond `turn/completed`.
 - [x] Audit the generated lifecycle batch and explicitly mark which notification families matter for the first interactive public lifecycle.
@@ -310,7 +379,7 @@ Scope:
 - [x] Add cancellation or interruption flows that are part of the intended first public lifecycle.
 - [x] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
 
-Exit criteria:
+### Exit Criteria
 
 - [x] The repo has a deliberate answer for where approval requests, elicitation requests, and item-level activity belong in the public model.
 - [x] The public API can represent the most important server-driven lifecycle events without dropping back to raw payloads.
@@ -319,7 +388,15 @@ Exit criteria:
 
 ## Milestone 6: Public Docs, Examples, And Release Readiness
 
-Scope:
+### Status
+
+In Progress
+
+### Scope
+
+- [ ] Make the package understandable, verifiable, and releasable for early Swift consumers without requiring them to read generated wire code or maintainer chat history.
+
+### Tickets
 
 - [x] Expand `README.md` with installation, runtime assumptions, and a minimal working example.
 - [x] Document the local Codex CLI dependency and explicit binary override path clearly.
@@ -333,13 +410,14 @@ Scope:
 - [x] Add the first DocC documentation catalog before v1, including a package landing page, public-handle topic groups, and conceptual articles for the interactive lifecycle, history companions, and generated-wire boundary.
 - [x] Validate the DocC catalog through Xcode `docbuild` and document the maintainer command.
 - [x] Add Swift Package Index metadata that declares `SwiftASB` as the documentation target.
+- [x] Split package-user documentation from contributor workflow by keeping `README.md` product-focused and adding `CONTRIBUTING.md` for package development.
 - [ ] Expand DocC with deeper source-level symbol comments and more examples before a v1 tag.
 - [ ] Confirm the Swift Package Index listing after the package is publicly indexed and tagged.
 - [x] Decide whether real subprocess integration tests are required before the first release.
   Decision: yes, but as opt-in suites rather than as part of the default `swift test` path while the live Codex runtime remains an external local dependency.
 - [x] Add an explicit source-available license for the package.
 
-Exit criteria:
+### Exit Criteria
 
 - [x] A new consumer can understand what `SwiftASB` is, what it depends on, and how to use the first supported lifecycle slice.
 - [x] The release boundary between public API, internal wire scaffolding, and unsupported protocol surfaces is explicit.
@@ -371,3 +449,16 @@ Exit criteria:
 - [x] Add a real subprocess-backed integration test harness once the supported event set is less volatile.
   Current shape: the repo now has an opt-in live harness for raw transport/protocol checks plus public-client turn and concurrency probes; broader always-on subprocess coverage is still intentionally deferred.
 - [x] Expand `README.md` with first-use examples and runtime expectations.
+
+## Backlog Candidates
+
+- [ ] Add a one-shot `run(...)` convenience API once the lower-level handle model is stable enough to hide honestly.
+- [ ] Add a broader public history cursor or transcript search surface after the local history contract is clearer.
+- [ ] Add richer MCP progress detail either as public event cases or as deeper observable companion state.
+- [ ] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
+- [ ] Confirm the Swift Package Index listing after the package is publicly indexed and tagged.
+
+## History
+
+- 2026-04-25: Added Xcode `docbuild` DocC validation, Swift Package Index metadata, and warning-clean DocC links.
+- 2026-04-25: Split README package-user guidance from contributor workflow in `CONTRIBUTING.md`.

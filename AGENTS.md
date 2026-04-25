@@ -12,6 +12,18 @@
   - `swift build`
   - `swift test`
 
+## Swift Package Workflow
+
+- Use `bootstrap-swift-package` only when a new Swift package repo still needs to be created from scratch.
+- Use `sync-swift-package-guidance` when repo guidance for this package drifts and needs to be refreshed or merged forward.
+- Re-run `sync-swift-package-guidance` after substantial package-workflow or plugin updates so local guidance stays aligned.
+- Use `swift-package-build-run-workflow` for manifest, dependency, resource, build, and run work when `Package.swift` is the source of truth.
+- Use `swift-package-testing-workflow` for Swift Testing, XCTest holdouts, fixtures, package test diagnosis, and package test-plan work.
+- Prefer `xcode-build-run-workflow` or `xcode-testing-workflow` only when package work needs Xcode-managed SDK, toolchain, DocC, or test behavior.
+- Keep `Package.swift` explicit about its package-wide Swift language mode; prefer `swiftLanguageModes: [.v6]` on current Swift 6-era manifests.
+- Treat `Package.resolved` and similar package-manager outputs as generated files; do not hand-edit them.
+- Keep package resources under the owning target tree, declare them intentionally, and load bundled resources through `Bundle.module`.
+
 ## Swift Baseline
 
 - For Swift, Apple-framework, Apple-platform, or Xcode-related tasks, read the relevant Apple or Swift documentation first before proposing or making changes.
