@@ -72,11 +72,17 @@ SwiftASB does not ship UI, but its observable companions are intended for SwiftU
 
 ### Verification
 
-Run the package checks before committing:
+Run the package checks before committing package changes:
 
 ```bash
 swift build
 swift test
+```
+
+Run the repo-maintenance validation before release, CI wrapper, maintainer guidance, or tooling changes:
+
+```bash
+bash scripts/repo-maintenance/validate-all.sh
 ```
 
 Validate DocC through Xcode when documentation changes:
@@ -107,6 +113,22 @@ Check whitespace before staging:
 
 ```bash
 git diff --check
+```
+
+### Maintainer Scripts
+
+SwiftASB uses `scripts/repo-maintenance/` as the local-first maintainer surface. GitHub Actions stays a thin wrapper around these scripts, and branch protection should require the `validate` check context from `.github/workflows/validate-repo-maintenance.yml`.
+
+Use the shared sync entrypoint for future managed repo-maintenance refreshes:
+
+```bash
+bash scripts/repo-maintenance/sync-shared.sh
+```
+
+Use the release entrypoint from a feature branch or isolated worktree with a clean committed worktree:
+
+```bash
+bash scripts/repo-maintenance/release.sh --mode standard --version vX.Y.Z
 ```
 
 ## Pull Request Expectations
