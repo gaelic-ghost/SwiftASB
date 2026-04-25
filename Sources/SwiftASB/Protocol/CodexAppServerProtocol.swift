@@ -9,7 +9,9 @@ struct CodexAppServerProtocol {
         case threadList = "thread/list"
         case threadRead = "thread/read"
         case threadResume = "thread/resume"
+        case threadSetName = "thread/name/set"
         case threadStart = "thread/start"
+        case threadMetadataUpdate = "thread/metadata/update"
         case threadTurnsList = "thread/turns/list"
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
@@ -63,6 +65,26 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadCompactStart, params: params),
             method: .threadCompactStart
+        )
+    }
+
+    func makeThreadSetNameRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadSetNameParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadSetName, params: params),
+            method: .threadSetName
+        )
+    }
+
+    func makeThreadMetadataUpdateRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolThreadMetadataUpdateParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadMetadataUpdate, params: params),
+            method: .threadMetadataUpdate
         )
     }
 
@@ -213,6 +235,30 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadCompactStart,
             resultType: CodexProtocolThreadCompactStartResponse.self
+        )
+    }
+
+    func decodeThreadSetNameResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadSetNameResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadSetName,
+            resultType: CodexProtocolThreadSetNameResponse.self
+        )
+    }
+
+    func decodeThreadMetadataUpdateResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadMetadataUpdateResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadMetadataUpdate,
+            resultType: CodexWireThreadMetadataUpdateResponse.self
         )
     }
 

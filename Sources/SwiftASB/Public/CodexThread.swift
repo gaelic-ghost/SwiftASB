@@ -2332,6 +2332,18 @@ public struct CodexThread: Sendable {
         try await appServer.compactThread(.init(threadID: id))
     }
 
+    public func setName(_ name: String) async throws {
+        try await appServer.setThreadName(.init(threadID: id, name: name))
+    }
+
+    public func updateMetadata(
+        gitInfo: CodexAppServer.ThreadMetadataGitInfoUpdate
+    ) async throws -> CodexAppServer.ThreadInfo {
+        try await appServer.updateThreadMetadata(
+            .init(threadID: id, gitInfo: gitInfo)
+        )
+    }
+
     public func readTurnHistory(turnID: String) async throws -> CodexTurnHandle.ClosedTurn? {
         try await appServer.closedTurn(threadID: id, turnID: turnID)
     }

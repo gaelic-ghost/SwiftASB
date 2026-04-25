@@ -41,6 +41,59 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 
 struct CodexProtocolThreadCompactStartResponse: Decodable, Equatable, Sendable {}
 
+struct CodexProtocolThreadSetNameResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
+    let gitInfo: GitInfo?
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case gitInfo
+        case threadID = "threadId"
+    }
+
+    struct GitInfo: Encodable, Equatable, Sendable {
+        let branch: FieldUpdate
+        let originURL: FieldUpdate
+        let sha: FieldUpdate
+
+        enum CodingKeys: String, CodingKey {
+            case branch
+            case originURL = "originUrl"
+            case sha
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(branch, forKey: .branch)
+            try container.encode(originURL, forKey: .originURL)
+            try container.encode(sha, forKey: .sha)
+        }
+    }
+
+    enum FieldUpdate: Equatable, Sendable {
+        case unchanged
+        case clear
+        case replace(String)
+    }
+}
+
+private extension KeyedEncodingContainer {
+    mutating func encode(
+        _ update: CodexProtocolThreadMetadataUpdateParams.FieldUpdate,
+        forKey key: Key
+    ) throws {
+        switch update {
+        case .unchanged:
+            return
+        case .clear:
+            try encodeNil(forKey: key)
+        case let .replace(value):
+            try encode(value, forKey: key)
+        }
+    }
+}
+
 struct CodexProtocolTurnInterruptParams: Encodable, Equatable, Sendable {
 	let threadID: String
 	let turnID: String
