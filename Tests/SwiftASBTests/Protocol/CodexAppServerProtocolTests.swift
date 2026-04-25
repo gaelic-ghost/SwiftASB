@@ -218,6 +218,68 @@ struct CodexAppServerProtocolTests {
         #expect(params["threadId"] as? String == "thread-123")
     }
 
+    @Test("encodes thread/rollback requests with the expected method and params payload")
+    func encodesThreadRollbackRequest() throws {
+        let payload = try protocolLayer.makeThreadRollbackRequest(
+            id: .string("thread-rollback-1"),
+            params: .init(numTurns: 2, threadID: "thread-123")
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/rollback")
+        #expect(object["id"] as? String == "thread-rollback-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["numTurns"] as? Int == 2)
+    }
+
+    @Test("encodes thread/name/set requests with the expected method and params payload")
+    func encodesThreadSetNameRequest() throws {
+        let payload = try protocolLayer.makeThreadSetNameRequest(
+            id: .string("thread-name-1"),
+            params: .init(name: "Planning Thread", threadID: "thread-123")
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/name/set")
+        #expect(object["id"] as? String == "thread-name-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["name"] as? String == "Planning Thread")
+    }
+
+    @Test("encodes thread/metadata/update requests with replace, clear, and unchanged fields")
+    func encodesThreadMetadataUpdateRequest() throws {
+        let payload = try protocolLayer.makeThreadMetadataUpdateRequest(
+            id: .string("thread-metadata-1"),
+            params: .init(
+                gitInfo: .init(
+                    branch: .replace("main"),
+                    originURL: .clear,
+                    sha: .unchanged
+                ),
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/metadata/update")
+        #expect(object["id"] as? String == "thread-metadata-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+
+        let gitInfo = try #require(params["gitInfo"] as? [String: Any])
+        #expect(gitInfo["branch"] as? String == "main")
+        #expect(gitInfo["originUrl"] is NSNull)
+        #expect(gitInfo["sha"] == nil)
+    }
+
     @Test("encodes model/list requests with the expected method and params payload")
     func encodesModelListRequest() throws {
         let payload = try protocolLayer.makeModelListRequest(

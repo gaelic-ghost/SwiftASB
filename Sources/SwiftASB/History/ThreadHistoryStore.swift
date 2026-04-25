@@ -44,6 +44,16 @@ actor ThreadHistoryStore {
             let completeness: String
         }
 
+        struct RollbackSnapshot: Sendable, Equatable {
+            let id: String
+            let previousNewestTurnID: String?
+            let recordedAt: Int
+            let removedTurnIDs: [String]
+            let requestedTurnCount: Int
+            let resultingNewestTurnID: String?
+            let serverUpdatedAt: Int
+        }
+
         struct TurnSnapshot: Sendable, Equatable {
             struct TokenUsageSnapshot: Codable, Sendable, Equatable {
                 let cachedInputTokens: Int?
@@ -92,6 +102,7 @@ actor ThreadHistoryStore {
         let modelProvider: String
         let name: String?
         let preview: String
+        let rollbacks: [RollbackSnapshot]
         let state: StateSnapshot
         let statusFlags: [String]
         let statusType: String
@@ -552,6 +563,21 @@ actor ThreadHistoryStore {
                 .map { turn in
                     try Self.makeTurnSnapshot(turn, in: context)
                 }
+            let rollbackRequest = HistoryThreadRollback.fetchRequest()
+            rollbackRequest.predicate = NSPredicate(format: "thread == %@", thread)
+            let rollbacks = try context.fetch(rollbackRequest)
+                .sorted { $0.recordedAt < $1.recordedAt }
+                .map { rollback in
+                    ThreadSnapshot.RollbackSnapshot(
+                        id: rollback.id,
+                        previousNewestTurnID: rollback.previousNewestTurnID,
+                        recordedAt: Int(rollback.recordedAt),
+                        removedTurnIDs: try Self.decode([String].self, from: rollback.removedTurnIDsData) ?? [],
+                        requestedTurnCount: Int(rollback.requestedTurnCount),
+                        resultingNewestTurnID: rollback.resultingNewestTurnID,
+                        serverUpdatedAt: Int(rollback.serverUpdatedAt)
+                    )
+                }
 
             return .init(
                 id: thread.id,
@@ -577,6 +603,7 @@ actor ThreadHistoryStore {
                 modelProvider: thread.modelProvider,
                 name: thread.name,
                 preview: thread.preview,
+                rollbacks: rollbacks,
                 state: .init(completeness: state.completeness),
                 statusFlags: (try Self.decode([String].self, from: thread.statusFlagsData)) ?? [],
                 statusType: thread.statusType,
@@ -751,6 +778,60 @@ actor ThreadHistoryStore {
         }
     }
 
+    func recordThreadRollback(
+        requestedTurnCount: Int,
+        thread: CodexAppServer.ThreadInfo,
+        turns: [HydratedTurn]
+    ) throws {
+        let threadID = thread.id
+        let visibleTurnIDs = Set(turns.map(\.turn.id))
+
+        let context = container.newBackgroundContext()
+        let maxOrderIndex = try context.performAndWaitReturning {
+            let threadObject = try Self.fetchOrInsertThread(id: thread.id, in: context)
+            Self.applyThreadInfo(thread, to: threadObject)
+            Self.ensureThreadPersistenceScaffolding(for: threadObject, in: context)
+
+            let existingTurns = try Self.fetchTurns(for: threadObject, in: context)
+            let previousNewestTurnID = existingTurns.last?.turnID
+            let removedTurnIDs = existingTurns
+                .map(\.turnID)
+                .filter { !visibleTurnIDs.contains($0) }
+
+            let rollback = HistoryThreadRollback(context: context)
+            rollback.id = UUID().uuidString
+            rollback.previousNewestTurnID = previousNewestTurnID
+            rollback.recordedAt = Int64(Date().timeIntervalSince1970)
+            rollback.removedTurnIDsData = try Self.encode(removedTurnIDs)
+            rollback.requestedTurnCount = Int64(requestedTurnCount)
+            rollback.resultingNewestTurnID = turns.last?.turn.id
+            rollback.serverUpdatedAt = Int64(thread.updatedAt)
+            rollback.thread = threadObject
+
+            _ = try Self.upsertHydratedTurns(turns, for: threadObject, in: context)
+
+            for turnObject in existingTurns where !visibleTurnIDs.contains(turnObject.turnID) {
+                context.delete(turnObject)
+            }
+
+            try Self.reindexTurns(for: threadObject, in: context)
+            threadObject.state?.completeness = Completeness.serverParity.rawValue
+            try context.saveIfChanged()
+
+            return try Self.fetchTurns(for: threadObject, in: context)
+                .map(\.orderIndex)
+                .max()
+                .map(Int.init)
+        }
+
+        if let maxOrderIndex {
+            nextTurnOrderByThreadID[threadID] = maxOrderIndex + 1
+        } else {
+            nextTurnOrderByThreadID[threadID] = 0
+        }
+        activeTurns = activeTurns.filter { visibleTurnIDs.contains($0.key) }
+    }
+
     func hydrateHistoricalTurns(
         threadID: String,
         turns: [HydratedTurn]
@@ -873,7 +954,22 @@ actor ThreadHistoryStore {
 
         let turnRequest = HistoryTurn.fetchRequest()
         turnRequest.predicate = NSPredicate(format: "thread == %@", thread)
-        let persistedTurns = try context.fetch(turnRequest)
+        let persistedTurns = try Self.fetchTurns(for: thread, in: context)
+
+        for (turnIndex, turn) in persistedTurns.enumerated() {
+            turn.orderIndex = Int64(turnIndex)
+        }
+
+        return .init(preservedRicherLocalDetail: preservedRicherLocalDetail)
+    }
+
+    private static func fetchTurns(
+        for thread: HistoryThread,
+        in context: NSManagedObjectContext
+    ) throws -> [HistoryTurn] {
+        let turnRequest = HistoryTurn.fetchRequest()
+        turnRequest.predicate = NSPredicate(format: "thread == %@", thread)
+        return try context.fetch(turnRequest)
             .sorted {
                 let lhsStartedAt = $0.startedAt
                 let rhsStartedAt = $1.startedAt
@@ -882,12 +978,16 @@ actor ThreadHistoryStore {
                 }
                 return lhsStartedAt < rhsStartedAt
             }
+    }
 
+    private static func reindexTurns(
+        for thread: HistoryThread,
+        in context: NSManagedObjectContext
+    ) throws {
+        let persistedTurns = try Self.fetchTurns(for: thread, in: context)
         for (turnIndex, turn) in persistedTurns.enumerated() {
             turn.orderIndex = Int64(turnIndex)
         }
-
-        return .init(preservedRicherLocalDetail: preservedRicherLocalDetail)
     }
 
     private static func makeTurnSnapshot(
@@ -1258,6 +1358,8 @@ actor ThreadHistoryStore {
         let description = NSPersistentStoreDescription(url: configuration.storeURL)
         description.type = configuration.inMemory ? NSInMemoryStoreType : NSSQLiteStoreType
         description.shouldAddStoreAsynchronously = false
+        description.shouldMigrateStoreAutomatically = true
+        description.shouldInferMappingModelAutomatically = true
 
         if !configuration.inMemory {
             try FileManager.default.createDirectory(
@@ -1325,6 +1427,20 @@ actor ThreadHistoryStore {
             attribute("completeness", .stringAttributeType, isOptional: false),
         ]
 
+        let rollbackEntity = NSEntityDescription()
+        rollbackEntity.name = "HistoryThreadRollback"
+        rollbackEntity.managedObjectClassName = NSStringFromClass(HistoryThreadRollback.self)
+        rollbackEntity.properties = [
+            attribute("id", .stringAttributeType, isOptional: false),
+            attribute("previousNewestTurnID", .stringAttributeType, isOptional: true),
+            attribute("recordedAt", .integer64AttributeType, isOptional: false),
+            attribute("removedTurnIDsData", .binaryDataAttributeType, isOptional: true),
+            attribute("requestedTurnCount", .integer64AttributeType, isOptional: false),
+            attribute("resultingNewestTurnID", .stringAttributeType, isOptional: true),
+            attribute("serverUpdatedAt", .integer64AttributeType, isOptional: false),
+        ]
+        rollbackEntity.uniquenessConstraints = [["id"]]
+
         let turnEntity = NSEntityDescription()
         turnEntity.name = "HistoryTurn"
         turnEntity.managedObjectClassName = NSStringFromClass(HistoryTurn.self)
@@ -1375,18 +1491,24 @@ actor ThreadHistoryStore {
         threadToTurns.inverseRelationship = turnToThread
         turnToThread.inverseRelationship = threadToTurns
 
+        let threadToRollbacks = relationship(name: "rollbacks", destination: rollbackEntity, minCount: 0, maxCount: 0, deleteRule: .cascadeDeleteRule)
+        let rollbackToThread = relationship(name: "thread", destination: threadEntity, minCount: 0, maxCount: 1, deleteRule: .nullifyDeleteRule)
+        threadToRollbacks.inverseRelationship = rollbackToThread
+        rollbackToThread.inverseRelationship = threadToRollbacks
+
         let turnToItems = relationship(name: "items", destination: itemEntity, minCount: 0, maxCount: 0, deleteRule: .cascadeDeleteRule)
         let itemToTurn = relationship(name: "turn", destination: turnEntity, minCount: 0, maxCount: 1, deleteRule: .nullifyDeleteRule)
         turnToItems.inverseRelationship = itemToTurn
         itemToTurn.inverseRelationship = turnToItems
 
-        threadEntity.properties.append(contentsOf: [threadToDefaults, threadToState, threadToTurns])
+        threadEntity.properties.append(contentsOf: [threadToDefaults, threadToState, threadToTurns, threadToRollbacks])
         defaultsEntity.properties.append(defaultsToThread)
         stateEntity.properties.append(stateToThread)
+        rollbackEntity.properties.append(rollbackToThread)
         turnEntity.properties.append(contentsOf: [turnToThread, turnToItems])
         itemEntity.properties.append(itemToTurn)
 
-        model.entities = [threadEntity, defaultsEntity, stateEntity, turnEntity, itemEntity]
+        model.entities = [threadEntity, defaultsEntity, stateEntity, rollbackEntity, turnEntity, itemEntity]
         return model
     }
 }
@@ -1521,6 +1643,7 @@ final class HistoryThread: NSManagedObject {
     @NSManaged var state: HistoryThreadState?
     @NSManaged var statusFlagsData: Data?
     @NSManaged var statusType: String
+    @NSManaged var rollbacks: NSSet?
     @NSManaged var turns: NSSet?
     @NSManaged var updatedAt: Int64
 }
@@ -1542,6 +1665,18 @@ final class HistoryThreadDefaults: NSManagedObject {
 @objc(HistoryThreadState)
 final class HistoryThreadState: NSManagedObject {
     @NSManaged var completeness: String
+    @NSManaged var thread: HistoryThread?
+}
+
+@objc(HistoryThreadRollback)
+final class HistoryThreadRollback: NSManagedObject {
+    @NSManaged var id: String
+    @NSManaged var previousNewestTurnID: String?
+    @NSManaged var recordedAt: Int64
+    @NSManaged var removedTurnIDsData: Data?
+    @NSManaged var requestedTurnCount: Int64
+    @NSManaged var resultingNewestTurnID: String?
+    @NSManaged var serverUpdatedAt: Int64
     @NSManaged var thread: HistoryThread?
 }
 
@@ -1580,6 +1715,12 @@ final class HistoryItem: NSManagedObject {
 private extension HistoryThread {
     @nonobjc static func fetchRequest() -> NSFetchRequest<HistoryThread> {
         NSFetchRequest<HistoryThread>(entityName: "HistoryThread")
+    }
+}
+
+private extension HistoryThreadRollback {
+    @nonobjc static func fetchRequest() -> NSFetchRequest<HistoryThreadRollback> {
+        NSFetchRequest<HistoryThreadRollback>(entityName: "HistoryThreadRollback")
     }
 }
 

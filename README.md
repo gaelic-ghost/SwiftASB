@@ -59,12 +59,18 @@ The current public lifecycle contract is intentionally narrow and explicit:
 
 - `CodexAppServer` owns the local subprocess plus initialize, thread start,
   `thread/list`, `thread/read`, `thread/resume`, `thread/fork`,
-  `thread/turns/list`, `model/list`, `mcpServerStatus/list`, and turn start.
+  `thread/turns/list`, `thread/name/set`, `thread/metadata/update`,
+  `model/list`, `mcpServerStatus/list`, and turn start.
 - `CodexAppServer.listModels(...)` and
   `CodexAppServer.listMcpServerStatuses(...)` expose app-wide capability
   snapshots that are not owned by one conversation thread.
 - `CodexThread` owns thread-scoped turn creation and thread-scoped fallback
   responses for unroutable interactive requests.
+- `CodexThread.setName(...)` and `CodexThread.updateMetadata(...)` expose the
+  straightforward thread-management endpoints. `CodexThread.rollbackLastTurns(...)`
+  wraps `thread/rollback`, records a local rollback marker, and trims visible
+  local history to match the app-server response without claiming to revert
+  filesystem changes.
 - `CodexTurnHandle` owns the active turn stream plus turn-scoped control
   methods, including `respond(to:with:)`, `steer(_:)`, `steerText(_:)`, and
   `interrupt()`.

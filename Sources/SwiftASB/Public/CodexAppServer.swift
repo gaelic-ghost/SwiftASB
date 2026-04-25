@@ -42,139 +42,6 @@ public actor CodexAppServer {
         }
     }
 
-    public struct ModelListRequest: Sendable, Equatable {
-        public var cursor: String?
-        public var includeHidden: Bool?
-        public var limit: Int?
-
-        public init(
-            cursor: String? = nil,
-            limit: Int? = nil,
-            includeHidden: Bool? = nil
-        ) {
-            self.cursor = cursor
-            self.includeHidden = includeHidden
-            self.limit = limit
-        }
-    }
-
-    public struct ModelListPage: Sendable, Equatable {
-        public let models: [Model]
-        public let nextCursor: String?
-    }
-
-    public struct Model: Sendable, Equatable, Identifiable {
-        public let additionalSpeedTiers: [String]?
-        public let availabilityNux: ModelAvailabilityNux?
-        public let defaultReasoningEffort: ReasoningEffort
-        public let description: String
-        public let displayName: String
-        public let hidden: Bool
-        public let id: String
-        public let inputModalities: [InputModality]?
-        public let isDefault: Bool
-        public let model: String
-        public let supportedReasoningEfforts: [ReasoningEffortOption]
-        public let supportsPersonality: Bool?
-        public let upgrade: String?
-        public let upgradeInfo: ModelUpgradeInfo?
-    }
-
-    public struct ModelAvailabilityNux: Sendable, Equatable {
-        public let message: String
-    }
-
-    public enum InputModality: String, Sendable, Equatable {
-        case image
-        case text
-    }
-
-    public struct ReasoningEffortOption: Sendable, Equatable {
-        public let description: String
-        public let reasoningEffort: ReasoningEffort
-    }
-
-    public struct ModelUpgradeInfo: Sendable, Equatable {
-        public let migrationMarkdown: String?
-        public let model: String
-        public let modelLink: String?
-        public let upgradeCopy: String?
-    }
-
-    public struct McpServerStatusListRequest: Sendable, Equatable {
-        public enum Detail: String, Sendable, Equatable {
-            case full
-            case toolsAndAuthOnly
-        }
-
-        public var cursor: String?
-        public var detail: Detail?
-        public var limit: Int?
-
-        public init(
-            cursor: String? = nil,
-            limit: Int? = nil,
-            detail: Detail? = nil
-        ) {
-            self.cursor = cursor
-            self.detail = detail
-            self.limit = limit
-        }
-    }
-
-    public struct McpServerStatusPage: Sendable, Equatable {
-        public let nextCursor: String?
-        public let servers: [McpServerStatus]
-    }
-
-    public struct McpServerStatus: Sendable, Equatable, Identifiable {
-        public enum AuthStatus: String, Sendable, Equatable {
-            case bearerToken
-            case notLoggedIn
-            case oAuth
-            case unsupported
-        }
-
-        public var id: String { name }
-        public let authStatus: AuthStatus
-        public let name: String
-        public let resources: [McpResource]
-        public let resourceTemplates: [McpResourceTemplate]
-        public let tools: [String: McpTool]
-    }
-
-    public struct McpResource: Sendable, Equatable {
-        public let annotations: JSONValue?
-        public let description: String?
-        public let icons: [JSONValue]?
-        public let metadata: JSONValue?
-        public let mimeType: String?
-        public let name: String
-        public let size: Int?
-        public let title: String?
-        public let uri: String
-    }
-
-    public struct McpResourceTemplate: Sendable, Equatable {
-        public let annotations: JSONValue?
-        public let description: String?
-        public let mimeType: String?
-        public let name: String
-        public let title: String?
-        public let uriTemplate: String
-    }
-
-    public struct McpTool: Sendable, Equatable {
-        public let annotations: JSONValue?
-        public let description: String?
-        public let icons: [JSONValue]?
-        public let inputSchema: JSONValue
-        public let metadata: JSONValue?
-        public let name: String
-        public let outputSchema: JSONValue?
-        public let title: String?
-    }
-
     public struct InitializeRequest: Sendable, Equatable {
         public var capabilities: InitializeCapabilities
         public var clientInfo: ClientInfo
@@ -388,6 +255,7 @@ public actor CodexAppServer {
         public let currentDirectoryPath: String
         public let ephemeral: Bool
         public let forkedFromThreadID: String?
+        public let gitInfo: GitInfo?
         public let modelProvider: String
         public let name: String?
         public let preview: String
@@ -1120,6 +988,95 @@ public actor CodexAppServer {
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/compact/start")
+        }
+    }
+
+    public func rollbackThread(_ request: ThreadRollbackRequest) async throws -> ThreadInfo {
+        try requireInitialized(for: "thread/rollback")
+        guard request.numberOfTurns >= 1 else {
+            throw CodexAppServerError.invalidState(
+                reason: "thread/rollback requires numberOfTurns to be at least 1."
+            )
+        }
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let payload = try protocolLayer.makeThreadRollbackRequest(
+                id: requestID,
+                params: .init(
+                    numTurns: request.numberOfTurns,
+                    threadID: request.threadID
+                )
+            )
+            let responsePayload = try await transport.send(payload, id: requestID)
+            let response = try protocolLayer.decodeThreadRollbackResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            let thread = ThreadInfo(wireValue: response.thread)
+            try await requireHistoryStore(for: "thread/rollback").recordThreadRollback(
+                requestedTurnCount: request.numberOfTurns,
+                thread: thread,
+                turns: response.thread.turns.map {
+                    .init(
+                        turn: .init(wireValue: $0),
+                        items: $0.items.map(CodexTurnItem.init(wireValue:))
+                    )
+                }
+            )
+
+            return thread
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/rollback")
+        }
+    }
+
+    public func setThreadName(_ request: ThreadSetNameRequest) async throws {
+        try requireInitialized(for: "thread/name/set")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let payload = try protocolLayer.makeThreadSetNameRequest(
+                id: requestID,
+                params: .init(name: request.name, threadID: request.threadID)
+            )
+            let response = try await transport.send(payload, id: requestID)
+            _ = try protocolLayer.decodeThreadSetNameResponse(
+                response,
+                expectedID: requestID
+            )
+            try await requireHistoryStore(for: "thread/name/set").recordThreadNameUpdated(
+                threadID: request.threadID,
+                name: request.name
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/name/set")
+        }
+    }
+
+    public func updateThreadMetadata(_ request: ThreadMetadataUpdateRequest) async throws -> ThreadInfo {
+        try requireInitialized(for: "thread/metadata/update")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let payload = try protocolLayer.makeThreadMetadataUpdateRequest(
+                id: requestID,
+                params: request.protocolValue
+            )
+            let responsePayload = try await transport.send(payload, id: requestID)
+            let response = try protocolLayer.decodeThreadMetadataUpdateResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            let thread = ThreadInfo(wireValue: response.thread)
+            try await requireHistoryStore(for: "thread/metadata/update").recordThreadMetadataUpdated(thread)
+
+            return thread
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/metadata/update")
         }
     }
 
@@ -3764,148 +3721,6 @@ private extension CodexThreadTokenUsageUpdated.Usage {
     }
 }
 
-private extension CodexAppServer.Model {
-    init(wireValue: CodexWireModel) {
-        self.init(
-            additionalSpeedTiers: wireValue.additionalSpeedTiers,
-            availabilityNux: wireValue.availabilityNux.map(CodexAppServer.ModelAvailabilityNux.init),
-            defaultReasoningEffort: .init(wireValue: wireValue.defaultReasoningEffort),
-            description: wireValue.description,
-            displayName: wireValue.displayName,
-            hidden: wireValue.hidden,
-            id: wireValue.id,
-            inputModalities: wireValue.inputModalities?.map(CodexAppServer.InputModality.init),
-            isDefault: wireValue.isDefault,
-            model: wireValue.model,
-            supportedReasoningEfforts: wireValue.supportedReasoningEfforts.map(
-                CodexAppServer.ReasoningEffortOption.init
-            ),
-            supportsPersonality: wireValue.supportsPersonality,
-            upgrade: wireValue.upgrade,
-            upgradeInfo: wireValue.upgradeInfo.map(CodexAppServer.ModelUpgradeInfo.init)
-        )
-    }
-}
-
-private extension CodexAppServer.ModelAvailabilityNux {
-    init(wireValue: CodexWireModelAvailabilityNux) {
-        self.init(message: wireValue.message)
-    }
-}
-
-private extension CodexAppServer.InputModality {
-    init(wireValue: CodexWireInputModality) {
-        switch wireValue {
-        case .image:
-            self = .image
-        case .text:
-            self = .text
-        }
-    }
-}
-
-private extension CodexAppServer.ReasoningEffortOption {
-    init(wireValue: CodexWireReasoningEffortOption) {
-        self.init(
-            description: wireValue.description,
-            reasoningEffort: .init(wireValue: wireValue.reasoningEffort)
-        )
-    }
-}
-
-private extension CodexAppServer.ModelUpgradeInfo {
-    init(wireValue: CodexWireModelUpgradeInfo) {
-        self.init(
-            migrationMarkdown: wireValue.migrationMarkdown,
-            model: wireValue.model,
-            modelLink: wireValue.modelLink,
-            upgradeCopy: wireValue.upgradeCopy
-        )
-    }
-}
-
-private extension CodexAppServer.McpServerStatusListRequest.Detail {
-    var wireValue: CodexWireMCPServerStatusDetail {
-        switch self {
-        case .full:
-            .full
-        case .toolsAndAuthOnly:
-            .toolsAndAuthOnly
-        }
-    }
-}
-
-private extension CodexAppServer.McpServerStatus {
-    init(wireValue: CodexWireMCPServerStatus) {
-        self.init(
-            authStatus: .init(wireValue: wireValue.authStatus),
-            name: wireValue.name,
-            resources: wireValue.resources.map(CodexAppServer.McpResource.init),
-            resourceTemplates: wireValue.resourceTemplates.map(CodexAppServer.McpResourceTemplate.init),
-            tools: wireValue.tools.mapValues(CodexAppServer.McpTool.init)
-        )
-    }
-}
-
-private extension CodexAppServer.McpServerStatus.AuthStatus {
-    init(wireValue: CodexWireMCPAuthStatus) {
-        switch wireValue {
-        case .bearerToken:
-            self = .bearerToken
-        case .notLoggedIn:
-            self = .notLoggedIn
-        case .oAuth:
-            self = .oAuth
-        case .unsupported:
-            self = .unsupported
-        }
-    }
-}
-
-private extension CodexAppServer.McpResource {
-    init(wireValue: CodexWireResource) {
-        self.init(
-            annotations: wireValue.annotations.map(CodexAppServer.JSONValue.init(wireValue:)),
-            description: wireValue.description,
-            icons: wireValue.icons?.map(CodexAppServer.JSONValue.init(wireValue:)),
-            metadata: wireValue.meta.map(CodexAppServer.JSONValue.init(wireValue:)),
-            mimeType: wireValue.mimeType,
-            name: wireValue.name,
-            size: wireValue.size,
-            title: wireValue.title,
-            uri: wireValue.uri
-        )
-    }
-}
-
-private extension CodexAppServer.McpResourceTemplate {
-    init(wireValue: CodexWireResourceTemplate) {
-        self.init(
-            annotations: wireValue.annotations.map(CodexAppServer.JSONValue.init(wireValue:)),
-            description: wireValue.description,
-            mimeType: wireValue.mimeType,
-            name: wireValue.name,
-            title: wireValue.title,
-            uriTemplate: wireValue.uriTemplate
-        )
-    }
-}
-
-private extension CodexAppServer.McpTool {
-    init(wireValue: CodexWireTool) {
-        self.init(
-            annotations: wireValue.annotations.map(CodexAppServer.JSONValue.init(wireValue:)),
-            description: wireValue.description,
-            icons: wireValue.icons?.map(CodexAppServer.JSONValue.init(wireValue:)),
-            inputSchema: .init(wireValue: wireValue.inputSchema),
-            metadata: wireValue.meta.map(CodexAppServer.JSONValue.init(wireValue:)),
-            name: wireValue.name,
-            outputSchema: wireValue.outputSchema.map(CodexAppServer.JSONValue.init(wireValue:)),
-            title: wireValue.title
-        )
-    }
-}
-
 private extension CodexAppServer.InitializeRequest {
     var wireValue: CodexWireInitializeParams {
         CodexWireInitializeParams(
@@ -4035,7 +3850,7 @@ private extension CodexAppServer.TurnInput.Kind {
     }
 }
 
-private extension CodexAppServer.JSONValue {
+extension CodexAppServer.JSONValue {
     init(wireValue: CodexWireJSONValue) {
         switch wireValue {
         case .null:
@@ -4231,7 +4046,7 @@ private extension CodexAppServer.SessionStartSource {
     }
 }
 
-private extension CodexAppServer.ReasoningEffort {
+extension CodexAppServer.ReasoningEffort {
     init(wireValue: CodexWireReasoningEffort) {
         self = Self(wireValue: Optional(wireValue))!
     }
@@ -4390,6 +4205,7 @@ private extension CodexAppServer.ThreadInfo {
             currentDirectoryPath: wireValue.cwd,
             ephemeral: wireValue.ephemeral,
             forkedFromThreadID: wireValue.forkedFromID,
+            gitInfo: wireValue.gitInfo.map(CodexAppServer.GitInfo.init),
             modelProvider: wireValue.modelProvider,
             name: wireValue.name,
             preview: wireValue.preview,
