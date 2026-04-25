@@ -444,6 +444,97 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "lists live app-wide capability snapshots through the public client",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_CAPABILITY_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI."
+        ),
+        .timeLimit(.minutes(2))
+    )
+    func listsLiveAppWideCapabilitySnapshots() async throws {
+        let harness = try LiveCodexHarness()
+        defer { harness.cleanup() }
+
+        let client = try await makeInitializedLiveClient(using: harness)
+        do {
+            let models = try await withTimeout(
+                seconds: 15,
+                operation: "listing live Codex model capabilities"
+            ) {
+                try await client.listModels(
+                    .init(
+                        limit: 20,
+                        includeHidden: true
+                    )
+                )
+            }
+            #expect(models.models.isEmpty == false)
+            #expect(models.models.allSatisfy { model in
+                model.id.isEmpty == false
+                    && model.model.isEmpty == false
+                    && model.displayName.isEmpty == false
+            })
+
+            let mcpServers = try await withTimeout(
+                seconds: 15,
+                operation: "listing live Codex MCP server capabilities"
+            ) {
+                try await client.listMcpServerStatuses(
+                    .init(
+                        limit: 20,
+                        detail: .toolsAndAuthOnly
+                    )
+                )
+            }
+            #expect(mcpServers.servers.allSatisfy { server in
+                server.name.isEmpty == false
+            })
+
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
+        }
+    }
+
+    @Test(
+        "sets a live thread name through the public thread handle",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_THREAD_MANAGEMENT_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI."
+        ),
+        .timeLimit(.minutes(2))
+    )
+    func setsLiveThreadName() async throws {
+        let harness = try LiveCodexHarness()
+        defer { harness.cleanup() }
+
+        let client = try await makeInitializedLiveClient(using: harness)
+        do {
+            let thread = try await startThread(
+                on: client,
+                workspacePath: harness.threadAWorkspace.path,
+                label: "thread-name"
+            )
+            let expectedName = "SwiftASB live name \(UUID().uuidString)"
+
+            try await withTimeout(
+                seconds: 15,
+                operation: "setting a live Codex thread name"
+            ) {
+                try await thread.setName(expectedName)
+            }
+
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "probes live approval-path behavior for shell commands",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
