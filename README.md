@@ -67,8 +67,10 @@ The current public lifecycle contract is intentionally narrow and explicit:
 - `CodexThread` owns thread-scoped turn creation and thread-scoped fallback
   responses for unroutable interactive requests.
 - `CodexThread.setName(...)` and `CodexThread.updateMetadata(...)` expose the
-  straightforward thread-management endpoints. Rollback remains deliberately
-  unpromoted until its local-history behavior is decided.
+  straightforward thread-management endpoints. `CodexThread.rollbackLastTurns(...)`
+  wraps `thread/rollback`, records a local rollback marker, and trims visible
+  local history to match the app-server response without claiming to revert
+  filesystem changes.
 - `CodexTurnHandle` owns the active turn stream plus turn-scoped control
   methods, including `respond(to:with:)`, `steer(_:)`, `steerText(_:)`, and
   `interrupt()`.

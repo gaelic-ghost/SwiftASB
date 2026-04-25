@@ -191,6 +191,62 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("rolls back thread history and records the rollback marker")
+    func rollsBackThreadHistoryAndRecordsMarker() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+        _ = try await client.listThreadTurns(
+            .init(
+                threadID: thread.id,
+                limit: 2,
+                sortDirection: .desc
+            )
+        )
+
+        let beforeRollback = try #require(await client.debugThreadHistorySnapshot(threadID: thread.id))
+        #expect(beforeRollback.turns.map(\.id) == ["turn-older", "turn-newer"])
+
+        let rolledBackThread = try await thread.rollbackLastTurns(1)
+
+        #expect(rolledBackThread.id == thread.id)
+        #expect(rolledBackThread.info.updatedAt == 1713350010)
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/rollback"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        #expect(params["numTurns"] as? Int == 1)
+
+        let afterRollback = try #require(await client.debugThreadHistorySnapshot(threadID: thread.id))
+        #expect(afterRollback.turns.map(\.id) == ["turn-older"])
+        #expect(afterRollback.state.completeness == "serverParity")
+        #expect(afterRollback.rollbacks.count == 1)
+        #expect(afterRollback.rollbacks[0].requestedTurnCount == 1)
+        #expect(afterRollback.rollbacks[0].previousNewestTurnID == "turn-newer")
+        #expect(afterRollback.rollbacks[0].resultingNewestTurnID == "turn-older")
+        #expect(afterRollback.rollbacks[0].removedTurnIDs == ["turn-newer"])
+        #expect(afterRollback.rollbacks[0].serverUpdatedAt == 1713350010)
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
     @Test("runs initialize, thread/start, and turn/start through the public client")
     func runsInitializeAndFirstLifecycleRequests() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -5252,6 +5308,42 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                         "status": ["type": "active"],
                         "turns": [],
                         "updatedAt": 1713350006,
+                    ],
+                ]
+            )
+        case "thread/rollback":
+            return responsePayload(
+                id: id,
+                result: [
+                    "thread": [
+                        "cliVersion": "0.121.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-123",
+                        "modelProvider": "openai",
+                        "name": "Hydrated Thread",
+                        "preview": "Hydrated thread preview",
+                        "source": "cli",
+                        "status": ["type": "active"],
+                        "turns": [
+                            [
+                                "completedAt": 1713350004,
+                                "durationMs": 2000,
+                                "error": NSNull(),
+                                "id": "turn-older",
+                                "items": [
+                                    [
+                                        "id": "item-older-user",
+                                        "text": "Older prompt",
+                                        "type": "userMessage",
+                                    ],
+                                ],
+                                "startedAt": 1713350002,
+                                "status": "completed",
+                            ],
+                        ],
+                        "updatedAt": 1713350010,
                     ],
                 ]
             )

@@ -9,6 +9,7 @@ struct CodexAppServerProtocol {
         case threadList = "thread/list"
         case threadRead = "thread/read"
         case threadResume = "thread/resume"
+        case threadRollback = "thread/rollback"
         case threadSetName = "thread/name/set"
         case threadStart = "thread/start"
         case threadMetadataUpdate = "thread/metadata/update"
@@ -65,6 +66,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadCompactStart, params: params),
             method: .threadCompactStart
+        )
+    }
+
+    func makeThreadRollbackRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadRollbackParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadRollback, params: params),
+            method: .threadRollback
         )
     }
 
@@ -235,6 +246,18 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadCompactStart,
             resultType: CodexProtocolThreadCompactStartResponse.self
+        )
+    }
+
+    func decodeThreadRollbackResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadRollbackResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadRollback,
+            resultType: CodexWireThreadRollbackResponse.self
         )
     }
 

@@ -111,6 +111,7 @@ belongs in the release boundary:
 | Approval request families | `CodexTurnEvent.approvalRequested`, `CodexThreadEvent.approvalRequested` | These are protocol-level server requests rather than generated notifications, but they are part of the supported public lifecycle. |
 | Elicitation request families | `CodexTurnEvent.elicitationRequested`, `CodexThreadEvent.elicitationRequested` | These are also protocol-level server requests and part of the supported public lifecycle. |
 | Approval reviewer options | `CodexAppServer.ApprovalsReviewer.autoReview` | v0.124 adds `auto_review`; this is a small public enum widening because callers already choose approval-review behavior through hand-owned request models. |
+| Thread rollback | `CodexThread.rollbackLastTurns(...)` | `thread/rollback` is public as a thread-scoped action. The local history store records a rollback marker, then trims visible local turns to match the app-server response. Full removed-turn payload preservation is deferred until a deliberate forensic archive model exists. |
 | Thread name setting | `CodexThread.setName(...)` | `thread/name/set` is a straightforward thread-scoped action. The method records the local name update after the app-server accepts the request and still allows server-sent `thread/name/updated` notifications to flow normally. |
 | Thread metadata patching | `CodexThread.updateMetadata(...)` | `thread/metadata/update` is public with a hand-owned replace/clear/unchanged patch model so callers can express the upstream null-vs-omitted semantics without generated wire types. |
 | App-wide model listing | `CodexAppServer.listModels(...)` | `model/list` describes shared runtime capabilities rather than one conversation thread, so the public API belongs on the connection-owning app-server actor. |
@@ -189,7 +190,6 @@ Remaining gap inside the observable-only slice:
 | Warning and guardian-warning notifications | These are important operator signals, but need a deliberate diagnostics surface rather than being exposed as raw event payloads. |
 | External-agent config import completed notifications | Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
 | Guardian denied-action approval endpoint | Generated internally because it appears in v0.124, but it needs a real guardian workflow model before it becomes public. |
-| Thread rollback endpoint | Generated internally so the wire snapshot can track v0.124, but public rollback still needs a deliberate local-history reconciliation decision before promotion. |
 | Hook started / completed notifications | The raw notifications remain internal; consumers see their current-state effect through `CodexThread.Dashboard.hookRuns` instead of through new event-enum cases. |
 | Raw response item completed notifications | Too low-level and transport-adjacent for the current public lifecycle boundary. |
 | Context compacted notifications | Interesting for diagnostics, but still not surfaced as a first-class public event; consumers currently see compaction through `Dashboard` and `Minimap` state plus explicit `compactContext()` control. |
@@ -326,9 +326,8 @@ The current remaining promotion questions are therefore narrower than before:
 6. how far should the non-UI public history-reading surface go beyond the
    first shipped `ClosedTurn` helpers before the package commits to a broader
    cursor or search contract?
-7. what public rollback shape should wrap `thread/rollback`, and what local
-   history reconciliation should it perform after the app-server returns the
-   updated thread?
+7. should rollback grow a forensic archive model that preserves full removed
+   turn and item payloads, or is the current rollback marker enough for v1?
 
 ## Decided Next Companion Shape
 

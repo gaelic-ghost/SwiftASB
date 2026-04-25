@@ -9,6 +9,16 @@ public extension CodexAppServer {
         }
     }
 
+    struct ThreadRollbackRequest: Sendable, Equatable {
+        public var numberOfTurns: Int
+        public var threadID: String
+
+        public init(threadID: String, numberOfTurns: Int) {
+            self.threadID = threadID
+            self.numberOfTurns = numberOfTurns
+        }
+    }
+
     struct ThreadMetadataUpdateRequest: Sendable, Equatable {
         public var gitInfo: ThreadMetadataGitInfoUpdate?
         public var threadID: String

@@ -991,6 +991,47 @@ public actor CodexAppServer {
         }
     }
 
+    public func rollbackThread(_ request: ThreadRollbackRequest) async throws -> ThreadInfo {
+        try requireInitialized(for: "thread/rollback")
+        guard request.numberOfTurns >= 1 else {
+            throw CodexAppServerError.invalidState(
+                reason: "thread/rollback requires numberOfTurns to be at least 1."
+            )
+        }
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let payload = try protocolLayer.makeThreadRollbackRequest(
+                id: requestID,
+                params: .init(
+                    numTurns: request.numberOfTurns,
+                    threadID: request.threadID
+                )
+            )
+            let responsePayload = try await transport.send(payload, id: requestID)
+            let response = try protocolLayer.decodeThreadRollbackResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            let thread = ThreadInfo(wireValue: response.thread)
+            try await requireHistoryStore(for: "thread/rollback").recordThreadRollback(
+                requestedTurnCount: request.numberOfTurns,
+                thread: thread,
+                turns: response.thread.turns.map {
+                    .init(
+                        turn: .init(wireValue: $0),
+                        items: $0.items.map(CodexTurnItem.init(wireValue:))
+                    )
+                }
+            )
+
+            return thread
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/rollback")
+        }
+    }
+
     public func setThreadName(_ request: ThreadSetNameRequest) async throws {
         try requireInitialized(for: "thread/name/set")
 

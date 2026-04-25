@@ -218,6 +218,23 @@ struct CodexAppServerProtocolTests {
         #expect(params["threadId"] as? String == "thread-123")
     }
 
+    @Test("encodes thread/rollback requests with the expected method and params payload")
+    func encodesThreadRollbackRequest() throws {
+        let payload = try protocolLayer.makeThreadRollbackRequest(
+            id: .string("thread-rollback-1"),
+            params: .init(numTurns: 2, threadID: "thread-123")
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/rollback")
+        #expect(object["id"] as? String == "thread-rollback-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["numTurns"] as? Int == 2)
+    }
+
     @Test("encodes thread/name/set requests with the expected method and params payload")
     func encodesThreadSetNameRequest() throws {
         let payload = try protocolLayer.makeThreadSetNameRequest(

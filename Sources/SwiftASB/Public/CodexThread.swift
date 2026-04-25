@@ -2332,6 +2332,29 @@ public struct CodexThread: Sendable {
         try await appServer.compactThread(.init(threadID: id))
     }
 
+    public func rollbackLastTurns(_ count: Int) async throws -> CodexThread {
+        let threadInfo = try await appServer.rollbackThread(
+            .init(threadID: id, numberOfTurns: count)
+        )
+        let events = await appServer.threadEventStream(threadID: id)
+        return CodexThread(
+            appServer: appServer,
+            session: .init(
+                approvalPolicy: approvalPolicy,
+                approvalsReviewer: approvalsReviewer,
+                currentDirectoryPath: currentDirectoryPath,
+                instructionSources: instructionSources,
+                model: model,
+                modelProvider: modelProvider,
+                reasoningEffort: reasoningEffort,
+                sandboxPolicy: sandboxPolicy,
+                serviceTier: serviceTier,
+                thread: threadInfo
+            ),
+            events: events
+        )
+    }
+
     public func setName(_ name: String) async throws {
         try await appServer.setThreadName(.init(threadID: id, name: name))
     }
