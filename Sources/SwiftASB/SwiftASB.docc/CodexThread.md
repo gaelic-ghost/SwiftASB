@@ -30,12 +30,12 @@ Rollback returns a refreshed thread handle. SwiftASB records a local rollback ma
 Use the non-UI history helpers when a caller needs completed turn snapshots without binding to an observable:
 
 - ``readRecentTurnHistoryWindow(limit:)`` reads the newest local completed turns.
-- ``readOlderTurnHistoryWindow(beforeTurnID:limit:)`` and ``readNewerTurnHistoryWindow(afterTurnID:limit:)`` page from a known boundary.
-- ``windowAroundTurn(_:before:after:)`` and ``windowAroundItem(_:before:after:)`` return centered local windows for inspectors.
+- ``readOlderTurnHistoryWindow(olderThan:limit:)`` and ``readNewerTurnHistoryWindow(newerThan:limit:)`` page from a known boundary.
+- ``windowAroundTurn(_:limit:)`` and ``windowAroundItem(_:limit:)`` return centered local windows for inspectors.
 
 ## Observable Companions
 
-Use ``makeDashboard()`` for thread-level current state, ``makeRecentTurns(limit:cachePolicy:)`` for a turn-centric view, ``makeRecentFiles(limit:)`` for a file-change view, and ``makeRecentCommands(limit:)`` for a command-output view.
+Use ``makeDashboard()`` for thread-level current state, ``makeRecentTurns(limit:cachePolicy:)`` for a turn-centric view, ``makeRecentFiles(limit:cachePolicy:)`` for a file-change view, and ``makeRecentCommands(limit:cachePolicy:)`` for a command-output view.
 
 These companions are separate on purpose. `RecentTurns`, `RecentFiles`, and `RecentCommands` preserve domain-specific behavior that a mixed activity feed would flatten too early.
 
@@ -59,7 +59,7 @@ These companions are separate on purpose. `RecentTurns`, `RecentFiles`, and `Rec
 ### Turns
 
 - ``startTurn(_:)``
-- ``startTextTurn(_:approvalPolicy:approvalsReviewer:sandboxPolicy:model:reasoningEffort:reasoningSummary:additionalWritableRoots:)``
+- ``startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)``
 - ``TurnRequest``
 
 ### Thread Actions
@@ -75,12 +75,12 @@ These companions are separate on purpose. `RecentTurns`, `RecentFiles`, and `Rec
 - ``readTurnHistory(turnID:)``
 - ``readRecentTurnHistoryWindow(limit:)``
 - ``readRecentTurnHistory(limit:)``
-- ``readOlderTurnHistoryWindow(beforeTurnID:limit:)``
-- ``readOlderTurnHistory(beforeTurnID:limit:)``
-- ``readNewerTurnHistoryWindow(afterTurnID:limit:)``
-- ``readNewerTurnHistory(afterTurnID:limit:)``
-- ``windowAroundTurn(_:before:after:)``
-- ``windowAroundItem(_:before:after:)``
+- ``readOlderTurnHistoryWindow(olderThan:limit:)``
+- ``readOlderTurnHistory(olderThan:limit:)``
+- ``readNewerTurnHistoryWindow(newerThan:limit:)``
+- ``readNewerTurnHistory(newerThan:limit:)``
+- ``windowAroundTurn(_:limit:)``
+- ``windowAroundItem(_:limit:)``
 
 ### Observable Companions
 
@@ -88,11 +88,12 @@ These companions are separate on purpose. `RecentTurns`, `RecentFiles`, and `Rec
 - ``Dashboard``
 - ``makeRecentTurns(limit:cachePolicy:)``
 - ``RecentTurns``
-- ``makeRecentFiles(limit:)``
+- ``makeRecentFiles(limit:cachePolicy:)``
 - ``RecentFiles``
-- ``makeRecentCommands(limit:)``
+- ``makeRecentCommands(limit:cachePolicy:)``
 - ``RecentCommands``
 
 ### Interactive Requests
 
-- ``respond(to:with:)``
+- ``respond(to:with:)-(CodexApprovalRequest,_)``
+- ``respond(to:with:)-(CodexElicitationRequest,_)``

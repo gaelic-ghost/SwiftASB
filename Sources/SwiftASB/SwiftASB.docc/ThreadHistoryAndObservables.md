@@ -54,10 +54,10 @@ Use these for "what is happening now" UI. Use history windows or closed turns fo
 - ``CodexThread/HistoryWindow``
 - ``CodexThread/readTurnHistory(turnID:)``
 - ``CodexThread/readRecentTurnHistoryWindow(limit:)``
-- ``CodexThread/readOlderTurnHistoryWindow(beforeTurnID:limit:)``
-- ``CodexThread/readNewerTurnHistoryWindow(afterTurnID:limit:)``
-- ``CodexThread/windowAroundTurn(_:before:after:)``
-- ``CodexThread/windowAroundItem(_:before:after:)``
+- ``CodexThread/readOlderTurnHistoryWindow(olderThan:limit:)``
+- ``CodexThread/readNewerTurnHistoryWindow(newerThan:limit:)``
+- ``CodexThread/windowAroundTurn(_:limit:)``
+- ``CodexThread/windowAroundItem(_:limit:)``
 
 ### Observable Companions
 
