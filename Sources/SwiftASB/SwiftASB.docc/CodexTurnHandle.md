@@ -9,7 +9,7 @@ Observe and control one active Codex turn.
 Use the handle for work that only makes sense while the turn is active:
 
 - observe streamed turn events through ``events``
-- answer approval or elicitation requests with ``respond(to:with:)``
+- answer approval requests with ``respond(to:with:)-(CodexApprovalRequest,_)`` or elicitation requests with ``respond(to:with:)-(CodexElicitationRequest,_)``
 - send steering input with ``steer(_:)`` or ``steerText(_:)``
 - interrupt the turn with ``interrupt()``
 - create a live current-state mirror with ``makeMinimap()``
@@ -53,7 +53,8 @@ The minimap is intentionally a live mirror, not a transcript. Use ``close()`` or
 
 ### Active-Turn Control
 
-- ``respond(to:with:)``
+- ``respond(to:with:)-(CodexApprovalRequest,_)``
+- ``respond(to:with:)-(CodexElicitationRequest,_)``
 - ``steer(_:)``
 - ``steerText(_:)``
 - ``interrupt()``

@@ -384,6 +384,7 @@ swift build
 - Keep generated wire code internal and treat the public wrappers as the actual package surface.
 - Keep temporary codegen artifacts under `codex-schemas/` and `tmp/` untracked unless a maintainer explicitly decides otherwise.
 - Keep `Sources/SwiftASB/SwiftASB.docc/` aligned with the supported public handles, thread lifecycle, local history helpers, and generated-wire boundary when the public API changes.
+- Keep `.spi.yml` aligned with the package products that should be documented by Swift Package Index.
 
 ### Validation
 
@@ -393,6 +394,14 @@ Run these first:
 swift build
 swift test
 ```
+
+Validate DocC with Xcode's documentation builder:
+
+```bash
+xcodebuild docbuild -scheme SwiftASB -destination generic/platform=macOS -derivedDataPath tmp/xcode-docc/DerivedData
+```
+
+That writes the generated archive under `tmp/xcode-docc/DerivedData/Build/Products/Debug/SwiftASB.doccarchive`. The `tmp/` directory is intentionally untracked.
 
 Useful opt-in live checks:
 
@@ -413,6 +422,7 @@ The approval-path probe is especially non-deterministic today and should be read
 
 ```text
 .
+├── .spi.yml
 ├── Package.swift
 ├── README.md
 ├── ROADMAP.md
