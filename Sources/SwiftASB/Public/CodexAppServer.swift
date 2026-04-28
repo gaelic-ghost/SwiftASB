@@ -147,6 +147,7 @@ public actor CodexAppServer {
         public var config: [String: JSONValue]?
         public var currentDirectoryPath: String?
         public var developerInstructions: String?
+        public var excludeTurns: Bool?
         public var model: String?
         public var modelProvider: String?
         public var personality: Personality?
@@ -163,6 +164,7 @@ public actor CodexAppServer {
             config: [String: JSONValue]? = nil,
             currentDirectoryPath: String? = nil,
             developerInstructions: String? = nil,
+            excludeTurns: Bool? = nil,
             model: String? = nil,
             modelProvider: String? = nil,
             personality: Personality? = nil,
@@ -177,6 +179,7 @@ public actor CodexAppServer {
             self.config = config
             self.currentDirectoryPath = currentDirectoryPath
             self.developerInstructions = developerInstructions
+            self.excludeTurns = excludeTurns
             self.model = model
             self.modelProvider = modelProvider
             self.personality = personality
@@ -194,6 +197,7 @@ public actor CodexAppServer {
         public var currentDirectoryPath: String?
         public var developerInstructions: String?
         public var ephemeral: Bool?
+        public var excludeTurns: Bool?
         public var model: String?
         public var modelProvider: String?
         public var personality: Personality?
@@ -211,6 +215,7 @@ public actor CodexAppServer {
             currentDirectoryPath: String? = nil,
             developerInstructions: String? = nil,
             ephemeral: Bool? = nil,
+            excludeTurns: Bool? = nil,
             model: String? = nil,
             modelProvider: String? = nil,
             personality: Personality? = nil,
@@ -226,6 +231,7 @@ public actor CodexAppServer {
             self.currentDirectoryPath = currentDirectoryPath
             self.developerInstructions = developerInstructions
             self.ephemeral = ephemeral
+            self.excludeTurns = excludeTurns
             self.model = model
             self.modelProvider = modelProvider
             self.personality = personality
@@ -3768,6 +3774,7 @@ private extension CodexAppServer.ThreadResumeRequest {
             config: config?.mapValues(\.wireValue),
             cwd: currentDirectoryPath,
             developerInstructions: developerInstructions,
+            excludeTurns: excludeTurns,
             model: model,
             modelProvider: modelProvider,
             personality: personality?.wireValue,
@@ -3789,6 +3796,7 @@ private extension CodexAppServer.ThreadForkRequest {
             cwd: currentDirectoryPath,
             developerInstructions: developerInstructions,
             ephemeral: ephemeral,
+            excludeTurns: excludeTurns,
             model: model,
             modelProvider: modelProvider,
             personality: personality?.wireValue,

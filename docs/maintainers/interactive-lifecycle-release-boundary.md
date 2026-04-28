@@ -256,11 +256,17 @@ notification families at all:
   families
 - `thread/turns/list` is public through hand-owned history paging APIs even
   though the generated params and response stay internal
+- `ThreadResumeRequest.excludeTurns` and `ThreadForkRequest.excludeTurns` are
+  public because they let callers request lightweight resume/fork metadata when
+  they plan to hydrate turn history through `thread/turns/list`
 - `permissionProfile` is generated and decoded internally, but the public API
   still accepts the existing hand-owned sandbox and approval settings until a
-  deliberate permission-profile model is designed
-- device-key, marketplace-removal, and add-credits email endpoints remain
-  outside the first lifecycle boundary
+  deliberate permission-profile model is designed. The v0.125 tagged
+  `permissionProfile` schema is supported through a hand-owned compatibility
+  decoder while the documented compatibility window still includes older CLI
+  minors.
+- device-key, marketplace-removal, marketplace-upgrade, account-provider, and
+  add-credits email endpoints remain outside the first lifecycle boundary
 
 That means the first interactive lifecycle boundary is defined by both
 notification promotion and server-request routing, not by notifications alone.
@@ -315,6 +321,8 @@ The current remaining promotion questions are therefore narrower than before:
    package own instead of leaking generated wire shapes?
 3. should `permissionProfile` become a public request/defaults model, or stay
    internal while the current sandbox and approval request models are enough?
+   The current decoder shim is temporary and should be removed once the rolling
+   support window no longer includes the older loose shape.
 4. warning, guardian-warning, model-verification, and guardian denied-action
    families need a diagnostics/control story before they graduate from internal
    generated scaffolding.
