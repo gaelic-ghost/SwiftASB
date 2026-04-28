@@ -939,7 +939,7 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
-        "reaches deterministic command approval state through the raw real app-server",
+        "completes deterministic command approval through the raw real app-server",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
                 || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_PROBE_TESTS"] == "1",
@@ -947,7 +947,7 @@ struct CodexAppServerLiveIntegrationTests {
         ),
         .timeLimit(.minutes(2))
     )
-    func reachesDeterministicCommandApprovalStateThroughRawRealAppServer() async throws {
+    func completesDeterministicCommandApprovalThroughRawRealAppServer() async throws {
         let mockResponses = try await MockResponsesServer(
             responses: [
                 .shellCommand(callID: "approval-shell-call", command: "/usr/bin/perl -e 'print 42, qq(\\n)'"),
@@ -1082,17 +1082,22 @@ struct CodexAppServerLiveIntegrationTests {
                 expectedID: turnRequestID
             )
 
-            let approvalState = try await awaitRawCommandApprovalState(
+            let approvalResult = try await awaitRawCommandApprovalCompletion(
                 eventIterator: &eventIterator,
                 protocolLayer: protocolLayer,
+                transport: transport,
                 threadID: threadResponse.thread.id,
                 turnID: turnResponse.turn.id,
-                operation: "waiting for deterministic raw command approval state"
+                operation: "waiting for deterministic raw command approval completion"
             )
-            #expect(approvalState.threadID == threadResponse.thread.id)
-            #expect(approvalState.sawCommandItem)
-            #expect(approvalState.sawWaitingOnApproval)
-            #expect(mockResponses.requestCount >= 1)
+            #expect(approvalResult.threadID == threadResponse.thread.id)
+            #expect(approvalResult.turnID == turnResponse.turn.id)
+            #expect(approvalResult.sawCommandItem)
+            #expect(approvalResult.sawWaitingOnApproval)
+            #expect(approvalResult.sawApprovalRequest)
+            #expect(approvalResult.sawServerRequestResolved)
+            #expect(approvalResult.completion.turn.status == .completed)
+            #expect(mockResponses.requestCount >= 2)
 
             await transport.stop()
         } catch {
@@ -2195,20 +2200,27 @@ private func completeLiveTurnAcceptingApprovals(
     throw LiveIntegrationError.timedOut(operation: operation, seconds: timeoutSeconds)
 }
 
-private struct RawCommandApprovalState: Equatable, Sendable {
+private struct RawCommandApprovalResult: Equatable, Sendable {
+    let completion: CodexWireTurnCompletedNotification
     let threadID: String
+    let turnID: String
     let sawCommandItem: Bool
+    let sawApprovalRequest: Bool
+    let sawServerRequestResolved: Bool
     let sawWaitingOnApproval: Bool
 }
 
-private func awaitRawCommandApprovalState(
+private func awaitRawCommandApprovalCompletion(
     eventIterator: inout AsyncStream<CodexRPCServerEvent>.Iterator,
     protocolLayer: CodexAppServerProtocol,
+    transport: CodexAppServerTransport,
     threadID: String,
     turnID: String,
     operation: String
-) async throws -> RawCommandApprovalState {
+) async throws -> RawCommandApprovalResult {
     var sawCommandItem = false
+    var sawApprovalRequest = false
+    var sawServerRequestResolved = false
     var observedEvents: [String] = []
 
     while let serverEvent = await eventIterator.next() {
@@ -2226,15 +2238,28 @@ private func awaitRawCommandApprovalState(
         case let .threadStatusChanged(status)
             where status.threadID == threadID
                 && status.status.activeFlags?.contains(.waitingOnApproval) == true:
-            return .init(
-                threadID: threadID,
-                sawCommandItem: sawCommandItem,
-                sawWaitingOnApproval: true
+            continue
+        case let .commandExecutionApprovalRequested(request)
+            where request.threadID == threadID && request.turnID == turnID:
+            sawApprovalRequest = true
+            let responsePayload = try protocolLayer.makeServerResponse(
+                id: request.requestID,
+                result: RawCommandExecutionApprovalResponse(decision: "accept")
             )
+            try await transport.sendResponse(responsePayload, requestID: request.requestID)
+        case let .serverRequestResolved(notification)
+            where notification.threadID == threadID:
+            sawServerRequestResolved = true
         case let .turnCompleted(completed)
             where completed.threadID == threadID && completed.turn.id == turnID:
-            throw LiveIntegrationError.eventStreamEnded(
-                operation: "\(operation): the turn completed before waitingOnApproval; observedEvents=\(observedEvents)"
+            return .init(
+                completion: completed,
+                threadID: threadID,
+                turnID: turnID,
+                sawCommandItem: sawCommandItem,
+                sawApprovalRequest: sawApprovalRequest,
+                sawServerRequestResolved: sawServerRequestResolved,
+                sawWaitingOnApproval: observedEvents.contains { $0.contains("waitingOnApproval") }
             )
         default:
             continue
@@ -2242,6 +2267,10 @@ private func awaitRawCommandApprovalState(
     }
 
     throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
+}
+
+private struct RawCommandExecutionApprovalResponse: Encodable {
+    let decision: String
 }
 
 private func acceptanceResponse(for request: CodexApprovalRequest) -> CodexApprovalResponse {

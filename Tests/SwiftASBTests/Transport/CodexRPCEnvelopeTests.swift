@@ -52,6 +52,24 @@ struct CodexRPCEnvelopeTests {
         #expect(classified == .serverEvent(.request(id: .int(7), method: "approval/request", payload: expectedParamsPayload)))
     }
 
+    @Test("classifies zero as an integer request ID instead of a boolean")
+    func classifiesZeroRequestID() throws {
+        let payload = #"{"id":0,"method":"item/commandExecution/requestApproval","params":{"threadId":"thread-123"}}"#.data(using: .utf8)!
+        let expectedParamsPayload = #"{"threadId":"thread-123"}"#.data(using: .utf8)!
+
+        let classified = try CodexRPCEnvelope.classifyInboundMessage(payload)
+
+        #expect(
+            classified == .serverEvent(
+                .request(
+                    id: .int(0),
+                    method: "item/commandExecution/requestApproval",
+                    payload: expectedParamsPayload
+                )
+            )
+        )
+    }
+
     @Test("rejects envelopes that have neither method nor ID")
     func rejectsMeaninglessEnvelope() throws {
         let payload = #"{"params":{"ok":true}}"#.data(using: .utf8)!

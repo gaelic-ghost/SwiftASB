@@ -170,14 +170,19 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   `[features] request_permissions_tool = true` and emits a `request_permissions`
   tool call. That gives SwiftASB a reproducible protocol path while still
   launching the real installed `codex app-server`.
-- SwiftASB now has opt-in real-app-server coverage for the deterministic setup
-  path: an isolated `CODEX_HOME`, local mock Responses provider, command item,
-  and `waitingOnApproval` thread state. The remaining gap is live delivery and
-  response handling for the raw approval JSON-RPC request through SwiftASB's
-  transport/public-client stack. Upstream app-server protocol structs are
-  intentionally JSON-RPC-like rather than strict JSON-RPC 2.0 and do not send or
-  expect a `jsonrpc` version member, so SwiftASB should keep generated outbound
-  envelopes aligned with that shape unless upstream changes the wire contract.
+- SwiftASB now has opt-in real-app-server coverage for the deterministic command
+  approval path: an isolated `CODEX_HOME`, local mock Responses provider,
+  command item, `waitingOnApproval` thread state, raw
+  `item/commandExecution/requestApproval` JSON-RPC delivery, SwiftASB's
+  response, `serverRequest/resolved`, command completion, and final
+  `turn/completed`. The root cause of the former gap was local: the JSON-RPC
+  envelope parser treated numeric request id `0` as a boolean because
+  `JSONSerialization` bridges JSON numbers through `NSNumber`. SwiftASB now
+  checks CoreFoundation boolean identity before accepting numeric request IDs.
+  Upstream app-server protocol structs are intentionally JSON-RPC-like rather
+  than strict JSON-RPC 2.0 and do not send or expect a `jsonrpc` version member,
+  so SwiftASB should keep generated outbound envelopes aligned with that shape
+  unless upstream changes the wire contract.
 - `approvalPolicy: .onRequest` plus `approvalsReviewer: .user` does not force
   approval requests for workspace-write command, file-create, or file-edit
   turns in the current live runtime. The approval/server-request probe records
@@ -222,18 +227,16 @@ of the public contract because consumers are wrapping a fast-moving local
 runtime.
 
 - Approval/server-request completion now has deterministic SwiftASB-owned
-  coverage and a focused live app-server probe. Fake-transport public-client
-  tests prove typed approval events surface through `CodexTurnHandle`,
-  `respond(...)` writes the expected JSON-RPC result, `serverRequest/resolved`
-  clears the route, and wrong-surface, wrong-kind, already-resolved, and
-  wrong-thread responses fail with descriptive errors. The opt-in live raw
-  mock-Responses probe still proves the real v0.125.0 app-server can reach a
-  command item plus `waitingOnApproval`, but a raw completion test is blocked by
-  current app-server behavior: under the isolated mock Responses provider, the
-  stream reaches `waitingOnApproval` and then ends before SwiftASB observes an
-  `item/commandExecution/requestApproval` JSON-RPC request to answer. Track that
-  as an app-server compatibility finding before making live approval completion
-  a required release gate.
+  coverage and a focused live app-server completion probe. Fake-transport
+  public-client tests prove typed approval events surface through
+  `CodexTurnHandle`, `respond(...)` writes the expected JSON-RPC result,
+  `serverRequest/resolved` clears the route, and wrong-surface, wrong-kind,
+  already-resolved, and wrong-thread responses fail with descriptive errors. The
+  opt-in live raw mock-Responses probe now proves the real v0.125.0 app-server
+  can reach a command item plus `waitingOnApproval`, deliver an answerable
+  `item/commandExecution/requestApproval` request with numeric id `0`, accept
+  SwiftASB's response, emit `serverRequest/resolved`, complete the command, make
+  the follow-up mock Responses call, and finish the turn.
 - Malformed server-originated request coverage now covers missing-params
   notifications, unknown server-request methods, unsupported request ID types,
   malformed command approval, malformed file-change approval, malformed
@@ -504,7 +507,7 @@ In Progress
 - [x] Add opt-in live rollback coverage using a disposable thread with isolated harmless turns and explicit local rollback-marker assertions.
 - [x] Add opt-in real-app-server coverage for deterministic approval setup using an isolated `CODEX_HOME`, a local mock Responses provider, and a real command item reaching `waitingOnApproval`.
 - [x] Extend deterministic SwiftASB-owned approval coverage through typed public request delivery, SwiftASB response handling, route resolution, and response guardrails.
-- [ ] Track the v0.125.0 mock-Responses live approval finding: the raw real app-server reaches `waitingOnApproval` but ends the stream before emitting an answerable `item/commandExecution/requestApproval` request.
+- [x] Extend opt-in raw real-app-server approval coverage through `item/commandExecution/requestApproval`, SwiftASB response handling, `serverRequest/resolved`, command completion, and `turn/completed`.
 - [x] Tighten recent-history helper behavior around live `thread/turns/list` boundaries for ephemeral and pre-materialized threads.
 - [x] Add cancellation or interruption flows that are part of the intended first public lifecycle.
 - [x] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
