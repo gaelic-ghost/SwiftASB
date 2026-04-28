@@ -1097,6 +1097,36 @@ struct CodexAppServerProtocolTests {
         }
     }
 
+    @Test("ignores unknown server-originated request methods")
+    func ignoresUnknownServerRequestMethods() throws {
+        let payload = Data(#"{"threadId":"thread-123"}"#.utf8)
+
+        let event = try protocolLayer.decodeServerEvent(
+            .request(
+                id: .string("unknown-1"),
+                method: "unknown/request",
+                payload: payload
+            )
+        )
+
+        #expect(event == nil)
+    }
+
+    @Test("throws protocol errors for malformed server-originated request payloads")
+    func rejectsMalformedServerRequestPayloads() throws {
+        let missingRequiredFieldsPayload = Data(#"{"itemId":"item-command-1"}"#.utf8)
+
+        #expect(throws: CodexProtocolError.self) {
+            try protocolLayer.decodeServerEvent(
+                .request(
+                    id: .string("approval-1"),
+                    method: "item/commandExecution/requestApproval",
+                    payload: missingRequiredFieldsPayload
+                )
+            )
+        }
+    }
+
     @Test("encodes JSON-RPC server request responses with the expected id and result payload")
     func encodesServerResponses() throws {
         struct ResultPayload: Encodable {

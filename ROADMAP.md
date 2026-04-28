@@ -215,6 +215,56 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   request delivery plus `serverRequest/resolved` as the highest-priority
   remaining coverage gap.
 
+### Test Coverage Gap Register
+
+Keep this register current while the package is below `1.0.0`; tests are part
+of the public contract because consumers are wrapping a fast-moving local
+runtime.
+
+- Approval/server-request completion is the highest-value missing path.
+  SwiftASB can now drive the real installed app-server to a command item and
+  `waitingOnApproval` through an isolated `CODEX_HOME` plus mock Responses
+  provider, but it still needs a red/green test that observes the raw
+  `item/commandExecution/requestApproval` JSON-RPC request, answers through
+  SwiftASB, and observes `serverRequest/resolved` plus turn completion. This
+  should cover command approval first, then file-change approval, permissions
+  request approval, and MCP elicitation as separate fixtures once the command
+  path is stable.
+- The public-client deterministic approval path is still missing. The current
+  deterministic coverage uses raw transport/protocol calls. Consumers use
+  `CodexAppServer`, `CodexThread`, and `CodexTurnHandle`, so the same local mock
+  Responses provider should eventually prove that typed public events surface,
+  `respond(...)` sends the expected result, and the minimap/dashboard mirrors
+  reflect the blocked and resolved states.
+- Malformed server-originated request coverage is too thin. Add focused tests
+  for missing `params`, unknown server-request methods, unsupported request ID
+  types, response attempts after a request route is gone, and request/resolution
+  IDs that do not match the active turn. Started in
+  `tests/coverage-gap-roadmap` with unknown-method, malformed command-approval
+  payload, missing-params notification, version-tolerant envelope, and invalid
+  request-id coverage. Remaining cases should cover route disappearance and
+  active-turn mismatch at the public-client layer. These should produce
+  descriptive errors or ignored events intentionally rather than ambiguous
+  stream loss.
+- Live history coverage is still indirect. `thread/read` and
+  `thread/turns/list` have fake-transport and protocol coverage, but there is
+  no focused live wrapper proving that a real non-ephemeral stored thread can be
+  read and paged after materialization. That wrapper should remain opt-in and
+  should use harmless text-only turns.
+- Transport edge coverage should be tightened around the line-framed stdio
+  contract. Add tests for versionless app-server envelopes, optional tolerated
+  `jsonrpc` fields, boolean/fractional/object request IDs, notifications without
+  `params`, partial line draining, malformed stdout followed by later valid
+  lines, duplicate response IDs, pending responses on process exit, and stderr
+  retention behavior. Started in `tests/coverage-gap-roadmap` with optional
+  `jsonrpc`, missing `params`, and invalid request-id coverage.
+- Schema drift guardrails should become fixture-driven. The v0.125 permission
+  profile compatibility cases are useful, but the promoted generated wire
+  snapshot needs a small suite of schema-derived fixture payloads for important
+  request, response, notification, and server-request families so additive
+  upstream fields are noticed deliberately and public/observable/internal
+  classification stays fresh.
+
 ## Proposed Next Release Slice
 
 Treat the next release candidate as a "first interactive lifecycle" release, not
