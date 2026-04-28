@@ -620,7 +620,8 @@ struct CodexAppServerLiveIntegrationTests {
         "probes live approval-path behavior for shell commands",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
-                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_TESTS"] == "1",
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_PROBE_TESTS"] == "1",
             "Requires explicit opt-in because this test launches the local Codex CLI."
         ),
         .timeLimit(.minutes(2))

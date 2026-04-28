@@ -174,9 +174,10 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   path: an isolated `CODEX_HOME`, local mock Responses provider, command item,
   and `waitingOnApproval` thread state. The remaining gap is live delivery and
   response handling for the raw approval JSON-RPC request through SwiftASB's
-  transport/public-client stack; protocol tests now require JSON-RPC response
-  envelopes to include `jsonrpc = "2.0"` so the response shape is ready once the
-  live delivery issue is isolated.
+  transport/public-client stack. Upstream app-server protocol structs are
+  intentionally JSON-RPC-like rather than strict JSON-RPC 2.0 and do not send or
+  expect a `jsonrpc` version member, so SwiftASB should keep generated outbound
+  envelopes aligned with that shape unless upstream changes the wire contract.
 - `approvalPolicy: .onRequest` plus `approvalsReviewer: .user` does not force
   approval requests for workspace-write command, file-create, or file-edit
   turns in the current live runtime. The approval/server-request probe records
@@ -205,6 +206,14 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   diagnostic report under `tmp/live-codex-reports/` so maintainers can inspect
   observed call kinds, approval kinds, recent-file snapshots, and recent-command
   snapshots after a real CLI run.
+- Test coverage audit, 2026-04-28: protocol encode/decode tests should assert
+  the app-server's JSON-RPC-like envelope shape directly. The upstream protocol
+  does not include `jsonrpc = "2.0"` on requests, notifications, or responses,
+  and `initialized` has no `params` field. Keep the default fake-transport tests
+  responsible for public-client routing and history behavior, keep opt-in live
+  tests responsible for installed-runtime behavior, and treat raw approval
+  request delivery plus `serverRequest/resolved` as the highest-priority
+  remaining coverage gap.
 
 ## Proposed Next Release Slice
 

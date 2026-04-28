@@ -836,16 +836,13 @@ extension CodexProtocolMCPServerElicitationRequest {
 }
 
 private struct JSONRPCRequestEnvelope<Params: Encodable>: Encodable {
-    let jsonrpc = "2.0"
     let id: CodexRPCRequestID
     let method: CodexAppServerProtocol.Method
     let params: Params
 }
 
 private struct JSONRPCNotificationEnvelope: Encodable {
-    let jsonrpc = "2.0"
     let method: CodexAppServerProtocol.Method
-    let params: [String: String] = [:]
 }
 
 private struct JSONRPCResponseEnvelope<Result: Decodable>: Decodable {
@@ -854,7 +851,6 @@ private struct JSONRPCResponseEnvelope<Result: Decodable>: Decodable {
 }
 
 private struct JSONRPCResultEnvelope<Result: Encodable>: Encodable {
-    let jsonrpc = "2.0"
     let id: CodexRPCRequestID
     let result: Result
 }
