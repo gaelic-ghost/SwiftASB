@@ -253,6 +253,14 @@ runtime.
   recent-stderr retention, malformed stdout followed by a later valid response,
   and late duplicate response lines after a pending request has already been
   fulfilled.
+- Follow-up: `CodexAppServerTransportTests.failsPendingResponsesWithProcessTermination`
+  has shown a timing-sensitive classification flake in full-suite runs. The
+  intended assertion is `CodexTransportError.processTerminated`, but one
+  review run observed `unexpectedEndOfStream` with the expected retained stderr
+  lines instead; the same focused test and the next full-suite run passed. We
+  should tighten the transport's subprocess-exit versus stdout-end ordering, or
+  narrow the test assertion to the stable consumer contract if both errors are
+  legitimately possible from the same child-process timing window.
 - Schema drift guardrails now include generated-wire fixture payloads for
   `thread/read`, `thread/turns/list`, command-execution thread items,
   active thread status flags, additive thread fields, and
