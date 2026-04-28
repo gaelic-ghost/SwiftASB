@@ -25,6 +25,12 @@ let window = try await thread.windowAroundTurn(
 
 The history helpers are intentionally local-history reads. They expose what SwiftASB has persisted and reconciled so far without promising a full transcript-search or remote cursor contract.
 
+## App-Server History Boundaries
+
+Recent observable startup is designed for UI surfaces that can render an initially empty history rail while live events arrive. If the live app-server reports that `thread/turns/list` is unavailable because a thread is ephemeral, or because a non-ephemeral thread has not materialized its first stored user turn yet, ``CodexThread/makeRecentTurns(limit:cachePolicy:)``, ``CodexThread/makeRecentFiles(limit:cachePolicy:)``, and ``CodexThread/makeRecentCommands(limit:cachePolicy:)`` start with an empty local-only view.
+
+That degraded startup path is limited to the known history-unavailable responses. Direct remote paging through ``CodexAppServer/listThreadTurns(_:)`` still reports the app-server error, and unexpected `thread/turns/list` failures still remain failures when creating recent observables.
+
 ## Recent Turns
 
 ``CodexThread/RecentTurns`` is a turn-centric observable for chat UIs, inspectors, and history rails. It prewarms from local history, expands older or newer whole-turn windows, tracks visible turn IDs and scroll signals, and slims older low-value payloads when the cache needs room.
