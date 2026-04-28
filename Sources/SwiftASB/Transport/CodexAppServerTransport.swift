@@ -280,6 +280,9 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
     private func handleStandardOutputChunk(_ chunk: Data) {
         guard !hasFinished else { return }
         guard !chunk.isEmpty else {
+            if process?.isRunning == true {
+                return
+            }
             handleStandardOutputEOF()
             return
         }

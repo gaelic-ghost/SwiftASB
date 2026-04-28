@@ -58,6 +58,8 @@ Default tests use fake transports and do not require a live Codex subprocess. Li
 
 The live approval-path probe is observational. The current Codex runtime does not reliably force an approval request for a chosen prompt, so that test can complete without observing an approval request and still be useful.
 
+The deterministic app-server approval test uses a different shape. It still launches the installed `codex app-server`, but it seeds an isolated `CODEX_HOME` whose `model_provider` points at a local mock Responses-compatible endpoint. The mock endpoint emits an upstream-style shell-command tool call, so the real app-server reaches a command item plus `waitingOnApproval` state without calling the hosted OpenAI API. This path does not require an OpenAI API key and should be the preferred regression coverage for deterministic approval setup. The remaining open gap is carrying that same live path through delivery of the raw JSON-RPC request, SwiftASB's response, and `serverRequest/resolved`.
+
 The live file-scenario probe is also observational around approval shape, but deterministic around filesystem outcome. It creates an isolated temporary workspace, asks the real Codex CLI to create, edit, and delete files across multiple turns, accepts approval requests when the runtime raises them, and verifies the final files on disk.
 
 The live rollback probe uses a disposable non-ephemeral thread with harmless text-only turns. It verifies that `rollbackLastTurns(1)` succeeds against the real app-server and that SwiftASB records the local rollback marker for the removed trailing turn.
@@ -103,10 +105,17 @@ env SWIFTASB_ENABLE_LIVE_CODEX_CAPABILITY_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_THREAD_MANAGEMENT_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SINGLE_TURN_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_CROSS_THREAD_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_TESTS=1 swift test
+env SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_PROBE_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_FILE_SCENARIO_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_ROLLBACK_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SAME_THREAD_TESTS=1 swift test
+```
+
+Run only the deterministic approval/server-request coverage and the exploratory
+approval probe:
+
+```bash
+scripts/run-live-codex-approval-probe.sh
 ```
 
 Run only the multi-turn live file scenario:

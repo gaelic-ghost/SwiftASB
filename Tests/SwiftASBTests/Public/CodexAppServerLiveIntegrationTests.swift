@@ -845,6 +845,169 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "reaches deterministic command approval state through the raw real app-server",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_PROBE_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI."
+        ),
+        .timeLimit(.minutes(2))
+    )
+    func reachesDeterministicCommandApprovalStateThroughRawRealAppServer() async throws {
+        let mockResponses = try await MockResponsesServer(
+            responses: [
+                .shellCommand(callID: "approval-shell-call", command: "/usr/bin/perl -e 'print 42, qq(\\n)'"),
+                .assistantMessage("APPROVAL_ACCEPTED_DONE"),
+            ]
+        )
+        defer { mockResponses.stop() }
+
+        let harness = try LiveCodexHarness(
+            configMode: .mockResponses(baseURL: mockResponses.baseURL.absoluteString)
+        )
+        defer { harness.cleanup() }
+
+        let transport = CodexAppServerTransport(
+            configuration: .init(
+                codexExecutableURL: harness.codexExecutableURL,
+                currentDirectoryURL: harness.rootDirectoryURL,
+                environment: harness.configuration.environment
+            )
+        )
+        let protocolLayer = CodexAppServerProtocol()
+        let serverEvents = await transport.serverEvents()
+        var eventIterator = serverEvents.makeAsyncIterator()
+
+        do {
+            try await transport.start()
+
+            let initializeRequestID = CodexRPCRequestID.string("deterministic-approval-initialize")
+            let initializePayload = try protocolLayer.makeInitializeRequest(
+                id: initializeRequestID,
+                params: CodexWireInitializeParams(
+                    capabilities: CodexWireInitializeCapabilities(
+                        experimentalAPI: nil,
+                        optOutNotificationMethods: [
+                            "account/rateLimits/updated",
+                            "hook/completed",
+                            "hook/started",
+                            "mcpServer/startupStatus/updated",
+                        ]
+                    ),
+                    clientInfo: .init(
+                        name: "SwiftASBDeterministicApprovalTests",
+                        title: "SwiftASB Deterministic Approval Tests",
+                        version: "0.1.0"
+                    )
+                )
+            )
+            let initializeResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic approval initialize response"
+            ) {
+                try await transport.send(initializePayload, id: initializeRequestID)
+            }
+            _ = try protocolLayer.decodeInitializeResponse(
+                initializeResponsePayload,
+                expectedID: initializeRequestID
+            )
+
+            try await transport.sendNotification(
+                try protocolLayer.makeInitializedNotification(),
+                method: "initialized"
+            )
+
+            let threadRequestID = CodexRPCRequestID.string("deterministic-approval-thread")
+            let threadStartPayload = try protocolLayer.makeThreadStartRequest(
+                id: threadRequestID,
+                params: CodexWireThreadStartParams(
+                    approvalPolicy: .enumeration(.untrusted),
+                    approvalsReviewer: .user,
+                    baseInstructions: nil,
+                    config: nil,
+                    cwd: harness.approvalProbeWorkspace.path,
+                    developerInstructions: "Use the model-provided tool call exactly as emitted.",
+                    ephemeral: true,
+                    model: nil,
+                    modelProvider: nil,
+                    permissionProfile: nil,
+                    personality: nil,
+                    sandbox: .readOnly,
+                    serviceName: nil,
+                    serviceTier: nil,
+                    sessionStartSource: nil
+                )
+            )
+            let threadResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic approval thread/start response"
+            ) {
+                try await transport.send(threadStartPayload, id: threadRequestID)
+            }
+            let threadResponse = try protocolLayer.decodeThreadStartResponse(
+                threadResponsePayload,
+                expectedID: threadRequestID
+            )
+
+            let turnRequestID = CodexRPCRequestID.string("deterministic-approval-turn")
+            let turnStartPayload = try protocolLayer.makeTurnStartRequest(
+                id: turnRequestID,
+                params: CodexWireTurnStartParams(
+                    approvalPolicy: .enumeration(.untrusted),
+                    approvalsReviewer: .user,
+                    cwd: nil,
+                    effort: nil,
+                    input: [
+                        CodexWireUserInput(
+                            text: "Run the provided command, then report completion.",
+                            textElements: nil,
+                            type: .text,
+                            url: nil,
+                            path: nil,
+                            name: nil
+                        )
+                    ],
+                    model: nil,
+                    outputSchema: nil,
+                    permissionProfile: nil,
+                    personality: nil,
+                    sandboxPolicy: nil,
+                    serviceTier: nil,
+                    summary: CodexWireReasoningSummary.none,
+                    threadID: threadResponse.thread.id
+                )
+            )
+            let turnResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic approval turn/start response"
+            ) {
+                try await transport.send(turnStartPayload, id: turnRequestID)
+            }
+            let turnResponse = try protocolLayer.decodeTurnStartResponse(
+                turnResponsePayload,
+                expectedID: turnRequestID
+            )
+
+            let approvalState = try await awaitRawCommandApprovalState(
+                eventIterator: &eventIterator,
+                protocolLayer: protocolLayer,
+                threadID: threadResponse.thread.id,
+                turnID: turnResponse.turn.id,
+                operation: "waiting for deterministic raw command approval state"
+            )
+            #expect(approvalState.threadID == threadResponse.thread.id)
+            #expect(approvalState.sawCommandItem)
+            #expect(approvalState.sawWaitingOnApproval)
+            #expect(mockResponses.requestCount >= 1)
+
+            await transport.stop()
+        } catch {
+            await transport.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "runs a multi-turn live file mutation scenario",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
@@ -1063,6 +1226,7 @@ private final class LiveCodexHarness {
     enum ConfigMode {
         case standard
         case approvalProbe
+        case mockResponses(baseURL: String, requestPermissionsTool: Bool = false)
     }
 
     init(configMode: ConfigMode = .standard, fileManager: FileManager = .default) throws {
@@ -1237,6 +1401,34 @@ private final class LiveCodexHarness {
             [projects.\(tomlQuotedString(projectRootURL.path))]
             trust_level = "untrusted"
             """
+        case let .mockResponses(baseURL, requestPermissionsTool):
+            isolatedConfig = """
+            model = "mock-model"
+            approval_policy = "untrusted"
+            approvals_reviewer = "user"
+            sandbox_mode = "read-only"
+            model_provider = "mock_provider"
+            suppress_unstable_features_warning = true
+
+            [features]
+            apps = false
+            exec_permission_approvals = true
+            request_permissions_tool = \(requestPermissionsTool)
+
+            [apps._default]
+            enabled = false
+
+            [model_providers.mock_provider]
+            name = "SwiftASB Mock Responses Provider"
+            base_url = "\(baseURL)/v1"
+            wire_api = "responses"
+            request_max_retries = 0
+            stream_max_retries = 0
+            supports_websockets = false
+
+            [projects.\(tomlQuotedString(projectRootURL.path))]
+            trust_level = "untrusted"
+            """
         }
         try Data(isolatedConfig.utf8).write(to: configURL)
     }
@@ -1246,7 +1438,7 @@ private final class LiveCodexHarness {
         projectRootURL: URL
     ) -> LiveApprovalProbeReport.CodexConfig? {
         switch configMode {
-        case .standard:
+        case .standard, .mockResponses:
             nil
         case .approvalProbe:
             .init(
@@ -1440,6 +1632,234 @@ private struct LiveFileMutationScenarioReport: Codable, Equatable {
     let finalFiles: [FinalFile]
     let recentFiles: [RecentFile]
     let recentCommands: [RecentCommand]
+}
+
+private final class MockResponsesServer: @unchecked Sendable {
+    private let process: Process
+    private let rootDirectoryURL: URL
+    private let requestCountFileURL: URL
+
+    let baseURL: URL
+
+    var requestCount: Int {
+        guard let text = try? String(contentsOf: requestCountFileURL, encoding: .utf8) else {
+            return 0
+        }
+        return Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+    }
+
+    init(responses: [MockResponsesEventStream]) async throws {
+        let fileManager = FileManager.default
+        self.rootDirectoryURL = fileManager.temporaryDirectory
+            .appendingPathComponent("SwiftASB-MockResponses-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: rootDirectoryURL, withIntermediateDirectories: true)
+
+        let responsesFileURL = rootDirectoryURL.appendingPathComponent("responses.json")
+        self.requestCountFileURL = rootDirectoryURL.appendingPathComponent("request-count.txt")
+        let portFileURL = rootDirectoryURL.appendingPathComponent("port.txt")
+        let scriptURL = rootDirectoryURL.appendingPathComponent("mock_responses_server.py")
+
+        let responseData = try JSONEncoder().encode(responses.map(\.body))
+        try responseData.write(to: responsesFileURL)
+        try Data("0\n".utf8).write(to: requestCountFileURL)
+        try Data(Self.pythonScript.utf8).write(to: scriptURL)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = [
+            "python3",
+            scriptURL.path,
+            responsesFileURL.path,
+            portFileURL.path,
+            requestCountFileURL.path,
+        ]
+        self.process = process
+        try process.run()
+
+        let port = try await Self.waitForPortFile(portFileURL)
+        self.baseURL = URL(string: "http://127.0.0.1:\(port)")!
+    }
+
+    func stop() {
+        if process.isRunning {
+            process.terminate()
+            process.waitUntilExit()
+        }
+        try? FileManager.default.removeItem(at: rootDirectoryURL)
+    }
+
+    private static func waitForPortFile(_ portFileURL: URL) async throws -> Int {
+        let deadline = ContinuousClock.now + .seconds(5)
+        while ContinuousClock.now < deadline {
+            if let text = try? String(contentsOf: portFileURL, encoding: .utf8),
+               let port = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                return port
+            }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+
+        throw LiveIntegrationError.timedOut(
+            operation: "waiting for the local mock Responses server to report its port",
+            seconds: 5
+        )
+    }
+
+    private static let pythonScript = """
+    import json
+    import sys
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    responses_path, port_path, count_path = sys.argv[1:4]
+    with open(responses_path, "r", encoding="utf-8") as handle:
+        responses = json.load(handle)
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            return
+
+        def do_GET(self):
+            body = json.dumps({"models": []}).encode("utf-8")
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_POST(self):
+            length = int(self.headers.get("content-length", "0"))
+            if length:
+                self.rfile.read(length)
+
+            try:
+                with open(count_path, "r", encoding="utf-8") as handle:
+                    count = int(handle.read().strip() or "0")
+            except FileNotFoundError:
+                count = 0
+            with open(count_path, "w", encoding="utf-8") as handle:
+                handle.write(f"{count + 1}\\n")
+
+            if responses:
+                body = responses.pop(0).encode("utf-8")
+            else:
+                body = (
+                    "event: response.created\\n"
+                    "data: {\\\"type\\\":\\\"response.created\\\",\\\"response\\\":{\\\"id\\\":\\\"fallback\\\"}}\\n\\n"
+                    "event: response.completed\\n"
+                    "data: {\\\"type\\\":\\\"response.completed\\\",\\\"response\\\":{\\\"id\\\":\\\"fallback\\\",\\\"usage\\\":{\\\"input_tokens\\\":0,\\\"input_tokens_details\\\":null,\\\"output_tokens\\\":0,\\\"output_tokens_details\\\":null,\\\"total_tokens\\\":0}}}\\n\\n"
+                ).encode("utf-8")
+
+            self.send_response(200)
+            self.send_header("content-type", "text/event-stream")
+            self.send_header("cache-control", "no-cache")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    with open(port_path, "w", encoding="utf-8") as handle:
+        handle.write(f"{server.server_address[1]}\\n")
+    server.serve_forever()
+    """
+}
+
+private struct MockResponsesEventStream: Encodable, Equatable {
+    let body: String
+
+    static func shellCommand(callID: String, command: String) throws -> Self {
+        let arguments = try jsonString([
+            "command": command,
+            "workdir": Optional<String>.none,
+            "timeout_ms": 5_000,
+        ] as [String: Any?])
+        return try .init(events: [
+            responseCreated(id: "resp-shell"),
+            functionCall(callID: callID, name: "shell_command", arguments: arguments),
+            responseCompleted(id: "resp-shell"),
+        ])
+    }
+
+    static func assistantMessage(_ message: String) throws -> Self {
+        try .init(events: [
+            responseCreated(id: "resp-final"),
+            [
+                "type": "response.output_item.done",
+                "item": [
+                    "type": "message",
+                    "role": "assistant",
+                    "id": "msg-final",
+                    "content": [
+                        [
+                            "type": "output_text",
+                            "text": message,
+                        ],
+                    ],
+                ],
+            ],
+            responseCompleted(id: "resp-final"),
+        ])
+    }
+
+    private init(events: [[String: Any]]) throws {
+        var body = ""
+        for event in events {
+            guard let eventType = event["type"] as? String else {
+                continue
+            }
+            body += "event: \(eventType)\n"
+            let data = try JSONSerialization.data(withJSONObject: event, options: [.sortedKeys])
+            body += "data: \(String(decoding: data, as: UTF8.self))\n\n"
+        }
+        self.body = body
+    }
+
+    private static func responseCreated(id: String) -> [String: Any] {
+        [
+            "type": "response.created",
+            "response": [
+                "id": id,
+            ],
+        ]
+    }
+
+    private static func responseCompleted(id: String) -> [String: Any] {
+        [
+            "type": "response.completed",
+            "response": [
+                "id": id,
+                "usage": [
+                    "input_tokens": 0,
+                    "input_tokens_details": NSNull(),
+                    "output_tokens": 0,
+                    "output_tokens_details": NSNull(),
+                    "total_tokens": 0,
+                ],
+            ],
+        ]
+    }
+
+    private static func functionCall(
+        callID: String,
+        name: String,
+        arguments: String
+    ) -> [String: Any] {
+        [
+            "type": "response.output_item.done",
+            "item": [
+                "type": "function_call",
+                "call_id": callID,
+                "name": name,
+                "arguments": arguments,
+            ],
+        ]
+    }
+
+    private static func jsonString(_ object: [String: Any?]) throws -> String {
+        let normalized = object.reduce(into: [String: Any]()) { partialResult, entry in
+            partialResult[entry.key] = entry.value ?? NSNull()
+        }
+        let data = try JSONSerialization.data(withJSONObject: normalized, options: [.sortedKeys])
+        return String(decoding: data, as: UTF8.self)
+    }
 }
 
 private enum LiveIntegrationError: Error, LocalizedError {
@@ -1679,6 +2099,55 @@ private func completeLiveTurnAcceptingApprovals(
     }
 
     throw LiveIntegrationError.timedOut(operation: operation, seconds: timeoutSeconds)
+}
+
+private struct RawCommandApprovalState: Equatable, Sendable {
+    let threadID: String
+    let sawCommandItem: Bool
+    let sawWaitingOnApproval: Bool
+}
+
+private func awaitRawCommandApprovalState(
+    eventIterator: inout AsyncStream<CodexRPCServerEvent>.Iterator,
+    protocolLayer: CodexAppServerProtocol,
+    threadID: String,
+    turnID: String,
+    operation: String
+) async throws -> RawCommandApprovalState {
+    var sawCommandItem = false
+    var observedEvents: [String] = []
+
+    while let serverEvent = await eventIterator.next() {
+        guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
+            continue
+        }
+        observedEvents.append(String(describing: decodedEvent))
+
+        switch decodedEvent {
+        case let .itemStarted(started)
+            where started.threadID == threadID
+                && started.turnID == turnID
+                && started.item.type == .commandExecution:
+            sawCommandItem = true
+        case let .threadStatusChanged(status)
+            where status.threadID == threadID
+                && status.status.activeFlags?.contains(.waitingOnApproval) == true:
+            return .init(
+                threadID: threadID,
+                sawCommandItem: sawCommandItem,
+                sawWaitingOnApproval: true
+            )
+        case let .turnCompleted(completed)
+            where completed.threadID == threadID && completed.turn.id == turnID:
+            throw LiveIntegrationError.eventStreamEnded(
+                operation: "\(operation): the turn completed before waitingOnApproval; observedEvents=\(observedEvents)"
+            )
+        default:
+            continue
+        }
+    }
+
+    throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
 }
 
 private func acceptanceResponse(for request: CodexApprovalRequest) -> CodexApprovalResponse {

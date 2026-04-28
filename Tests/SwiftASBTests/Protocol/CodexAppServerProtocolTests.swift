@@ -24,7 +24,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "initialize")
         #expect(object["id"] as? String == "init-1")
 
@@ -39,14 +39,14 @@ struct CodexAppServerProtocolTests {
         #expect(capabilities["optOutNotificationMethods"] as? [String] == ["thread/started"])
     }
 
-    @Test("encodes initialized notifications without params")
+    @Test("encodes initialized notifications with an empty params object")
     func encodesInitializedNotification() throws {
         let payload = try protocolLayer.makeInitializedNotification()
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "initialized")
-        #expect(object["params"] == nil)
+        #expect(object["params"] as? [String: String] == [:])
         #expect(object["id"] == nil)
     }
 
@@ -74,7 +74,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "thread/start")
         #expect(object["id"] as? String == "thread-1")
 
@@ -109,7 +109,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "thread/list")
         #expect(object["id"] as? String == "thread-list-1")
 
@@ -148,7 +148,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "thread/resume")
         #expect(object["id"] as? String == "thread-resume-1")
 
@@ -189,7 +189,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "thread/fork")
         #expect(object["id"] as? String == "thread-fork-1")
 
@@ -214,7 +214,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "thread/compact/start")
         #expect(object["id"] as? String == "thread-compact-1")
 
@@ -230,7 +230,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "thread/rollback")
         #expect(object["id"] as? String == "thread-rollback-1")
 
@@ -247,7 +247,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "thread/name/set")
         #expect(object["id"] as? String == "thread-name-1")
 
@@ -271,7 +271,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "thread/metadata/update")
         #expect(object["id"] as? String == "thread-metadata-1")
 
@@ -296,7 +296,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "model/list")
         #expect(object["id"] as? String == "model-list-1")
 
@@ -318,7 +318,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "mcpServerStatus/list")
         #expect(object["id"] as? String == "mcp-status-1")
 
@@ -359,7 +359,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "turn/start")
         #expect(object["id"] as? String == "turn-1")
 
@@ -389,7 +389,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "turn/interrupt")
         #expect(object["id"] as? String == "interrupt-1")
 
@@ -419,7 +419,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["method"] as? String == "turn/steer")
         #expect(object["id"] as? String == "steer-1")
 
@@ -1065,7 +1065,7 @@ struct CodexAppServerProtocolTests {
         )
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
-        #expect(object["jsonrpc"] == nil)
+        #expect(object["jsonrpc"] as? String == "2.0")
         #expect(object["id"] as? String == "approval-1")
         let result = try #require(object["result"] as? [String: Any])
         #expect(result["decision"] as? String == "accept")

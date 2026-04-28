@@ -170,6 +170,13 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   `[features] request_permissions_tool = true` and emits a `request_permissions`
   tool call. That gives SwiftASB a reproducible protocol path while still
   launching the real installed `codex app-server`.
+- SwiftASB now has opt-in real-app-server coverage for the deterministic setup
+  path: an isolated `CODEX_HOME`, local mock Responses provider, command item,
+  and `waitingOnApproval` thread state. The remaining gap is live delivery and
+  response handling for the raw approval JSON-RPC request through SwiftASB's
+  transport/public-client stack; protocol tests now require JSON-RPC response
+  envelopes to include `jsonrpc = "2.0"` so the response shape is ready once the
+  live delivery issue is isolated.
 - `approvalPolicy: .onRequest` plus `approvalsReviewer: .user` does not force
   approval requests for workspace-write command, file-create, or file-edit
   turns in the current live runtime. The approval/server-request probe records
@@ -439,7 +446,8 @@ In Progress
 - [x] Add opt-in live coverage for app-wide capability snapshots and a straightforward thread-management smoke path.
 - [x] Add opt-in live coverage for a multi-turn file mutation scenario against the real CLI, with deterministic filesystem assertions and optional diagnostic report output.
 - [x] Add opt-in live rollback coverage using a disposable thread with isolated harmless turns and explicit local rollback-marker assertions.
-- [ ] Add opt-in real-app-server coverage for at least one approval or server-request path using an isolated `CODEX_HOME`, a local mock Responses provider, and the upstream-tested `serverRequest/resolved` flow.
+- [x] Add opt-in real-app-server coverage for deterministic approval setup using an isolated `CODEX_HOME`, a local mock Responses provider, and a real command item reaching `waitingOnApproval`.
+- [ ] Extend deterministic approval coverage through raw request delivery, SwiftASB response handling, and the upstream-tested `serverRequest/resolved` flow.
 - [x] Tighten recent-history helper behavior around live `thread/turns/list` boundaries for ephemeral and pre-materialized threads.
 - [x] Add cancellation or interruption flows that are part of the intended first public lifecycle.
 - [x] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
