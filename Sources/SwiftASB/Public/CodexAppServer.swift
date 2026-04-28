@@ -676,10 +676,12 @@ public actor CodexAppServer {
     private var serverEventTask: Task<Void, Never>?
     private var threadStatuses: [String: ThreadStatus] = [:]
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
+    private var diagnosticEventContinuations: [UUID: AsyncThrowingStream<CodexDiagnosticEvent, Error>.Continuation] = [:]
     private var threadObservableActivityContinuations: [String: [UUID: AsyncStream<CodexThread.Dashboard.ActivityState>.Continuation]] = [:]
     private var threadCommandDeltaContinuations: [String: [UUID: AsyncStream<CommandExecutionOutputDeltaEvent>.Continuation]] = [:]
     private var threadFileDeltaContinuations: [String: [UUID: AsyncStream<FileChangeOutputDeltaEvent>.Continuation]] = [:]
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
+    private var bufferedDiagnosticEvents: [CodexDiagnosticEvent] = []
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var threadTurnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
     private var turnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
@@ -750,6 +752,7 @@ public actor CodexAppServer {
         serverEventTask?.cancel()
         serverEventTask = nil
         finishAllThreadEventStreams(throwing: nil)
+        finishAllDiagnosticEventStreams(throwing: nil)
         finishAllThreadObservableActivityStreams()
         finishAllThreadCommandDeltaStreams()
         finishAllThreadFileDeltaStreams()
@@ -762,6 +765,7 @@ public actor CodexAppServer {
         threadObservableActivityStates.removeAll()
         turnThreadIDs.removeAll()
         bufferedThreadEvents.removeAll()
+        bufferedDiagnosticEvents.removeAll()
         bufferedTurnEvents.removeAll()
         bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
@@ -782,6 +786,10 @@ public actor CodexAppServer {
         }
 
         return .init(resolution: resolution)
+    }
+
+    public func diagnostics() -> AsyncThrowingStream<CodexDiagnosticEvent, Error> {
+        makeDiagnosticEventStream()
     }
 
     public func initialize(_ request: InitializeRequest) async throws -> InitializeSession {
@@ -2216,6 +2224,9 @@ public actor CodexAppServer {
                 await self.finishAllThreadEventStreams(
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
                 )
+                await self.finishAllDiagnosticEventStreams(
+                    throwing: CodexAppServerError.wrap(error, operation: "server events")
+                )
                 await self.finishAllTurnEventStreams(
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
                 )
@@ -2363,10 +2374,17 @@ public actor CodexAppServer {
                 turnID: notification.turnID,
                 threadID: notification.threadID
             )
+        case let .warning(notification):
+            handleDiagnosticEvent(.init(wireValue: notification))
+        case let .guardianWarning(notification):
+            handleDiagnosticEvent(.init(wireValue: notification))
         case let .modelRerouted(notification):
+            handleDiagnosticEvent(.init(wireValue: notification))
             Self.logger.notice(
                 "Model rerouted for thread \(notification.threadID, privacy: .public) turn \(notification.turnID, privacy: .public): \(notification.fromModel, privacy: .public) -> \(notification.toModel, privacy: .public) because \(notification.reason.rawValue, privacy: .public)"
             )
+        case let .modelVerification(notification):
+            handleDiagnosticEvent(.init(wireValue: notification))
         case let .fileChangeOutputDelta(notification):
             let deltaEvent = FileChangeOutputDeltaEvent(
                 delta: notification.delta,
@@ -2484,6 +2502,7 @@ public actor CodexAppServer {
 
         guard hasStarted, !isStopping else {
             finishAllThreadEventStreams(throwing: nil)
+            finishAllDiagnosticEventStreams(throwing: nil)
             finishAllThreadObservableActivityStreams()
             finishAllThreadCommandDeltaStreams()
             finishAllThreadFileDeltaStreams()
@@ -2495,6 +2514,12 @@ public actor CodexAppServer {
             throwing: CodexAppServerError.transportFailure(
                 operation: "server events",
                 reason: "Codex app-server stopped delivering thread notifications before pending thread streams finished."
+            )
+        )
+        finishAllDiagnosticEventStreams(
+            throwing: CodexAppServerError.transportFailure(
+                operation: "server events",
+                reason: "Codex app-server stopped delivering diagnostics before pending diagnostic streams finished."
             )
         )
         finishAllThreadObservableActivityStreams()
@@ -2532,6 +2557,25 @@ public actor CodexAppServer {
             continuation.onTermination = { _ in
                 Task {
                     await self.removeThreadEventContinuation(streamID: streamID, threadID: threadID)
+                }
+            }
+        }
+    }
+
+    private func makeDiagnosticEventStream() -> AsyncThrowingStream<CodexDiagnosticEvent, Error> {
+        let streamID = UUID()
+
+        return AsyncThrowingStream { continuation in
+            registerDiagnosticEventContinuation(continuation, streamID: streamID)
+
+            for event in bufferedDiagnosticEvents {
+                continuation.yield(event)
+            }
+            bufferedDiagnosticEvents.removeAll()
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeDiagnosticEventContinuation(streamID: streamID)
                 }
             }
         }
@@ -2617,6 +2661,17 @@ public actor CodexAppServer {
                 continuation.finish()
             }
         }
+    }
+
+    private func registerDiagnosticEventContinuation(
+        _ continuation: AsyncThrowingStream<CodexDiagnosticEvent, Error>.Continuation,
+        streamID: UUID
+    ) {
+        diagnosticEventContinuations[streamID] = continuation
+    }
+
+    private func removeDiagnosticEventContinuation(streamID: UUID) {
+        diagnosticEventContinuations.removeValue(forKey: streamID)
     }
 
     private func registerThreadEventContinuation(
@@ -2712,6 +2767,17 @@ public actor CodexAppServer {
             if isTerminal {
                 continuation.finish()
             }
+        }
+    }
+
+    private func publishDiagnosticEvent(_ event: CodexDiagnosticEvent) {
+        guard !diagnosticEventContinuations.isEmpty else {
+            bufferedDiagnosticEvents.append(event)
+            return
+        }
+
+        for continuation in diagnosticEventContinuations.values {
+            continuation.yield(event)
         }
     }
 
@@ -3274,6 +3340,23 @@ public actor CodexAppServer {
         }
     }
 
+    private func handleDiagnosticEvent(_ diagnostic: CodexDiagnosticEvent) {
+        publishDiagnosticEvent(diagnostic)
+
+        if let threadID = diagnostic.threadID {
+            publishThreadEvent(.diagnostic(diagnostic), for: threadID, isTerminal: false)
+        }
+
+        if let turnID = diagnostic.turnID {
+            publishTurnEvent(
+                .diagnostic(diagnostic),
+                for: turnID,
+                isTerminal: false,
+                bufferIfUnobserved: true
+            )
+        }
+    }
+
     private func handleInteractiveElicitationRequest(_ request: CodexElicitationRequest) {
         let destination = interactiveRequestDestination(
             threadID: request.threadID,
@@ -3342,6 +3425,19 @@ public actor CodexAppServer {
     private func finishAllThreadEventStreams(throwing error: CodexAppServerError?) {
         let activeContinuations = threadEventContinuations.values.flatMap(\.values)
         threadEventContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            if let error {
+                continuation.finish(throwing: error)
+            } else {
+                continuation.finish()
+            }
+        }
+    }
+
+    private func finishAllDiagnosticEventStreams(throwing error: CodexAppServerError?) {
+        let activeContinuations = diagnosticEventContinuations.values
+        diagnosticEventContinuations.removeAll()
 
         for continuation in activeContinuations {
             if let error {

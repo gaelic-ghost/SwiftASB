@@ -33,6 +33,8 @@ Call ``start()`` before sending protocol requests. Call ``initialize(_:)`` once 
 
 Use ``cliExecutableDiagnostics()`` when a UI or command-line tool needs to explain which `codex` executable was found and whether its version is inside the documented compatibility window.
 
+Use ``diagnostics()`` to observe passive runtime diagnostics that are not control requests. These events let clients show or log warnings, guardian warnings, model reroutes, and model verification results without exposing generated wire payloads.
+
 ## App-Wide Capabilities
 
 Use ``listModels(_:)`` and ``listMcpServerStatuses(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog and MCP server surface.
@@ -49,6 +51,8 @@ Thread-scoped convenience methods live on ``CodexThread`` when the caller alread
 
 - ``Configuration``
 - ``CLIExecutableDiagnostics``
+- ``diagnostics()``
+- ``CodexDiagnosticEvent``
 
 ### Startup
 

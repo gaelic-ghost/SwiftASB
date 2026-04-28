@@ -532,12 +532,36 @@ struct CodexAppServerProtocol {
                         resultType: CodexWireHookCompletedNotification.self
                     )
                 )
+            case "warning":
+                return .warning(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireWarningNotification.self
+                    )
+                )
+            case "guardianWarning":
+                return .guardianWarning(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireGuardianWarningNotification.self
+                    )
+                )
             case "model/rerouted":
                 return .modelRerouted(
                     try decodeNotification(
                         payload,
                         method: method,
                         resultType: CodexWireModelReroutedNotification.self
+                    )
+                )
+            case "model/verification":
+                return .modelVerification(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireModelVerificationNotification.self
                     )
                 )
             case "turn/started":

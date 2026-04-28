@@ -1015,6 +1015,77 @@ struct CodexAppServerProtocolTests {
         }
     }
 
+    @Test("decodes diagnostic notifications into typed protocol events")
+    func decodesDiagnosticNotifications() throws {
+        let warningPayload = Data(
+            #"{"message":"Runtime configuration is using a fallback.","threadId":"thread-123"}"#.utf8
+        )
+
+        let warningEvent = try #require(
+            try decodeEvent(method: "warning", payload: warningPayload)
+        )
+
+        switch warningEvent {
+        case let .warning(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.message == "Runtime configuration is using a fallback.")
+        default:
+            Issue.record("Expected warning to decode into .warning.")
+        }
+
+        let guardianWarningPayload = Data(
+            #"{"message":"Guardian flagged this session for review.","threadId":"thread-123"}"#.utf8
+        )
+
+        let guardianWarningEvent = try #require(
+            try decodeEvent(method: "guardianWarning", payload: guardianWarningPayload)
+        )
+
+        switch guardianWarningEvent {
+        case let .guardianWarning(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.message == "Guardian flagged this session for review.")
+        default:
+            Issue.record("Expected guardianWarning to decode into .guardianWarning.")
+        }
+
+        let modelReroutedPayload = Data(
+            #"{"fromModel":"gpt-5.4","reason":"highRiskCyberActivity","threadId":"thread-123","toModel":"gpt-5.4-safe","turnId":"turn-123"}"#.utf8
+        )
+
+        let modelReroutedEvent = try #require(
+            try decodeEvent(method: "model/rerouted", payload: modelReroutedPayload)
+        )
+
+        switch modelReroutedEvent {
+        case let .modelRerouted(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.fromModel == "gpt-5.4")
+            #expect(notification.toModel == "gpt-5.4-safe")
+            #expect(notification.reason == .highRiskCyberActivity)
+        default:
+            Issue.record("Expected model/rerouted to decode into .modelRerouted.")
+        }
+
+        let modelVerificationPayload = Data(
+            #"{"threadId":"thread-123","turnId":"turn-123","verifications":["trustedAccessForCyber"]}"#.utf8
+        )
+
+        let modelVerificationEvent = try #require(
+            try decodeEvent(method: "model/verification", payload: modelVerificationPayload)
+        )
+
+        switch modelVerificationEvent {
+        case let .modelVerification(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.verifications == [.trustedAccessForCyber])
+        default:
+            Issue.record("Expected model/verification to decode into .modelVerification.")
+        }
+    }
+
     @Test("decodes server-originated approval and elicitation requests into typed protocol events")
     func decodesServerRequests() throws {
         let commandApprovalPayload = Data(
