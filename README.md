@@ -157,7 +157,7 @@ for try await event in turn.events {
 }
 ```
 
-If the runtime does not naturally raise an approval request for a particular prompt, that is expected today. The live approval-path test is useful for observing current behavior, but it is not a deterministic release gate.
+If the runtime does not naturally raise an approval request for a particular prompt, that is expected today. SwiftASB keeps prompt-driven live approval probes observational, while deterministic approval regression coverage uses the real app-server with a local mock Responses provider so the request, response, resolution, and turn-completion path can be asserted without calling the hosted OpenAI API.
 
 ### SwiftUI State Companions
 
