@@ -77,7 +77,7 @@
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a rolling support window of the latest public Codex CLI release plus the prior two minor versions, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current rolling Codex CLI compatibility window, but richer examples are still open. |
-| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including app-wide capability snapshots, a thread-name smoke path, same-thread concurrency probing, a best-effort live approval-path probe, a disposable live rollback scenario, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The file scenario can write a JSON diagnostic report under `tmp/live-codex-reports/` through `scripts/run-live-codex-file-scenario.sh`; rollback can be run directly through `scripts/run-live-codex-rollback-scenario.sh`. The default test suite still relies on a deterministic fake transport seam because the current runtime does not reliably force an approval request on demand. |
+| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including app-wide capability snapshots, a thread-name smoke path, same-thread concurrency probing, a best-effort live approval-path probe, approval/server-request candidate probing, a disposable live rollback scenario, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The approval/server-request probe, file scenario, and rollback scenario can be run directly through `scripts/run-live-codex-approval-probe.sh`, `scripts/run-live-codex-file-scenario.sh`, and `scripts/run-live-codex-rollback-scenario.sh`; the first two write JSON diagnostic reports under `tmp/live-codex-reports/`. The default test suite still relies on a deterministic fake transport seam because the current runtime does not reliably force an approval request on demand. |
 | FSL-1.1-ALv2 licensing | `Shipped` | The repo now carries the `FSL-1.1-ALv2` license text, README references the live license surface, and each released version converts to Apache 2.0 two years after it is first made available. |
 
 ## Milestone Progress
@@ -155,6 +155,21 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   scenarios should accept approval requests when they surface, but durable
   assertions should focus on terminal turn status, observable call snapshots, and
   filesystem or history outcomes.
+- `approvalPolicy: .onRequest` plus `approvalsReviewer: .user` does not force
+  approval requests for workspace-write command, file-create, or file-edit
+  turns in the current live runtime. The approval/server-request probe records
+  those turns as completed command calls with no accepted approval kinds.
+- A read-only sandbox write request currently attempts the command, leaves the
+  target file absent, and times out without surfacing a typed approval request or
+  completion. Keep this as a live finding while we decide whether SwiftASB needs
+  a stronger timeout, blocked-call, or server-request validation surface for this
+  app-server behavior.
+- `scripts/run-live-codex-approval-probe.sh` is the preferred exploratory
+  validation for approval/server-request candidates. It opts into the live probe
+  and writes `live-approval-server-request-probe.json` under
+  `tmp/live-codex-reports/` so maintainers can inspect observed call kinds,
+  approval kinds, terminal text, file outcomes, and probe errors after a real CLI
+  run.
 - `scripts/run-live-codex-file-scenario.sh` is the preferred validation for the
   create/edit/delete path. It opts into the live file scenario and writes a JSON
   diagnostic report under `tmp/live-codex-reports/` so maintainers can inspect

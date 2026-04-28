@@ -722,6 +722,145 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "probes live approval and server-request candidate scenarios",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_PROBE_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI and probes nondeterministic approval behavior."
+        ),
+        .timeLimit(.minutes(5))
+    )
+    func probesLiveApprovalAndServerRequestCandidates() async throws {
+        let harness = try LiveCodexHarness()
+        defer { harness.cleanup() }
+
+        let readFixtureURL = harness.approvalProbeWorkspace
+            .appendingPathComponent("approval-read-target.txt", isDirectory: false)
+        let readFixtureText = "approval-probe-\(UUID().uuidString)\n"
+        try Data(readFixtureText.utf8).write(to: readFixtureURL)
+        let expectedDigest = Data(SHA256.hash(data: Data(readFixtureText.utf8))).map {
+            String(format: "%02x", $0)
+        }.joined()
+
+        let editFixtureURL = harness.approvalProbeWorkspace
+            .appendingPathComponent("approval-edit-target.txt", isDirectory: false)
+        try Data("before\n".utf8).write(to: editFixtureURL)
+
+        let createURL = harness.approvalProbeWorkspace
+            .appendingPathComponent("approval-create-target.txt", isDirectory: false)
+
+        let client = try await makeInitializedLiveClient(using: harness)
+        do {
+            let probeThread = try await startThread(
+                on: client,
+                workspacePath: harness.approvalProbeWorkspace.path,
+                label: "approval-probe",
+                approvalPolicy: .onRequest,
+                approvalsReviewer: .user,
+                ephemeral: false,
+                developerInstructions: """
+                You are running inside a SwiftASB live integration test.
+                Perform only the exact requested action.
+                If approval is requested, wait for the test harness to answer it.
+                Do not ask follow-up questions.
+                Reply only with the exact text requested by the user message.
+                """
+            )
+
+            let cases = [
+                LiveApprovalProbeCase(
+                    label: "command-read",
+                    prompt: """
+                    Use a shell command to print the SHA-256 digest of approval-read-target.txt in the
+                    current working directory, then reply with exactly this text and nothing else:
+                    \(expectedDigest)
+                    """,
+                    expectedFinalText: expectedDigest,
+                    inspectedPath: readFixtureURL
+                ),
+                LiveApprovalProbeCase(
+                    label: "file-create",
+                    prompt: """
+                    Create approval-create-target.txt with exactly this content:
+                    created by approval probe
+
+                    Then reply with exactly APPROVAL_PROBE_CREATE_DONE and nothing else.
+                    """,
+                    expectedFinalText: "APPROVAL_PROBE_CREATE_DONE",
+                    inspectedPath: createURL
+                ),
+                LiveApprovalProbeCase(
+                    label: "file-edit",
+                    prompt: """
+                    Replace approval-edit-target.txt with exactly this content:
+                    after
+
+                    Then reply with exactly APPROVAL_PROBE_EDIT_DONE and nothing else.
+                    """,
+                    expectedFinalText: "APPROVAL_PROBE_EDIT_DONE",
+                    inspectedPath: editFixtureURL
+                ),
+            ]
+
+            var results: [LiveApprovalProbeReport.Result] = []
+            for probeCase in cases {
+                results.append(try await runApprovalProbeCaseReport(probeCase, on: probeThread))
+            }
+
+            let readOnlyThread = try await startThread(
+                on: client,
+                workspacePath: harness.approvalProbeWorkspace.path,
+                label: "approval-probe-read-only",
+                approvalPolicy: .onRequest,
+                approvalsReviewer: .user,
+                ephemeral: false,
+                sandboxMode: .readOnly,
+                developerInstructions: """
+                You are running inside a SwiftASB live integration test.
+                Perform only the exact requested action.
+                If approval is requested, wait for the test harness to answer it.
+                Do not ask follow-up questions.
+                Reply only with the exact text requested by the user message.
+                """
+            )
+            let readOnlyTargetURL = harness.approvalProbeWorkspace
+                .appendingPathComponent("approval-read-only-target.txt", isDirectory: false)
+            let readOnlyWriteCase = LiveApprovalProbeCase(
+                label: "read-only-file-create",
+                prompt: """
+                Create approval-read-only-target.txt with exactly this content:
+                created from read-only sandbox
+
+                Then reply with exactly APPROVAL_PROBE_READ_ONLY_CREATE_DONE and nothing else.
+                """,
+                expectedFinalText: "APPROVAL_PROBE_READ_ONLY_CREATE_DONE",
+                inspectedPath: readOnlyTargetURL
+            )
+            results.append(try await runApprovalProbeCaseReport(readOnlyWriteCase, on: readOnlyThread))
+
+            let report = LiveApprovalProbeReport(
+                threadID: probeThread.id,
+                readOnlyThreadID: readOnlyThread.id,
+                workspacePath: harness.approvalProbeWorkspace.path,
+                results: results
+            )
+            try harness.writeReport(report, fileName: "live-approval-server-request-probe.json")
+
+            for expectedCase in cases {
+                let result = try #require(results.first { $0.label == expectedCase.label })
+                #expect(result.status == CodexAppServer.TurnStatus.completed.rawValue)
+                #expect(result.latestCompletedItemText == expectedCase.expectedFinalText)
+                #expect(result.errorDescription == nil)
+            }
+
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "runs a multi-turn live file mutation scenario",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
@@ -930,6 +1069,7 @@ private final class LiveCodexHarness {
     let codexHomeURL: URL
     let threadAWorkspace: URL
     let threadBWorkspace: URL
+    let approvalProbeWorkspace: URL
     let fileScenarioWorkspace: URL
     let rollbackWorkspace: URL
     let sameThreadWorkspace: URL
@@ -944,6 +1084,7 @@ private final class LiveCodexHarness {
         self.codexHomeURL = rootDirectoryURL.appendingPathComponent(".codex", isDirectory: true)
         self.threadAWorkspace = rootDirectoryURL.appendingPathComponent("thread-a", isDirectory: true)
         self.threadBWorkspace = rootDirectoryURL.appendingPathComponent("thread-b", isDirectory: true)
+        self.approvalProbeWorkspace = rootDirectoryURL.appendingPathComponent("approval-probe", isDirectory: true)
         self.fileScenarioWorkspace = rootDirectoryURL.appendingPathComponent("file-scenario", isDirectory: true)
         self.rollbackWorkspace = rootDirectoryURL.appendingPathComponent("rollback", isDirectory: true)
         self.sameThreadWorkspace = rootDirectoryURL.appendingPathComponent("same-thread", isDirectory: true)
@@ -952,6 +1093,7 @@ private final class LiveCodexHarness {
         try fileManager.createDirectory(at: codexHomeURL, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: threadAWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: threadBWorkspace, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: approvalProbeWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: fileScenarioWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: rollbackWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: sameThreadWorkspace, withIntermediateDirectories: true)
@@ -1087,6 +1229,7 @@ private struct LiveScenarioTurnResult {
     let completion: CodexTurnCompletion
     let acceptedApprovalKinds: [String]
     let callSnapshots: [CodexTurnHandle.Minimap.CallSnapshot]
+    let latestCompletedItemText: String?
 
     func reportTurn(label: String) -> LiveFileMutationScenarioReport.Turn {
         LiveFileMutationScenarioReport.Turn(
@@ -1098,6 +1241,83 @@ private struct LiveScenarioTurnResult {
             callDisplayNames: callSnapshots.map(\.displayName)
         )
     }
+}
+
+private struct LiveApprovalProbeCase {
+    let label: String
+    let prompt: String
+    let expectedFinalText: String
+    let inspectedPath: URL
+}
+
+private struct LiveApprovalProbeReport: Codable, Equatable {
+    struct Result: Codable, Equatable {
+        let label: String
+        let threadID: String
+        let turnID: String
+        let status: String
+        let acceptedApprovalKinds: [String]
+        let callKinds: [String]
+        let callDisplayNames: [String]
+        let latestCompletedItemText: String?
+        let inspectedFile: InspectedFile
+        let errorDescription: String?
+
+        init(
+            _ probeCase: LiveApprovalProbeCase,
+            thread: CodexThread,
+            result: LiveScenarioTurnResult
+        ) {
+            self.label = probeCase.label
+            self.threadID = thread.id
+            self.turnID = result.completion.turn.id
+            self.status = result.completion.turn.status.rawValue
+            self.acceptedApprovalKinds = result.acceptedApprovalKinds
+            self.callKinds = result.callSnapshots.map(\.kind.rawValue)
+            self.callDisplayNames = result.callSnapshots.map(\.displayName)
+            self.latestCompletedItemText = result.latestCompletedItemText
+            self.inspectedFile = .init(url: probeCase.inspectedPath)
+            self.errorDescription = nil
+        }
+
+        init(
+            _ probeCase: LiveApprovalProbeCase,
+            thread: CodexThread,
+            turnID: String,
+            status: String,
+            callSnapshots: [CodexTurnHandle.Minimap.CallSnapshot],
+            latestCompletedItemText: String?,
+            error: Error
+        ) {
+            self.label = probeCase.label
+            self.threadID = thread.id
+            self.turnID = turnID
+            self.status = status
+            self.acceptedApprovalKinds = []
+            self.callKinds = callSnapshots.map(\.kind.rawValue)
+            self.callDisplayNames = callSnapshots.map(\.displayName)
+            self.latestCompletedItemText = latestCompletedItemText
+            self.inspectedFile = .init(url: probeCase.inspectedPath)
+            self.errorDescription = String(describing: error)
+        }
+    }
+
+    struct InspectedFile: Codable, Equatable {
+        let path: String
+        let exists: Bool
+        let contents: String?
+
+        init(url: URL) {
+            self.path = url.lastPathComponent
+            self.exists = FileManager.default.fileExists(atPath: url.path)
+            self.contents = try? String(contentsOf: url, encoding: .utf8)
+        }
+    }
+
+    let threadID: String
+    let readOnlyThreadID: String
+    let workspacePath: String
+    let results: [Result]
 }
 
 private struct LiveFileMutationScenarioReport: Codable, Equatable {
@@ -1172,6 +1392,7 @@ private func startThread(
     approvalPolicy: CodexAppServer.ApprovalPolicy = .never,
     approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil,
     ephemeral: Bool = true,
+    sandboxMode: CodexAppServer.SandboxMode = .workspaceWrite,
     developerInstructions: String = """
     You are running inside a SwiftASB live integration test.
     Do not call tools.
@@ -1188,7 +1409,7 @@ private func startThread(
                 currentDirectoryPath: workspacePath,
                 developerInstructions: developerInstructions,
                 ephemeral: ephemeral,
-                sandboxMode: .workspaceWrite
+                sandboxMode: sandboxMode
             )
         )
     }
@@ -1219,6 +1440,41 @@ private func startSecondSameThreadTurn(
         return .started(turnHandle)
     } catch {
         return .failed(String(describing: error))
+    }
+}
+
+private func runApprovalProbeCaseReport(
+    _ probeCase: LiveApprovalProbeCase,
+    on thread: CodexThread
+) async throws -> LiveApprovalProbeReport.Result {
+    let turn = try await startTurn(
+        on: thread,
+        prompt: probeCase.prompt,
+        approvalPolicy: .onRequest,
+        approvalsReviewer: .user
+    )
+    let minimap = await turn.makeMinimap()
+
+    do {
+        let result = try await completeLiveTurnAcceptingApprovals(
+            turn,
+            timeoutSeconds: 90,
+            operation: "waiting for the \(probeCase.label) approval probe to complete"
+        )
+        return .init(probeCase, thread: thread, result: result)
+    } catch {
+        let snapshots = await MainActor.run(body: { minimap.callSnapshots })
+        let completedText = await MainActor.run(body: { minimap.latestCompletedItem?.item.text })
+        let status = await MainActor.run(body: { minimap.latestCompletion?.turn.status.rawValue })
+        return .init(
+            probeCase,
+            thread: thread,
+            turnID: turn.turn.id,
+            status: status ?? "failed",
+            callSnapshots: snapshots,
+            latestCompletedItemText: completedText,
+            error: error
+        )
     }
 }
 
@@ -1299,10 +1555,12 @@ private func completeLiveTurnAcceptingApprovals(
 
         if let completion = await MainActor.run(body: { minimap.latestCompletion }) {
             let snapshots = await MainActor.run(body: { minimap.callSnapshots })
+            let completedText = await MainActor.run(body: { minimap.latestCompletedItem?.item.text })
             return LiveScenarioTurnResult(
                 completion: completion,
                 acceptedApprovalKinds: acceptedApprovalKinds,
-                callSnapshots: snapshots
+                callSnapshots: snapshots,
+                latestCompletedItemText: completedText
             )
         }
 
