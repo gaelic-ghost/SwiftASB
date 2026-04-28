@@ -171,6 +171,8 @@ SwiftUI apps should not need to replay every raw event to show useful state. The
 
 For inspector-style UI that needs completed history without binding to an observable, `CodexThread.HistoryWindow` and the `readRecent...`, `readOlder...`, `readNewer...`, `windowAroundTurn(...)`, and `windowAroundItem(...)` helpers expose narrow local-history reads.
 
+Recent observable startup is intentionally UI-friendly around known live app-server history boundaries. If a thread is ephemeral, or if a non-ephemeral thread has not materialized stored turn history yet, `makeRecentTurns(...)`, `makeRecentFiles(...)`, and `makeRecentCommands(...)` start as empty local-only views instead of surfacing raw `thread/turns/list` protocol text. Direct calls to `CodexAppServer.listThreadTurns(...)` still report the underlying app-server failure so lower-level callers can handle remote paging errors explicitly.
+
 ### Supported Today
 
 The current public lifecycle contract is intentionally narrow and explicit:

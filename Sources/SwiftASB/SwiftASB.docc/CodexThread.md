@@ -39,6 +39,8 @@ Use ``makeDashboard()`` for thread-level current state, ``makeRecentTurns(limit:
 
 These companions are separate on purpose. `RecentTurns`, `RecentFiles`, and `RecentCommands` preserve domain-specific behavior that a mixed activity feed would flatten too early.
 
+Recent observable startup can begin as an empty local-only view when the live app-server has no remote turn page to provide yet. That includes ephemeral threads and non-ephemeral threads before stored history materializes. Direct ``CodexAppServer/listThreadTurns(_:)`` calls still surface the app-server error for callers that need explicit remote paging behavior.
+
 ## Topics
 
 ### Identity And Defaults

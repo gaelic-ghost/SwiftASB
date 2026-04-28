@@ -60,6 +60,8 @@ The live approval-path probe is observational. The current Codex runtime does no
 
 The live file-scenario probe is also observational around approval shape, but deterministic around filesystem outcome. It creates an isolated temporary workspace, asks the real Codex CLI to create, edit, and delete files across multiple turns, accepts approval requests when the runtime raises them, and verifies the final files on disk.
 
+The live rollback probe uses a disposable non-ephemeral thread with harmless text-only turns. It verifies that `rollbackLastTurns(1)` succeeds against the real app-server and that SwiftASB records the local rollback marker for the removed trailing turn.
+
 ## Development Expectations
 
 ### Naming Conventions
@@ -103,6 +105,7 @@ env SWIFTASB_ENABLE_LIVE_CODEX_SINGLE_TURN_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_CROSS_THREAD_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_FILE_SCENARIO_TESTS=1 swift test
+env SWIFTASB_ENABLE_LIVE_CODEX_ROLLBACK_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SAME_THREAD_TESTS=1 swift test
 ```
 
@@ -114,6 +117,12 @@ scripts/run-live-codex-file-scenario.sh
 
 That wrapper writes the live scenario diagnostic report to
 `tmp/live-codex-reports/live-file-mutation-scenario.json`.
+
+Run only the disposable live rollback scenario:
+
+```bash
+scripts/run-live-codex-rollback-scenario.sh
+```
 
 Use the generated-wire entrypoint when refreshing Codex schema-derived models:
 

@@ -535,6 +535,88 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "rolls back a disposable live thread and records a local marker",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_ROLLBACK_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI and mutates stored thread history."
+        ),
+        .timeLimit(.minutes(3))
+    )
+    func rollsBackLiveThreadAndRecordsMarker() async throws {
+        let harness = try LiveCodexHarness()
+        defer { harness.cleanup() }
+
+        let client = try await makeInitializedLiveClient(using: harness)
+        do {
+            let thread = try await startThread(
+                on: client,
+                workspacePath: harness.rollbackWorkspace.path,
+                label: "rollback",
+                ephemeral: false,
+                developerInstructions: """
+                You are running inside a SwiftASB live integration test.
+                Do not call tools.
+                Do not edit files.
+                Do not ask follow-up questions.
+                Reply only with the exact text requested by the user message.
+                """
+            )
+
+            let firstTurn = try await startTurn(
+                on: thread,
+                prompt: prompt(label: "LIVE_ROLLBACK_FIRST_DONE")
+            )
+            let firstCompletion = try await awaitCompletion(
+                of: firstTurn,
+                timeoutSeconds: 45,
+                operation: "waiting for the first live rollback turn to complete"
+            )
+            #expect(firstCompletion.turn.status == .completed)
+
+            let secondTurn = try await startTurn(
+                on: thread,
+                prompt: prompt(label: "LIVE_ROLLBACK_SECOND_DONE")
+            )
+            let secondCompletion = try await awaitCompletion(
+                of: secondTurn,
+                timeoutSeconds: 45,
+                operation: "waiting for the second live rollback turn to complete"
+            )
+            #expect(secondCompletion.turn.status == .completed)
+
+            let beforeRollback = try #require(await client.debugThreadHistorySnapshot(threadID: thread.id))
+            #expect(beforeRollback.turns.map(\.id).contains(firstCompletion.turn.id))
+            #expect(beforeRollback.turns.map(\.id).contains(secondCompletion.turn.id))
+
+            let rolledBackThread = try await withTimeout(
+                seconds: 20,
+                operation: "rolling back the latest live Codex turn"
+            ) {
+                try await thread.rollbackLastTurns(1)
+            }
+            #expect(rolledBackThread.id == thread.id)
+
+            let afterRollback = try #require(await client.debugThreadHistorySnapshot(threadID: thread.id))
+            let remainingTurnIDs = afterRollback.turns.map(\.id)
+            #expect(remainingTurnIDs.contains(firstCompletion.turn.id))
+            #expect(remainingTurnIDs.contains(secondCompletion.turn.id) == false)
+            #expect(afterRollback.rollbacks.isEmpty == false)
+
+            let latestRollback = try #require(afterRollback.rollbacks.last)
+            #expect(latestRollback.requestedTurnCount == 1)
+            #expect(latestRollback.previousNewestTurnID == secondCompletion.turn.id)
+            #expect(latestRollback.removedTurnIDs == [secondCompletion.turn.id])
+            #expect(latestRollback.resultingNewestTurnID == firstCompletion.turn.id)
+
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "probes live approval-path behavior for shell commands",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
@@ -849,6 +931,7 @@ private final class LiveCodexHarness {
     let threadAWorkspace: URL
     let threadBWorkspace: URL
     let fileScenarioWorkspace: URL
+    let rollbackWorkspace: URL
     let sameThreadWorkspace: URL
     let codexExecutableURL: URL
 
@@ -862,6 +945,7 @@ private final class LiveCodexHarness {
         self.threadAWorkspace = rootDirectoryURL.appendingPathComponent("thread-a", isDirectory: true)
         self.threadBWorkspace = rootDirectoryURL.appendingPathComponent("thread-b", isDirectory: true)
         self.fileScenarioWorkspace = rootDirectoryURL.appendingPathComponent("file-scenario", isDirectory: true)
+        self.rollbackWorkspace = rootDirectoryURL.appendingPathComponent("rollback", isDirectory: true)
         self.sameThreadWorkspace = rootDirectoryURL.appendingPathComponent("same-thread", isDirectory: true)
         self.codexExecutableURL = try Self.resolveCodexExecutableURL()
 
@@ -869,6 +953,7 @@ private final class LiveCodexHarness {
         try fileManager.createDirectory(at: threadAWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: threadBWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: fileScenarioWorkspace, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: rollbackWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: sameThreadWorkspace, withIntermediateDirectories: true)
         try Self.seedIsolatedCodexHome(at: codexHomeURL, fileManager: fileManager)
     }
