@@ -26,8 +26,8 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
     private var standardInputHandle: FileHandle?
     private var standardOutputHandle: FileHandle?
     private var standardErrorHandle: FileHandle?
-    private var standardOutputBuffer = Data()
-    private var standardErrorBuffer = Data()
+    private var standardOutputBuffer = LineDelimitedDataBuffer()
+    private var standardErrorBuffer = LineDelimitedDataBuffer()
     private var pendingResponses: [CodexRPCRequestID: CheckedContinuation<Data, Error>] = [:]
     private var serverEventContinuations: [UUID: AsyncStream<CodexRPCServerEvent>.Continuation] = [:]
     private var recentStandardErrorLines: [String] = []
@@ -252,9 +252,8 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
     private func handleStandardOutputEOF() {
         guard !hasFinished else { return }
-        if !standardOutputBuffer.isEmpty {
-            handleStandardOutputDataLine(standardOutputBuffer)
-            standardOutputBuffer.removeAll(keepingCapacity: false)
+        if let partialLine = standardOutputBuffer.finishPartialLine() {
+            handleStandardOutputDataLine(partialLine)
         }
         finishTransport(with: .unexpectedEndOfStream(recentStandardError: recentStandardErrorLines))
     }
@@ -285,37 +284,24 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
             return
         }
 
-        standardOutputBuffer.append(chunk)
-        drainStandardOutputBuffer()
+        for lineData in standardOutputBuffer.append(chunk) {
+            guard !hasFinished else { return }
+            handleStandardOutputDataLine(lineData)
+        }
     }
 
     private func handleStandardErrorChunk(_ chunk: Data) {
         guard !hasFinished else { return }
         guard !chunk.isEmpty else {
-            if !standardErrorBuffer.isEmpty {
-                appendStandardErrorDataLine(standardErrorBuffer)
-                standardErrorBuffer.removeAll(keepingCapacity: false)
+            if let partialLine = standardErrorBuffer.finishPartialLine() {
+                appendStandardErrorDataLine(partialLine)
             }
             return
         }
 
-        standardErrorBuffer.append(chunk)
-        drainStandardErrorBuffer()
-    }
-
-    private func drainStandardOutputBuffer() {
-        while let newlineIndex = standardOutputBuffer.firstIndex(of: 0x0A) {
-            let lineData = standardOutputBuffer[..<newlineIndex]
-            handleStandardOutputDataLine(Data(lineData))
-            standardOutputBuffer.removeSubrange(...newlineIndex)
-        }
-    }
-
-    private func drainStandardErrorBuffer() {
-        while let newlineIndex = standardErrorBuffer.firstIndex(of: 0x0A) {
-            let lineData = standardErrorBuffer[..<newlineIndex]
-            appendStandardErrorDataLine(Data(lineData))
-            standardErrorBuffer.removeSubrange(...newlineIndex)
+        for lineData in standardErrorBuffer.append(chunk) {
+            guard !hasFinished else { return }
+            appendStandardErrorDataLine(lineData)
         }
     }
 
