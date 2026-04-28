@@ -40,6 +40,12 @@ Keep package structure changes in `Package.swift`, and prefer SwiftPM commands f
 
 When touching public API, update the matching tests, README usage notes, DocC pages, and roadmap status in the same branch. When touching generated wire code, use `scripts/generate-wire-types.sh` instead of hand-editing the promoted generated snapshot.
 
+### Generated Schema Promotion Policy
+
+Generated `CodexWire...` models are internal scaffolding until a SwiftASB-owned surface gives them a consumer-facing job. When a generated schema family graduates into public API or observable companion behavior, the same PR must add at least one representative fixture test that decodes or encodes the promoted shape through the package-owned boundary.
+
+That fixture should cover the exact request, response, notification, or server-request family being promoted; include the fields SwiftASB relies on; and include one harmless additive unknown field when the upstream payload is expected to remain forward-compatible. Keep the fixture close to the protocol or public-client tests that own the behavior, and update `ROADMAP.md` with the public/observable/internal classification decision.
+
 ### Asking For Review
 
 A change is ready for review when the relevant validation commands pass, docs reflect the actual shipped behavior, and the PR explains what changed and what was verified. If a live Codex runtime behavior is nondeterministic, say that plainly in the PR body instead of presenting a probe as a hard release gate.

@@ -244,19 +244,23 @@ runtime.
   that a real non-ephemeral stored thread can complete harmless text-only turns,
   then read those turns back through `thread/read` and page them through
   `thread/turns/list`.
-- Transport edge coverage should be tightened around the line-framed stdio
-  contract. Add tests for versionless app-server envelopes, optional tolerated
-  `jsonrpc` fields, boolean/fractional/object request IDs, notifications without
-  `params`, and partial line draining. Started in `tests/coverage-gap-roadmap`
-  with optional `jsonrpc`, missing `params`, invalid request-id coverage, and
-  line-buffer partial draining. Full subprocess-edge fixtures for duplicate
-  response IDs, pending responses on process exit, and stderr retention remain
-  useful but lower risk than the public/protocol routing gaps above.
+- Transport edge coverage now covers both envelope/line-buffer parsing and
+  real subprocess failure modes. The default tests cover versionless app-server
+  envelopes, optional tolerated `jsonrpc` fields, boolean/fractional/object
+  request IDs, notifications without `params`, partial line draining, duplicate
+  pending request IDs, pending response failure when the child process exits,
+  recent-stderr retention, malformed stdout followed by a later valid response,
+  and late duplicate response lines after a pending request has already been
+  fulfilled.
 - Schema drift guardrails now include generated-wire fixture payloads for
   `thread/read`, `thread/turns/list`, command-execution thread items,
   active thread status flags, additive thread fields, and
   `serverRequest/resolved`. Keep adding one fixture whenever a promoted schema
   family graduates from generated-internal to public or observable behavior.
+  The policy is: promotion from generated-internal to public or observable
+  behavior must include at least one representative fixture in the same PR,
+  including one additive unknown field when the upstream shape is expected to
+  remain forward-compatible.
 
 ## Proposed Next Release Slice
 
