@@ -1633,13 +1633,18 @@ public actor CodexAppServer {
             )
         }
 
-        let page = try await listThreadTurns(
-            .init(
-                threadID: threadID,
-                limit: limit,
-                sortDirection: .desc
+        let page: ThreadTurnsPage
+        do {
+            page = try await listThreadTurns(
+                .init(
+                    threadID: threadID,
+                    limit: limit,
+                    sortDirection: .desc
+                )
             )
-        )
+        } catch let error as CodexAppServerError where Self.isThreadTurnsHistoryUnavailable(error) {
+            return .init(turns: [], nextOlderCursor: nil, nextNewerCursor: nil)
+        }
 
         return .init(
             turns: try await historyStore.turnSnapshots(
@@ -2984,6 +2989,16 @@ public actor CodexAppServer {
 
     private static func recentCommandSnapshotID(turnID: String, itemID: String) -> String {
         "\(turnID):\(itemID)"
+    }
+
+    private static func isThreadTurnsHistoryUnavailable(_ error: CodexAppServerError) -> Bool {
+        guard case let .protocolFailure(operation, reason) = error,
+              operation == "thread/turns/list" else {
+            return false
+        }
+
+        return reason.contains("ephemeral threads do not support thread/turns/list")
+            || reason.contains("thread/turns/list is unavailable before first user message")
     }
 
     private static func recentFileStatusSummary(status: String?, text: String?) -> String? {

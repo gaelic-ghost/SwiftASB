@@ -120,6 +120,101 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @MainActor
+    @Test("starts recent observables locally when live turn history is unavailable before first user message")
+    func startsRecentObservablesLocallyBeforeLiveHistoryMaterializes() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadTurnsListErrorMessage: """
+            thread 019dd4eb-fc9d-7361-9e7d-e7c472c333b8 is not materialized yet; thread/turns/list is unavailable before first user message
+            """
+        )
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        let recentTurns = try await thread.makeRecentTurns(limit: 4)
+        let recentFiles = try await thread.makeRecentFiles(limit: 4)
+        let recentCommands = try await thread.makeRecentCommands(limit: 4)
+
+        #expect(recentTurns.turns.isEmpty)
+        #expect(recentTurns.nextOlderCursor == nil)
+        #expect(recentTurns.nextNewerCursor == nil)
+        #expect(recentFiles.files.isEmpty)
+        #expect(recentFiles.nextOlderCursor == nil)
+        #expect(recentCommands.commands.isEmpty)
+        #expect(recentCommands.nextOlderCursor == nil)
+
+        await client.stop()
+    }
+
+    @MainActor
+    @Test("starts recent observables locally for ephemeral threads without server-paged turn history")
+    func startsRecentObservablesLocallyForEphemeralThreads() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadTurnsListErrorMessage: "ephemeral threads do not support thread/turns/list"
+        )
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread(.init(ephemeral: true))
+
+        let recentTurns = try await thread.makeRecentTurns(limit: 4)
+        let recentFiles = try await thread.makeRecentFiles(limit: 4)
+        let recentCommands = try await thread.makeRecentCommands(limit: 4)
+
+        #expect(recentTurns.turns.isEmpty)
+        #expect(recentFiles.files.isEmpty)
+        #expect(recentCommands.commands.isEmpty)
+
+        await client.stop()
+    }
+
+    @MainActor
+    @Test("preserves unexpected thread turn list failures for recent observable startup")
+    func preservesUnexpectedRecentObservableStartupFailures() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadTurnsListErrorMessage: "database unavailable while reading turn history"
+        )
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        await #expect(throws: CodexAppServerError.self) {
+            try await thread.makeRecentTurns(limit: 4)
+        }
+
+        await client.stop()
+    }
+
     @Test("sets thread names through the public thread handle")
     func setsThreadNameThroughPublicHandle() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -5137,6 +5232,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var threadReadResult: [String: Any]?
     private var threadForkResult: [String: Any]?
     private var threadResumeResult: [String: Any]?
+    private var threadTurnsListErrorMessage: String?
     private var threadTurnsListResult: [String: Any]?
     private var threadTurnsListResultQueue: [[String: Any]]
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
@@ -5150,6 +5246,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         threadReadResult: [String: Any]? = nil,
         threadForkResult: [String: Any]? = nil,
         threadResumeResult: [String: Any]? = nil,
+        threadTurnsListErrorMessage: String? = nil,
         threadTurnsListResult: [String: Any]? = nil,
         threadTurnsListResultQueue: [[String: Any]] = []
     ) {
@@ -5158,6 +5255,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         self.threadReadResult = threadReadResult
         self.threadForkResult = threadForkResult
         self.threadResumeResult = threadResumeResult
+        self.threadTurnsListErrorMessage = threadTurnsListErrorMessage
         self.threadTurnsListResult = threadTurnsListResult
         self.threadTurnsListResultQueue = threadTurnsListResultQueue
     }
@@ -5560,6 +5658,13 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 ]
             )
         case "thread/turns/list":
+            if let threadTurnsListErrorMessage {
+                return errorPayload(
+                    id: id,
+                    code: -32600,
+                    message: threadTurnsListErrorMessage
+                )
+            }
             if !threadTurnsListResultQueue.isEmpty {
                 return responsePayload(
                     id: id,
