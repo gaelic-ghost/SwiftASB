@@ -640,6 +640,118 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "runs a multi-turn live file mutation scenario",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_FILE_SCENARIO_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI and asks it to mutate files."
+        ),
+        .timeLimit(.minutes(5))
+    )
+    func runsMultiTurnLiveFileMutationScenario() async throws {
+        let harness = try LiveCodexHarness()
+        defer { harness.cleanup() }
+
+        let scratchURL = harness.fileScenarioWorkspace.appendingPathComponent("scratch.txt")
+        let auditURL = harness.fileScenarioWorkspace.appendingPathComponent("audit.txt")
+
+        let client = try await makeInitializedLiveClient(using: harness)
+        do {
+            let thread = try await startThread(
+                on: client,
+                workspacePath: harness.fileScenarioWorkspace.path,
+                label: "file-mutation-scenario",
+                approvalPolicy: .onRequest,
+                approvalsReviewer: .user,
+                ephemeral: false,
+                developerInstructions: """
+                You are running inside a SwiftASB live integration test.
+                Make only the exact filesystem change requested by the user.
+                Stay inside the current working directory.
+                If approval is requested, wait for the test harness to answer it.
+                Do not ask follow-up questions.
+                After the requested filesystem change succeeds, reply with exactly FILE_SCENARIO_DONE and nothing else.
+                """
+            )
+
+            let createTurn = try await startTurn(
+                on: thread,
+                prompt: """
+                Create scratch.txt with exactly this content:
+                alpha
+
+                Then reply with exactly FILE_SCENARIO_DONE and nothing else.
+                """,
+                approvalPolicy: .onRequest,
+                approvalsReviewer: .user
+            )
+            let createResult = try await completeLiveTurnAcceptingApprovals(
+                createTurn,
+                timeoutSeconds: 90,
+                operation: "waiting for the live file scenario create turn to complete"
+            )
+            #expect(createResult.completion.turn.status == .completed)
+            #expect(try String(contentsOf: scratchURL, encoding: .utf8) == "alpha\n")
+
+            let recentFiles = try await thread.makeRecentFiles(limit: 10)
+            let recentCommands = try await thread.makeRecentCommands(limit: 10)
+
+            let editTurn = try await startTurn(
+                on: thread,
+                prompt: """
+                Replace scratch.txt with exactly this content:
+                alpha
+                beta
+
+                Then reply with exactly FILE_SCENARIO_DONE and nothing else.
+                """,
+                approvalPolicy: .onRequest,
+                approvalsReviewer: .user
+            )
+            let editResult = try await completeLiveTurnAcceptingApprovals(
+                editTurn,
+                timeoutSeconds: 90,
+                operation: "waiting for the live file scenario edit turn to complete"
+            )
+            #expect(editResult.completion.turn.status == .completed)
+            #expect(try String(contentsOf: scratchURL, encoding: .utf8) == "alpha\nbeta\n")
+
+            let deleteTurn = try await startTurn(
+                on: thread,
+                prompt: """
+                Delete scratch.txt.
+                Create audit.txt with exactly this content:
+                deleted scratch.txt
+
+                Then reply with exactly FILE_SCENARIO_DONE and nothing else.
+                """,
+                approvalPolicy: .onRequest,
+                approvalsReviewer: .user
+            )
+            let deleteResult = try await completeLiveTurnAcceptingApprovals(
+                deleteTurn,
+                timeoutSeconds: 90,
+                operation: "waiting for the live file scenario delete turn to complete"
+            )
+            #expect(deleteResult.completion.turn.status == .completed)
+            #expect(FileManager.default.fileExists(atPath: scratchURL.path) == false)
+            #expect(try String(contentsOf: auditURL, encoding: .utf8) == "deleted scratch.txt\n")
+
+            let observedCalls = createResult.callSnapshots + editResult.callSnapshots + deleteResult.callSnapshots
+            #expect(observedCalls.contains { $0.kind == .fileEdit || $0.kind == .command })
+
+            let fileSnapshots = await MainActor.run { recentFiles.files }
+            let commandSnapshots = await MainActor.run { recentCommands.commands }
+            #expect(fileSnapshots.isEmpty == false || commandSnapshots.isEmpty == false)
+
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "probes live same-thread overlapping turn behavior",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
@@ -708,6 +820,7 @@ private final class LiveCodexHarness {
     let codexHomeURL: URL
     let threadAWorkspace: URL
     let threadBWorkspace: URL
+    let fileScenarioWorkspace: URL
     let sameThreadWorkspace: URL
     let codexExecutableURL: URL
 
@@ -720,12 +833,14 @@ private final class LiveCodexHarness {
         self.codexHomeURL = rootDirectoryURL.appendingPathComponent(".codex", isDirectory: true)
         self.threadAWorkspace = rootDirectoryURL.appendingPathComponent("thread-a", isDirectory: true)
         self.threadBWorkspace = rootDirectoryURL.appendingPathComponent("thread-b", isDirectory: true)
+        self.fileScenarioWorkspace = rootDirectoryURL.appendingPathComponent("file-scenario", isDirectory: true)
         self.sameThreadWorkspace = rootDirectoryURL.appendingPathComponent("same-thread", isDirectory: true)
         self.codexExecutableURL = try Self.resolveCodexExecutableURL()
 
         try fileManager.createDirectory(at: codexHomeURL, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: threadAWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: threadBWorkspace, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: fileScenarioWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: sameThreadWorkspace, withIntermediateDirectories: true)
         try Self.seedIsolatedCodexHome(at: codexHomeURL, fileManager: fileManager)
     }
@@ -836,6 +951,11 @@ private enum LiveTurnStartOutcome {
     case failed(String)
 }
 
+private struct LiveScenarioTurnResult {
+    let completion: CodexTurnCompletion
+    let callSnapshots: [CodexTurnHandle.Minimap.CallSnapshot]
+}
+
 private enum LiveIntegrationError: Error, LocalizedError {
     case timedOut(operation: String, seconds: Double)
     case eventStreamEnded(operation: String)
@@ -859,6 +979,7 @@ private func startThread(
     label: String,
     approvalPolicy: CodexAppServer.ApprovalPolicy = .never,
     approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil,
+    ephemeral: Bool = true,
     developerInstructions: String = """
     You are running inside a SwiftASB live integration test.
     Do not call tools.
@@ -874,7 +995,7 @@ private func startThread(
                 approvalsReviewer: approvalsReviewer,
                 currentDirectoryPath: workspacePath,
                 developerInstructions: developerInstructions,
-                ephemeral: true,
+                ephemeral: ephemeral,
                 sandboxMode: .workspaceWrite
             )
         )
@@ -957,6 +1078,39 @@ private func awaitRequestResolution(
            resolution.kind == expectedKind {
             return resolution
         }
+        try await Task.sleep(nanoseconds: 100_000_000)
+    }
+
+    throw LiveIntegrationError.timedOut(operation: operation, seconds: timeoutSeconds)
+}
+
+private func completeLiveTurnAcceptingApprovals(
+    _ turnHandle: CodexTurnHandle,
+    timeoutSeconds: Double,
+    operation: String
+) async throws -> LiveScenarioTurnResult {
+    let minimap = await turnHandle.makeMinimap()
+    let deadline = ContinuousClock.now + .seconds(timeoutSeconds)
+    var answeredRequestIDs = Set<CodexRPCRequestID>()
+
+    while ContinuousClock.now < deadline {
+        if let request = await MainActor.run(body: { minimap.latestApprovalRequest }),
+           answeredRequestIDs.contains(request.requestID) == false {
+            answeredRequestIDs.insert(request.requestID)
+            try await turnHandle.respond(
+                to: request,
+                with: acceptanceResponse(for: request)
+            )
+        }
+
+        if let completion = await MainActor.run(body: { minimap.latestCompletion }) {
+            let snapshots = await MainActor.run(body: { minimap.callSnapshots })
+            return LiveScenarioTurnResult(
+                completion: completion,
+                callSnapshots: snapshots
+            )
+        }
+
         try await Task.sleep(nanoseconds: 100_000_000)
     }
 

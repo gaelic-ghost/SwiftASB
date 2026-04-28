@@ -58,6 +58,8 @@ Default tests use fake transports and do not require a live Codex subprocess. Li
 
 The live approval-path probe is observational. The current Codex runtime does not reliably force an approval request for a chosen prompt, so that test can complete without observing an approval request and still be useful.
 
+The live file-scenario probe is also observational around approval shape, but deterministic around filesystem outcome. It creates an isolated temporary workspace, asks the real Codex CLI to create, edit, and delete files across multiple turns, accepts approval requests when the runtime raises them, and verifies the final files on disk.
+
 ## Development Expectations
 
 ### Naming Conventions
@@ -100,7 +102,14 @@ env SWIFTASB_ENABLE_LIVE_CODEX_THREAD_MANAGEMENT_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SINGLE_TURN_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_CROSS_THREAD_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_TESTS=1 swift test
+env SWIFTASB_ENABLE_LIVE_CODEX_FILE_SCENARIO_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SAME_THREAD_TESTS=1 swift test
+```
+
+Run only the multi-turn live file scenario:
+
+```bash
+scripts/run-live-codex-file-scenario.sh
 ```
 
 Use the generated-wire entrypoint when refreshing Codex schema-derived models:

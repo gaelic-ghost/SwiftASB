@@ -1455,8 +1455,9 @@ struct CodexAppServerTests {
             ]
         )
 
-        await waitForObservableState {
+        await waitForObservableState(maxAttempts: 2_000) {
             recentFiles.files[0].status == .completed
+                && recentFiles.files[0].payloadText?.contains("https://example.com") == true
         }
 
         #expect(recentFiles.files.count == 1)
