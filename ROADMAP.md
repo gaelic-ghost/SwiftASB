@@ -7,6 +7,7 @@
 - [Current Feature Matrix](#current-feature-matrix)
 - [Milestone Progress](#milestone-progress)
 - [Current Maintainer Priority](#current-maintainer-priority)
+- [Live App-Server Findings](#live-app-server-findings)
 - [Proposed Next Release Slice](#proposed-next-release-slice)
 - [Decisions Made For The First Interactive Lifecycle](#decisions-made-for-the-first-interactive-lifecycle)
 - [Milestone 0: Package And Repo Baseline](#milestone-0-package-and-repo-baseline)
@@ -61,9 +62,9 @@
 | Multiple active threads per app-server | `Shipped` | One `CodexAppServer` now supports many concurrently held `CodexThread` handles, and the package tests plus live probes treat cross-thread concurrency as a supported model. |
 | Multiple simultaneous turns on one thread | `Resolved for now` | Live probing showed that same-thread overlap is not independently routable at the app-server layer today, so `SwiftASB` rejects overlapping same-thread turns client-side with `CodexAppServerError.invalidState`. |
 | `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, includes a `startTextTurn(...)` happy-path helper, exposes a typed thread event stream, wraps `compactContext()`, and can now vend a live `Dashboard` observable mirror with aggregate tool-calling, MCP-calling, hook-run, and thread-compaction state. |
-| Thread-scoped recent-turn observable | `Partially shipped` | `CodexThread.makeRecentTurns(limit:)` now vends a bounded recent-turn observable that prewarms from the local history store, supports explicit older/newer whole-turn window expansion, seeds upstream paging cursors even when the visible initial window came from local history, and falls back to `thread/turns/list` when needed. `RecentTurns` now ships named cache-policy presets for chat UIs, full inspectors, and compact history rails; tracks both resident item counts and weighted resident item cost; slims low-value payloads out of older non-visible completed turns before evicting whole turns; rehydrates slimmed turns when they become visible again; and uses scroll-position, visibility, phase, and velocity signals to drive protected residency plus earlier prefetch. Richer weighting heuristics and deeper policy tuning are still open. |
-| Thread-scoped recent-file observable | `Partially shipped` | `CodexThread.makeRecentFiles(limit:)` now vends a file-centric recent-files observable that hydrates from persisted file-change items, keeps one resident entry per file-change item, enriches live entries from `item/fileChange/outputDelta`, can load older file entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-payload slimming with automatic payload rehydration for protected files. The current weighting now accounts for diff structure and line volume, and shell summaries prefer concise edit summaries over raw terminal status when sealed payload is available. The remaining open work is mostly deeper weighting and the later mixed `RecentActivity` feed. |
-| Thread-scoped recent-command observable | `Partially shipped` | `CodexThread.makeRecentCommands(limit:)` now vends a command-centric recent-commands observable that hydrates from persisted `commandExecution` items, keeps one resident entry per command item, enriches live entries from `item/commandExecution/outputDelta`, can load older command entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-output slimming with automatic output rehydration for protected commands. Current output weighting accounts for output size and line structure, and shell summaries prefer concise command and output summaries over raw transport detail. The remaining open work is mostly deeper weighting, shell-summary tuning, and the later mixed `RecentActivity` feed. |
+| Thread-scoped recent-turn observable | `Partially shipped` | `CodexThread.makeRecentTurns(limit:)` now vends a bounded recent-turn observable that prewarms from the local history store, supports explicit older/newer whole-turn window expansion, seeds upstream paging cursors even when the visible initial window came from local history, and falls back to `thread/turns/list` when needed. Live probing shows that upstream turn paging is available only after a non-ephemeral thread has materialized at least one user turn, so the API still needs a clearer validation or degraded local-only behavior for ephemeral and pre-materialized threads. `RecentTurns` now ships named cache-policy presets for chat UIs, full inspectors, and compact history rails; tracks both resident item counts and weighted resident item cost; slims low-value payloads out of older non-visible completed turns before evicting whole turns; rehydrates slimmed turns when they become visible again; and uses scroll-position, visibility, phase, and velocity signals to drive protected residency plus earlier prefetch. Richer weighting heuristics and deeper policy tuning are still open. |
+| Thread-scoped recent-file observable | `Partially shipped` | `CodexThread.makeRecentFiles(limit:)` now vends a file-centric recent-files observable that hydrates from persisted file-change items, keeps one resident entry per file-change item, enriches live entries from `item/fileChange/outputDelta`, can load older file entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-payload slimming with automatic payload rehydration for protected files. Live probing exercises a real create/edit/delete scenario, but recent-file startup still inherits the same `thread/turns/list` runtime boundary as recent-turns. The current weighting now accounts for diff structure and line volume, and shell summaries prefer concise edit summaries over raw terminal status when sealed payload is available. The remaining open work is clearer live-boundary validation, better payload-cost calibration at the margins, and deciding whether `FileChangePatchUpdatedNotification` should enrich the observable with structured patch previews. |
+| Thread-scoped recent-command observable | `Partially shipped` | `CodexThread.makeRecentCommands(limit:)` now vends a command-centric recent-commands observable that hydrates from persisted `commandExecution` items, keeps one resident entry per command item, enriches live entries from `item/commandExecution/outputDelta`, can load older command entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-output slimming with automatic output rehydration for protected commands. Live probing confirms that recent-command startup inherits the same non-ephemeral/materialized-thread boundary when it needs upstream `thread/turns/list`. Current output weighting accounts for output size and line structure, and shell summaries prefer concise command and output summaries over raw transport detail. The remaining open work is clearer live-boundary validation, better output-cost calibration, and sharper shell-summary heuristics. |
 | Non-UI local history-reading helpers | `Partially shipped` | `CodexThread` now exposes a lightweight `HistoryWindow` page shape for recent local history, older or newer local windows around a known boundary turn id, centered `windowAroundTurn(...)` reads, centered `windowAroundItem(...)` reads, direct `ClosedTurn` reads for one turn, and convenience array helpers over those same windows. This gives non-UI callers an intentional path into the local history store without binding a UI-oriented observable, while still deferring a broader public cursor model, transcript search surface, and richer history-query helpers. |
 | Public API curation | `Partially shipped` | The first source-organization pass has split app-wide model, MCP, and thread-management value types into dedicated `CodexAppServer+...` files while preserving `CodexAppServer` as the single connection-wide owner. The first DocC catalog now maps the main handles and lifecycle concepts, but more source splitting, name review, default-argument review, and source-level symbol documentation remain before v1. |
 | DocC documentation | `Partially shipped` | `Sources/SwiftASB/SwiftASB.docc/` now contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, and generated-wire boundary notes. The catalog is validated through Xcode `docbuild`; deeper symbol comments and more examples still remain before v1. |
@@ -76,7 +77,7 @@
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a rolling support window of the latest public Codex CLI release plus the prior two minor versions, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current rolling Codex CLI compatibility window, but richer examples are still open. |
-| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including app-wide capability snapshots, a thread-name smoke path, same-thread concurrency probing, and a best-effort live approval-path probe, while the default test suite still relies on a deterministic fake transport seam because the current runtime does not reliably force an approval request on demand. |
+| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including app-wide capability snapshots, a thread-name smoke path, same-thread concurrency probing, a best-effort live approval-path probe, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The file scenario can write a JSON diagnostic report under `tmp/live-codex-reports/` through `scripts/run-live-codex-file-scenario.sh`. The default test suite still relies on a deterministic fake transport seam because the current runtime does not reliably force an approval request on demand. |
 | FSL-1.1-ALv2 licensing | `Shipped` | The repo now carries the `FSL-1.1-ALv2` license text, README references the live license surface, and each released version converts to Apache 2.0 two years after it is first made available. |
 
 ## Milestone Progress
@@ -136,6 +137,32 @@ That means the current priority order is:
 9. Expand DocC before v1: keep the first `SwiftASB.docc` catalog current, add deeper symbol comments where the generated documentation is too terse, add more copy-pasteable walkthroughs, and keep the Xcode `docbuild` validation path clean.
 10. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
 11. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
+
+## Live App-Server Findings
+
+The current live Codex CLI probes have found real app-server behavior that should
+shape `SwiftASB` rather than stay as one-off test knowledge.
+
+- `thread/turns/list` rejects ephemeral threads. Any public helper that can fall
+  back to upstream turn paging needs either a clearer precondition for
+  non-ephemeral threads or a local-only degraded mode when the thread is known to
+  be ephemeral.
+- `thread/turns/list` also rejects a non-ephemeral thread before the first user
+  message materializes stored thread history. Recent-turn, recent-file, and
+  recent-command observables should not make this look like an ordinary protocol
+  failure. The next API-tightening pass should either delay upstream paging until
+  after first-turn materialization, return an empty local-only initial view, or
+  throw a more specific `CodexAppServerError.invalidState` that names the live
+  runtime boundary.
+- Approval prompts remain nondeterministic for prompt-driven live tests. Live
+  scenarios should accept approval requests when they surface, but durable
+  assertions should focus on terminal turn status, observable call snapshots, and
+  filesystem or history outcomes.
+- `scripts/run-live-codex-file-scenario.sh` is the preferred validation for the
+  create/edit/delete path. It opts into the live file scenario and writes a JSON
+  diagnostic report under `tmp/live-codex-reports/` so maintainers can inspect
+  observed call kinds, approval kinds, recent-file snapshots, and recent-command
+  snapshots after a real CLI run.
 
 ## Proposed Next Release Slice
 
@@ -375,8 +402,10 @@ In Progress
   Decision: stream-first. Approval and elicitation requests should arrive as typed public events, with answers sent through explicit public methods on the owning surface.
 - [x] Add fake-transport tests that prove approval and elicitation messages can be observed and answered through the chosen public shape.
 - [x] Add opt-in live coverage for app-wide capability snapshots and a straightforward thread-management smoke path.
+- [x] Add opt-in live coverage for a multi-turn file mutation scenario against the real CLI, with deterministic filesystem assertions and optional diagnostic report output.
 - [ ] Add opt-in live rollback coverage using a disposable thread with isolated harmless turns and explicit local rollback-marker assertions.
 - [ ] Add opt-in live coverage for at least one approval or server-request path if the local Codex runtime exposes a stable repro.
+- [ ] Tighten recent-history helper behavior around live `thread/turns/list` boundaries for ephemeral and pre-materialized threads.
 - [x] Add cancellation or interruption flows that are part of the intended first public lifecycle.
 - [x] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
 
@@ -448,8 +477,9 @@ In Progress
 - [ ] Add a one-shot `run(...)` convenience API once the handle model feels stable.
 - [x] Add consumer-facing examples for the supported interactive lifecycle before broadening the public API further.
 - [x] Add a real subprocess-backed integration test harness once the supported event set is less volatile.
-  Current shape: the repo now has an opt-in live harness for raw transport/protocol checks plus public-client turn and concurrency probes; broader always-on subprocess coverage is still intentionally deferred.
+  Current shape: the repo now has an opt-in live harness for raw transport/protocol checks, public-client turn and concurrency probes, and a multi-turn real-CLI file mutation scenario with JSON report output; broader always-on subprocess coverage is still intentionally deferred.
 - [x] Expand `README.md` with first-use examples and runtime expectations.
+- [ ] Make recent-history observables fit live app-server history availability more explicitly instead of surfacing raw `thread/turns/list` protocol errors for ephemeral or pre-materialized threads.
 
 ## Backlog Candidates
 
@@ -457,6 +487,7 @@ In Progress
 - [ ] Add a broader public history cursor or transcript search surface after the local history contract is clearer.
 - [ ] Add richer MCP progress detail either as public event cases or as deeper observable companion state.
 - [ ] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
+- [ ] Add a local-only or clearer-error startup mode for recent history observables when live upstream paging is unavailable because the thread is ephemeral or not yet materialized.
 - [ ] Confirm the Swift Package Index listing after the package is publicly indexed and tagged.
 
 ## History
