@@ -40,6 +40,12 @@ Keep package structure changes in `Package.swift`, and prefer SwiftPM commands f
 
 When touching public API, update the matching tests, README usage notes, DocC pages, and roadmap status in the same branch. When touching generated wire code, use `scripts/generate-wire-types.sh` instead of hand-editing the promoted generated snapshot.
 
+### Generated Schema Promotion Policy
+
+Generated `CodexWire...` models are internal scaffolding until a SwiftASB-owned surface gives them a consumer-facing job. When a generated schema family graduates into public API or observable companion behavior, the same PR must add at least one representative fixture test that decodes or encodes the promoted shape through the package-owned boundary.
+
+That fixture should cover the exact request, response, notification, or server-request family being promoted; include the fields SwiftASB relies on; and include one harmless additive unknown field when the upstream payload is expected to remain forward-compatible. Keep the fixture close to the protocol or public-client tests that own the behavior, and update `ROADMAP.md` with the public/observable/internal classification decision.
+
 ### Asking For Review
 
 A change is ready for review when the relevant validation commands pass, docs reflect the actual shipped behavior, and the PR explains what changed and what was verified. If a live Codex runtime behavior is nondeterministic, say that plainly in the PR body instead of presenting a probe as a hard release gate.
@@ -57,6 +63,8 @@ SwiftASB discovers the Codex executable from `PATH`, common Homebrew locations, 
 Default tests use fake transports and do not require a live Codex subprocess. Live tests are opt-in because they launch the local Codex CLI in temporary workspaces and depend on the installed runtime.
 
 The live approval-path probe is observational. The current Codex runtime does not reliably force an approval request for a chosen prompt, so that test can complete without observing an approval request and still be useful.
+
+The deterministic app-server approval test uses a different shape. It still launches the installed `codex app-server`, but it seeds an isolated `CODEX_HOME` whose `model_provider` points at a local mock Responses-compatible endpoint. The mock endpoint emits an upstream-style shell-command tool call, so the real app-server reaches a command item plus `waitingOnApproval`, delivers `item/commandExecution/requestApproval`, accepts SwiftASB's JSON-RPC response, emits `serverRequest/resolved`, completes the command, and finishes the turn without calling the hosted OpenAI API. This path does not require an OpenAI API key and should be the preferred regression coverage for deterministic approval setup.
 
 The live file-scenario probe is also observational around approval shape, but deterministic around filesystem outcome. It creates an isolated temporary workspace, asks the real Codex CLI to create, edit, and delete files across multiple turns, accepts approval requests when the runtime raises them, and verifies the final files on disk.
 
@@ -103,10 +111,17 @@ env SWIFTASB_ENABLE_LIVE_CODEX_CAPABILITY_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_THREAD_MANAGEMENT_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SINGLE_TURN_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_CROSS_THREAD_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_TESTS=1 swift test
+env SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_PROBE_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_FILE_SCENARIO_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_ROLLBACK_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SAME_THREAD_TESTS=1 swift test
+```
+
+Run only the deterministic approval/server-request coverage and the exploratory
+approval probe:
+
+```bash
+scripts/run-live-codex-approval-probe.sh
 ```
 
 Run only the multi-turn live file scenario:

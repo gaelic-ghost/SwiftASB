@@ -72,12 +72,12 @@
 | Contributor documentation split | `Shipped` | `README.md` is now focused on Swift and SwiftUI package users, while `CONTRIBUTING.md` owns contributor setup, validation, DocC, live-test flags, generated-wire refresh, and PR expectations. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `close()` handoff into a caller-owned sealed turn snapshot. |
 | Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Raw command-output and file-change-output deltas now stay internal as transport detail but drive the shipped `RecentCommands` and `RecentFiles` companions, and streamed payloads are preserved when later completed snapshots are thinner. Richer MCP-progress detail still remains internal, and model reroutes plus v0.124 warning and model-verification notifications are still logged or retained internally rather than exposed. |
-| Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, and request resolution is tracked by JSON-RPC request id, but broader live coverage and more server-request families are still open. |
+| Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, request resolution is tracked by JSON-RPC request id, and deterministic command-approval completion is covered through the real app-server with a mock Responses provider. More server-request families and prompt-driven live behavior remain open. |
 | Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list`, seeds previously unknown local threads from paged history, widens persisted turn identity to stay thread-scoped across forks, and records explicit fork lineage while preserving conservative reconciliation that keeps richer local detail when upstream stored history is thinner. Public history paging/search helpers and archive-retention policy are still open. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a rolling support window of the latest public Codex CLI release plus the prior two minor versions, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current rolling Codex CLI compatibility window, but richer examples are still open. |
-| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including app-wide capability snapshots, a thread-name smoke path, same-thread concurrency probing, a best-effort live approval-path probe, a disposable live rollback scenario, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The file scenario can write a JSON diagnostic report under `tmp/live-codex-reports/` through `scripts/run-live-codex-file-scenario.sh`; rollback can be run directly through `scripts/run-live-codex-rollback-scenario.sh`. The default test suite still relies on a deterministic fake transport seam because the current runtime does not reliably force an approval request on demand. |
+| End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including app-wide capability snapshots, a thread-name smoke path, same-thread concurrency probing, deterministic command-approval completion through a mock Responses provider, a best-effort prompt-driven approval-path probe, approval/server-request candidate probing, a disposable live rollback scenario, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The approval/server-request probe, file scenario, and rollback scenario can be run directly through `scripts/run-live-codex-approval-probe.sh`, `scripts/run-live-codex-file-scenario.sh`, and `scripts/run-live-codex-rollback-scenario.sh`; the first two write JSON diagnostic reports under `tmp/live-codex-reports/`. The default test suite still relies on a deterministic fake transport seam for most public-client behavior because the current prompt-driven runtime does not reliably force an approval request on demand. |
 | FSL-1.1-ALv2 licensing | `Shipped` | The repo now carries the `FSL-1.1-ALv2` license text, README references the live license surface, and each released version converts to Apache 2.0 two years after it is first made available. |
 
 ## Milestone Progress
@@ -92,15 +92,14 @@
 
 ## Current Maintainer Priority
 
-The next meaningful package step is no longer proving that history hydration is
-possible. That slice now exists.
+The next meaningful package step is no longer proving basic history hydration,
+first-pass reconciliation, or command-approval completion. Those slices now
+exist.
 
-The next meaningful work is no longer basic hydration or first-pass
-reconciliation. That slice now exists.
-
-The next meaningful work is to extend reconciliation into the remaining thread
-management flows and then expose a deliberate public history-reading surface
-without making the stored-history contract sound richer than it really is.
+The next meaningful work is to finish the first interactive lifecycle release
+shape: keep the shipped public handles intentional, keep the live-runtime probes
+honest about prompt-driven nondeterminism, and close the remaining public docs,
+DocC, and API-curation gaps before widening into convenience APIs.
 
 The package can now:
 
@@ -126,17 +125,15 @@ The package can now:
 
 That means the current priority order is:
 
-1. Keep tuning `RecentTurns` now that the first resident-window, scroll-aware cache policy, named presets, weighted item-cost budgeting, payload-slimming path, and centered non-UI history windows are shipped. The remaining work there is better weight calibration, smarter shell-vs-payload heuristics, and deciding whether some item kinds deserve stickier retention than the current first-pass rules.
-2. Keep tuning `RecentFiles` now that the first selection-aware shell-versus-payload slimming pass is shipped. The remaining work there is better payload-cost calibration at the margins and deciding whether `FileChangePatchUpdatedNotification` should enrich the observable with structured patch previews. `RecentFiles` remains a dedicated file-centric companion rather than feeding a near-term mixed activity type.
-3. Keep tuning `RecentCommands` now that the first command-side shell-versus-output slimming pass is shipped. The remaining work there is better output-cost calibration and sharper shell-summary heuristics. `RecentCommands` remains a dedicated command-centric companion rather than feeding a near-term mixed activity type.
-4. Keep the v0.125 additions classified before public promotion: `excludeTurns` is public on resume/fork request models because it directly supports the existing paged history model, `marketplace/upgrade` and the `amazonBedrock` account variant remain internal because SwiftASB does not yet own marketplace or account-management APIs, and the stricter tagged `permissionProfile` shape is handled by a temporary compatibility shim until the older loose shape leaves the rolling support window. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian action families stay internal until their consumer job is clear.
-5. Do not add `RecentActivity` for v1. The separate `RecentTurns`, `RecentFiles`, and `RecentCommands` types are the clearer consumer surface, and a mixed feed would add more confusion than value right now.
-6. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
-7. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
-8. Continue public API curation before v1: the first model/MCP/thread-management source split is done and the first DocC public-surface map now exists, but the package still needs more source splitting where it reduces file sprawl, tighter names and defaults, deeper source-level symbol documentation, and a final pass to make the first-class package surface feel intentionally designed rather than merely accumulated.
-9. Expand DocC before v1: keep the first `SwiftASB.docc` catalog current, add deeper symbol comments where the generated documentation is too terse, add more copy-pasteable walkthroughs, and keep the Xcode `docbuild` validation path clean.
-10. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate.
-11. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
+1. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate now that deterministic approval completion, rollback, file mutation, history hydration, and subprocess failure-mode coverage all exist.
+2. Continue public API curation before v1: the first model/MCP/thread-management source split is done and the first DocC public-surface map now exists, but the package still needs more source splitting where it reduces file sprawl, tighter names and defaults, deeper source-level symbol documentation, and a final pass to make the first-class package surface feel intentionally designed rather than merely accumulated.
+3. Expand DocC before v1: keep the first `SwiftASB.docc` catalog current, add deeper symbol comments where the generated documentation is too terse, add more copy-pasteable walkthroughs, and keep the Xcode `docbuild` validation path clean.
+4. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` now that the first resident-window, cache-policy, payload-slimming, centered-window, file-centric, and command-centric surfaces are shipped. The remaining work is calibration and heuristics, not proving the model exists.
+5. Keep the v0.125 additions classified before public promotion: `excludeTurns` is public on resume/fork request models because it directly supports the existing paged history model, `marketplace/upgrade` and the `amazonBedrock` account variant remain internal because SwiftASB does not yet own marketplace or account-management APIs, and the stricter tagged `permissionProfile` shape is handled by a temporary compatibility shim until the older loose shape leaves the rolling support window. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian action families stay internal until their consumer job is clear.
+6. Do not add `RecentActivity` for v1. The separate `RecentTurns`, `RecentFiles`, and `RecentCommands` types are the clearer consumer surface, and a mixed feed would add more confusion than value right now.
+7. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
+8. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
+9. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
 
 ## Live App-Server Findings
 
@@ -155,11 +152,116 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   scenarios should accept approval requests when they surface, but durable
   assertions should focus on terminal turn status, observable call snapshots, and
   filesystem or history outcomes.
+- Upstream Codex app-server coverage proves the JSON-RPC server-request path is
+  deterministic when the model stream is controlled. Their v2 app-server tests
+  trigger `CommandExecutionRequestApproval`, `FileChangeRequestApproval`,
+  `PermissionsRequestApproval`, and MCP elicitation requests with a mock
+  Responses provider and then answer the JSON-RPC request before waiting for
+  `serverRequest/resolved`. SwiftASB should mirror that shape with a local mock
+  Responses server instead of treating prompt-driven live approval behavior as
+  the only possible real-CLI test path.
+- For ordinary command and file-change approvals, upstream uses mocked Responses
+  tool-call events such as shell command and apply-patch calls under
+  `approval_policy = "untrusted"` and `sandbox_mode = "read-only"` to force
+  app-server request emission. For request-permissions coverage, upstream enables
+  `[features] request_permissions_tool = true` and emits a `request_permissions`
+  tool call. That gives SwiftASB a reproducible protocol path while still
+  launching the real installed `codex app-server`.
+- SwiftASB now has opt-in real-app-server coverage for the deterministic command
+  approval path: an isolated `CODEX_HOME`, local mock Responses provider,
+  command item, `waitingOnApproval` thread state, raw
+  `item/commandExecution/requestApproval` JSON-RPC delivery, SwiftASB's
+  response, `serverRequest/resolved`, command completion, and final
+  `turn/completed`. The root cause of the former gap was local: the JSON-RPC
+  envelope parser treated numeric request id `0` as a boolean because
+  `JSONSerialization` bridges JSON numbers through `NSNumber`. SwiftASB now
+  checks CoreFoundation boolean identity before accepting numeric request IDs.
+  Upstream app-server protocol structs are intentionally JSON-RPC-like rather
+  than strict JSON-RPC 2.0 and do not send or expect a `jsonrpc` version member,
+  so SwiftASB should keep generated outbound envelopes aligned with that shape
+  unless upstream changes the wire contract.
+- `approvalPolicy: .onRequest` plus `approvalsReviewer: .user` does not force
+  approval requests for workspace-write command, file-create, or file-edit
+  turns in the current live runtime. The approval/server-request probe records
+  those turns as completed command calls with no accepted approval kinds.
+- Setting the isolated live-test Codex config and request payloads to
+  `approval_policy = "untrusted"`, `approvals_reviewer = "user"`, and
+  `sandbox_mode = "workspace-write"` does change behavior, but not into a clean
+  typed approval flow. The command starts, no approval request is surfaced, the
+  turn times out, and the app-server transport is no longer usable for follow-up
+  `thread/start` calls.
+- A read-only sandbox write request currently attempts the command, leaves the
+  target file absent, and times out without surfacing a typed approval request or
+  completion when run after the workspace-write `.onRequest` candidates. Under
+  the stricter `.untrusted` probe, the app-server transport stops before the
+  read-only candidate can start. Keep both as live findings while we decide
+  whether SwiftASB needs a stronger timeout, blocked-call, or server-request
+  validation surface for this app-server behavior.
+- `scripts/run-live-codex-approval-probe.sh` is the preferred exploratory
+  validation for approval/server-request candidates. It opts into the live probe
+  and writes `live-approval-server-request-probe.json` under
+  `tmp/live-codex-reports/` so maintainers can inspect attempted Codex config,
+  observed call kinds, approval kinds, terminal text, file outcomes, and probe
+  errors after a real CLI run.
 - `scripts/run-live-codex-file-scenario.sh` is the preferred validation for the
   create/edit/delete path. It opts into the live file scenario and writes a JSON
   diagnostic report under `tmp/live-codex-reports/` so maintainers can inspect
   observed call kinds, approval kinds, recent-file snapshots, and recent-command
   snapshots after a real CLI run.
+- Test coverage audit, 2026-04-28: protocol encode/decode tests should assert
+  the app-server's JSON-RPC-like envelope shape directly. The upstream protocol
+  does not include `jsonrpc = "2.0"` on requests, notifications, or responses,
+  and `initialized` has no `params` field. Keep the default fake-transport tests
+  responsible for public-client routing and history behavior, and keep opt-in
+  live tests responsible for installed-runtime behavior. Raw command-approval
+  request delivery plus `serverRequest/resolved` is now covered through the real
+  app-server; the remaining live approval findings are prompt-driven runtime
+  behavior and additional server-request families.
+
+### Test Coverage Gap Register
+
+Keep this register current while the package is below `1.0.0`; tests are part
+of the public contract because consumers are wrapping a fast-moving local
+runtime.
+
+- Approval/server-request completion now has deterministic SwiftASB-owned
+  coverage and a focused live app-server completion probe. Fake-transport
+  public-client tests prove typed approval events surface through
+  `CodexTurnHandle`, `respond(...)` writes the expected JSON-RPC result,
+  `serverRequest/resolved` clears the route, and wrong-surface, wrong-kind,
+  already-resolved, and wrong-thread responses fail with descriptive errors. The
+  opt-in live raw mock-Responses probe now proves the real v0.125.0 app-server
+  can reach a command item plus `waitingOnApproval`, deliver an answerable
+  `item/commandExecution/requestApproval` request with numeric id `0`, accept
+  SwiftASB's response, emit `serverRequest/resolved`, complete the command, make
+  the follow-up mock Responses call, and finish the turn.
+- Malformed server-originated request coverage now covers missing-params
+  notifications, unknown server-request methods, unsupported request ID types,
+  malformed command approval, malformed file-change approval, malformed
+  permissions approval, malformed tool user input, malformed MCP elicitation,
+  route disappearance after resolution, wrong response surfaces, and
+  request/response IDs routed through the wrong active thread.
+- Live history coverage now includes an opt-in mock-Responses wrapper proving
+  that a real non-ephemeral stored thread can complete harmless text-only turns,
+  then read those turns back through `thread/read` and page them through
+  `thread/turns/list`.
+- Transport edge coverage now covers both envelope/line-buffer parsing and
+  real subprocess failure modes. The default tests cover versionless app-server
+  envelopes, optional tolerated `jsonrpc` fields, boolean/fractional/object
+  request IDs, notifications without `params`, partial line draining, duplicate
+  pending request IDs, pending response failure when the child process exits,
+  recent-stderr retention, malformed stdout followed by a later valid response,
+  and late duplicate response lines after a pending request has already been
+  fulfilled.
+- Schema drift guardrails now include generated-wire fixture payloads for
+  `thread/read`, `thread/turns/list`, command-execution thread items,
+  active thread status flags, additive thread fields, and
+  `serverRequest/resolved`. Keep adding one fixture whenever a promoted schema
+  family graduates from generated-internal to public or observable behavior.
+  The policy is: promotion from generated-internal to public or observable
+  behavior must include at least one representative fixture in the same PR,
+  including one additive unknown field when the upstream shape is expected to
+  remain forward-compatible.
 
 ## Proposed Next Release Slice
 
@@ -194,7 +296,7 @@ as a convenience-API release.
 - Expanding the public API just because the generated schema contains more message types.
 - A mixed `RecentActivity` feed; keep `RecentTurns`, `RecentFiles`, and
   `RecentCommands` as separate first-class surfaces for v1.
-- Treating the live approval-path probe as a deterministic release gate while the runtime repro remains non-deterministic.
+- Treating the prompt-driven live approval-path probe as a deterministic release gate while that runtime repro remains non-deterministic.
 
 ### Exit signal for this slice
 
@@ -401,7 +503,9 @@ In Progress
 - [x] Add opt-in live coverage for app-wide capability snapshots and a straightforward thread-management smoke path.
 - [x] Add opt-in live coverage for a multi-turn file mutation scenario against the real CLI, with deterministic filesystem assertions and optional diagnostic report output.
 - [x] Add opt-in live rollback coverage using a disposable thread with isolated harmless turns and explicit local rollback-marker assertions.
-- [ ] Add opt-in live coverage for at least one approval or server-request path if the local Codex runtime exposes a stable repro.
+- [x] Add opt-in real-app-server coverage for deterministic approval setup using an isolated `CODEX_HOME`, a local mock Responses provider, and a real command item reaching `waitingOnApproval`.
+- [x] Extend deterministic SwiftASB-owned approval coverage through typed public request delivery, SwiftASB response handling, route resolution, and response guardrails.
+- [x] Extend opt-in raw real-app-server approval coverage through `item/commandExecution/requestApproval`, SwiftASB response handling, `serverRequest/resolved`, command completion, and `turn/completed`.
 - [x] Tighten recent-history helper behavior around live `thread/turns/list` boundaries for ephemeral and pre-materialized threads.
 - [x] Add cancellation or interruption flows that are part of the intended first public lifecycle.
 - [x] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
@@ -474,7 +578,7 @@ In Progress
 - [ ] Add a one-shot `run(...)` convenience API once the handle model feels stable.
 - [x] Add consumer-facing examples for the supported interactive lifecycle before broadening the public API further.
 - [x] Add a real subprocess-backed integration test harness once the supported event set is less volatile.
-  Current shape: the repo now has an opt-in live harness for raw transport/protocol checks, public-client turn and concurrency probes, and a multi-turn real-CLI file mutation scenario with JSON report output; broader always-on subprocess coverage is still intentionally deferred.
+  Current shape: the repo now has an opt-in live harness for raw transport/protocol checks, public-client turn and concurrency probes, deterministic command-approval completion, disposable rollback, and a multi-turn real-CLI file mutation scenario with JSON report output; broader always-on subprocess coverage is still intentionally deferred.
 - [x] Expand `README.md` with first-use examples and runtime expectations.
 - [x] Make recent-history observables fit live app-server history availability more explicitly instead of surfacing raw `thread/turns/list` protocol errors for ephemeral or pre-materialized threads.
 

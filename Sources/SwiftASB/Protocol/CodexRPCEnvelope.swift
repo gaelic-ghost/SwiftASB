@@ -57,17 +57,13 @@ internal enum CodexRPCEnvelope {
             return .string(string)
         }
 
-        if rawValue is Bool {
-            throw CodexTransportError.invalidJSONRPCEnvelope(
-                reason: "JSON-RPC request IDs must not be booleans."
-            )
-        }
-
-        if let integer = rawValue as? Int {
-            return .int(integer)
-        }
-
         if let number = rawValue as? NSNumber {
+            if CFGetTypeID(number) == CFBooleanGetTypeID() {
+                throw CodexTransportError.invalidJSONRPCEnvelope(
+                    reason: "JSON-RPC request IDs must not be booleans."
+                )
+            }
+
             let doubleValue = number.doubleValue
             let integerValue = number.intValue
             guard doubleValue.rounded(.towardZero) == doubleValue else {
