@@ -617,6 +617,99 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "materializes a non-ephemeral live thread and pages its turns through the public client",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_HISTORY_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI and reads stored thread history."
+        ),
+        .timeLimit(.minutes(3))
+    )
+    func materializesLiveThreadHistoryThroughPublicClient() async throws {
+        let mockResponses = try await MockResponsesServer(
+            responses: [
+                .assistantMessage("LIVE_HISTORY_FIRST_DONE"),
+                .assistantMessage("LIVE_HISTORY_SECOND_DONE"),
+            ]
+        )
+        defer { mockResponses.stop() }
+
+        let harness = try LiveCodexHarness(
+            configMode: .mockResponses(baseURL: mockResponses.baseURL.absoluteString)
+        )
+        defer { harness.cleanup() }
+
+        let client = try await makeInitializedLiveClient(using: harness)
+        do {
+            let thread = try await startThread(
+                on: client,
+                workspacePath: harness.threadAWorkspace.path,
+                label: "history",
+                ephemeral: false
+            )
+
+            let firstTurn = try await startTurn(
+                on: thread,
+                prompt: prompt(label: "LIVE_HISTORY_FIRST_DONE")
+            )
+            let firstCompletion = try await awaitCompletion(
+                of: firstTurn,
+                timeoutSeconds: 45,
+                operation: "waiting for the first live history turn to complete"
+            )
+            #expect(firstCompletion.turn.status == .completed)
+
+            let secondTurn = try await startTurn(
+                on: thread,
+                prompt: prompt(label: "LIVE_HISTORY_SECOND_DONE")
+            )
+            let secondCompletion = try await awaitCompletion(
+                of: secondTurn,
+                timeoutSeconds: 45,
+                operation: "waiting for the second live history turn to complete"
+            )
+            #expect(secondCompletion.turn.status == .completed)
+
+            let readResult = try await withTimeout(
+                seconds: 20,
+                operation: "reading the materialized live thread"
+            ) {
+                try await client.readThread(
+                    .init(
+                        threadID: thread.id,
+                        includeTurns: true
+                    )
+                )
+            }
+            #expect(readResult.thread.id == thread.id)
+            #expect(readResult.turns.map(\.id).contains(firstCompletion.turn.id))
+            #expect(readResult.turns.map(\.id).contains(secondCompletion.turn.id))
+
+            let turnsPage = try await withTimeout(
+                seconds: 20,
+                operation: "listing materialized live thread turns"
+            ) {
+                try await client.listThreadTurns(
+                    .init(
+                        threadID: thread.id,
+                        limit: 10,
+                        sortDirection: .asc
+                    )
+                )
+            }
+            let pagedTurnIDs = turnsPage.turns.map(\.id)
+            #expect(pagedTurnIDs.contains(firstCompletion.turn.id))
+            #expect(pagedTurnIDs.contains(secondCompletion.turn.id))
+            #expect(mockResponses.requestCount >= 2)
+
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "probes live approval-path behavior for shell commands",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"

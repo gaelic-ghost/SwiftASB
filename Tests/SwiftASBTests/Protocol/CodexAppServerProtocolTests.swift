@@ -1114,16 +1114,39 @@ struct CodexAppServerProtocolTests {
 
     @Test("throws protocol errors for malformed server-originated request payloads")
     func rejectsMalformedServerRequestPayloads() throws {
-        let missingRequiredFieldsPayload = Data(#"{"itemId":"item-command-1"}"#.utf8)
+        let malformedRequests: [(method: String, payload: Data)] = [
+            (
+                "item/commandExecution/requestApproval",
+                Data(#"{"itemId":"item-command-1"}"#.utf8)
+            ),
+            (
+                "item/fileChange/requestApproval",
+                Data(#"{"itemId":"item-file-1","threadId":"thread-123"}"#.utf8)
+            ),
+            (
+                "item/permissions/requestApproval",
+                Data(#"{"itemId":"item-permissions-1","threadId":"thread-123","turnId":"turn-123"}"#.utf8)
+            ),
+            (
+                "item/tool/requestUserInput",
+                Data(#"{"itemId":"item-input-1","questions":[{"id":"goal"}],"threadId":"thread-123","turnId":"turn-123"}"#.utf8)
+            ),
+            (
+                "mcpServer/elicitation/request",
+                Data(#"{"message":"Authorize the calendar server.","mode":"url","threadId":"thread-123","url":"https://example.com/authorize"}"#.utf8)
+            ),
+        ]
 
-        #expect(throws: CodexProtocolError.self) {
-            try protocolLayer.decodeServerEvent(
-                .request(
-                    id: .string("approval-1"),
-                    method: "item/commandExecution/requestApproval",
-                    payload: missingRequiredFieldsPayload
+        for malformedRequest in malformedRequests {
+            #expect(throws: CodexProtocolError.self) {
+                try protocolLayer.decodeServerEvent(
+                    .request(
+                        id: .string("malformed-1"),
+                        method: malformedRequest.method,
+                        payload: malformedRequest.payload
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -1143,6 +1166,137 @@ struct CodexAppServerProtocolTests {
         #expect(object["id"] as? String == "approval-1")
         let result = try #require(object["result"] as? [String: Any])
         #expect(result["decision"] as? String == "accept")
+    }
+
+    @Test("decodes promoted generated-wire fixture payloads for drift guardrails")
+    func decodesPromotedGeneratedWireFixturePayloads() throws {
+        let decoder = JSONDecoder()
+        let threadReadPayload = Data(
+            #"""
+            {
+              "thread": {
+                "agentNickname": null,
+                "agentRole": null,
+                "cliVersion": "0.125.0",
+                "createdAt": 1713350000,
+                "cwd": "/tmp/project",
+                "ephemeral": false,
+                "forkedFromId": null,
+                "gitInfo": null,
+                "id": "thread-fixture",
+                "modelProvider": "openai",
+                "name": "Fixture Thread",
+                "path": "/tmp/codex/thread-fixture.jsonl",
+                "preview": "Fixture preview",
+                "source": "appServer",
+                "status": {
+                  "type": "active",
+                  "activeFlags": ["waitingOnApproval"]
+                },
+                "turns": [
+                  {
+                    "completedAt": 1713350002,
+                    "durationMs": 2000,
+                    "error": null,
+                    "id": "turn-fixture",
+                    "items": [
+                      {
+                        "content": null,
+                        "id": "item-command-fixture",
+                        "type": "commandExecution",
+                        "fragments": null,
+                        "memoryCitation": null,
+                        "phase": null,
+                        "text": null,
+                        "summary": null,
+                        "aggregatedOutput": "42\n",
+                        "command": "printf 42",
+                        "commandActions": [],
+                        "cwd": "/tmp/project",
+                        "durationMs": 10,
+                        "exitCode": 0,
+                        "processId": null,
+                        "source": "agent",
+                        "status": "completed",
+                        "changes": null,
+                        "arguments": null,
+                        "error": null,
+                        "mcpAppResourceURI": null,
+                        "result": null,
+                        "server": null,
+                        "tool": null,
+                        "contentItems": null,
+                        "namespace": null,
+                        "success": null,
+                        "agentsStates": null,
+                        "model": null,
+                        "prompt": null,
+                        "reasoningEffort": null,
+                        "receiverThreadIds": null,
+                        "senderThreadId": null,
+                        "action": null,
+                        "query": null,
+                        "path": null,
+                        "revisedPrompt": null,
+                        "savedPath": null,
+                        "review": null
+                      }
+                    ],
+                    "startedAt": 1713350001,
+                    "status": "completed"
+                  }
+                ],
+                "updatedAt": 1713350003,
+                "futureAdditiveField": {
+                  "keptForFixture": true
+                }
+              }
+            }
+            """#.utf8
+        )
+
+        let threadRead = try decoder.decode(CodexProtocolThreadReadResponse.self, from: threadReadPayload)
+        #expect(threadRead.thread.id == "thread-fixture")
+        #expect(threadRead.thread.status.activeFlags == [.waitingOnApproval])
+        #expect(threadRead.thread.turns.first?.items.first?.type == .commandExecution)
+
+        let turnsListPayload = Data(
+            #"""
+            {
+              "backwardsCursor": "cursor-previous",
+              "data": [
+                {
+                  "completedAt": 1713350002,
+                  "durationMs": 2000,
+                  "error": null,
+                  "id": "turn-fixture",
+                  "items": [],
+                  "startedAt": 1713350001,
+                  "status": "completed"
+                }
+              ],
+              "nextCursor": "cursor-next"
+            }
+            """#.utf8
+        )
+
+        let turnsList = try decoder.decode(CodexProtocolThreadTurnsListResponse.self, from: turnsListPayload)
+        #expect(turnsList.backwardsCursor == "cursor-previous")
+        #expect(turnsList.data.map(\.id) == ["turn-fixture"])
+        #expect(turnsList.nextCursor == "cursor-next")
+
+        let resolvedPayload = Data(
+            #"""
+            {
+              "requestId": 0,
+              "threadId": "thread-fixture"
+            }
+            """#.utf8
+        )
+
+        let resolved = try decoder.decode(CodexWireServerRequestResolvedNotification.self, from: resolvedPayload)
+        #expect(resolved.requestID == .integer(0))
+        #expect(resolved.threadID == "thread-fixture")
     }
 
     @Test("decodes reasoning notifications into typed protocol events")

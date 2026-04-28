@@ -4827,6 +4827,75 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("rejects interactive approval responses through the wrong thread route")
+    func rejectsApprovalResponsesThroughWrongThreadRoute() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadStartIDQueue: ["thread-route-a", "thread-route-b"]
+        )
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let firstThread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project-a",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+        let firstTurn = try await firstThread.startTextTurn("Review the first patch.")
+        await transport.emitCommandExecutionApprovalRequest(
+            requestID: .string("approval-1"),
+            threadID: firstThread.id,
+            turnID: firstTurn.turn.id,
+            itemID: "item-command-1"
+        )
+
+        guard case let .approvalRequested(approvalRequest)? = try await firstTurn.events.first(where: { _ in true }) else {
+            Issue.record("Expected a turn-scoped approval request on the first thread.")
+            await client.stop()
+            return
+        }
+
+        let secondThread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project-b",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+        let secondTurn = try await secondThread.startTextTurn("Review the second patch.")
+
+        do {
+            try await secondTurn.respond(
+                to: approvalRequest,
+                with: .commandExecution(.accept)
+            )
+            Issue.record("Expected a response through a different active turn route to fail.")
+        } catch let error as CodexAppServerError {
+            guard case let .invalidState(reason) = error else {
+                Issue.record("Expected an invalidState error for a mismatched active thread route.")
+                await client.stop()
+                return
+            }
+            #expect(reason.contains("belongs to thread \(firstThread.id)"))
+            #expect(reason.contains("not thread \(secondThread.id)"))
+        }
+
+        #expect(await transport.recordedResponses.isEmpty)
+
+        await client.stop()
+    }
+
     @Test("routes unroutable MCP elicitation requests through CodexThread and answers them there")
     func routesUnroutableMcpElicitationsThroughThread() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -5382,6 +5451,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var threadReadResult: [String: Any]?
     private var threadForkResult: [String: Any]?
     private var threadResumeResult: [String: Any]?
+    private var threadStartIDQueue: [String]
     private var threadTurnsListErrorMessage: String?
     private var threadTurnsListResult: [String: Any]?
     private var threadTurnsListResultQueue: [[String: Any]]
@@ -5396,6 +5466,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         threadReadResult: [String: Any]? = nil,
         threadForkResult: [String: Any]? = nil,
         threadResumeResult: [String: Any]? = nil,
+        threadStartIDQueue: [String] = [],
         threadTurnsListErrorMessage: String? = nil,
         threadTurnsListResult: [String: Any]? = nil,
         threadTurnsListResultQueue: [[String: Any]] = []
@@ -5405,6 +5476,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         self.threadReadResult = threadReadResult
         self.threadForkResult = threadForkResult
         self.threadResumeResult = threadResumeResult
+        self.threadStartIDQueue = threadStartIDQueue
         self.threadTurnsListErrorMessage = threadTurnsListErrorMessage
         self.threadTurnsListResult = threadTurnsListResult
         self.threadTurnsListResultQueue = threadTurnsListResultQueue
@@ -5605,6 +5677,8 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 )
             }
 
+            let threadID = threadStartIDQueue.isEmpty ? "thread-123" : threadStartIDQueue.removeFirst()
+
             return responsePayload(
                 id: id,
                 result: [
@@ -5626,7 +5700,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                         "createdAt": 1713350000,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
-                        "id": "thread-123",
+                        "id": threadID,
                         "modelProvider": "openai",
                         "preview": "Hello from the fake app-server",
                         "source": "cli",

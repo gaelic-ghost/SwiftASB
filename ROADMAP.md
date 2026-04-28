@@ -221,54 +221,42 @@ Keep this register current while the package is below `1.0.0`; tests are part
 of the public contract because consumers are wrapping a fast-moving local
 runtime.
 
-- Approval/server-request completion is the highest-value missing path.
-  SwiftASB can now drive the real installed app-server to a command item and
-  `waitingOnApproval` through an isolated `CODEX_HOME` plus mock Responses
-  provider, but it still needs a red/green test that observes the raw
-  `item/commandExecution/requestApproval` JSON-RPC request, answers through
-  SwiftASB, and observes `serverRequest/resolved` plus turn completion. This
-  should cover command approval first, then file-change approval, permissions
-  request approval, and MCP elicitation as separate fixtures once the command
-  path is stable.
-- The public-client deterministic approval path is still missing. The current
-  deterministic coverage uses raw transport/protocol calls. Consumers use
-  `CodexAppServer`, `CodexThread`, and `CodexTurnHandle`, so the same local mock
-  Responses provider should eventually prove that typed public events surface,
-  `respond(...)` sends the expected result, and the minimap/dashboard mirrors
-  reflect the blocked and resolved states. Started in
-  `tests/coverage-gap-roadmap` with fake-transport public-client guardrail tests
-  for wrong response surfaces, mismatched approval response kinds, and responses
-  after `serverRequest/resolved`; the real mock-Responses public-client path is
-  still open.
-- Malformed server-originated request coverage is too thin. Add focused tests
-  for missing `params`, unknown server-request methods, unsupported request ID
-  types, response attempts after a request route is gone, and request/resolution
-  IDs that do not match the active turn. Started in
-  `tests/coverage-gap-roadmap` with unknown-method, malformed command-approval
-  payload, missing-params notification, version-tolerant envelope, and invalid
-  request-id coverage, plus public-client guardrail tests for route
-  disappearance after resolution and wrong-surface turn routing. Remaining cases
-  should cover active-turn mismatch and malformed payloads for non-command
-  request families. These should produce descriptive errors or ignored events
-  intentionally rather than ambiguous stream loss.
-- Live history coverage is still indirect. `thread/read` and
-  `thread/turns/list` have fake-transport and protocol coverage, but there is
-  no focused live wrapper proving that a real non-ephemeral stored thread can be
-  read and paged after materialization. That wrapper should remain opt-in and
-  should use harmless text-only turns.
+- Approval/server-request completion now has deterministic SwiftASB-owned
+  coverage and a focused live app-server probe. Fake-transport public-client
+  tests prove typed approval events surface through `CodexTurnHandle`,
+  `respond(...)` writes the expected JSON-RPC result, `serverRequest/resolved`
+  clears the route, and wrong-surface, wrong-kind, already-resolved, and
+  wrong-thread responses fail with descriptive errors. The opt-in live raw
+  mock-Responses probe still proves the real v0.125.0 app-server can reach a
+  command item plus `waitingOnApproval`, but a raw completion test is blocked by
+  current app-server behavior: under the isolated mock Responses provider, the
+  stream reaches `waitingOnApproval` and then ends before SwiftASB observes an
+  `item/commandExecution/requestApproval` JSON-RPC request to answer. Track that
+  as an app-server compatibility finding before making live approval completion
+  a required release gate.
+- Malformed server-originated request coverage now covers missing-params
+  notifications, unknown server-request methods, unsupported request ID types,
+  malformed command approval, malformed file-change approval, malformed
+  permissions approval, malformed tool user input, malformed MCP elicitation,
+  route disappearance after resolution, wrong response surfaces, and
+  request/response IDs routed through the wrong active thread.
+- Live history coverage now includes an opt-in mock-Responses wrapper proving
+  that a real non-ephemeral stored thread can complete harmless text-only turns,
+  then read those turns back through `thread/read` and page them through
+  `thread/turns/list`.
 - Transport edge coverage should be tightened around the line-framed stdio
   contract. Add tests for versionless app-server envelopes, optional tolerated
   `jsonrpc` fields, boolean/fractional/object request IDs, notifications without
-  `params`, partial line draining, malformed stdout followed by later valid
-  lines, duplicate response IDs, pending responses on process exit, and stderr
-  retention behavior. Started in `tests/coverage-gap-roadmap` with optional
-  `jsonrpc`, missing `params`, and invalid request-id coverage.
-- Schema drift guardrails should become fixture-driven. The v0.125 permission
-  profile compatibility cases are useful, but the promoted generated wire
-  snapshot needs a small suite of schema-derived fixture payloads for important
-  request, response, notification, and server-request families so additive
-  upstream fields are noticed deliberately and public/observable/internal
-  classification stays fresh.
+  `params`, and partial line draining. Started in `tests/coverage-gap-roadmap`
+  with optional `jsonrpc`, missing `params`, invalid request-id coverage, and
+  line-buffer partial draining. Full subprocess-edge fixtures for duplicate
+  response IDs, pending responses on process exit, and stderr retention remain
+  useful but lower risk than the public/protocol routing gaps above.
+- Schema drift guardrails now include generated-wire fixture payloads for
+  `thread/read`, `thread/turns/list`, command-execution thread items,
+  active thread status flags, additive thread fields, and
+  `serverRequest/resolved`. Keep adding one fixture whenever a promoted schema
+  family graduates from generated-internal to public or observable behavior.
 
 ## Proposed Next Release Slice
 
@@ -511,7 +499,8 @@ In Progress
 - [x] Add opt-in live coverage for a multi-turn file mutation scenario against the real CLI, with deterministic filesystem assertions and optional diagnostic report output.
 - [x] Add opt-in live rollback coverage using a disposable thread with isolated harmless turns and explicit local rollback-marker assertions.
 - [x] Add opt-in real-app-server coverage for deterministic approval setup using an isolated `CODEX_HOME`, a local mock Responses provider, and a real command item reaching `waitingOnApproval`.
-- [ ] Extend deterministic approval coverage through raw request delivery, SwiftASB response handling, and the upstream-tested `serverRequest/resolved` flow.
+- [x] Extend deterministic SwiftASB-owned approval coverage through typed public request delivery, SwiftASB response handling, route resolution, and response guardrails.
+- [ ] Track the v0.125.0 mock-Responses live approval finding: the raw real app-server reaches `waitingOnApproval` but ends the stream before emitting an answerable `item/commandExecution/requestApproval` request.
 - [x] Tighten recent-history helper behavior around live `thread/turns/list` boundaries for ephemeral and pre-materialized threads.
 - [x] Add cancellation or interruption flows that are part of the intended first public lifecycle.
 - [x] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
