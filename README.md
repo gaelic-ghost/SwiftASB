@@ -180,6 +180,7 @@ The current public lifecycle contract is intentionally narrow and explicit:
 - `CodexAppServer` starts and stops the subprocess, initializes the session, starts threads and turns, lists stored threads, reads/resumes/forks threads, pages stored turns, lists models, and lists MCP server statuses.
 - `CodexThread` owns thread-scoped turn creation, thread events, thread-management actions, local-history reads, and thread-scoped observable companions.
 - `CodexTurnHandle` owns active-turn events and active-turn controls such as response handling, steering, interruption, minimap creation, and explicit close-to-snapshot handoff.
+- Diagnostics for warnings, guardian warnings, model reroutes, and model verification surface through hand-owned public events rather than generated wire payloads.
 - Different threads may host concurrent turns.
 - Overlapping turns on the same thread are rejected client-side with `CodexAppServerError.invalidState` because the live app-server does not yet expose a reliable independent lifecycle for them.
 - The generated wire layer stays internal.

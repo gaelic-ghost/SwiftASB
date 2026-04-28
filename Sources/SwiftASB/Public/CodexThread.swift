@@ -349,6 +349,8 @@ public struct CodexThread: Sendable {
                 delta.turnID
             case let .diffUpdated(update):
                 update.turnID
+            case let .diagnostic(diagnostic):
+                diagnostic.turnID
             case let .itemStarted(itemStarted):
                 itemStarted.turnID
             case let .itemCompleted(itemCompleted):
@@ -2066,6 +2068,7 @@ public struct CodexThread: Sendable {
         public private(set) var isArchived: Bool
         public private(set) var isClosed: Bool
         public private(set) var isCompactingThreadContext: Bool
+        public private(set) var latestDiagnostic: CodexDiagnosticEvent?
         public private(set) var latestTokenUsage: CodexThreadTokenUsageUpdated?
         public private(set) var mcpCallingStatus: ActivityStatus
         public private(set) var name: String?
@@ -2093,6 +2096,7 @@ public struct CodexThread: Sendable {
             self.threadID = threadID
             self.isArchived = false
             self.isClosed = false
+            self.latestDiagnostic = nil
             self.latestTokenUsage = nil
             self.name = initialInfo.name
             self.preview = initialInfo.preview
@@ -2145,6 +2149,8 @@ public struct CodexThread: Sendable {
                 status = started.thread.status
             case let .statusChanged(change):
                 status = change.status
+            case let .diagnostic(diagnostic):
+                latestDiagnostic = diagnostic
             case .approvalRequested:
                 return
             case .elicitationRequested:
@@ -2529,6 +2535,7 @@ public struct CodexThread: Sendable {
 public enum CodexThreadEvent: Sendable, Equatable {
     case started(CodexThreadStarted)
     case statusChanged(CodexThreadStatusChanged)
+    case diagnostic(CodexDiagnosticEvent)
     case approvalRequested(CodexApprovalRequest)
     case elicitationRequested(CodexElicitationRequest)
     case serverRequestResolved(CodexInteractiveRequestResolved)

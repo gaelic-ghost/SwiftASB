@@ -185,9 +185,9 @@ Remaining gap inside the observable-only slice:
 | File-change output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentFiles` as a file-centric observable companion instead of becoming new top-level public event cases. |
 | File-change patch-updated notifications | Useful for richer `RecentFiles` previews later, but not yet wired into a stable public diff model. For now the generated type is internal scaffolding. |
 | MCP tool-call progress notifications | The current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
-| Model-rerouted notifications | Operationally interesting, but not yet part of the stable public lifecycle promised to consumers. These currently stay internal and are logged for operator diagnostics. |
-| Model-verification notifications | Operationally useful diagnostics, but no public consumer model has been chosen yet. |
-| Warning and guardian-warning notifications | These are important operator signals, but need a deliberate diagnostics surface rather than being exposed as raw event payloads. |
+| Model-rerouted notifications | Public as hand-owned diagnostics so clients can explain runtime model changes without reading raw generated payloads. |
+| Model-verification notifications | Public as hand-owned diagnostics so clients can show or log verified model capability signals. |
+| Warning and guardian-warning notifications | Public as hand-owned diagnostics because these are passive operator/user signals, not requests that require a response. |
 | External-agent config import completed notifications | Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
 | Guardian denied-action approval endpoint | Generated internally because it appears in v0.124, but it needs a real guardian workflow model before it becomes public. |
 | Hook started / completed notifications | The raw notifications remain internal; consumers see their current-state effect through `CodexThread.Dashboard.hookRuns` instead of through new event-enum cases. |
@@ -227,15 +227,15 @@ families break down like this:
 | `FileChangeOutputDeltaNotification` | `Observable-only for now` |
 | `FileChangePatchUpdatedNotification` | `Internal-only for now` |
 | `McpToolCallProgressNotification` | `Internal-only for now` |
-| `ModelVerificationNotification` | `Internal-only for now` |
-| `ModelReroutedNotification` | `Internal-only for now` |
+| `ModelVerificationNotification` | `Public now as diagnostics` |
+| `ModelReroutedNotification` | `Public now as diagnostics` |
 | `HookStartedNotification` | `Observable-only for now` |
 | `HookCompletedNotification` | `Observable-only for now` |
 | `RawResponseItemCompletedNotification` | `Internal-only for now` |
 | `ContextCompactedNotification` | `Internal-only for now` |
 | `ExternalAgentConfigImportCompletedNotification` | `Internal-only for now` |
-| `GuardianWarningNotification` | `Internal-only for now` |
-| `WarningNotification` | `Internal-only for now` |
+| `GuardianWarningNotification` | `Public now as diagnostics` |
+| `WarningNotification` | `Public now as diagnostics` |
 | `ErrorNotification` | `Internal-only for now` |
 | `ItemGuardianApprovalReviewStartedNotification` | `Internal-only for now` |
 | `ItemGuardianApprovalReviewCompletedNotification` | `Internal-only for now` |
@@ -323,9 +323,10 @@ The current remaining promotion questions are therefore narrower than before:
    internal while the current sandbox and approval request models are enough?
    The current decoder shim is temporary and should be removed once the rolling
    support window no longer includes the older loose shape.
-4. warning, guardian-warning, model-verification, and guardian denied-action
-   families need a diagnostics/control story before they graduate from internal
-   generated scaffolding.
+4. diagnostics and control flows stay separate. Warning, guardian-warning,
+   model-reroute, and model-verification families are passive public diagnostic
+   events. Guardian denied-action approval stays internal until SwiftASB owns a
+   stable request and response model for what the user is approving.
 5. file and command detail are now both treated as dedicated companion
    observables rather than as widened event enums:
    `RecentFiles` and `RecentCommands` are the shipped file-centric and

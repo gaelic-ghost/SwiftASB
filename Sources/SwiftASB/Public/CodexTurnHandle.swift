@@ -118,6 +118,7 @@ public struct CodexTurnHandle: Sendable {
         public private(set) var latestAgentMessageDelta: CodexTurnAgentMessageDelta?
         public private(set) var latestCompletedItem: CodexTurnItemCompleted?
         public private(set) var latestCompletion: CodexTurnCompletion?
+        public private(set) var latestDiagnostic: CodexDiagnosticEvent?
         public private(set) var latestDiffUpdate: CodexTurnDiffUpdate?
         public private(set) var latestElicitationRequest: CodexElicitationRequest?
         public private(set) var latestPlanDelta: CodexTurnPlanDelta?
@@ -146,6 +147,7 @@ public struct CodexTurnHandle: Sendable {
             self.latestAgentMessageDelta = nil
             self.latestCompletedItem = nil
             self.latestCompletion = nil
+            self.latestDiagnostic = nil
             self.latestDiffUpdate = nil
             self.latestElicitationRequest = nil
             self.latestPlanDelta = nil
@@ -187,6 +189,8 @@ public struct CodexTurnHandle: Sendable {
                 latestPlanDelta = delta
             case let .diffUpdated(update):
                 latestDiffUpdate = update
+            case let .diagnostic(diagnostic):
+                latestDiagnostic = diagnostic
             case let .approvalRequested(request):
                 latestApprovalRequest = request
             case let .elicitationRequested(request):
@@ -364,6 +368,7 @@ public enum CodexTurnEvent: Sendable, Equatable {
     case planUpdated(CodexTurnPlanUpdate)
     case planDelta(CodexTurnPlanDelta)
     case diffUpdated(CodexTurnDiffUpdate)
+    case diagnostic(CodexDiagnosticEvent)
     case approvalRequested(CodexApprovalRequest)
     case elicitationRequested(CodexElicitationRequest)
     case serverRequestResolved(CodexInteractiveRequestResolved)

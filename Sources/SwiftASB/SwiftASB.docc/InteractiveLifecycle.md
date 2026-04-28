@@ -39,6 +39,8 @@ for try await event in turn.events {
         renderPlan(update.plan)
     case let .diffUpdated(update):
         renderDiff(update.diff)
+    case let .diagnostic(diagnostic):
+        renderDiagnostic(diagnostic)
     case let .approvalRequested(request):
         try await turn.respond(to: request, with: .commandExecution(.deny))
     case let .elicitationRequested(request):
@@ -51,6 +53,8 @@ for try await event in turn.events {
     }
 }
 ```
+
+Diagnostics are passive runtime signals. They explain warnings, guardian warnings, model reroutes, and model verification results, but they are not requests that the app can answer. Observe app-wide diagnostics through ``CodexAppServer/diagnostics()``, or handle targeted diagnostics from ``CodexThreadEvent/diagnostic(_:)`` and ``CodexTurnEvent/diagnostic(_:)``.
 
 ## Steering And Interruption
 
@@ -79,6 +83,7 @@ Use ``CodexTurnHandle/close()`` when a caller wants a completed-turn value that 
 
 - ``CodexThreadEvent``
 - ``CodexTurnEvent``
+- ``CodexDiagnosticEvent``
 
 ### Requests And Responses
 
