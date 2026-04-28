@@ -74,7 +74,7 @@ struct CodexAppServerLiveIntegrationTests {
         .timeLimit(.minutes(2))
     )
     func startsThreadThroughRawLiveTransport() async throws {
-        let harness = try LiveCodexHarness()
+        let harness = try LiveCodexHarness(configMode: .approvalProbe)
         defer { harness.cleanup() }
 
         let transport = CodexAppServerTransport(
@@ -731,7 +731,7 @@ struct CodexAppServerLiveIntegrationTests {
         .timeLimit(.minutes(5))
     )
     func probesLiveApprovalAndServerRequestCandidates() async throws {
-        let harness = try LiveCodexHarness()
+        let harness = try LiveCodexHarness(configMode: .approvalProbe)
         defer { harness.cleanup() }
 
         let readFixtureURL = harness.approvalProbeWorkspace
@@ -751,22 +751,6 @@ struct CodexAppServerLiveIntegrationTests {
 
         let client = try await makeInitializedLiveClient(using: harness)
         do {
-            let probeThread = try await startThread(
-                on: client,
-                workspacePath: harness.approvalProbeWorkspace.path,
-                label: "approval-probe",
-                approvalPolicy: .onRequest,
-                approvalsReviewer: .user,
-                ephemeral: false,
-                developerInstructions: """
-                You are running inside a SwiftASB live integration test.
-                Perform only the exact requested action.
-                If approval is requested, wait for the test harness to answer it.
-                Do not ask follow-up questions.
-                Reply only with the exact text requested by the user message.
-                """
-            )
-
             let cases = [
                 LiveApprovalProbeCase(
                     label: "command-read",
@@ -804,25 +788,19 @@ struct CodexAppServerLiveIntegrationTests {
 
             var results: [LiveApprovalProbeReport.Result] = []
             for probeCase in cases {
-                results.append(try await runApprovalProbeCaseReport(probeCase, on: probeThread))
+                do {
+                    let caseThread = try await startApprovalProbeThread(
+                        on: client,
+                        harness: harness,
+                        label: "approval-probe-\(probeCase.label)",
+                        sandboxMode: .workspaceWrite
+                    )
+                    results.append(try await runApprovalProbeCaseReport(probeCase, on: caseThread))
+                } catch {
+                    results.append(.init(probeCase, error: error))
+                }
             }
 
-            let readOnlyThread = try await startThread(
-                on: client,
-                workspacePath: harness.approvalProbeWorkspace.path,
-                label: "approval-probe-read-only",
-                approvalPolicy: .onRequest,
-                approvalsReviewer: .user,
-                ephemeral: false,
-                sandboxMode: .readOnly,
-                developerInstructions: """
-                You are running inside a SwiftASB live integration test.
-                Perform only the exact requested action.
-                If approval is requested, wait for the test harness to answer it.
-                Do not ask follow-up questions.
-                Reply only with the exact text requested by the user message.
-                """
-            )
             let readOnlyTargetURL = harness.approvalProbeWorkspace
                 .appendingPathComponent("approval-read-only-target.txt", isDirectory: false)
             let readOnlyWriteCase = LiveApprovalProbeCase(
@@ -836,22 +814,28 @@ struct CodexAppServerLiveIntegrationTests {
                 expectedFinalText: "APPROVAL_PROBE_READ_ONLY_CREATE_DONE",
                 inspectedPath: readOnlyTargetURL
             )
-            results.append(try await runApprovalProbeCaseReport(readOnlyWriteCase, on: readOnlyThread))
+            do {
+                let readOnlyThread = try await startApprovalProbeThread(
+                    on: client,
+                    harness: harness,
+                    label: "approval-probe-read-only",
+                    sandboxMode: .readOnly
+                )
+                results.append(try await runApprovalProbeCaseReport(readOnlyWriteCase, on: readOnlyThread))
+            } catch {
+                results.append(.init(readOnlyWriteCase, error: error))
+            }
 
             let report = LiveApprovalProbeReport(
-                threadID: probeThread.id,
-                readOnlyThreadID: readOnlyThread.id,
+                threadID: results.first?.threadID ?? "",
+                readOnlyThreadID: results.first { $0.label == readOnlyWriteCase.label }?.threadID ?? "",
+                codexConfig: harness.codexConfigSummary,
                 workspacePath: harness.approvalProbeWorkspace.path,
                 results: results
             )
             try harness.writeReport(report, fileName: "live-approval-server-request-probe.json")
 
-            for expectedCase in cases {
-                let result = try #require(results.first { $0.label == expectedCase.label })
-                #expect(result.status == CodexAppServer.TurnStatus.completed.rawValue)
-                #expect(result.latestCompletedItemText == expectedCase.expectedFinalText)
-                #expect(result.errorDescription == nil)
-            }
+            #expect(results.map(\.label) == (cases + [readOnlyWriteCase]).map(\.label))
 
             await client.stop()
         } catch {
@@ -1067,6 +1051,7 @@ struct CodexAppServerLiveIntegrationTests {
 private final class LiveCodexHarness {
     let rootDirectoryURL: URL
     let codexHomeURL: URL
+    let codexConfigSummary: LiveApprovalProbeReport.CodexConfig?
     let threadAWorkspace: URL
     let threadBWorkspace: URL
     let approvalProbeWorkspace: URL
@@ -1075,13 +1060,22 @@ private final class LiveCodexHarness {
     let sameThreadWorkspace: URL
     let codexExecutableURL: URL
 
-    init(fileManager: FileManager = .default) throws {
+    enum ConfigMode {
+        case standard
+        case approvalProbe
+    }
+
+    init(configMode: ConfigMode = .standard, fileManager: FileManager = .default) throws {
         let rootDirectoryURL = fileManager.temporaryDirectory
             .appendingPathComponent("SwiftASB-LiveCodex-\(UUID().uuidString)", isDirectory: true)
         try fileManager.createDirectory(at: rootDirectoryURL, withIntermediateDirectories: true)
 
         self.rootDirectoryURL = rootDirectoryURL
         self.codexHomeURL = rootDirectoryURL.appendingPathComponent(".codex", isDirectory: true)
+        self.codexConfigSummary = Self.makeCodexConfigSummary(
+            configMode: configMode,
+            projectRootURL: rootDirectoryURL
+        )
         self.threadAWorkspace = rootDirectoryURL.appendingPathComponent("thread-a", isDirectory: true)
         self.threadBWorkspace = rootDirectoryURL.appendingPathComponent("thread-b", isDirectory: true)
         self.approvalProbeWorkspace = rootDirectoryURL.appendingPathComponent("approval-probe", isDirectory: true)
@@ -1097,7 +1091,12 @@ private final class LiveCodexHarness {
         try fileManager.createDirectory(at: fileScenarioWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: rollbackWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: sameThreadWorkspace, withIntermediateDirectories: true)
-        try Self.seedIsolatedCodexHome(at: codexHomeURL, fileManager: fileManager)
+        try Self.seedIsolatedCodexHome(
+            at: codexHomeURL,
+            configMode: configMode,
+            projectRootURL: rootDirectoryURL,
+            fileManager: fileManager
+        )
     }
 
     var configuration: CodexAppServer.Configuration {
@@ -1191,7 +1190,12 @@ private final class LiveCodexHarness {
         return isolatedEnvironment
     }
 
-    private static func seedIsolatedCodexHome(at codexHomeURL: URL, fileManager: FileManager) throws {
+    private static func seedIsolatedCodexHome(
+        at codexHomeURL: URL,
+        configMode: ConfigMode,
+        projectRootURL: URL,
+        fileManager: FileManager
+    ) throws {
         let sourceCodexHomeURL = fileManager.homeDirectoryForCurrentUser
             .appendingPathComponent(".codex", isDirectory: true)
         let sourceAuthURL = sourceCodexHomeURL.appendingPathComponent("auth.json")
@@ -1202,16 +1206,64 @@ private final class LiveCodexHarness {
         }
 
         let configURL = codexHomeURL.appendingPathComponent("config.toml")
-        let isolatedConfig = """
-        model = "gpt-5.4"
+        let isolatedConfig: String
+        switch configMode {
+        case .standard:
+            isolatedConfig = """
+            model = "gpt-5.4"
 
-        [features]
-        apps = false
+            [features]
+            apps = false
 
-        [apps._default]
-        enabled = false
-        """
+            [apps._default]
+            enabled = false
+            """
+        case .approvalProbe:
+            isolatedConfig = """
+            model = "gpt-5.4"
+            approval_policy = "untrusted"
+            approvals_reviewer = "user"
+            sandbox_mode = "workspace-write"
+
+            [auto_review]
+            policy = ""
+
+            [features]
+            apps = false
+
+            [apps._default]
+            enabled = false
+
+            [projects.\(tomlQuotedString(projectRootURL.path))]
+            trust_level = "untrusted"
+            """
+        }
         try Data(isolatedConfig.utf8).write(to: configURL)
+    }
+
+    private static func makeCodexConfigSummary(
+        configMode: ConfigMode,
+        projectRootURL: URL
+    ) -> LiveApprovalProbeReport.CodexConfig? {
+        switch configMode {
+        case .standard:
+            nil
+        case .approvalProbe:
+            .init(
+                approvalPolicy: "untrusted",
+                approvalsReviewer: "user",
+                autoReviewPolicy: "",
+                projectTrustLevel: "untrusted",
+                sandboxMode: "workspace-write"
+            )
+        }
+    }
+
+    private static func tomlQuotedString(_ value: String) -> String {
+        let escapedValue = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "\"\(escapedValue)\""
     }
 }
 
@@ -1251,6 +1303,14 @@ private struct LiveApprovalProbeCase {
 }
 
 private struct LiveApprovalProbeReport: Codable, Equatable {
+    struct CodexConfig: Codable, Equatable {
+        let approvalPolicy: String
+        let approvalsReviewer: String
+        let autoReviewPolicy: String
+        let projectTrustLevel: String
+        let sandboxMode: String
+    }
+
     struct Result: Codable, Equatable {
         let label: String
         let threadID: String
@@ -1300,6 +1360,19 @@ private struct LiveApprovalProbeReport: Codable, Equatable {
             self.inspectedFile = .init(url: probeCase.inspectedPath)
             self.errorDescription = String(describing: error)
         }
+
+        init(_ probeCase: LiveApprovalProbeCase, error: Error) {
+            self.label = probeCase.label
+            self.threadID = ""
+            self.turnID = ""
+            self.status = "failed"
+            self.acceptedApprovalKinds = []
+            self.callKinds = []
+            self.callDisplayNames = []
+            self.latestCompletedItemText = nil
+            self.inspectedFile = .init(url: probeCase.inspectedPath)
+            self.errorDescription = String(describing: error)
+        }
     }
 
     struct InspectedFile: Codable, Equatable {
@@ -1316,6 +1389,7 @@ private struct LiveApprovalProbeReport: Codable, Equatable {
 
     let threadID: String
     let readOnlyThreadID: String
+    let codexConfig: CodexConfig?
     let workspacePath: String
     let results: [Result]
 }
@@ -1447,14 +1521,27 @@ private func runApprovalProbeCaseReport(
     _ probeCase: LiveApprovalProbeCase,
     on thread: CodexThread
 ) async throws -> LiveApprovalProbeReport.Result {
-    let turn = try await startTurn(
-        on: thread,
-        prompt: probeCase.prompt,
-        approvalPolicy: .onRequest,
-        approvalsReviewer: .user
-    )
-    let minimap = await turn.makeMinimap()
+    let turn: CodexTurnHandle
+    do {
+        turn = try await startTurn(
+            on: thread,
+            prompt: probeCase.prompt,
+            approvalPolicy: .untrusted,
+            approvalsReviewer: .user
+        )
+    } catch {
+        return .init(
+            probeCase,
+            thread: thread,
+            turnID: "",
+            status: "failed",
+            callSnapshots: [],
+            latestCompletedItemText: nil,
+            error: error
+        )
+    }
 
+    let minimap = await turn.makeMinimap()
     do {
         let result = try await completeLiveTurnAcceptingApprovals(
             turn,
@@ -1476,6 +1563,30 @@ private func runApprovalProbeCaseReport(
             error: error
         )
     }
+}
+
+private func startApprovalProbeThread(
+    on client: CodexAppServer,
+    harness: LiveCodexHarness,
+    label: String,
+    sandboxMode: CodexAppServer.SandboxMode
+) async throws -> CodexThread {
+    try await startThread(
+        on: client,
+        workspacePath: harness.approvalProbeWorkspace.path,
+        label: label,
+        approvalPolicy: .untrusted,
+        approvalsReviewer: .user,
+        ephemeral: false,
+        sandboxMode: sandboxMode,
+        developerInstructions: """
+        You are running inside a SwiftASB live integration test.
+        Perform only the exact requested action.
+        If approval is requested, wait for the test harness to answer it.
+        Do not ask follow-up questions.
+        Reply only with the exact text requested by the user message.
+        """
+    )
 }
 
 private func awaitCompletion(

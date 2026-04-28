@@ -159,17 +159,25 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   approval requests for workspace-write command, file-create, or file-edit
   turns in the current live runtime. The approval/server-request probe records
   those turns as completed command calls with no accepted approval kinds.
+- Setting the isolated live-test Codex config and request payloads to
+  `approval_policy = "untrusted"`, `approvals_reviewer = "user"`, and
+  `sandbox_mode = "workspace-write"` does change behavior, but not into a clean
+  typed approval flow. The command starts, no approval request is surfaced, the
+  turn times out, and the app-server transport is no longer usable for follow-up
+  `thread/start` calls.
 - A read-only sandbox write request currently attempts the command, leaves the
   target file absent, and times out without surfacing a typed approval request or
-  completion. Keep this as a live finding while we decide whether SwiftASB needs
-  a stronger timeout, blocked-call, or server-request validation surface for this
-  app-server behavior.
+  completion when run after the workspace-write `.onRequest` candidates. Under
+  the stricter `.untrusted` probe, the app-server transport stops before the
+  read-only candidate can start. Keep both as live findings while we decide
+  whether SwiftASB needs a stronger timeout, blocked-call, or server-request
+  validation surface for this app-server behavior.
 - `scripts/run-live-codex-approval-probe.sh` is the preferred exploratory
   validation for approval/server-request candidates. It opts into the live probe
   and writes `live-approval-server-request-probe.json` under
-  `tmp/live-codex-reports/` so maintainers can inspect observed call kinds,
-  approval kinds, terminal text, file outcomes, and probe errors after a real CLI
-  run.
+  `tmp/live-codex-reports/` so maintainers can inspect attempted Codex config,
+  observed call kinds, approval kinds, terminal text, file outcomes, and probe
+  errors after a real CLI run.
 - `scripts/run-live-codex-file-scenario.sh` is the preferred validation for the
   create/edit/delete path. It opts into the live file scenario and writes a JSON
   diagnostic report under `tmp/live-codex-reports/` so maintainers can inspect
