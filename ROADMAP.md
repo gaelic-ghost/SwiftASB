@@ -155,6 +155,21 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   scenarios should accept approval requests when they surface, but durable
   assertions should focus on terminal turn status, observable call snapshots, and
   filesystem or history outcomes.
+- Upstream Codex app-server coverage proves the JSON-RPC server-request path is
+  deterministic when the model stream is controlled. Their v2 app-server tests
+  trigger `CommandExecutionRequestApproval`, `FileChangeRequestApproval`,
+  `PermissionsRequestApproval`, and MCP elicitation requests with a mock
+  Responses provider and then answer the JSON-RPC request before waiting for
+  `serverRequest/resolved`. SwiftASB should mirror that shape with a local mock
+  Responses server instead of treating prompt-driven live approval behavior as
+  the only possible real-CLI test path.
+- For ordinary command and file-change approvals, upstream uses mocked Responses
+  tool-call events such as shell command and apply-patch calls under
+  `approval_policy = "untrusted"` and `sandbox_mode = "read-only"` to force
+  app-server request emission. For request-permissions coverage, upstream enables
+  `[features] request_permissions_tool = true` and emits a `request_permissions`
+  tool call. That gives SwiftASB a reproducible protocol path while still
+  launching the real installed `codex app-server`.
 - `approvalPolicy: .onRequest` plus `approvalsReviewer: .user` does not force
   approval requests for workspace-write command, file-create, or file-edit
   turns in the current live runtime. The approval/server-request probe records
@@ -424,7 +439,7 @@ In Progress
 - [x] Add opt-in live coverage for app-wide capability snapshots and a straightforward thread-management smoke path.
 - [x] Add opt-in live coverage for a multi-turn file mutation scenario against the real CLI, with deterministic filesystem assertions and optional diagnostic report output.
 - [x] Add opt-in live rollback coverage using a disposable thread with isolated harmless turns and explicit local rollback-marker assertions.
-- [ ] Add opt-in live coverage for at least one approval or server-request path if the local Codex runtime exposes a stable repro.
+- [ ] Add opt-in real-app-server coverage for at least one approval or server-request path using an isolated `CODEX_HOME`, a local mock Responses provider, and the upstream-tested `serverRequest/resolved` flow.
 - [x] Tighten recent-history helper behavior around live `thread/turns/list` boundaries for ephemeral and pre-materialized threads.
 - [x] Add cancellation or interruption flows that are part of the intended first public lifecycle.
 - [x] Revisit whether more of the generated wire graph needs to be promoted into internal compiled sources, starting with the `v0.124.0` schema additions and their public/observable/internal classification.
