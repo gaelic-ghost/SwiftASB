@@ -235,17 +235,22 @@ runtime.
   `CodexAppServer`, `CodexThread`, and `CodexTurnHandle`, so the same local mock
   Responses provider should eventually prove that typed public events surface,
   `respond(...)` sends the expected result, and the minimap/dashboard mirrors
-  reflect the blocked and resolved states.
+  reflect the blocked and resolved states. Started in
+  `tests/coverage-gap-roadmap` with fake-transport public-client guardrail tests
+  for wrong response surfaces, mismatched approval response kinds, and responses
+  after `serverRequest/resolved`; the real mock-Responses public-client path is
+  still open.
 - Malformed server-originated request coverage is too thin. Add focused tests
   for missing `params`, unknown server-request methods, unsupported request ID
   types, response attempts after a request route is gone, and request/resolution
   IDs that do not match the active turn. Started in
   `tests/coverage-gap-roadmap` with unknown-method, malformed command-approval
   payload, missing-params notification, version-tolerant envelope, and invalid
-  request-id coverage. Remaining cases should cover route disappearance and
-  active-turn mismatch at the public-client layer. These should produce
-  descriptive errors or ignored events intentionally rather than ambiguous
-  stream loss.
+  request-id coverage, plus public-client guardrail tests for route
+  disappearance after resolution and wrong-surface turn routing. Remaining cases
+  should cover active-turn mismatch and malformed payloads for non-command
+  request families. These should produce descriptive errors or ignored events
+  intentionally rather than ambiguous stream loss.
 - Live history coverage is still indirect. `thread/read` and
   `thread/turns/list` have fake-transport and protocol coverage, but there is
   no focused live wrapper proving that a real non-ephemeral stored thread can be
