@@ -112,6 +112,9 @@ Run only the multi-turn live file scenario:
 scripts/run-live-codex-file-scenario.sh
 ```
 
+That wrapper writes the live scenario diagnostic report to
+`tmp/live-codex-reports/live-file-mutation-scenario.json`.
+
 Use the generated-wire entrypoint when refreshing Codex schema-derived models:
 
 ```bash

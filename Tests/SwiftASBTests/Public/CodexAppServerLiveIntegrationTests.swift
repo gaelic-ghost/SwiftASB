@@ -744,6 +744,34 @@ struct CodexAppServerLiveIntegrationTests {
             let commandSnapshots = await MainActor.run { recentCommands.commands }
             #expect(fileSnapshots.isEmpty == false || commandSnapshots.isEmpty == false)
 
+            let report = LiveFileMutationScenarioReport(
+                threadID: thread.id,
+                workspacePath: harness.fileScenarioWorkspace.path,
+                turns: [
+                    createResult.reportTurn(label: "create"),
+                    editResult.reportTurn(label: "edit"),
+                    deleteResult.reportTurn(label: "delete"),
+                ],
+                finalFiles: [
+                    .init(
+                        path: scratchURL.lastPathComponent,
+                        exists: FileManager.default.fileExists(atPath: scratchURL.path),
+                        contents: nil
+                    ),
+                    .init(
+                        path: auditURL.lastPathComponent,
+                        exists: FileManager.default.fileExists(atPath: auditURL.path),
+                        contents: try String(contentsOf: auditURL, encoding: .utf8)
+                    ),
+                ],
+                recentFiles: fileSnapshots.map(LiveFileMutationScenarioReport.RecentFile.init),
+                recentCommands: commandSnapshots.map(LiveFileMutationScenarioReport.RecentCommand.init)
+            )
+            #expect(report.turns.allSatisfy { $0.status == "completed" })
+            #expect(report.finalFiles.contains { $0.path == "scratch.txt" && $0.exists == false })
+            #expect(report.finalFiles.contains { $0.path == "audit.txt" && $0.contents == "deleted scratch.txt\n" })
+            try harness.writeReport(report, fileName: "live-file-mutation-scenario.json")
+
             await client.stop()
         } catch {
             await client.stop()
@@ -857,6 +885,25 @@ private final class LiveCodexHarness {
         try? fileManager.removeItem(at: rootDirectoryURL)
     }
 
+    func writeReport<T: Encodable>(
+        _ report: T,
+        fileName: String,
+        fileManager: FileManager = .default
+    ) throws {
+        guard let reportDirectoryPath = ProcessInfo.processInfo.environment["SWIFTASB_LIVE_CODEX_REPORT_DIR"],
+              reportDirectoryPath.isEmpty == false else {
+            return
+        }
+
+        let reportDirectoryURL = URL(fileURLWithPath: reportDirectoryPath, isDirectory: true)
+        try fileManager.createDirectory(at: reportDirectoryURL, withIntermediateDirectories: true)
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let reportData = try encoder.encode(report)
+        try reportData.write(to: reportDirectoryURL.appendingPathComponent(fileName))
+    }
+
     private static func resolveCodexExecutableURL() throws -> URL {
         let process = Process()
         let standardOutput = Pipe()
@@ -953,7 +1000,67 @@ private enum LiveTurnStartOutcome {
 
 private struct LiveScenarioTurnResult {
     let completion: CodexTurnCompletion
+    let acceptedApprovalKinds: [String]
     let callSnapshots: [CodexTurnHandle.Minimap.CallSnapshot]
+
+    func reportTurn(label: String) -> LiveFileMutationScenarioReport.Turn {
+        LiveFileMutationScenarioReport.Turn(
+            label: label,
+            id: completion.turn.id,
+            status: completion.turn.status.rawValue,
+            acceptedApprovalKinds: acceptedApprovalKinds,
+            callKinds: callSnapshots.map(\.kind.rawValue),
+            callDisplayNames: callSnapshots.map(\.displayName)
+        )
+    }
+}
+
+private struct LiveFileMutationScenarioReport: Codable, Equatable {
+    struct Turn: Codable, Equatable {
+        let label: String
+        let id: String
+        let status: String
+        let acceptedApprovalKinds: [String]
+        let callKinds: [String]
+        let callDisplayNames: [String]
+    }
+
+    struct FinalFile: Codable, Equatable {
+        let path: String
+        let exists: Bool
+        let contents: String?
+    }
+
+    struct RecentFile: Codable, Equatable {
+        let path: String?
+        let status: String
+        let latestStatusText: String?
+
+        init(_ snapshot: CodexThread.RecentFiles.FileSnapshot) {
+            self.path = snapshot.path
+            self.status = snapshot.status.rawValue
+            self.latestStatusText = snapshot.latestStatusText
+        }
+    }
+
+    struct RecentCommand: Codable, Equatable {
+        let command: String?
+        let status: String
+        let latestStatusText: String?
+
+        init(_ snapshot: CodexThread.RecentCommands.CommandSnapshot) {
+            self.command = snapshot.command
+            self.status = snapshot.status.rawValue
+            self.latestStatusText = snapshot.latestStatusText
+        }
+    }
+
+    let threadID: String
+    let workspacePath: String
+    let turns: [Turn]
+    let finalFiles: [FinalFile]
+    let recentFiles: [RecentFile]
+    let recentCommands: [RecentCommand]
 }
 
 private enum LiveIntegrationError: Error, LocalizedError {
@@ -1092,11 +1199,13 @@ private func completeLiveTurnAcceptingApprovals(
     let minimap = await turnHandle.makeMinimap()
     let deadline = ContinuousClock.now + .seconds(timeoutSeconds)
     var answeredRequestIDs = Set<CodexRPCRequestID>()
+    var acceptedApprovalKinds: [String] = []
 
     while ContinuousClock.now < deadline {
         if let request = await MainActor.run(body: { minimap.latestApprovalRequest }),
            answeredRequestIDs.contains(request.requestID) == false {
             answeredRequestIDs.insert(request.requestID)
+            acceptedApprovalKinds.append(request.kind.rawValue)
             try await turnHandle.respond(
                 to: request,
                 with: acceptanceResponse(for: request)
@@ -1107,6 +1216,7 @@ private func completeLiveTurnAcceptingApprovals(
             let snapshots = await MainActor.run(body: { minimap.callSnapshots })
             return LiveScenarioTurnResult(
                 completion: completion,
+                acceptedApprovalKinds: acceptedApprovalKinds,
                 callSnapshots: snapshots
             )
         }
