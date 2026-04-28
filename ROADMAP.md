@@ -7,6 +7,7 @@
 - [Current Feature Matrix](#current-feature-matrix)
 - [Milestone Progress](#milestone-progress)
 - [Current Maintainer Priority](#current-maintainer-priority)
+- [V1 Readiness Checklist](#v1-readiness-checklist)
 - [Live App-Server Findings](#live-app-server-findings)
 - [Proposed Next Release Slice](#proposed-next-release-slice)
 - [Decisions Made For The First Interactive Lifecycle](#decisions-made-for-the-first-interactive-lifecycle)
@@ -134,6 +135,132 @@ That means the current priority order is:
 7. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
 8. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
 9. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
+
+## V1 Readiness Checklist
+
+This checklist tracks the remaining work to decide whether `SwiftASB` is ready
+for a `v1.0.0` tag. The goal is not to make every possible app-server feature
+public before v1. The goal is to make the supported lifecycle honest, durable,
+well documented, and intentionally shaped.
+
+### Release Boundary Decision
+
+- [ ] Decide whether the shipped interactive lifecycle is a credible v1 surface:
+  thread start/resume/fork/read/list, turn start/control, typed progress,
+  approvals, elicitation, diagnostics, local history hydration, recent
+  observables, rollback, and app-wide model/MCP snapshots.
+- [ ] Explicitly classify each remaining Milestone 5 gap as `v1 blocker`,
+  `v1 docs-only note`, or `post-v1`.
+- [ ] Keep guardian denied-action approval internal unless we define a stable
+  control-flow model for what the user is approving and how a Swift consumer
+  should answer it.
+- [ ] Keep marketplace upgrade, account-management variants, richer MCP
+  progress, external-agent config import, patch-updated file previews, and
+  mixed recent activity out of v1 unless a concrete consumer workflow requires
+  them.
+- [ ] Decide whether the current rollback behavior is enough for v1, or whether
+  rollback must preserve full removed-turn payloads as forensic archive data
+  before the API is called stable.
+
+### Public API Curation
+
+- [ ] Inventory every public type, initializer, method, enum case, and default
+  argument under `Sources/SwiftASB/Public/`.
+- [ ] For each public symbol, decide whether it is stable for v1, should be
+  renamed before v1, should become internal, or should move behind a narrower
+  owning type.
+- [ ] Review `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`,
+  `Minimap`, `RecentTurns`, `RecentFiles`, `RecentCommands`, history-window
+  helpers, diagnostics, approval, elicitation, model, MCP, and thread-management
+  surfaces as one connected API rather than as separate shipped slices.
+- [ ] Split any remaining oversized public source files where the split removes
+  real navigation cost or clarifies ownership boundaries.
+- [ ] Tighten public names and parameter labels so callers can understand the
+  operation without reading generated-wire terminology.
+- [ ] Review default arguments for compatibility risk before v1, especially
+  cache-policy defaults, history limits, binary-discovery defaults, and request
+  options that mirror upstream Codex behavior.
+- [ ] Make sure public stream semantics are consistent: when streams buffer,
+  when they finish, whether they throw, and which owner is responsible for
+  answering or observing each event.
+
+### Documentation And Examples
+
+- [ ] Update any stale release references, including README text that still
+  names `v0.8.6` as the experimental baseline after `v0.8.7`.
+- [ ] Expand DocC symbol comments for the supported lifecycle, not just the
+  conceptual articles.
+- [ ] Add copy-pasteable DocC walkthroughs for: starting and initializing an
+  app-server, starting a thread and turn, observing turn progress, answering an
+  approval request, handling diagnostics, reading recent history, and using
+  recent file/command companions in a SwiftUI view model.
+- [ ] Keep README product-facing and concise, but make sure it names every
+  v1-supported surface that a new consumer is expected to trust.
+- [ ] Keep `CONTRIBUTING.md` focused on contributor workflow, generated schema
+  refreshes, live-test flags, validation commands, release workflow, and
+  temporary compatibility-shim policy.
+- [ ] Run and keep clean the Xcode DocC validation path before the v1 tag.
+
+### Test And Runtime Confidence
+
+- [ ] Keep default `swift test` deterministic and local, with fake transport
+  coverage for public API behavior.
+- [ ] Keep live Codex CLI tests opt-in, because the installed CLI and prompt
+  behavior remain external local dependencies.
+- [ ] Run the opt-in live probes before v1 and record any observed behavior
+  changes in `ROADMAP.md` or maintainer docs.
+- [ ] Resolve or deliberately narrow the subprocess timing flake where child
+  process exit can sometimes surface as `unexpectedEndOfStream` with retained
+  stderr instead of `processTerminated`.
+- [ ] Decide whether the existing multi-turn live file-mutation scenario is
+  enough live coverage for v1, or whether v1 needs another deterministic real
+  app-server scenario.
+- [ ] Confirm approval/server-request coverage still proves the request,
+  response, `serverRequest/resolved`, and terminal-turn path through the real
+  app-server with a mock Responses provider.
+
+### Compatibility And Generated Wire
+
+- [ ] Audit active compatibility shims and give each one a removal trigger tied
+  to the rolling Codex CLI support window.
+- [ ] Revisit the v0.125 `permissionProfile` compatibility shim when the support
+  window no longer includes the older loose shape.
+- [ ] Confirm the promoted generated-wire snapshot matches the Codex CLI schema
+  version included in the v1 compatibility window.
+- [ ] Confirm generated wire stays internal in docs, source organization, and
+  public examples.
+- [ ] Re-run schema drift fixture coverage after any promoted generated-wire
+  refresh.
+- [ ] Decide whether v1 should support only the latest documented rolling window
+  or whether a shorter first-v1 compatibility promise is more honest.
+
+### History And Observable Companions
+
+- [ ] Review `RecentTurns`, `RecentFiles`, and `RecentCommands` cache-policy
+  names, defaults, selection behavior, slimming behavior, and rehydration
+  semantics before v1.
+- [ ] Decide whether archive-aware retention and eviction is a v1 blocker or a
+  documented post-v1 history-store enhancement.
+- [ ] Decide whether broader public cursor semantics, transcript search, or
+  richer non-UI history query helpers are post-v1.
+- [ ] Keep `RecentActivity` out of v1 unless a real consumer workflow needs a
+  mixed timeline; the current decision is to keep file, command, and turn
+  companions separate.
+- [ ] Confirm history reads prefer local data only when local completeness is
+  trustworthy, and still expose upstream failures through low-level APIs where
+  callers need them.
+
+### Packaging And Release Verification
+
+- [ ] Confirm Swift Package Index listing and DocC rendering after the latest
+  public tag is indexed.
+- [ ] Run `swift test`, `git diff --check`, and
+  `bash scripts/repo-maintenance/validate-all.sh` before the v1 release branch.
+- [ ] Run Xcode DocC validation before the v1 release branch.
+- [ ] Decide whether to cut a `v0.9.0` release candidate before `v1.0.0`.
+- [ ] Prepare v1 release notes with explicit sections for public surface,
+  intentionally internal surfaces, compatibility window, migration notes,
+  validation performed, and known post-v1 work.
 
 ## Live App-Server Findings
 
