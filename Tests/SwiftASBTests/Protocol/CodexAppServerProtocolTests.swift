@@ -136,6 +136,7 @@ struct CodexAppServerProtocolTests {
                 config: ["temperature": .double(0.15)],
                 cwd: "/tmp/project",
                 developerInstructions: "Keep the answer concise.",
+                excludeTurns: true,
                 model: "gpt-5.4",
                 modelProvider: "openai",
                 personality: .friendly,
@@ -158,6 +159,7 @@ struct CodexAppServerProtocolTests {
         #expect(params["modelProvider"] as? String == "openai")
         #expect(params["personality"] as? String == "friendly")
         #expect(params["serviceTier"] as? String == "fast")
+        #expect(params["excludeTurns"] as? Bool == true)
 
         let config = try #require(params["config"] as? [String: Any])
         #expect(config["temperature"] as? Double == 0.15)
@@ -175,6 +177,7 @@ struct CodexAppServerProtocolTests {
                 cwd: "/tmp/project",
                 developerInstructions: "Keep the fork focused.",
                 ephemeral: true,
+                excludeTurns: true,
                 model: "gpt-5.4",
                 modelProvider: "openai",
                 personality: .pragmatic,
@@ -194,6 +197,7 @@ struct CodexAppServerProtocolTests {
         #expect(params["threadId"] as? String == "thread-123")
         #expect(params["cwd"] as? String == "/tmp/project")
         #expect(params["ephemeral"] as? Bool == true)
+        #expect(params["excludeTurns"] as? Bool == true)
         #expect(params["model"] as? String == "gpt-5.4")
         #expect(params["personality"] as? String == "pragmatic")
         #expect(params["serviceTier"] as? String == "fast")
@@ -482,6 +486,80 @@ struct CodexAppServerProtocolTests {
         #expect(response.thread.id == "thread-123")
         #expect(response.thread.preview == "Hello")
         #expect(response.thread.turns.isEmpty)
+    }
+
+    @Test("decodes older loose permission profiles")
+    func decodesOlderLoosePermissionProfile() throws {
+        let payload = threadStartResponsePayload(
+            permissionProfile:
+                #"""
+                {"fileSystem":{"entries":[{"access":"write","path":{"type":"path","path":"/tmp/project"}}],"globScanMaxDepth":4},"network":{"enabled":true}}
+                """#
+        )
+
+        let response = try protocolLayer.decodeThreadStartResponse(payload, expectedID: .string("thread-1"))
+
+        #expect(response.permissionProfile?.fileSystem?.entries.count == 1)
+        #expect(response.permissionProfile?.fileSystem?.globScanMaxDepth == 4)
+        #expect(response.permissionProfile?.network?.enabled == true)
+    }
+
+    @Test("decodes v0.125 managed permission profiles")
+    func decodesManagedPermissionProfile() throws {
+        let payload = threadStartResponsePayload(
+            permissionProfile:
+                #"""
+                {"type":"managed","fileSystem":{"type":"restricted","entries":[{"access":"write","path":{"type":"path","path":"/tmp/project"}}],"globScanMaxDepth":4},"network":{"enabled":true}}
+                """#
+        )
+
+        let response = try protocolLayer.decodeThreadStartResponse(payload, expectedID: .string("thread-1"))
+
+        #expect(response.permissionProfile?.fileSystem?.entries.count == 1)
+        #expect(response.permissionProfile?.fileSystem?.globScanMaxDepth == 4)
+        #expect(response.permissionProfile?.network?.enabled == true)
+    }
+
+    @Test("decodes v0.125 managed unrestricted permission profiles")
+    func decodesManagedUnrestrictedPermissionProfile() throws {
+        let payload = threadStartResponsePayload(
+            permissionProfile:
+                #"""
+                {"type":"managed","fileSystem":{"type":"unrestricted"},"network":{"enabled":true}}
+                """#
+        )
+
+        let response = try protocolLayer.decodeThreadStartResponse(payload, expectedID: .string("thread-1"))
+
+        #expect(response.permissionProfile?.fileSystem?.entries.isEmpty == true)
+        #expect(response.permissionProfile?.fileSystem?.globScanMaxDepth == nil)
+        #expect(response.permissionProfile?.network?.enabled == true)
+    }
+
+    @Test("decodes v0.125 disabled permission profiles")
+    func decodesDisabledPermissionProfile() throws {
+        let payload = threadStartResponsePayload(permissionProfile: #"{"type":"disabled"}"#)
+
+        let response = try protocolLayer.decodeThreadStartResponse(payload, expectedID: .string("thread-1"))
+
+        #expect(response.permissionProfile != nil)
+        #expect(response.permissionProfile?.fileSystem == nil)
+        #expect(response.permissionProfile?.network == nil)
+    }
+
+    @Test("decodes v0.125 external permission profiles")
+    func decodesExternalPermissionProfile() throws {
+        let payload = threadStartResponsePayload(
+            permissionProfile:
+                #"""
+                {"type":"external","network":{"enabled":false}}
+                """#
+        )
+
+        let response = try protocolLayer.decodeThreadStartResponse(payload, expectedID: .string("thread-1"))
+
+        #expect(response.permissionProfile?.fileSystem == nil)
+        #expect(response.permissionProfile?.network?.enabled == false)
     }
 
     @Test("decodes thread/compact/start responses and honors the expected request ID")
@@ -1055,5 +1133,13 @@ struct CodexAppServerProtocolTests {
         payload: Data
     ) throws -> CodexAppServerProtocolEvent? {
         try protocolLayer.decodeServerEvent(.notification(method: method, payload: payload))
+    }
+
+    private func threadStartResponsePayload(permissionProfile: String) -> Data {
+        Data(
+            """
+            {"id":"thread-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","permissionProfile":\(permissionProfile),"reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.125.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","preview":"Hello","source":"cli","status":{"type":"active"},"turns":[],"updatedAt":1713350001}}}
+            """.utf8
+        )
     }
 }

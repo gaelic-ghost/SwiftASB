@@ -125,6 +125,7 @@ struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
     let config: [String: CodexWireJSONValue]?
     let cwd: String?
     let developerInstructions: String?
+    let excludeTurns: Bool?
     let model: String?
     let modelProvider: String?
     let personality: CodexWirePersonality?
@@ -140,6 +141,7 @@ struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
         case config
         case cwd
         case developerInstructions
+        case excludeTurns
         case model
         case modelProvider
         case personality
@@ -158,6 +160,7 @@ struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
     let cwd: String?
     let developerInstructions: String?
     let ephemeral: Bool?
+    let excludeTurns: Bool?
     let model: String?
     let modelProvider: String?
     let personality: CodexWirePersonality?
@@ -174,6 +177,7 @@ struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
         case cwd
         case developerInstructions
         case ephemeral
+        case excludeTurns
         case model
         case modelProvider
         case personality

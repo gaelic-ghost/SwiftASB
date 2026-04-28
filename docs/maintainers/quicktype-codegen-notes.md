@@ -70,11 +70,43 @@ inspecting upstream schema changes or quicktype regressions.
 
 ## Current generated batch
 
-The default generated batch currently targets the local `v0.124.0` schema dump:
+The default generated batch currently stages against the local `v0.125.0` schema dump:
 
-- `SCHEMA_VERSION=v0.124.0`
+- `SCHEMA_VERSION=v0.125.0`
 - promoted output:
   `Sources/SwiftASB/Generated/CodexWire/Latest/CodexLifecycleV2Batch+JSONValue.swift`
+
+The promoted `Latest` snapshot is intentionally not swapped blindly just
+because staging generation succeeds. The v0.125 dump tightens
+`permissionProfile` from a loose optional-field object into a tagged shape, and
+the package still documents a rolling compatibility window covering older CLI
+minors. Promote that generated change only after adding or confirming a
+compatibility-aware decode path for older payloads.
+
+## Compatibility Shim Policy
+
+SwiftASB supports a rolling Codex CLI window, so temporary compatibility shims
+are expected. They must stay explicit, tested, and removable.
+
+When adding a compatibility shim:
+
+1. Put the shim in a dedicated hand-owned file, not inside the promoted
+   generated batch.
+2. Name the older and newer wire shapes it bridges.
+3. Add tests for every supported shape in the current rolling window.
+4. Document the removal trigger in the shim comment and in maintainer docs.
+5. Revisit the shim whenever the rolling compatibility window advances.
+
+When the oldest affected Codex CLI minor drops out of the documented support
+window, remove the shim in the same change that advances the window unless a
+newer live-runtime probe proves the older shape can still appear.
+
+The current compatibility shim is:
+
+- `CodexWirePermissionProfileCompatibility.swift`, which lets the promoted
+  wire layer decode older loose `permissionProfile.fileSystem.entries` payloads
+  and v0.125 tagged filesystem permission payloads, including
+  `type: "unrestricted"` payloads that do not carry sandbox entries.
 
 ### V2 lifecycle batch
 
@@ -149,9 +181,10 @@ It now includes:
 `InitializeParams` is included here because it exists in the v2 bundle and is
 still useful as part of the consolidated lifecycle graph.
 
-The v0.124 dump also contains endpoint families that are intentionally not in
-the promoted batch yet, including device-key signing, marketplace removal, and
-add-credits email nudges. Those are account-management or marketplace surfaces,
+The v0.124 and v0.125 dumps also contain endpoint families that are
+intentionally not in the promoted batch yet, including device-key signing,
+marketplace removal and upgrade, and add-credits email nudges. Those are
+account-management or marketplace surfaces,
 not first interactive lifecycle or app-wide capability surfaces.
 
 ### Hand-owned initialize compatibility shim
