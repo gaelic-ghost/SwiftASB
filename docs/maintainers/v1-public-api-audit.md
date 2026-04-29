@@ -9,14 +9,22 @@ wire family.
 
 | File | Lines | Audit focus |
 | --- | ---: | --- |
-| `Sources/SwiftASB/Public/CodexAppServer.swift` | 4616 | Largest public file. Split remaining request/result/domain values where that clarifies ownership; review names/defaults on app-wide, thread, turn, compatibility, and launch surfaces. |
-| `Sources/SwiftASB/Public/CodexThread.swift` | 2787 | Review thread handle methods, dashboard, recent observables, history-window APIs, response routing, and whether nested observable companion types remain navigable enough for v1. |
+| `Sources/SwiftASB/Public/CodexAppServer.swift` | 4035 | Root actor runtime, transport lifecycle, event fanout, local history reconciliation, stream registration, and protocol conversion internals. |
+| `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift` | 731 | Recent-turn observable companion and turn-snapshot conversion helpers. |
+| `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift` | 709 | Recent-file observable companion and file-snapshot conversion helpers. |
+| `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift` | 674 | Recent-command observable companion and command-snapshot conversion helpers. |
 | `Sources/SwiftASB/Public/CodexTurnHandle.swift` | 695 | Review turn-event naming, minimap shape, close-to-snapshot surface, steering/interrupt names, and public event payload values. |
-| `Sources/SwiftASB/Public/CodexInteractiveRequests.swift` | 501 | Review approval and elicitation naming, request/response ownership, unknown action surfaces, permission-profile naming, and response defaults. |
-| `Sources/SwiftASB/Public/CodexDiagnostics.swift` | 158 | Review diagnostic event naming, model reroute/verification vocabulary, and future-proofing for unknown wire values. |
+| `Sources/SwiftASB/Public/CodexInteractiveRequests.swift` | 504 | Review approval and elicitation naming, request/response ownership, unknown action surfaces, permission-profile naming, and response defaults. |
+| `Sources/SwiftASB/Public/CodexThread.swift` | 472 | Thread handle, history-window type, turn-start request, thread-scoped actions, and public thread event payloads. |
+| `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift` | 300 | Thread start/resume/fork/list/read/turn-page request and result values. |
+| `Sources/SwiftASB/Public/CodexThread+Dashboard.swift` | 224 | Thread-level SwiftUI dashboard companion. |
+| `Sources/SwiftASB/Public/CodexDiagnostics.swift` | 156 | Review diagnostic event naming, model reroute/verification vocabulary, and future-proofing for unknown wire values. |
 | `Sources/SwiftASB/Public/CodexAppServer+MCP.swift` | 157 | Review app-wide MCP capability snapshot names and `JSONValue` exposure in MCP metadata/schema fields. |
 | `Sources/SwiftASB/Public/CodexAppServer+Models.swift` | 120 | Review model-list names, pagination naming, and whether account/marketplace-adjacent fields stay intentionally absent. |
+| `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift` | 117 | Compatibility enums, sandbox/approval/reasoning vocabulary, and public `JSONValue`. |
 | `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift` | 104 | Review thread set-name, metadata update, rollback request/result names, and null/omitted field terminology. |
+| `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift` | 93 | CLI diagnostics, launch configuration, initialization request/session values. |
+| `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift` | 87 | Turn start request/session/info/input values. |
 | `Sources/SwiftASB/Public/CodexErrors.swift` | 45 | Review public error cases, wording, and whether stream failures consistently wrap transport/protocol causes. |
 
 ## V1 Surface Promise
@@ -85,15 +93,17 @@ Use these decisions for every public symbol:
 
 ### Move Or Split Before V1
 
-- Split `CodexAppServer.swift` by consumer-facing responsibility without
-  changing ownership or behavior. This is file organization only, not a new
-  abstraction. The target split should make startup, thread lifecycle, turn
-  lifecycle, compatibility/configuration values, JSON support, and private
-  protocol conversions easier to review independently.
-- Split `CodexThread.swift` by consumer-facing responsibility without changing
-  ownership or behavior. Keep the handle and action methods in the root file,
-  then move dashboard, recent turns, recent files, recent commands, history
-  windows, and thread event payloads into focused sibling files.
+- `CodexAppServer.swift` has been split by consumer-facing responsibility
+  without changing ownership or behavior. Startup/bootstrap values,
+  thread-lifecycle values, turn-lifecycle values, and compatibility values now
+  live in focused sibling files; the root actor file keeps runtime behavior,
+  event fanout, local history reconciliation, stream registration, and private
+  protocol conversion internals.
+- `CodexThread.swift` has been split by consumer-facing responsibility without
+  changing ownership or behavior. The root file keeps the thread handle,
+  history-window type, thread-scoped actions, and thread event payloads, while
+  dashboard, recent turns, recent files, and recent commands live in focused
+  sibling files.
 - Keep `CodexInteractiveRequests.swift` as one public conceptual area for now,
   but split it only if symbol comments and examples still leave it hard to
   scan. The approval/elicitation model is a single consumer job: inspect the
@@ -175,7 +185,7 @@ Use these decisions for every public symbol:
   Decision: keep app-wide, snapshot-style capability reads public.
 - [x] Review whether `CodexAppServer.swift` should keep all nested app-server
   request/result/domain values, or split more values into dedicated files.
-  Decision: split by responsibility before v1; do not introduce new owners.
+  Decision: split by responsibility before v1; no new owners were introduced.
 
 ### Thread Lifecycle And Management
 
@@ -308,13 +318,13 @@ Use these decisions for every public symbol:
 
 ## Initial Risk Notes
 
-- `CodexAppServer.swift` is the highest navigation risk because it still mixes
-  root actor behavior, many nested public request/result models, compatibility
-  enums, internal fanout, history reconciliation, and private conversion
-  helpers in one file.
-- `CodexThread.swift` is the second-highest navigation risk because it owns
-  thread actions, dashboard, recent-turn/file/command observables, history
-  window helpers, and many thread event payloads.
+- `CodexAppServer.swift` remains the highest navigation risk because it still
+  owns root actor behavior, event fanout, history reconciliation, and private
+  conversion helpers. The public request/result/domain values have been split
+  into focused sibling files.
+- `CodexThread.swift` now keeps the thread handle, history-window type,
+  thread-scoped actions, and thread event payloads. Dashboard and recent
+  observable companions have been split into focused sibling files.
 - `CodexInteractiveRequests.swift` should get a careful naming pass because
   approval and elicitation APIs are part of the v1 promise and will be expensive
   to rename after the v1 tag.
