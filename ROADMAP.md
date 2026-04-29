@@ -145,22 +145,54 @@ well documented, and intentionally shaped.
 
 ### Release Boundary Decision
 
-- [ ] Decide whether the shipped interactive lifecycle is a credible v1 surface:
+- [x] Decide whether the shipped interactive lifecycle is a credible v1 surface:
   thread start/resume/fork/read/list, turn start/control, typed progress,
   approvals, elicitation, diagnostics, local history hydration, recent
   observables, rollback, and app-wide model/MCP snapshots.
-- [ ] Explicitly classify each remaining Milestone 5 gap as `v1 blocker`,
+  Decision: yes. Treat v1 as the first stable Swift-native client surface for
+  the core Codex app-server lifecycle, not as a promise that every generated
+  app-server feature is public.
+- [x] Explicitly classify each remaining Milestone 5 gap as `v1 blocker`,
   `v1 docs-only note`, or `post-v1`.
-- [ ] Keep guardian denied-action approval internal unless we define a stable
-  control-flow model for what the user is approving and how a Swift consumer
-  should answer it.
-- [ ] Keep marketplace upgrade, account-management variants, richer MCP
+  Decision: the remaining unpromoted generated families listed below are
+  post-v1 unless a real consumer workflow reclassifies one before the v1 API
+  freeze.
+- [x] Keep guardian denied-action approval internal for v1.
+  Decision: post-v1. It needs a stable user-facing control-flow model for what
+  is being approved and how a Swift consumer should answer it.
+- [x] Keep marketplace upgrade, account-management variants, richer MCP
   progress, external-agent config import, patch-updated file previews, and
-  mixed recent activity out of v1 unless a concrete consumer workflow requires
-  them.
-- [ ] Decide whether the current rollback behavior is enough for v1, or whether
-  rollback must preserve full removed-turn payloads as forensic archive data
-  before the API is called stable.
+  mixed recent activity out of v1.
+  Decision: post-v1. The v1 surface should not widen just because the generated
+  schema contains those families.
+- [x] Decide whether the current rollback behavior is enough for v1.
+  Decision: yes. `CodexThread.rollbackLastTurns(...)` may be stable for v1
+  without preserving full removed-turn payloads as forensic archive data; richer
+  rollback forensics are post-v1.
+
+### Post-V1 Deferred Items
+
+These are intentionally outside the v1 promise unless a concrete consumer
+workflow forces a release-boundary change before the v1 tag.
+
+- [ ] Guardian denied-action approval with a stable request and response model.
+- [ ] Marketplace upgrade surfaces.
+- [ ] Account-management variants, including provider-specific account families
+  such as Amazon Bedrock.
+- [ ] Richer MCP progress detail beyond the current dashboard/minimap summaries.
+- [ ] External-agent config import surfaces.
+- [ ] File patch-updated previews or structured patch rendering for
+  `RecentFiles`.
+- [ ] Mixed `RecentActivity` timeline. Keep `RecentTurns`, `RecentFiles`, and
+  `RecentCommands` separate for v1.
+- [ ] Broader public history cursor semantics.
+- [ ] Transcript search.
+- [ ] Richer non-UI history query helpers beyond the current local windows.
+- [ ] Archive-aware retention and eviction beyond the current list-driven
+  archive-state drift correction.
+- [ ] Rollback forensic archival that preserves full removed-turn payloads.
+- [ ] One-shot `run(...)` convenience API after the lower-level lifecycle is
+  stable enough to hide honestly.
 
 ### Public API Curation
 
@@ -429,6 +461,17 @@ as a convenience-API release.
 - Broader sugar beyond `startTextTurn(...)`.
 - Public exposure of generated wire models.
 - Expanding the public API just because the generated schema contains more message types.
+- Guardian denied-action approval until SwiftASB owns a stable request and
+  response model for that control flow.
+- Marketplace upgrade and account-management variants, including
+  provider-specific account families such as Amazon Bedrock.
+- Richer MCP progress detail beyond the current dashboard/minimap summaries.
+- External-agent config import surfaces.
+- File patch-updated previews or structured patch rendering for `RecentFiles`.
+- Broader history cursor semantics, transcript search, and richer non-UI
+  history query helpers beyond the current local windows.
+- Archive-aware retention/eviction and rollback forensic archival of removed
+  turn payloads.
 - A mixed `RecentActivity` feed; keep `RecentTurns`, `RecentFiles`, and
   `RecentCommands` as separate first-class surfaces for v1.
 - Treating the prompt-driven live approval-path probe as a deterministic release gate while that runtime repro remains non-deterministic.
@@ -650,7 +693,8 @@ In Progress
 - [x] The repo has a deliberate answer for where approval requests, elicitation requests, and item-level activity belong in the public model.
 - [x] The public API can represent the most important server-driven lifecycle events without dropping back to raw payloads.
 - [x] Approval and user-input request handling has a deliberate public model.
-- [ ] The package covers a meaningful multi-turn interactive lifecycle rather than only the happy-path bootstrap, including the remaining thread-management and richer-progress gaps beyond the current observable summaries.
+- [x] The package covers a meaningful multi-turn interactive lifecycle rather than only the happy-path bootstrap, including thread management, diagnostics, approvals, local history hydration, recent observables, rollback, and live file-mutation coverage.
+  Decision: richer MCP progress, guardian denied-action approval, external-agent import, patch previews, mixed recent activity, and broader history/search surfaces are post-v1 rather than Milestone 5 blockers.
 
 ## Milestone 6: Public Docs, Examples, And Release Readiness
 
@@ -722,6 +766,11 @@ In Progress
 - [ ] Add a one-shot `run(...)` convenience API once the lower-level handle model is stable enough to hide honestly.
 - [ ] Add a broader public history cursor or transcript search surface after the local history contract is clearer.
 - [ ] Add richer MCP progress detail either as public event cases or as deeper observable companion state.
+- [ ] Add guardian denied-action approval once SwiftASB owns a stable request and response model for that control flow.
+- [ ] Add marketplace upgrade and account-management surfaces after SwiftASB has a concrete app-wide management workflow.
+- [ ] Add external-agent config import surfaces after external-agent configuration becomes a public app-server management workflow.
+- [ ] Add file patch-updated previews or structured patch rendering for `RecentFiles`.
+- [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
 - [x] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
 - [x] Add a local-only startup mode for recent history observables when live upstream paging is unavailable because the thread is ephemeral or not yet materialized.
 - [ ] Confirm the Swift Package Index listing after the package is publicly indexed and tagged.
