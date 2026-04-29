@@ -87,7 +87,7 @@ public struct CodexCommandExecutionApprovalRequest: Sendable, Equatable {
     public let commandActions: [CodexCommandAction]?
     public let currentDirectoryPath: String?
     public let reason: String?
-    public let proposedExecpolicyAmendment: [String]?
+    public let proposedExecPolicyAmendment: [String]?
     public let proposedNetworkPolicyAmendments: [CodexNetworkPolicyAmendment]?
     public let networkApprovalContext: CodexAppServer.JSONValue?
 
@@ -103,7 +103,7 @@ public struct CodexCommandExecutionApprovalRequest: Sendable, Equatable {
         commandActions: [CodexCommandAction]?,
         currentDirectoryPath: String?,
         reason: String?,
-        proposedExecpolicyAmendment: [String]?,
+        proposedExecPolicyAmendment: [String]?,
         proposedNetworkPolicyAmendments: [CodexNetworkPolicyAmendment]?,
         networkApprovalContext: CodexAppServer.JSONValue?
     ) {
@@ -116,7 +116,7 @@ public struct CodexCommandExecutionApprovalRequest: Sendable, Equatable {
         self.commandActions = commandActions
         self.currentDirectoryPath = currentDirectoryPath
         self.reason = reason
-        self.proposedExecpolicyAmendment = proposedExecpolicyAmendment
+        self.proposedExecPolicyAmendment = proposedExecPolicyAmendment
         self.proposedNetworkPolicyAmendments = proposedNetworkPolicyAmendments
         self.networkApprovalContext = networkApprovalContext
     }
@@ -445,7 +445,10 @@ public enum CodexFileChangeApprovalResponse: String, Sendable, Equatable {
 }
 
 public struct CodexPermissionsApprovalResponse: Sendable, Equatable {
-    public enum Scope: String, Sendable, Equatable {case turn, session}
+    public enum Scope: String, Sendable, Equatable {
+        case turn
+        case session
+    }
 
     public let permissions: CodexPermissionProfile
     public let scope: Scope

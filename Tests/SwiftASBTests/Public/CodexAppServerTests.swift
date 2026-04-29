@@ -4403,7 +4403,7 @@ struct CodexAppServerTests {
         let minimap = turnHandle.minimap
 
         let appDiagnosticsTask = Task {
-            try await diagnosticEvents(from: await client.diagnostics(), count: 4)
+            try await diagnosticEvents(from: await client.diagnosticEvents(), count: 4)
         }
         let threadEventsTask = Task {
             try await threadEvents(from: thread.events, count: 4)
@@ -4534,7 +4534,7 @@ struct CodexAppServerTests {
         )
 
         let appDiagnosticsTask = Task {
-            try await diagnosticEvents(from: await client.diagnostics(), count: 1)
+            try await diagnosticEvents(from: await client.diagnosticEvents(), count: 1)
         }
 
         for _ in 0..<5 {
@@ -4574,7 +4574,7 @@ struct CodexAppServerTests {
         )
 
         let nextDiagnosticTask = Task {
-            try await nextDiagnosticEventOrEnd(from: await client.diagnostics())
+            try await nextDiagnosticEventOrEnd(from: await client.diagnosticEvents())
         }
 
         for _ in 0..<5 {
