@@ -101,14 +101,13 @@ Use these decisions for every public symbol:
 
 ### Rename Or Clarify Before V1
 
-- Rename or alias `CodexAppServer.diagnostics()` before v1. It returns an
-  `AsyncThrowingStream<CodexDiagnosticEvent, Error>`, so `diagnosticEvents()`
-  or `diagnosticsStream()` would better communicate that consumers are
+- `CodexAppServer.diagnostics()` has been renamed to
+  `CodexAppServer.diagnosticEvents()` so consumers can see that they are
   subscribing to future events rather than reading a snapshot.
-- Decide whether `CodexModelVerificationEvent` should become
-  `CodexModelVerificationDiagnostic`. The current name is technically true,
-  but it is a payload nested inside `CodexDiagnosticEvent.modelVerification`,
-  which makes `Event` read redundant at the call site.
+- `CodexModelVerificationEvent` has been renamed to
+  `CodexModelVerificationDiagnostic` because it is a payload nested inside
+  `CodexDiagnosticEvent.modelVerification`, where the `Event` suffix reads
+  redundant at the call site.
 - Keep `CodexThread.TurnRequest` only if the scoped call
   `thread.startTurn(.init(...))` remains clear in examples. If examples need to
   mention both `CodexThread.TurnRequest` and `CodexAppServer.TurnStartRequest`,
@@ -126,18 +125,16 @@ Use these decisions for every public symbol:
 
 ### API Honesty Fixes Before V1
 
-- Remove or make reachable the public diagnostic `unknown(String)` cases in
-  `CodexModelReroute.Reason` and `CodexModelVerification`. They currently imply
-  forward-compatible decoding, but strict generated-wire enum decoding cannot
-  reach them. Either the generated-wire mapping must preserve unknown raw
-  values, or the public cases should be removed until that behavior exists.
-- Fix spelling before v1 in
-  `CodexCommandExecutionApprovalRequest.proposedExecpolicyAmendment`; if the
-  public API keeps that field, use `proposedExecPolicyAmendment` or a clearer
-  domain name.
-- Format and review compact one-line public declarations such as
-  `CodexPermissionsApprovalResponse.Scope`. V1 public declarations should be
-  easy to read in generated docs.
+- The unreachable public diagnostic `unknown(String)` cases have been removed
+  from `CodexModelReroute.Reason` and `CodexModelVerification`. Strict
+  generated-wire enum decoding cannot reach them today, so keeping them would
+  overstate the package's forward-compatibility behavior.
+- `CodexCommandExecutionApprovalRequest.proposedExecpolicyAmendment` has been
+  corrected to `proposedExecPolicyAmendment` on the public API surface while
+  still mapping from the current generated-wire spelling internally.
+- Compact one-line public declarations such as
+  `CodexPermissionsApprovalResponse.Scope` should remain expanded for generated
+  docs readability.
 - Review every public `JSONValue` exposure and keep it only where the upstream
   app-server payload is genuinely dynamic, such as output schemas, MCP metadata,
   MCP elicitation content, and unknown structured context.
@@ -170,9 +167,9 @@ Use these decisions for every public symbol:
 - [x] Review `start()`, `stop()`, `initialize(_:)`, and lifecycle guard errors.
   Decision: stable ownership; docs still need to explain the expected startup
   order and thrown lifecycle failures.
-- [x] Review app-wide stream semantics for `diagnostics()`.
-  Decision: the stream is stable, but the method name should change or gain an
-  explicitly stream-shaped alias before v1.
+- [x] Review app-wide stream semantics for `diagnosticEvents()`.
+  Decision: the stream is stable and now uses the stream-shaped
+  `diagnosticEvents()` name.
 - [x] Review `listModels(_:)` and `listMcpServerStatuses(_:)` as app-wide
   capability surfaces.
   Decision: keep app-wide, snapshot-style capability reads public.
@@ -250,8 +247,8 @@ Use these decisions for every public symbol:
   gathers user/MCP input.
 - [x] Review command, file-change, permissions, tool-user-input, and MCP
   elicitation request field names.
-  Decision: mostly stable, with `proposedExecpolicyAmendment` requiring a
-  spelling/naming fix before v1.
+  Decision: mostly stable; `proposedExecPolicyAmendment` now uses the corrected
+  public spelling.
 - [x] Review `CodexApprovalResponse` and `CodexElicitationResponse` response
   shapes and whether the owning answer methods are discoverable.
   Decision: stable paired request/response model; examples should teach
@@ -269,13 +266,13 @@ Use these decisions for every public symbol:
 - [x] Review `CodexDiagnosticEvent` case names.
   Decision: stable passive event family.
 - [x] Review `CodexRuntimeWarning`, `CodexGuardianWarning`,
-  `CodexModelReroute`, and `CodexModelVerificationEvent` naming.
-  Decision: warning/reroute names are stable; decide whether to rename
-  `CodexModelVerificationEvent` before v1.
+  `CodexModelReroute`, and `CodexModelVerificationDiagnostic` naming.
+  Decision: warning/reroute names are stable; model verification now uses the
+  `CodexModelVerificationDiagnostic` payload name.
 - [x] Decide whether the public diagnostic enums should keep `unknown(String)`
   cases when current strict generated-wire decoding cannot reach them.
-  Decision: do not keep unreachable public unknown cases. Either wire decoding
-  must preserve unknown values, or the cases should be removed before v1.
+  Decision: do not keep unreachable public unknown cases. They have been
+  removed until wire decoding can preserve unknown raw values.
 - [x] Document diagnostics as passive signals, not answerable requests.
   Decision: passive-only stays part of the v1 promise; detailed user docs still
   need to be written.

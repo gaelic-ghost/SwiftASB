@@ -54,7 +54,7 @@ for try await event in turn.events {
 }
 ```
 
-Diagnostics are passive runtime signals. They explain warnings, guardian warnings, model reroutes, and model verification results, but they are not requests that the app can answer. Observe app-wide diagnostics through ``CodexAppServer/diagnostics()``, or handle targeted diagnostics from ``CodexThreadEvent/diagnostic(_:)`` and ``CodexTurnEvent/diagnostic(_:)``.
+Diagnostics are passive runtime signals. They explain warnings, guardian warnings, model reroutes, and model verification results, but they are not requests that the app can answer. Observe app-wide diagnostics through ``CodexAppServer/diagnosticEvents()``, or handle targeted diagnostics from ``CodexThreadEvent/diagnostic(_:)`` and ``CodexTurnEvent/diagnostic(_:)``.
 
 ## Steering And Interruption
 

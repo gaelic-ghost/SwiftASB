@@ -16,7 +16,7 @@
 
 ### Status
 
-SwiftASB is in early development, and `v0.8.6` is the current experimental baseline.
+SwiftASB is a pre-1.0 package with a supported interactive lifecycle and an active v1 API freeze in progress. `v0.8.7` is the current released baseline.
 
 ### What This Project Is
 
@@ -38,7 +38,7 @@ SwiftUI clients need a clean way to show what a Codex turn is doing right now: w
 Add SwiftASB to a SwiftPM package or Xcode package dependency:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "0.8.6")
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "0.8.7")
 ```
 
 Then add the product to the target that talks to Codex:
@@ -233,7 +233,7 @@ Contributor validation commands, live test flags, and the Xcode DocC build comma
 
 ## Release Notes
 
-`ROADMAP.md` tracks milestone status and the next release-facing work. `v0.8.6` is already tagged as the current experimental baseline, and the roadmap plus git history remain the source of truth for what has shipped versus what is intentionally open.
+`ROADMAP.md` tracks milestone status and the next release-facing work. `v0.8.7` is already tagged as the current released baseline, and the roadmap plus git history remain the source of truth for what has shipped versus what is intentionally open.
 
 ## License
 

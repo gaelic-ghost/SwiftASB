@@ -2,7 +2,7 @@ public enum CodexDiagnosticEvent: Sendable, Equatable {
     case warning(CodexRuntimeWarning)
     case guardianWarning(CodexGuardianWarning)
     case modelRerouted(CodexModelReroute)
-    case modelVerification(CodexModelVerificationEvent)
+    case modelVerification(CodexModelVerificationDiagnostic)
 
     public var threadID: String? {
         switch self {
@@ -72,11 +72,10 @@ public struct CodexModelReroute: Sendable, Equatable {
 
     public enum Reason: Sendable, Equatable {
         case highRiskCyberActivity
-        case unknown(String)
     }
 }
 
-public struct CodexModelVerificationEvent: Sendable, Equatable {
+public struct CodexModelVerificationDiagnostic: Sendable, Equatable {
     public let threadID: String
     public let turnID: String
     public let verifications: [CodexModelVerification]
@@ -94,7 +93,6 @@ public struct CodexModelVerificationEvent: Sendable, Equatable {
 
 public enum CodexModelVerification: Sendable, Equatable {
     case trustedAccessForCyber
-    case unknown(String)
 }
 
 extension CodexDiagnosticEvent {

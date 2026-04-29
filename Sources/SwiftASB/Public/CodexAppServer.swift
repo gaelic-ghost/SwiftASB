@@ -788,7 +788,7 @@ public actor CodexAppServer {
         return .init(resolution: resolution)
     }
 
-    public func diagnostics() -> AsyncThrowingStream<CodexDiagnosticEvent, Error> {
+    public func diagnosticEvents() -> AsyncThrowingStream<CodexDiagnosticEvent, Error> {
         makeDiagnosticEventStream()
     }
 
@@ -3550,7 +3550,7 @@ private extension CodexProtocolCommandExecutionApprovalRequest {
                 commandActions: commandActions?.map(\.publicValue),
                 currentDirectoryPath: cwd,
                 reason: reason,
-                proposedExecpolicyAmendment: proposedExecpolicyAmendment,
+                proposedExecPolicyAmendment: proposedExecpolicyAmendment,
                 proposedNetworkPolicyAmendments: proposedNetworkPolicyAmendments?.map(\.publicValue),
                 networkApprovalContext: networkApprovalContext.map(CodexAppServer.JSONValue.init(wireValue:))
             )
