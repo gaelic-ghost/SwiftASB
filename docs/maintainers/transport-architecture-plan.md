@@ -159,7 +159,7 @@ Current status:
   - `CodexThread.events`
   - `CodexThread.Dashboard` via `makeDashboard()`
   - `CodexTurnHandle.events`
-  - `CodexTurnHandle.Minimap` via `makeMinimap()`
+  - `CodexTurnHandle.Minimap` via `minimap`
 
 ### Pass 4
 

@@ -1427,7 +1427,7 @@ public actor CodexAppServer {
         else {
             let reason = """
             SwiftASB cannot close turn \(turnID) for thread \(threadID) while it is still \(snapshot.status).
-            Wait for a terminal turn status before calling `close()`.
+            Wait for a terminal turn status before calling `complete()`.
             """
             throw CodexAppServerError.invalidState(reason: reason)
         }

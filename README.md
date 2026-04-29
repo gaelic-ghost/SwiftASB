@@ -164,7 +164,7 @@ If the runtime does not naturally raise an approval request for a particular pro
 SwiftUI apps should not need to replay every raw event to show useful state. The current companion types cover the first UI-shaped surfaces:
 
 - `CodexThread.makeDashboard()` mirrors thread-level current state, including aggregate tool activity, MCP activity, hook activity, and active thread compaction.
-- `CodexTurnHandle.makeMinimap()` mirrors per-turn current state, including command, file-edit, dynamic-tool, collab-tool, MCP, and compaction activity.
+- `CodexTurnHandle.minimap` mirrors per-turn current state, including command, file-edit, dynamic-tool, collab-tool, MCP, and compaction activity.
 - `CodexThread.makeRecentTurns(limit:cachePolicy:)` provides a bounded turn-centric history view with cache presets for chat, transcript, and compact rails.
 - `CodexThread.makeRecentFiles(limit:cachePolicy:)` provides a file-change-centric view with selection-aware payload slimming and rehydration.
 - `CodexThread.makeRecentCommands(limit:cachePolicy:)` provides a command-centric view with output-aware slimming and rehydration.
@@ -179,7 +179,7 @@ The current public lifecycle contract is intentionally narrow and explicit:
 
 - `CodexAppServer` starts and stops the subprocess, initializes the session, starts threads and turns, lists stored threads, reads/resumes/forks threads, pages stored turns, lists models, and lists MCP server statuses.
 - `CodexThread` owns thread-scoped turn creation, thread events, thread-management actions, local-history reads, and thread-scoped observable companions.
-- `CodexTurnHandle` owns active-turn events and active-turn controls such as response handling, steering, interruption, minimap creation, and explicit close-to-snapshot handoff.
+- `CodexTurnHandle` owns active-turn events and active-turn controls such as response handling, steering, interruption, minimap observation, and explicit completion snapshot handoff.
 - Diagnostics for warnings, guardian warnings, model reroutes, and model verification surface through hand-owned public events rather than generated wire payloads.
 - Different threads may host concurrent turns.
 - Overlapping turns on the same thread are rejected client-side with `CodexAppServerError.invalidState` because the live app-server does not yet expose a reliable independent lifecycle for them.

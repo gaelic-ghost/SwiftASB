@@ -65,11 +65,11 @@ try await turn.steerText("Focus on public API changes.")
 try await turn.interrupt()
 ```
 
-SwiftASB rejects overlapping same-thread turns before they reach the app-server because live same-thread routing is not independently reliable today. Start another turn on the same thread only after the active handle completes, fails, is interrupted, or is closed.
+SwiftASB rejects overlapping same-thread turns before they reach the app-server because live same-thread routing is not independently reliable today. Start another turn on the same thread only after the active handle completes, fails, or is interrupted.
 
-## Closing The Handle
+## Completing The Handle
 
-Use ``CodexTurnHandle/close()`` when a caller wants a completed-turn value that no longer depends on the live handle. Use thread history helpers when the caller wants older completed turns from local storage.
+Use ``CodexTurnHandle/complete()`` when a caller wants a completed-turn value that no longer depends on the live handle. Use thread history helpers when the caller wants older completed turns from local storage.
 
 ## Topics
 

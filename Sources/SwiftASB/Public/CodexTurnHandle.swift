@@ -309,11 +309,6 @@ public struct CodexTurnHandle: Sendable {
         minimapStorage.minimap
     }
 
-    @MainActor
-    public func makeMinimap() async -> Minimap {
-        minimap
-    }
-
     public func respond(
         to request: CodexApprovalRequest,
         with response: CodexApprovalResponse
@@ -358,7 +353,7 @@ public struct CodexTurnHandle: Sendable {
     }
 
     @discardableResult
-    public func close() async throws -> ClosedTurn {
+    public func complete() async throws -> ClosedTurn {
         try await appServer.closedTurn(threadID: threadID, turnID: turn.id)
     }
 }

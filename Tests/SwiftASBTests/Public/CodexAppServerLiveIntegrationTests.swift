@@ -758,7 +758,7 @@ struct CodexAppServerLiveIntegrationTests {
                 approvalsReviewer: .user
             )
 
-            let minimap = await approvalTurn.makeMinimap()
+            let minimap = await approvalTurn.minimap
             let approvalOutcome = try await awaitApprovalPathOutcome(
                 in: minimap,
                 timeoutSeconds: 20,
@@ -2060,7 +2060,7 @@ private func runApprovalProbeCaseReport(
         )
     }
 
-    let minimap = await turn.makeMinimap()
+    let minimap = await turn.minimap
     do {
         let result = try await completeLiveTurnAcceptingApprovals(
             turn,
@@ -2167,7 +2167,7 @@ private func completeLiveTurnAcceptingApprovals(
     timeoutSeconds: Double,
     operation: String
 ) async throws -> LiveScenarioTurnResult {
-    let minimap = await turnHandle.makeMinimap()
+    let minimap = await turnHandle.minimap
     let deadline = ContinuousClock.now + .seconds(timeoutSeconds)
     var answeredRequestIDs = Set<CodexRPCRequestID>()
     var acceptedApprovalKinds: [String] = []

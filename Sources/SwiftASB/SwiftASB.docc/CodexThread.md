@@ -62,7 +62,7 @@ Recent observable startup can begin as an empty local-only view when the live ap
 
 - ``startTurn(_:)``
 - ``startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)``
-- ``TurnRequest``
+- ``TurnStartRequest``
 
 ### Thread Actions
 

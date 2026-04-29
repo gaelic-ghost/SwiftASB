@@ -387,7 +387,7 @@ Review-driven ownership correction:
 - `Minimap` should be created and attached when `startTurn(...)` creates the
   `CodexTurnHandle`, not later on demand.
 - the public handle should expose a stored `turn.minimap` reference instead of
-  depending on a late `makeMinimap()` subscription for correctness.
+  depending on late minimap observation for correctness.
 - this avoids losing early item activity that starts before a consumer asks for
   a minimap and makes `callSnapshots` an honest per-turn current-state mirror.
 

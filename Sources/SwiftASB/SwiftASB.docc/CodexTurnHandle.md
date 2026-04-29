@@ -12,8 +12,8 @@ Use the handle for work that only makes sense while the turn is active:
 - answer approval requests with ``respond(to:with:)-(CodexApprovalRequest,_)`` or elicitation requests with ``respond(to:with:)-(CodexElicitationRequest,_)``
 - send steering input with ``steer(_:)`` or ``steerText(_:)``
 - interrupt the turn with ``interrupt()``
-- create a live current-state mirror with ``makeMinimap()``
-- close the live handle into a caller-owned completed snapshot with ``close()``
+- read the live current-state mirror with ``minimap``
+- complete the live handle into a caller-owned completed snapshot with ``complete()``
 
 ```swift
 let turn = try await thread.startTextTurn("List the public API surfaces.")
@@ -35,7 +35,7 @@ for try await event in turn.events {
 
 ``Minimap`` is an observable current-state companion for a single turn. It tracks active and completed command, file-edit, MCP, dynamic-tool, and collab-tool calls, plus latest plan, diff, message, reasoning, approval, elicitation, request-resolution, and completion events.
 
-The minimap is intentionally a live mirror, not a transcript. Use ``close()`` or ``CodexThread`` history helpers when a consumer needs sealed completed-turn data.
+The minimap is intentionally a live mirror, not a transcript. Use ``complete()`` or ``CodexThread`` history helpers when a consumer needs sealed completed-turn data.
 
 ## Topics
 
@@ -48,7 +48,6 @@ The minimap is intentionally a live mirror, not a transcript. Use ``close()`` or
 ### Live Observation
 
 - ``minimap``
-- ``makeMinimap()``
 - ``Minimap``
 
 ### Active-Turn Control
@@ -58,7 +57,7 @@ The minimap is intentionally a live mirror, not a transcript. Use ``close()`` or
 - ``steer(_:)``
 - ``steerText(_:)``
 - ``interrupt()``
-- ``close()``
+- ``complete()``
 
 ### Completed Snapshot
 
