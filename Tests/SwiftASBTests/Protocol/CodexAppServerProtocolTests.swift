@@ -488,7 +488,7 @@ struct CodexAppServerProtocolTests {
     @Test("decodes initialize responses and honors the expected request ID")
     func decodesInitializeResponse() throws {
         let payload = Data(
-            #"{"id":"init-1","result":{"codexHome":"/Users/galew/.codex","platformFamily":"unix","platformOs":"macos","userAgent":"codex-cli/0.126.0"}}"#.utf8
+            #"{"id":"init-1","result":{"codexHome":"/Users/galew/.codex","platformFamily":"unix","platformOs":"macos","userAgent":"codex-cli/0.128.0"}}"#.utf8
         )
 
         let response = try protocolLayer.decodeInitializeResponse(payload, expectedID: .string("init-1"))
@@ -496,7 +496,7 @@ struct CodexAppServerProtocolTests {
         #expect(response.codexHome == "/Users/galew/.codex")
         #expect(response.platformFamily == "unix")
         #expect(response.platformOS == "macos")
-        #expect(response.userAgent == "codex-cli/0.126.0")
+        #expect(response.userAgent == "codex-cli/0.128.0")
     }
 
     @Test("throws protocol errors when the server returns an RPC error response")
@@ -513,7 +513,7 @@ struct CodexAppServerProtocolTests {
     @Test("throws protocol errors when the response ID does not match")
     func rejectsInitializeResponseIDMismatch() throws {
         let payload = Data(
-            #"{"id":"init-2","result":{"codexHome":"/Users/galew/.codex","platformFamily":"unix","platformOs":"macos","userAgent":"codex-cli/0.126.0"}}"#.utf8
+            #"{"id":"init-2","result":{"codexHome":"/Users/galew/.codex","platformFamily":"unix","platformOs":"macos","userAgent":"codex-cli/0.128.0"}}"#.utf8
         )
 
         #expect(throws: CodexProtocolError.self) {
@@ -525,7 +525,7 @@ struct CodexAppServerProtocolTests {
     func decodesThreadStartResponse() throws {
         let payload = Data(
             #"""
-            {"id":"thread-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.126.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","preview":"Hello","source":"cli","status":{"type":"active"},"turns":[],"updatedAt":1713350001}}}
+            {"id":"thread-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.128.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","preview":"Hello","source":"cli","status":{"type":"active"},"turns":[],"updatedAt":1713350001}}}
             """#.utf8
         )
 
@@ -616,7 +616,7 @@ struct CodexAppServerProtocolTests {
     func decodesThreadListResponse() throws {
         let payload = Data(
             #"""
-            {"id":"thread-list-1","result":{"data":[{"cliVersion":"0.126.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","name":"Release prep","preview":"Summarize the release notes","source":"cli","status":{"type":"notLoaded"},"turns":[],"updatedAt":1713350005}],"nextCursor":"cursor-next"}}
+            {"id":"thread-list-1","result":{"data":[{"cliVersion":"0.128.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","name":"Release prep","preview":"Summarize the release notes","source":"cli","status":{"type":"notLoaded"},"turns":[],"updatedAt":1713350005}],"nextCursor":"cursor-next"}}
             """#.utf8
         )
 
@@ -632,7 +632,7 @@ struct CodexAppServerProtocolTests {
     func decodesThreadResumeResponse() throws {
         let payload = Data(
             #"""
-            {"id":"thread-resume-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.126.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","name":"Resumed Thread","preview":"Hydrated resume preview","source":"cli","status":{"type":"idle"},"turns":[{"completedAt":1713350005,"durationMs":3000,"error":null,"id":"turn-hydrated-1","items":[{"id":"item-agent-1","status":"completed","text":"Resumed reply.","type":"agentMessage"}],"startedAt":1713350002,"status":"completed"}],"updatedAt":1713350005}}}
+            {"id":"thread-resume-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.128.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","name":"Resumed Thread","preview":"Hydrated resume preview","source":"cli","status":{"type":"idle"},"turns":[{"completedAt":1713350005,"durationMs":3000,"error":null,"id":"turn-hydrated-1","items":[{"id":"item-agent-1","status":"completed","text":"Resumed reply.","type":"agentMessage"}],"startedAt":1713350002,"status":"completed"}],"updatedAt":1713350005}}}
             """#.utf8
         )
 
@@ -648,7 +648,7 @@ struct CodexAppServerProtocolTests {
     func decodesThreadForkResponse() throws {
         let payload = Data(
             #"""
-            {"id":"thread-fork-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.126.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":true,"forkedFromId":"thread-123","id":"thread-456","modelProvider":"openai","name":"Forked Thread","preview":"Hydrated fork preview","source":"cli","status":{"type":"idle"},"turns":[{"completedAt":1713350005,"durationMs":3000,"error":null,"id":"turn-hydrated-1","items":[{"id":"item-agent-1","status":"completed","text":"Forked reply.","type":"agentMessage"}],"startedAt":1713350002,"status":"completed"}],"updatedAt":1713350005}}}
+            {"id":"thread-fork-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.128.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":true,"forkedFromId":"thread-123","id":"thread-456","modelProvider":"openai","name":"Forked Thread","preview":"Hydrated fork preview","source":"cli","status":{"type":"idle"},"turns":[{"completedAt":1713350005,"durationMs":3000,"error":null,"id":"turn-hydrated-1","items":[{"id":"item-agent-1","status":"completed","text":"Forked reply.","type":"agentMessage"}],"startedAt":1713350002,"status":"completed"}],"updatedAt":1713350005}}}
             """#.utf8
         )
 
@@ -728,7 +728,7 @@ struct CodexAppServerProtocolTests {
     func decodesThreadLifecycleNotifications() throws {
         let threadStartedPayload = Data(
             #"""
-            {"thread":{"cliVersion":"0.126.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","preview":"Hello","source":"cli","status":{"type":"active"},"turns":[],"updatedAt":1713350001}}
+            {"thread":{"cliVersion":"0.128.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","preview":"Hello","source":"cli","status":{"type":"active"},"turns":[],"updatedAt":1713350001}}
             """#.utf8
         )
 
@@ -1240,7 +1240,7 @@ struct CodexAppServerProtocolTests {
               "thread": {
                 "agentNickname": null,
                 "agentRole": null,
-                "cliVersion": "0.125.0",
+                "cliVersion": "0.128.0",
                 "createdAt": 1713350000,
                 "cwd": "/tmp/project",
                 "ephemeral": false,
@@ -1429,7 +1429,7 @@ struct CodexAppServerProtocolTests {
     private func threadStartResponsePayload(permissionProfile: String) -> Data {
         Data(
             """
-            {"id":"thread-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","permissionProfile":\(permissionProfile),"reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.125.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","preview":"Hello","source":"cli","status":{"type":"active"},"turns":[],"updatedAt":1713350001}}}
+            {"id":"thread-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","permissionProfile":\(permissionProfile),"reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.128.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","preview":"Hello","source":"cli","status":{"type":"active"},"turns":[],"updatedAt":1713350001}}}
             """.utf8
         )
     }

@@ -42,8 +42,6 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.ModelListRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.NetworkAccess` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.Personality` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccess` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccessType` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffortOption` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.ReasoningSummary` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
@@ -199,7 +197,6 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.McpServerStatusListRequest.init(cursor:limit:detail:)` - `init(cursor: String? = nil, limit: Int? = nil, detail: CodexAppServer.McpServerStatusListRequest.Detail? = nil)` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.ModelListRequest.init(cursor:limit:includeHidden:)` - `init(cursor: String? = nil, limit: Int? = nil, includeHidden: Bool? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.Personality.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccessType.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningSummary.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.SandboxMode.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
@@ -413,8 +410,6 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.Personality.friendly` - `case friendly` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.Personality.none` - `case none` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.Personality.pragmatic` - `case pragmatic` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccessType.fullAccess` - `case fullAccess` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccessType.restricted` - `case restricted` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort.high` - `case high` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort.low` - `case low` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort.medium` - `case medium` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift

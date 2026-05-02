@@ -44,13 +44,14 @@ The first interactive lifecycle release does not support:
 
 ## Codex CLI Compatibility Policy
 
-`SwiftASB` intentionally uses a rolling compatibility window for the local
-Codex CLI runtime.
+`SwiftASB` currently uses a narrow compatibility window for the local Codex CLI
+runtime while the app-server schema is moving quickly before v1.
 
 Current policy:
 
-- support the latest public Codex CLI release
-- support the prior two minor versions as well
+- support the latest reviewed public Codex CLI minor release
+- widen back to a rolling window only after the latest generated-wire and public
+  API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
 
 Practical implications:
@@ -59,7 +60,7 @@ Practical implications:
 - expect many upstream releases to be additive rather than immediately breaking
 - when a newer CLI exposes extra app-server behavior, treat that as a possible
   late additive promotion or gated capability rather than as proof that the
-  older supported window is no longer valid
+  reviewed support window is no longer valid
 - if a newly introduced upstream change is genuinely incompatible with the
   written public lifecycle boundary, tighten the support statement explicitly
   in docs and tests instead of letting drift stay implicit

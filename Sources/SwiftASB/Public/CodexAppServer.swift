@@ -3679,11 +3679,9 @@ private extension CodexAppServer.SandboxPolicy {
     init(wireValue: CodexWireSandboxPolicy) {
         self.init(
             type: .init(wireValue: wireValue.type),
-            access: nil,
             networkAccess: wireValue.networkAccess.map { CodexAppServer.NetworkAccess(wireValue: $0) },
             excludeSlashTmp: wireValue.excludeSlashTmp,
             excludeTmpdirEnvVar: wireValue.excludeTmpdirEnvVar,
-            readOnlyAccess: nil,
             writableRoots: wireValue.writableRoots ?? []
         )
     }

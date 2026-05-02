@@ -20,7 +20,8 @@ the versioned schema as the maintainer source for generated wire review.
 Options:
   --experimental
              Include experimental methods and fields. This is the default.
-  --stable   Dump only the stable app-server schema surface for comparison.
+  --stable   Dump only the stable app-server schema surface for comparison
+             under codex-schemas/vX.Y.Z-stable.
   --force    Replace an existing dump for the detected Codex CLI version.
 
 Environment:
@@ -74,12 +75,19 @@ version=$(
   exit 1
 }
 
-schema_version="v$version"
+if [ "$include_experimental" = true ]; then
+  schema_variant="experimental"
+  schema_version="v$version"
+else
+  schema_variant="stable"
+  schema_version="v$version-stable"
+fi
+
 schema_dir="$SCHEMA_PARENT/$schema_version"
 
 if [ -d "$schema_dir" ] && [ "$force" = false ]; then
   if find "$schema_dir" -type f -name '*.json' -print -quit | grep . >/dev/null 2>&1; then
-    printf 'Codex CLI %s schemas already exist at %s.\n' "$schema_version" "$schema_dir"
+    printf 'Codex CLI %s %s schemas already exist at %s.\n' "v$version" "$schema_variant" "$schema_dir"
     printf 'Use --force to replace that dump.\n'
     exit 0
   fi
@@ -99,13 +107,7 @@ else
   out_dir="$schema_dir"
 fi
 
-if [ "$include_experimental" = true ]; then
-  schema_variant="experimental"
-else
-  schema_variant="stable"
-fi
-
-printf 'Dumping Codex CLI %s %s app-server schemas to %s\n' "$schema_version" "$schema_variant" "$schema_dir"
+printf 'Dumping Codex CLI v%s %s app-server schemas to %s\n' "$version" "$schema_variant" "$schema_dir"
 
 if [ "$include_experimental" = true ]; then
   "$CODEX_BIN" app-server generate-json-schema --experimental --out "$out_dir"
@@ -128,4 +130,4 @@ if [ "$force" = true ]; then
   rm -rf "$tmp_dir"
 fi
 
-printf 'Wrote %s JSON schema files for Codex CLI %s under %s\n' "$json_count" "$schema_version" "$schema_dir"
+printf 'Wrote %s JSON schema files for Codex CLI v%s %s under %s\n' "$json_count" "$version" "$schema_variant" "$schema_dir"
