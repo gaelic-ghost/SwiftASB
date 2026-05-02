@@ -419,7 +419,7 @@ Use these decisions for every public symbol:
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.
 - [x] Update stale README release references before the next release.
-  Decision: README now names `v0.9.1` as the current released baseline.
+  Decision: README now names `v0.9.2` as the current released baseline.
 - [ ] Confirm README, DocC, and this audit use the same v1 release boundary.
 
 ## Initial Risk Notes
