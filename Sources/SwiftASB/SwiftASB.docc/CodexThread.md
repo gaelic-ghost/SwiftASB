@@ -43,6 +43,12 @@ Recent observable startup can begin as an empty local-only view when the live ap
 
 ## Topics
 
+### Walkthroughs
+
+- <doc:HandlingTurnProgressAndApprovals>
+- <doc:ReadingDiagnosticsAndHistory>
+- <doc:SwiftUIObservableCompanions>
+
 ### Identity And Defaults
 
 - ``id``

@@ -47,6 +47,11 @@ Thread-scoped convenience methods live on ``CodexThread`` when the caller alread
 
 ## Topics
 
+### Walkthroughs
+
+- <doc:GettingStartedWithSwiftASB>
+- <doc:ReadingDiagnosticsAndHistory>
+
 ### Configuration
 
 - ``Configuration``

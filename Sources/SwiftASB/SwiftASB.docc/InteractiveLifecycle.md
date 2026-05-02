@@ -42,7 +42,7 @@ for try await event in turn.events {
     case let .diagnostic(diagnostic):
         renderDiagnostic(diagnostic)
     case let .approvalRequested(request):
-        try await turn.respond(to: request, with: .commandExecution(.deny))
+        try await turn.respond(to: request, with: .commandExecution(.decline))
     case let .elicitationRequested(request):
         try await turn.respond(to: request, with: .toolUserInput(.init(answers: [:])))
     case let .completed(completion):
@@ -82,6 +82,13 @@ SwiftASB rejects overlapping same-thread turns before they reach the app-server 
 Use ``CodexTurnHandle/complete()`` when a caller wants a completed-turn value that no longer depends on the live handle. Use thread history helpers when the caller wants older completed turns from local storage.
 
 ## Topics
+
+### Walkthroughs
+
+- <doc:GettingStartedWithSwiftASB>
+- <doc:HandlingTurnProgressAndApprovals>
+- <doc:ReadingDiagnosticsAndHistory>
+- <doc:SwiftUIObservableCompanions>
 
 ### Handles
 

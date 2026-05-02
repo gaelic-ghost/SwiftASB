@@ -67,8 +67,8 @@
 | Thread-scoped recent-file observable | `Partially shipped` | `CodexThread.makeRecentFiles(limit:)` now vends a file-centric recent-files observable that hydrates from persisted file-change items, keeps one resident entry per file-change item, enriches live entries from `item/fileChange/outputDelta`, can load older file entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-payload slimming with automatic payload rehydration for protected files. Live probing exercises a real create/edit/delete scenario, and recent-file startup now inherits the same empty local-only degradation as recent-turns for the known live history-unavailable responses. The current weighting now accounts for diff structure and line volume, and shell summaries prefer concise edit summaries over raw terminal status when sealed payload is available. The remaining open work is better payload-cost calibration at the margins and deciding whether `FileChangePatchUpdatedNotification` should enrich the observable with structured patch previews. |
 | Thread-scoped recent-command observable | `Partially shipped` | `CodexThread.makeRecentCommands(limit:)` now vends a command-centric recent-commands observable that hydrates from persisted `commandExecution` items, keeps one resident entry per command item, enriches live entries from `item/commandExecution/outputDelta`, can load older command entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-output slimming with automatic output rehydration for protected commands. Recent-command startup now inherits the same empty local-only degradation as recent-turns for the known live history-unavailable responses. Current output weighting accounts for output size and line structure, and shell summaries prefer concise command and output summaries over raw transport detail. The remaining open work is better output-cost calibration and sharper shell-summary heuristics. |
 | Non-UI local history-reading helpers | `Partially shipped` | `CodexThread` now exposes a lightweight `HistoryWindow` page shape for recent local history, older or newer local windows around a known boundary turn id, centered `windowAroundTurn(...)` reads, centered `windowAroundItem(...)` reads, direct `ClosedTurn` reads for one turn, and convenience array helpers over those same windows. This gives non-UI callers an intentional path into the local history store without binding a UI-oriented observable, while still deferring a broader public cursor model, transcript search surface, and richer history-query helpers. |
-| Public API curation | `Partially shipped` | The first source-organization pass has split app-wide model, MCP, and thread-management value types into dedicated `CodexAppServer+...` files while preserving `CodexAppServer` as the single connection-wide owner. The first DocC catalog now maps the main handles and lifecycle concepts, but more source splitting, name review, default-argument review, and source-level symbol documentation remain before v1. |
-| DocC documentation | `Partially shipped` | `Sources/SwiftASB/SwiftASB.docc/` now contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, and generated-wire boundary notes. The catalog is validated through Xcode `docbuild`; deeper symbol comments and more examples still remain before v1. |
+| Public API curation | `Partially shipped` | The first source-organization pass has split app-wide model, MCP, and thread-management value types into dedicated `CodexAppServer+...` files while preserving `CodexAppServer` as the single connection-wide owner. The first DocC catalog now maps the main handles and lifecycle concepts, and the first source-level comment pass covers the supported lifecycle entrypoints, defaults, response routing, and completion handoff; final name/default review and any targeted source splits remain before v1. |
+| DocC documentation | `Partially shipped` | `Sources/SwiftASB/SwiftASB.docc/` now contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, generated-wire boundary notes, and copy-pasteable walkthroughs for startup, progress/approval handling, diagnostics/history, and SwiftUI observable companions. The catalog is validated through Xcode `docbuild`; remaining v1 work is a final stale-link/prose pass and any symbol comments that still read too terse. |
 | Swift Package Index readiness | `Partially shipped` | `.spi.yml` declares `SwiftASB` as the documentation target so Swift Package Index can build the intended DocC catalog. The actual listing still needs confirmation after the package is publicly indexed and tagged for the release slice. |
 | Contributor documentation split | `Shipped` | `README.md` is now focused on Swift and SwiftUI package users, while `CONTRIBUTING.md` owns contributor setup, validation, DocC, live-test flags, generated-wire refresh, and PR expectations. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `complete()` handoff into a caller-owned sealed turn snapshot. |
@@ -128,7 +128,11 @@ That means the current priority order is:
 
 1. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate now that deterministic approval completion, diagnostics, rollback, file mutation, history hydration, and subprocess failure-mode coverage all exist.
 2. Continue public API curation before v1: the first model/MCP/thread-management source split is done and the first DocC public-surface map now exists, but the package still needs more source splitting where it reduces file sprawl, tighter names and defaults, deeper source-level symbol documentation, and a final pass to make the first-class package surface feel intentionally designed rather than merely accumulated.
-3. Expand DocC before v1: keep the first `SwiftASB.docc` catalog current, add deeper symbol comments where the generated documentation is too terse, add more copy-pasteable walkthroughs, and keep the Xcode `docbuild` validation path clean.
+3. Finish the DocC release-readiness pass before v1: keep the first
+   `SwiftASB.docc` catalog current, keep the new startup/progress/approval/
+   diagnostics/history/SwiftUI walkthroughs accurate, add any remaining symbol
+   comments where generated documentation is still too terse, and keep the
+   Xcode `docbuild` validation path clean.
 4. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` now that the first resident-window, cache-policy, payload-slimming, centered-window, file-centric, and command-centric surfaces are shipped. The remaining work is calibration and heuristics, not proving the model exists.
 5. Keep v0.128 schema additions classified before public promotion: `excludeTurns` remains public on resume/fork request models because it directly supports the existing paged history model; `permissionProfile`, `activePermissionProfile`, and request-side `permissions` stay internal until SwiftASB owns a deliberate public permission-profile model; `hooks/list` is a near-term post-v1 diagnostics/capability target; `ModelProviderCapabilitiesRead*` is a clean app-wide capability candidate; thread goals, realtime, fuzzy file search sessions, remote-control status, marketplace/account-management families, and guardian denied-action approval remain post-v1 until their consumer workflows are clearer. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian warning families are public diagnostics.
 6. Do not add `RecentActivity` for v1. The separate `RecentTurns`, `RecentFiles`, and `RecentCommands` types are the clearer consumer surface, and a mixed feed would add more confusion than value right now.
@@ -264,18 +268,28 @@ workflow forces a release-boundary change before the v1 tag.
 - [x] Update stale release references after the `v0.9.3` patch release.
   Decision: README now names `v0.9.3` as the current released baseline and no
   longer describes the package as early development.
-- [ ] Expand DocC symbol comments for the supported lifecycle, not just the
+- [ ] Finish DocC symbol comments for the supported lifecycle, not just the
   conceptual articles.
-- [ ] Add copy-pasteable DocC walkthroughs for: starting and initializing an
+  Progress: the first source-level documentation pass now covers
+  `CodexAppServer`, `CodexThread`, and `CodexTurnHandle` lifecycle entrypoints,
+  defaults, response routing, completion handoff, diagnostics, and history
+  access. The remaining pre-v1 work is a targeted skim for stable public values
+  whose generated docs are still too terse for a first-time consumer.
+- [x] Add copy-pasteable DocC walkthroughs for: starting and initializing an
   app-server, starting a thread and turn, observing turn progress, answering an
   approval request, handling diagnostics, reading recent history, and using
   recent file/command companions in a SwiftUI view model.
+  Decision: covered by the startup, progress/approval, diagnostics/history, and
+  SwiftUI observable companion walkthroughs in `Sources/SwiftASB/SwiftASB.docc/`.
 - [ ] Keep README product-facing and concise, but make sure it names every
   v1-supported surface that a new consumer is expected to trust.
 - [ ] Keep `CONTRIBUTING.md` focused on contributor workflow, generated schema
   refreshes, live-test flags, validation commands, release workflow, and
   temporary compatibility-shim policy.
-- [ ] Run and keep clean the Xcode DocC validation path before the v1 tag.
+- [x] Run and keep clean the Xcode DocC validation path before the v1 tag.
+  Decision: `xcodebuild docbuild -scheme SwiftASB -destination
+  generic/platform=macOS -derivedDataPath tmp/xcode-docc/DerivedData` passed on
+  2026-05-02 after the walkthrough and source-comment pass.
 
 ### Test And Runtime Confidence
 
@@ -518,14 +532,16 @@ lifecycle, not as a convenience-API expansion.
   permission-profile shapes internal, removed the older permission-profile
   compatibility shim, and recorded `hooks/list` as a near-term post-v1 target.
 - API curation and DocC docs good enough that a Swift consumer can understand
-  the supported package surface without reading maintainer notes.
+  the supported package surface without reading maintainer notes, including
+  walkthroughs for the primary v1 lifecycle jobs.
 
 ### Remaining pre-v1 hardening
 
 - Complete the public API inventory and freeze decisions recorded in
   `docs/maintainers/v1-public-api-audit.md`.
-- Add source-level symbol documentation and DocC walkthroughs for the supported
-  lifecycle.
+- Finish the remaining targeted source-level symbol documentation skim for the
+  supported lifecycle. The first walkthrough set has landed; keep it accurate
+  during the final release-readiness pass.
 - Keep default local tests deterministic, narrow or document the known
   subprocess timing flake, and run the opt-in live probes before the v1 tag.
 - Audit active compatibility shims and tie each removal trigger to the current
@@ -795,12 +811,16 @@ In Progress
 - [x] Add a maintainer-facing note that clarifies which generated notification families intentionally remain internal for now.
 - [x] Add version-compatibility policy notes for the local Codex binary.
 - [x] Refresh the compatibility window and promoted generated snapshot against the current `v0.124.0` schema dump once the added endpoint, notification, and field families have been classified.
-- [ ] Curate the public API before v1 by splitting large source files along existing responsibility boundaries, tightening public names/defaults, and adding source-level symbol documentation for the supported lifecycle.
+- [ ] Curate the public API before v1 by splitting large source files along existing responsibility boundaries where still helpful, tightening public names/defaults, and finishing targeted source-level symbol documentation for the supported lifecycle.
 - [x] Add the first DocC documentation catalog before v1, including a package landing page, public-handle topic groups, and conceptual articles for the interactive lifecycle, history companions, and generated-wire boundary.
 - [x] Validate the DocC catalog through Xcode `docbuild` and document the maintainer command.
 - [x] Add Swift Package Index metadata that declares `SwiftASB` as the documentation target.
 - [x] Split package-user documentation from contributor workflow by keeping `README.md` product-focused and adding `CONTRIBUTING.md` for package development.
-- [ ] Expand DocC with deeper source-level symbol comments and more examples before a v1 tag.
+- [x] Expand DocC with deeper source-level symbol comments and more examples before a v1 tag.
+  Decision: the first source-comment pass and four copy-pasteable walkthroughs
+  now cover startup, progress/approvals, diagnostics/history, and SwiftUI
+  observable companions. Keep any final pre-v1 edits focused on stale links,
+  stale prose, and symbol comments that are still too terse.
 - [ ] Confirm the Swift Package Index listing after the package is publicly indexed and tagged.
 - [x] Decide whether real subprocess integration tests are required before the first release.
   Decision: yes, but as opt-in suites rather than as part of the default `swift test` path while the live Codex runtime remains an external local dependency.

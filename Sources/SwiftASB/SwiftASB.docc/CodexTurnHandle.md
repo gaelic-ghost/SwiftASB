@@ -21,7 +21,7 @@ let turn = try await thread.startTextTurn("List the public API surfaces.")
 for try await event in turn.events {
     switch event {
     case let .approvalRequested(request):
-        try await turn.respond(to: request, with: .commandExecution(.deny))
+        try await turn.respond(to: request, with: .commandExecution(.decline))
     case let .completed(completion):
         print("Finished:", completion.turn.status)
         return
@@ -38,6 +38,11 @@ for try await event in turn.events {
 The minimap is intentionally a live mirror, not a transcript. Use ``complete()`` or ``CodexThread`` history helpers when a consumer needs sealed completed-turn data.
 
 ## Topics
+
+### Walkthroughs
+
+- <doc:HandlingTurnProgressAndApprovals>
+- <doc:SwiftUIObservableCompanions>
 
 ### Identity And Events
 
