@@ -516,8 +516,8 @@ lifecycle, not as a convenience-API expansion.
   lifecycle.
 - Keep default local tests deterministic, narrow or document the known
   subprocess timing flake, and run the opt-in live probes before the v1 tag.
-- Audit active compatibility shims and tie each removal trigger to the rolling
-  Codex CLI support window.
+- Audit active compatibility shims and tie each removal trigger to the current
+  reviewed Codex CLI support window.
 - Confirm Swift Package Index listing and DocC rendering after the latest public
   tag is indexed.
 
