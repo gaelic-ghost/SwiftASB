@@ -158,6 +158,11 @@ public actor CodexAppServer {
         }
     }
 
+    /// Launches the configured local Codex app-server subprocess.
+    ///
+    /// Call this before `initialize(_:)` or any other protocol request. A
+    /// successful start also begins SwiftASB's background event loop for
+    /// diagnostics, thread events, and turn events.
     public func start() async throws {
         do {
             try await transport.start()
@@ -170,6 +175,11 @@ public actor CodexAppServer {
         }
     }
 
+    /// Stops the app-server subprocess and finishes all public streams.
+    ///
+    /// Streams finish normally when shutdown is initiated through SwiftASB.
+    /// After stopping, call `start()` and `initialize(_:)` again before sending
+    /// more app-server requests.
     public func stop() async {
         isStopping = true
         serverEventTask?.cancel()
@@ -195,6 +205,11 @@ public actor CodexAppServer {
         outstandingInteractiveRequests.removeAll()
     }
 
+    /// Returns diagnostics for the Codex CLI executable selected at startup.
+    ///
+    /// The value is available after `start()` succeeds. Use it to show users
+    /// where `codex` was found, which version was launched, and whether that
+    /// version is inside SwiftASB's documented reviewed support window.
     public func cliExecutableDiagnostics() async throws -> CLIExecutableDiagnostics {
         guard hasStarted else {
             throw CodexAppServerError.invalidState(
@@ -222,6 +237,10 @@ public actor CodexAppServer {
         makeDiagnosticEventStream()
     }
 
+    /// Performs the app-server initialize handshake.
+    ///
+    /// Call this once after `start()`. SwiftASB sends the app-server's required
+    /// `initialized` notification after the response is decoded successfully.
     public func initialize(_ request: InitializeRequest) async throws -> InitializeSession {
         try requireStarted(for: "initialize")
 
@@ -349,6 +368,12 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reopens an existing stored Codex thread and returns a thread handle.
+    ///
+    /// The returned handle carries refreshed thread metadata, default turn
+    /// settings, and a new thread-event stream. When `excludeTurns` is set on
+    /// the request, Codex owns how much prior turn context is hidden from the
+    /// resumed session.
     public func resumeThread(_ request: ThreadResumeRequest) async throws -> CodexThread {
         try requireInitialized(for: "thread/resume")
 
@@ -388,6 +413,11 @@ public actor CodexAppServer {
         }
     }
 
+    /// Creates a new thread from an existing stored thread.
+    ///
+    /// Forking returns a handle for the new thread and records the forked
+    /// history in SwiftASB's local store. When `excludeTurns` is set on the
+    /// request, Codex owns which prior turns are omitted from the fork context.
     public func forkThread(_ request: ThreadForkRequest) async throws -> CodexThread {
         try requireInitialized(for: "thread/fork")
 
@@ -427,6 +457,11 @@ public actor CodexAppServer {
         }
     }
 
+    /// Starts app-server context compaction for a stored thread.
+    ///
+    /// Most consumers should call `CodexThread.compactContext()` when they
+    /// already have a thread handle. This lower-level app-server method is
+    /// useful when the caller owns only a thread identifier.
     public func compactThread(_ request: ThreadCompactRequest) async throws {
         try requireInitialized(for: "thread/compact/start")
 
@@ -447,6 +482,11 @@ public actor CodexAppServer {
         }
     }
 
+    /// Rolls back trailing turns from a stored thread and returns refreshed metadata.
+    ///
+    /// SwiftASB records a local rollback marker and reconciles local history to
+    /// the app-server response. It does not preserve a full forensic archive of
+    /// removed turn payloads.
     public func rollbackThread(_ request: ThreadRollbackRequest) async throws -> ThreadInfo {
         try requireInitialized(for: "thread/rollback")
         guard request.numberOfTurns >= 1 else {
@@ -488,6 +528,11 @@ public actor CodexAppServer {
         }
     }
 
+    /// Sets the stored human-readable name for a thread.
+    ///
+    /// Most consumers should call `CodexThread.setName(_:)` from an existing
+    /// thread handle. This lower-level app-server method is useful when the
+    /// caller owns only a thread identifier.
     public func setThreadName(_ request: ThreadSetNameRequest) async throws {
         try requireInitialized(for: "thread/name/set")
 
@@ -512,6 +557,11 @@ public actor CodexAppServer {
         }
     }
 
+    /// Patches stored thread metadata and returns refreshed thread metadata.
+    ///
+    /// Field updates distinguish values to replace, values to clear, and values
+    /// to leave unchanged so callers can express the app-server's null-versus-
+    /// omitted behavior without using generated wire types.
     public func updateThreadMetadata(_ request: ThreadMetadataUpdateRequest) async throws -> ThreadInfo {
         try requireInitialized(for: "thread/metadata/update")
 
@@ -540,6 +590,10 @@ public actor CodexAppServer {
     ///
     /// Omitting `request` sends an empty thread-list request, leaving page
     /// size, sort order, filters, and archive visibility to the app-server.
+    /// Reads a page of stored thread snapshots from the app-server.
+    ///
+    /// Omitting `request` sends an empty list request, leaving filters, sort
+    /// order, and page size to the app-server defaults.
     public func listThreads(_ request: ThreadListRequest = .init()) async throws -> ThreadListPage {
         try requireInitialized(for: "thread/list")
 
@@ -581,6 +635,10 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reads a stored thread snapshot and optionally includes turns.
+    ///
+    /// Returned turns are hydrated into SwiftASB's local history store so later
+    /// thread-scoped history helpers can read the same completed-turn data.
     public func readThread(_ request: ThreadReadRequest) async throws -> ThreadReadResult {
         try requireInitialized(for: "thread/read")
 
@@ -622,6 +680,11 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reads a page of turns for a stored thread directly from the app-server.
+    ///
+    /// This low-level paging API surfaces app-server errors as failures. Recent
+    /// observable companions use a narrower startup fallback for known
+    /// history-unavailable responses.
     public func listThreadTurns(_ request: ThreadTurnsListRequest) async throws -> ThreadTurnsPage {
         try requireInitialized(for: "thread/turns/list")
 
@@ -663,6 +726,11 @@ public actor CodexAppServer {
         }
     }
 
+    /// Starts a turn from an app-server-owned request.
+    ///
+    /// Most consumers should prefer `CodexThread.startTurn(_:)` or
+    /// `CodexThread.startTextTurn(...)` so the thread identity and defaults are
+    /// supplied by the thread handle.
     public func startTurn(_ request: TurnStartRequest) async throws -> CodexTurnHandle {
         try requireInitialized(for: "turn/start")
         try reserveThreadForTurnStart(threadID: request.threadID)

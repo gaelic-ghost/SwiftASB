@@ -57,6 +57,11 @@ These companions are not alternate event logs. `Dashboard` starts from the curre
 
 ## Topics
 
+### Walkthroughs
+
+- <doc:ReadingDiagnosticsAndHistory>
+- <doc:SwiftUIObservableCompanions>
+
 ### History Reads
 
 - ``CodexThread/HistoryWindow``

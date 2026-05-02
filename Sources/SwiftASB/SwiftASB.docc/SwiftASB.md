@@ -19,7 +19,11 @@ Generated Codex wire types remain internal scaffolding. Public callers should us
 
 ### Start Here
 
+- <doc:GettingStartedWithSwiftASB>
 - <doc:InteractiveLifecycle>
+- <doc:HandlingTurnProgressAndApprovals>
+- <doc:ReadingDiagnosticsAndHistory>
+- <doc:SwiftUIObservableCompanions>
 - <doc:AppWideCapabilities>
 - <doc:ThreadManagement>
 - <doc:ThreadHistoryAndObservables>

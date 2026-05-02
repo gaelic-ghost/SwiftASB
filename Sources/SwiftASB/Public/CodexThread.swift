@@ -182,10 +182,19 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Asks the app-server to compact this thread's context.
+    ///
+    /// Dashboard and minimap companions mirror compaction activity when the
+    /// runtime emits item lifecycle events for that work.
     public func compactContext() async throws {
         try await appServer.compactThread(.init(threadID: id))
     }
 
+    /// Rolls back trailing turns from this stored thread.
+    ///
+    /// The returned handle carries refreshed thread metadata and a fresh event
+    /// stream. SwiftASB records a local rollback marker but does not preserve a
+    /// full archive of removed turn payloads.
     public func rollbackLastTurns(_ count: Int) async throws -> CodexThread {
         let threadInfo = try await appServer.rollbackThread(
             .init(threadID: id, numberOfTurns: count)
@@ -209,10 +218,15 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Sets the stored human-readable name for this thread.
     public func setName(_ name: String) async throws {
         try await appServer.setThreadName(.init(threadID: id, name: name))
     }
 
+    /// Patches this thread's stored Git metadata.
+    ///
+    /// Each field in `gitInfo` can replace, clear, or leave the corresponding
+    /// app-server value unchanged.
     public func updateMetadata(
         gitInfo: CodexAppServer.ThreadMetadataGitInfoUpdate
     ) async throws -> CodexAppServer.ThreadInfo {
@@ -221,6 +235,9 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Reads one completed turn from SwiftASB's local history store.
+    ///
+    /// Returns `nil` when the turn has not been persisted or hydrated locally.
     public func readTurnHistory(turnID: String) async throws -> CodexTurnHandle.ClosedTurn? {
         try await appServer.closedTurn(threadID: id, turnID: turnID)
     }
@@ -400,6 +417,10 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Answers a thread-routed approval request.
+    ///
+    /// SwiftASB rejects responses for requests that belong to another thread or
+    /// to an active turn-specific route.
     public func respond(
         to request: CodexApprovalRequest,
         with response: CodexApprovalResponse
@@ -412,6 +433,10 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Answers a thread-routed elicitation request.
+    ///
+    /// SwiftASB rejects responses for requests that belong to another thread or
+    /// to an active turn-specific route.
     public func respond(
         to request: CodexElicitationRequest,
         with response: CodexElicitationResponse

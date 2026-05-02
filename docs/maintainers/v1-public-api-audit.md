@@ -415,13 +415,25 @@ Use these decisions for every public symbol:
   self-explanatory from its declaration.
   Progress: default-bearing public initializers and methods now document whether
   omission delegates to Codex, chooses a SwiftASB local-history/UI default, or
-  applies an explicit safety default such as `.turn` or `.unchanged`.
-- [ ] Add DocC examples for app-server startup, thread/turn start, progress
+  applies an explicit safety default such as `.turn` or `.unchanged`. The first
+  source-level pass also covers the supported lifecycle entrypoints on
+  `CodexAppServer`, `CodexThread`, and `CodexTurnHandle`; the remaining pre-v1
+  work is a targeted skim for stable public values whose generated docs are
+  still too terse for a first-time consumer.
+- [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.
+  Decision: covered by the startup, progress/approval, diagnostics/history, and
+  SwiftUI observable companion walkthroughs in `Sources/SwiftASB/SwiftASB.docc/`.
 - [x] Update stale README release references before the next release.
   Decision: README now names `v0.9.3` as the current released baseline.
-- [ ] Confirm README, DocC, and this audit use the same v1 release boundary.
+- [x] Confirm README, DocC, and this audit use the same v1 release boundary.
+  Decision: README, DocC, and this audit now describe the same narrow v1
+  promise: app-server lifecycle, app-wide capability reads, stored-thread
+  operations, turn control, approval/elicitation handling, diagnostics, local
+  history, observable companions, and selected thread-management actions, while
+  generated wire models and broader app-server feature families stay internal
+  or post-v1.
 
 ## Initial Risk Notes
 

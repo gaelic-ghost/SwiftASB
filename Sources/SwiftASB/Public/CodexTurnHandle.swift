@@ -323,6 +323,10 @@ public struct CodexTurnHandle: Sendable {
         minimapStorage.minimap
     }
 
+    /// Answers an approval request for this active turn.
+    ///
+    /// SwiftASB verifies that the request belongs to this turn before sending
+    /// the response back to the app-server.
     public func respond(
         to request: CodexApprovalRequest,
         with response: CodexApprovalResponse
@@ -335,6 +339,10 @@ public struct CodexTurnHandle: Sendable {
         )
     }
 
+    /// Answers an elicitation request for this active turn.
+    ///
+    /// SwiftASB verifies that the request belongs to this turn before sending
+    /// the response back to the app-server.
     public func respond(
         to request: CodexElicitationRequest,
         with response: CodexElicitationResponse
@@ -347,6 +355,7 @@ public struct CodexTurnHandle: Sendable {
         )
     }
 
+    /// Interrupts this active turn through the app-server.
     public func interrupt() async throws {
         try await appServer.interruptTurn(
             threadID: threadID,
@@ -354,6 +363,7 @@ public struct CodexTurnHandle: Sendable {
         )
     }
 
+    /// Sends additional user input to this active turn.
     public func steer(_ input: [CodexAppServer.TurnInput]) async throws {
         try await appServer.steerTurn(
             threadID: threadID,
@@ -362,11 +372,17 @@ public struct CodexTurnHandle: Sendable {
         )
     }
 
+    /// Sends one text input item to this active turn.
     public func steerText(_ text: String) async throws {
         try await steer([.text(text)])
     }
 
     @discardableResult
+    /// Reads this turn's completed local-history snapshot.
+    ///
+    /// This does not send a command to terminate the turn. Use it after terminal
+    /// completion when the caller wants a sealed value independent of the live
+    /// handle.
     public func complete() async throws -> ClosedTurn {
         try await appServer.closedTurn(threadID: threadID, turnID: turn.id)
     }
