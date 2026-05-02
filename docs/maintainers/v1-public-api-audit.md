@@ -380,18 +380,21 @@ Use these decisions for every public symbol:
 - [x] Remove stale public placeholder namespaces.
   Decision: the template-era `SwiftASB` enum is not a consumer API and is no
   longer public.
-- [ ] Review public observable companion state for accidental construction or
+- [x] Review public observable companion state for accidental construction or
   mutation surfaces.
-  Decision so far: `Dashboard.ActivityState` is already internal, while
-  dashboard, minimap, recent-turn, recent-file, and recent-command presentation
+  Decision: `Dashboard.ActivityState` and companion initializers are internal.
+  Dashboard, minimap, recent-turn, recent-file, and recent-command presentation
   properties remain public read-only or `public private(set)` as appropriate for
-  SwiftUI observation.
-- [ ] Review request and response values for public constructor needs.
-  Decision so far: caller-authored request and response values keep public
-  initializers. App-server-authored pages, snapshots, request roots, command
-  actions, tool-user-input questions, and MCP elicitation prompt payloads stay
-  readable without gaining public construction unless examples or tests need
-  that ability.
+  SwiftUI observation. The remaining mutable public companion fields are
+  caller-owned UI inputs such as selection, scroll position, visible IDs, and
+  scroll activity.
+- [x] Review request and response values for public constructor needs.
+  Decision: caller-authored request, configuration, and response values keep
+  public initializers. App-server-authored pages, snapshots, request roots,
+  command actions, tool-user-input questions, MCP elicitation prompt payloads,
+  diagnostics, model-list upgrade details, and observable companion snapshots
+  stay readable without public construction unless examples or tests later prove
+  that ability is necessary.
 - [x] Review passive diagnostic payload construction.
   Decision: diagnostic payload structs stay public and readable, but their
   constructors are internal because consumers observe diagnostics rather than

@@ -218,6 +218,9 @@ workflow forces a release-boundary change before the v1 tag.
   to construct them, keep request/response values constructible where consumers
   need to send or test them, and regenerate the public symbol inventory after
   each tightening pass.
+  Progress: observable companion state has been reviewed. Companion construction
+  stays internal, presentation state is read-only or `public private(set)`, and
+  the mutable public companion fields are limited to caller-owned UI inputs.
 - [ ] Review `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`,
   `Minimap`, `RecentTurns`, `RecentFiles`, `RecentCommands`, history-window
   helpers, diagnostics, approval, elicitation, model, MCP, and thread-management
