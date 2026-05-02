@@ -207,7 +207,7 @@ workflow forces a release-boundary change before the v1 tag.
   the SwiftPM public symbol graph for the v1 freeze, while
   `docs/maintainers/v1-public-api-audit.md` remains the durable decision
   checklist.
-- [ ] For each public symbol, decide whether it is stable for v1, should be
+- [x] For each public symbol, decide whether it is stable for v1, should be
   renamed before v1, should become internal, or should move behind a narrower
   owning type.
   Progress: the access-control audit is now explicit. The first tightening pass
@@ -218,6 +218,10 @@ workflow forces a release-boundary change before the v1 tag.
   on. The second pass also removes marketplace-adjacent model upgrade fields
   from the public model-list shape while keeping the generated wire decode
   internal.
+  Decision: completed in `docs/maintainers/v1-public-api-audit.md` and the
+  regenerated symbol inventory. The final pre-v1 public graph records 1,107
+  public/open symbols after the v0.128 sandbox-field cleanup, with no generated
+  `CodexWire...` names exposed through the `SwiftASB` product.
 - [ ] Audit access control symbol-by-symbol before docs/examples: remove stale
   public placeholders, keep observable snapshots read-only unless callers need
   to construct them, keep request/response values constructible where consumers
@@ -311,10 +315,18 @@ workflow forces a release-boundary change before the v1 tag.
   are a clean public candidate, and thread goals, realtime, fuzzy file search,
   remote-control status, marketplace/account-management families, and guardian
   denied-action approval stay post-v1.
-- [ ] Confirm generated wire stays internal in docs, source organization, and
+- [x] Confirm generated wire stays internal in docs, source organization, and
   public examples.
-- [ ] Re-run schema drift fixture coverage after any promoted generated-wire
+  Decision: generated wire remains internal scaffolding. Public docs and README
+  describe hand-owned SwiftASB values, generated-wire references stay in
+  maintainer docs/scripts/internal protocol tests, and repo-maintenance
+  validation now fails if generated sources declare public symbols or public
+  declarations expose `CodexWire...` names.
+- [x] Re-run schema drift fixture coverage after any promoted generated-wire
   refresh.
+  Progress: `swift test` has been rerun after the v0.128 promoted-wire refresh
+  and exercises the v0.128 permission-profile fixtures, request/response
+  envelopes, notification fixtures, and public conversion paths.
 - [x] Decide whether v1 should support only the latest documented rolling window
   or whether a shorter first-v1 compatibility promise is more honest.
   Decision: use a narrow `0.128.x` support window for the first v1 boundary,

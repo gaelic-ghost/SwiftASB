@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02. This is a maintainer ledger for the v1 public API freeze; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening. This is a maintainer ledger for the v1 public API freeze; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1117
-- Public/open types: 171
-- Public/open initializers: 72
+- Public/open symbols: 1107
+- Public/open types: 169
+- Public/open initializers: 71
 - Public/open methods and type methods: 60
-- Public/open enum cases: 226
-- Public/open properties: 588
+- Public/open enum cases: 224
+- Public/open properties: 583
 
 ## Public Types
 
