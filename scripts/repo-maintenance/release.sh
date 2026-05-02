@@ -219,10 +219,51 @@ watch_ci() {
   fi
 
   log "Watching CI for PR #$pr_number."
+  wait_for_ci_registration "$pr_number"
   if ! gh pr checks "$pr_number" --watch; then
     die "CI is not green for PR #$pr_number. Fix the failing checks, push the branch, and rerun release.sh so it can watch CI again."
   fi
   log "CI is green for PR #$pr_number."
+}
+
+wait_for_ci_registration() {
+  pr_number="$1"
+  timeout_seconds="${REPO_MAINTENANCE_CI_REGISTRATION_TIMEOUT_SECONDS:-120}"
+  poll_seconds="${REPO_MAINTENANCE_CI_REGISTRATION_POLL_SECONDS:-5}"
+  elapsed_seconds=0
+
+  case "$timeout_seconds" in
+    ''|*[!0-9]*)
+      die "REPO_MAINTENANCE_CI_REGISTRATION_TIMEOUT_SECONDS must be a non-negative integer."
+      ;;
+  esac
+
+  case "$poll_seconds" in
+    ''|*[!0-9]*)
+      die "REPO_MAINTENANCE_CI_REGISTRATION_POLL_SECONDS must be a positive integer."
+      ;;
+  esac
+
+  [ "$poll_seconds" -gt 0 ] || die "REPO_MAINTENANCE_CI_REGISTRATION_POLL_SECONDS must be greater than zero."
+
+  while :; do
+    check_count="$(
+      gh pr view "$pr_number" --json statusCheckRollup --jq '.statusCheckRollup | length'
+    )"
+
+    if [ "$check_count" != "0" ]; then
+      log "CI has reported $check_count check(s) for PR #$pr_number."
+      return 0
+    fi
+
+    [ "$elapsed_seconds" -lt "$timeout_seconds" ] || {
+      die "No CI checks were reported for PR #$pr_number after ${timeout_seconds}s. Confirm the branch pushed correctly, GitHub Actions is enabled, and the workflow trigger matches this PR."
+    }
+
+    log "No CI checks reported for PR #$pr_number yet; waiting ${poll_seconds}s."
+    sleep "$poll_seconds"
+    elapsed_seconds=$((elapsed_seconds + poll_seconds))
+  done
 }
 
 check_pr_comments() {
