@@ -38,8 +38,6 @@ public extension CodexAppServer {
         public let model: String
         public let supportedReasoningEfforts: [ReasoningEffortOption]
         public let supportsPersonality: Bool?
-        public let upgrade: String?
-        public let upgradeInfo: ModelUpgradeInfo?
     }
 
     struct ModelAvailabilityNux: Sendable, Equatable {
@@ -56,12 +54,6 @@ public extension CodexAppServer {
         public let reasoningEffort: ReasoningEffort
     }
 
-    struct ModelUpgradeInfo: Sendable, Equatable {
-        public let migrationMarkdown: String?
-        public let model: String
-        public let modelLink: String?
-        public let upgradeCopy: String?
-    }
 }
 
 extension CodexAppServer.Model {
@@ -80,9 +72,7 @@ extension CodexAppServer.Model {
             supportedReasoningEfforts: wireValue.supportedReasoningEfforts.map(
                 CodexAppServer.ReasoningEffortOption.init
             ),
-            supportsPersonality: wireValue.supportsPersonality,
-            upgrade: wireValue.upgrade,
-            upgradeInfo: wireValue.upgradeInfo.map(CodexAppServer.ModelUpgradeInfo.init)
+            supportsPersonality: wireValue.supportsPersonality
         )
     }
 }
@@ -109,17 +99,6 @@ extension CodexAppServer.ReasoningEffortOption {
         self.init(
             description: wireValue.description,
             reasoningEffort: .init(wireValue: wireValue.reasoningEffort)
-        )
-    }
-}
-
-extension CodexAppServer.ModelUpgradeInfo {
-    init(wireValue: CodexWireModelUpgradeInfo) {
-        self.init(
-            migrationMarkdown: wireValue.migrationMarkdown,
-            model: wireValue.model,
-            modelLink: wireValue.modelLink,
-            upgradeCopy: wireValue.upgradeCopy
         )
     }
 }

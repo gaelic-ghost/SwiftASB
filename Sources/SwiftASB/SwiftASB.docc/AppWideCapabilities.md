@@ -38,7 +38,6 @@ These types are public because a consumer can use them directly today. Other gen
 - ``CodexAppServer/Model``
 - ``CodexAppServer/InputModality``
 - ``CodexAppServer/ReasoningEffortOption``
-- ``CodexAppServer/ModelUpgradeInfo``
 
 ### MCP Servers
 

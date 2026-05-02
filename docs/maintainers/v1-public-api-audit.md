@@ -11,8 +11,8 @@ The source inventory below tracks the files that own hand-shaped public API.
 The generated symbol ledger for this pass lives in
 [`v1-public-api-symbol-inventory.md`](./v1-public-api-symbol-inventory.md).
 That ledger was generated from SwiftPM's public symbol graph and currently
-records 1,124 public/open symbols: 172 types, 72 initializers, 60 methods or
-type methods, 226 enum cases, and 594 properties.
+records 1,117 public/open symbols: 171 types, 72 initializers, 60 methods or
+type methods, 226 enum cases, and 588 properties.
 
 | File | Lines | Audit focus |
 | --- | ---: | --- |
@@ -151,6 +151,10 @@ Use these decisions for every public symbol:
 - Keep passive diagnostic payloads readable through `CodexDiagnosticEvent`
   without giving them public constructors. This matches the broader event model:
   SwiftASB creates app-server-originated events, while consumers inspect them.
+- Keep model-list public fields scoped to picker and capability needs.
+  Marketplace-adjacent model upgrade fields are decoded by the internal wire
+  layer but are no longer copied into the public `CodexAppServer.Model` shape
+  for v1.
 - The unreachable public diagnostic `unknown(String)` cases have been removed
   from `CodexModelReroute.Reason` and `CodexModelVerification`. Strict
   generated-wire enum decoding cannot reach them today, so keeping them would
@@ -392,10 +396,14 @@ Use these decisions for every public symbol:
   Decision: diagnostic payload structs stay public and readable, but their
   constructors are internal because consumers observe diagnostics rather than
   emitting them through SwiftASB.
+- [x] Review marketplace-adjacent model-list fields.
+  Decision: `Model.upgrade`, `Model.upgradeInfo`, and `ModelUpgradeInfo` are
+  not part of the v1 model-picker promise. Keep the generated wire fields
+  internal until SwiftASB owns a public marketplace or upgrade workflow.
 - [x] Regenerate the symbol inventory after this access-control tightening pass.
-  Decision: the ledger now records 1,124 exported public/open symbols after the
-  placeholder, request-payload constructor, and diagnostic-constructor
-  narrowing.
+  Decision: the ledger now records 1,117 exported public/open symbols after the
+  placeholder, request-payload constructor, diagnostic-constructor, and
+  marketplace-adjacent model-field narrowing.
 
 ### Documentation Requirements
 

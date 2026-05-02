@@ -4,12 +4,12 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 
 ## Summary
 
-- Public/open symbols: 1124
-- Public/open types: 172
+- Public/open symbols: 1117
+- Public/open types: 171
 - Public/open initializers: 72
 - Public/open methods and type methods: 60
 - Public/open enum cases: 226
-- Public/open properties: 594
+- Public/open properties: 588
 
 ## Public Types
 
@@ -40,7 +40,6 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.ModelAvailabilityNux` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.ModelListPage` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.ModelListRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
-- `CodexAppServer.ModelUpgradeInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.NetworkAccess` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.Personality` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReadOnlyAccess` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
@@ -609,7 +608,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 19 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 15 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 34 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 26 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 20 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 90 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift`: 12 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift`: 23 public properties

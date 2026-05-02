@@ -210,7 +210,9 @@ workflow forces a release-boundary change before the v1 tag.
   app-server-authored interactive request and passive diagnostic payload
   constructors so the package no longer exports template-era, request
   fabrication, or diagnostic-emission surfaces that consumers should not depend
-  on.
+  on. The second pass also removes marketplace-adjacent model upgrade fields
+  from the public model-list shape while keeping the generated wire decode
+  internal.
 - [ ] Audit access control symbol-by-symbol before docs/examples: remove stale
   public placeholders, keep observable snapshots read-only unless callers need
   to construct them, keep request/response values constructible where consumers
