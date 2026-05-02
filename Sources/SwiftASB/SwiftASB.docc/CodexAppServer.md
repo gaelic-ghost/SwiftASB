@@ -45,6 +45,8 @@ Use ``startThread(_:)`` for a new thread, ``resumeThread(_:)`` for an existing s
 
 Thread-scoped convenience methods live on ``CodexThread`` when the caller already has a thread handle.
 
+Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` when the caller wants the thread metadata first and plans to page stored turns separately through ``listThreadTurns(_:)`` or read local history through ``CodexThread``. Leaving the field nil lets Codex include its normal response payload for the operation.
+
 ## Topics
 
 ### Walkthroughs

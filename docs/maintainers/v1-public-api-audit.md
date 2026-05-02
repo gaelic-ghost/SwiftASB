@@ -98,6 +98,13 @@ Use these decisions for every public symbol:
 - Keep richer activity, file-diff, MCP-progress, account-management,
   marketplace, transcript-search, and external-agent configuration surfaces
   post-v1.
+- Connected owner review: keep the v1 surface centered on three owners.
+  `CodexAppServer` owns subprocess lifetime, initialization, app-wide
+  capability reads, and lower-level stored-thread operations. `CodexThread`
+  owns conversation-scoped work: starting turns, thread management, request
+  routing, local history, and thread-scoped observable companions.
+  `CodexTurnHandle` owns active-turn control, live turn events, minimap state,
+  and explicit completion into a sealed local-history snapshot.
 
 ### Move Or Split Before V1
 
@@ -234,8 +241,8 @@ Use these decisions for every public symbol:
 - [x] Review `CLIExecutableDiagnostics` source and compatibility vocabulary.
   Decision: stable as a diagnostic support surface; keep it app-root owned.
 - [x] Review `start()`, `stop()`, `initialize(_:)`, and lifecycle guard errors.
-  Decision: stable ownership; docs still need to explain the expected startup
-  order and thrown lifecycle failures.
+  Decision: stable ownership. Startup order is covered by README and DocC
+  walkthroughs; thrown lifecycle failures stay under `CodexAppServerError`.
 - [x] Review app-wide stream semantics for `diagnosticEvents()`.
   Decision: the stream is stable and now uses the stream-shaped
   `diagnosticEvents()` name.
@@ -250,12 +257,13 @@ Use these decisions for every public symbol:
 
 - [x] Review `ThreadStartRequest`, `ThreadResumeRequest`, and
   `ThreadForkRequest` field names, defaults, and `excludeTurns` documentation.
-  Decision: keep the request families public; `excludeTurns` needs docs before
-  freeze.
+  Decision: keep the request families public. `excludeTurns` is documented as a
+  metadata-first option for callers that plan to page or read history
+  separately.
 - [x] Review `ThreadInfo`, `ThreadSession`, thread status types, and active flag
   vocabulary.
-  Decision: stable enough for the v1 lifecycle; complete symbol comments before
-  freeze.
+  Decision: stable enough for the v1 lifecycle; remaining documentation work is
+  a targeted symbol-comment skim, not an ownership or naming blocker.
 - [x] Review `listThreads(_:)`, `readThread(_:)`, `resumeThread(_:)`,
   `forkThread(_:)`, and `listThreadTurns(_:)` naming and result page shapes.
   Decision: stable app-root low-level actions.
@@ -353,8 +361,8 @@ Use these decisions for every public symbol:
   Decision: do not keep unreachable public unknown cases. They have been
   removed until wire decoding can preserve unknown raw values.
 - [x] Document diagnostics as passive signals, not answerable requests.
-  Decision: passive-only stays part of the v1 promise; detailed user docs still
-  need to be written.
+  Decision: passive-only stays part of the v1 promise. README and DocC now
+  teach diagnostics as observable signals rather than control requests.
 
 ### Observable Companions And History
 

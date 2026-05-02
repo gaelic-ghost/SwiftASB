@@ -165,7 +165,7 @@ SwiftUI apps should not need to replay every raw event to show useful state. The
 
 - `CodexThread.makeDashboard()` mirrors thread-level current state, including aggregate tool activity, MCP activity, hook activity, and active thread compaction.
 - `CodexTurnHandle.minimap` mirrors per-turn current state, including command, file-edit, dynamic-tool, collab-tool, MCP, and compaction activity.
-- `CodexThread.makeRecentTurns(limit:cachePolicy:)` provides a bounded turn-centric history view with cache presets for chat, transcript, and compact rails.
+- `CodexThread.makeRecentTurns(limit:cachePolicy:)` provides a bounded turn-centric history view with cache presets for chat, inspector, and compact history rails.
 - `CodexThread.makeRecentFiles(limit:cachePolicy:)` provides a file-change-centric view with selection-aware payload slimming and rehydration.
 - `CodexThread.makeRecentCommands(limit:cachePolicy:)` provides a command-centric view with output-aware slimming and rehydration.
 
