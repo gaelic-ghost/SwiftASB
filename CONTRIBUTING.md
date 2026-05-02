@@ -117,6 +117,18 @@ env SWIFTASB_ENABLE_LIVE_CODEX_ROLLBACK_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SAME_THREAD_TESTS=1 swift test
 ```
 
+Run the release-gate live probe set before patch releases when the local Codex
+CLI is available and the release needs real-runtime confidence:
+
+```bash
+scripts/run-live-codex-release-gate.sh
+```
+
+That wrapper runs the deterministic approval/server-request probe, the
+multi-turn create/edit/delete file scenario, and the disposable rollback
+scenario. Set `SWIFTASB_LIVE_CODEX_REPORT_DIR` to write JSON diagnostic reports
+outside `tmp/live-codex-reports/`.
+
 Run only the deterministic approval/server-request coverage and the exploratory
 approval probe:
 

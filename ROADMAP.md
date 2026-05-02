@@ -9,6 +9,7 @@
 - [Current Maintainer Priority](#current-maintainer-priority)
 - [V1 Readiness Checklist](#v1-readiness-checklist)
 - [Live App-Server Findings](#live-app-server-findings)
+- [Live Testing Expansion Plan](#live-testing-expansion-plan)
 - [Proposed Next Release Slice](#proposed-next-release-slice)
 - [Decisions Made For The First Interactive Lifecycle](#decisions-made-for-the-first-interactive-lifecycle)
 - [Milestone 0: Package And Repo Baseline](#milestone-0-package-and-repo-baseline)
@@ -690,6 +691,91 @@ runtime.
   behavior must include at least one representative fixture in the same PR,
   including one additive unknown field when the upstream shape is expected to
   remain forward-compatible.
+
+## Live Testing Expansion Plan
+
+Now that `SwiftASB` has a v1 public API, live testing is a release-maintenance
+surface. Its job is to prove the package still matches the installed Codex CLI
+when app-server behavior changes underneath the Swift API.
+
+### Release-Gate Live Probes
+
+These are the small, high-signal live probes that should run before ordinary
+releases:
+
+- [x] Consolidate the current release-gate probes behind
+  `scripts/run-live-codex-release-gate.sh`.
+- [ ] Keep startup, initialize, binary diagnostics, app-wide model/MCP snapshot,
+  single-turn, and cross-thread coverage in the release-gate set when their
+  runtime cost stays reasonable.
+- [x] Keep deterministic command approval with a mock Responses provider in the
+  release-gate set.
+- [x] Keep the multi-turn create/edit/delete file scenario in the release-gate
+  set.
+- [x] Keep the disposable stored-thread rollback scenario in the release-gate
+  set.
+
+Release-gate probes should fail when SwiftASB's documented v1 contract is
+broken. They should stay small enough that maintainers can run them during
+release prep without turning every release into an exploratory runtime study.
+
+### Compatibility And Behavior Probes
+
+These probes are observational and should write JSON reports. They should fail
+only when SwiftASB's documented contract breaks; otherwise behavior drift should
+be recorded in this roadmap or maintainer docs.
+
+- [ ] Approval-policy matrix: `.never`, `.onRequest`, `.untrusted`, and
+  `.granular`.
+- [ ] Sandbox matrix: `.readOnly`, `.workspaceWrite`, and tightly isolated
+  danger-full-access coverage only if the test workspace makes the risk clear.
+- [ ] Same-thread overlap probe, kept observational until upstream app-server
+  semantics become independently routable.
+- [ ] Ephemeral, stored, and pre-materialized thread-history behavior probes.
+- [ ] Codex CLI version/support-window diagnostics probe that records the
+  installed runtime, schema dump availability, and SwiftASB compatibility
+  result.
+
+### Server-Request Family Probes
+
+Every promoted answerable server-request family should have both deterministic
+fake-transport unit coverage and an opt-in real app-server probe when the real
+runtime can be driven with a mock Responses provider.
+
+- [ ] Permissions approval / request-permissions tool path.
+- [ ] Tool user input.
+- [ ] MCP server elicitation.
+- [ ] Guardian denied-action approval after SwiftASB owns a stable public model.
+- [ ] Future promoted surfaces such as `hooks/list` and model-provider
+  capabilities when they become public or observable contracts.
+
+### Harness And Script Shape
+
+Live tests should grow a shared harness instead of more one-off setup code.
+The harness should own temporary workspaces, isolated `CODEX_HOME`, Codex config
+generation, mock Responses provider startup, report writing, timeouts, cleanup,
+and optional workspace retention for debugging.
+
+Planned script entrypoints:
+
+- [x] `scripts/run-live-codex-release-gate.sh`
+- [ ] `scripts/run-live-codex-behavior-matrix.sh`
+- [ ] `scripts/run-live-codex-server-requests.sh`
+
+The live script surface should support these environment knobs consistently:
+
+- `SWIFTASB_LIVE_CODEX_TIMEOUT_SECONDS`
+- `SWIFTASB_LIVE_CODEX_REPORT_DIR`
+- `SWIFTASB_LIVE_CODEX_KEEP_WORKSPACES=1`
+- `SWIFTASB_LIVE_CODEX_BIN=/path/to/codex`
+
+### First Implementation Slice
+
+The first post-v1 live-testing slice is the consolidated release-gate runner.
+It should run the currently proven high-signal probes in order: deterministic
+approval/server-request, multi-turn file mutation, and rollback. The next slice
+should add the permissions approval mock-Responses probe, because permissions
+approval is the largest remaining answerable server-request family gap.
 
 ## Proposed Next Release Slice
 
