@@ -25,12 +25,15 @@ public extension CodexAppServer {
         }
     }
 
+    /// One page of MCP server status results.
     struct McpServerStatusPage: Sendable, Equatable {
         public let nextCursor: String?
         public let servers: [McpServerStatus]
     }
 
+    /// Capability snapshot for one configured MCP server.
     struct McpServerStatus: Sendable, Equatable, Identifiable {
+        /// Authentication state reported for an MCP server.
         public enum AuthStatus: String, Sendable, Equatable {
             case bearerToken
             case notLoggedIn
@@ -46,6 +49,7 @@ public extension CodexAppServer {
         public let tools: [String: McpTool]
     }
 
+    /// MCP resource advertised by a server.
     struct McpResource: Sendable, Equatable {
         public let annotations: JSONValue?
         public let description: String?
@@ -58,6 +62,7 @@ public extension CodexAppServer {
         public let uri: String
     }
 
+    /// MCP resource template advertised by a server.
     struct McpResourceTemplate: Sendable, Equatable {
         public let annotations: JSONValue?
         public let description: String?
@@ -67,6 +72,7 @@ public extension CodexAppServer {
         public let uriTemplate: String
     }
 
+    /// MCP tool advertised by a server.
     struct McpTool: Sendable, Equatable {
         public let annotations: JSONValue?
         public let description: String?

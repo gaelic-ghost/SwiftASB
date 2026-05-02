@@ -1,5 +1,6 @@
 import Foundation
 
+/// Error surfaced by the public app-server client API.
 public enum CodexAppServerError: Error, Sendable, LocalizedError, Equatable {
     case invalidState(reason: String)
     case transportFailure(operation: String, reason: String)

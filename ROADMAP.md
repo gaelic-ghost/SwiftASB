@@ -236,14 +236,17 @@ workflow forces a release-boundary change before the v1 tag.
   regenerated symbol inventory. The final pre-v1 public graph records 1,107
   public/open symbols after the v0.128 sandbox-field cleanup, with no generated
   `CodexWire...` names exposed through the `SwiftASB` product.
-- [ ] Audit access control symbol-by-symbol before docs/examples: remove stale
+- [x] Audit access control symbol-by-symbol before docs/examples: remove stale
   public placeholders, keep observable snapshots read-only unless callers need
   to construct them, keep request/response values constructible where consumers
   need to send or test them, and regenerate the public symbol inventory after
   each tightening pass.
-  Progress: observable companion state has been reviewed. Companion construction
+  Decision: observable companion state has been reviewed. Companion construction
   stays internal, presentation state is read-only or `public private(set)`, and
   the mutable public companion fields are limited to caller-owned UI inputs.
+  App-server-authored request identifiers and passive diagnostic payload
+  constructors remain internal, while request and response values that callers
+  need to send or test remain constructible.
 - [x] Review `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`,
   `Minimap`, `RecentTurns`, `RecentFiles`, `RecentCommands`, history-window
   helpers, diagnostics, approval, elicitation, model, MCP, and thread-management
@@ -256,19 +259,24 @@ workflow forces a release-boundary change before the v1 tag.
   recent-turn, recent-file, and recent-command companions are current-state or
   bounded-history mirrors, not alternate protocol owners. Diagnostics remain
   passive events, and model/MCP reads remain app-wide snapshots.
-- [ ] Split any remaining oversized public source files where the split removes
+- [x] Split any remaining oversized public source files where the split removes
   real navigation cost or clarifies ownership boundaries.
-- [ ] Tighten public names and parameter labels so callers can understand the
+  Decision: no additional pre-v1 split is needed. The remaining large public
+  actor source carries runtime entrypoints and internal mapping work; the
+  consumer-facing request, result, model, MCP, thread-management, observable,
+  diagnostics, approval, and elicitation values already live in focused files.
+- [x] Tighten public names and parameter labels so callers can understand the
   operation without reading generated-wire terminology.
-  Progress: the first field/default/enum vocabulary pass corrected the public
+  Decision: the final connected-surface pass keeps the current owner and naming
+  model for v1. The first field/default/enum vocabulary pass corrected the public
   execution-policy approval response case to
   `acceptWithExecPolicyAmendment(_:)`, matching the already-corrected
   `proposedExecPolicyAmendment` request field while keeping the private
   app-server wire spelling for compatibility.
-- [ ] Review default arguments for compatibility risk before v1, especially
+- [x] Review default arguments for compatibility risk before v1, especially
   cache-policy defaults, history limits, binary-discovery defaults, and request
   options that mirror upstream Codex behavior.
-  Progress: the audit now classifies defaults as compatibility promises. The
+  Decision: the audit now classifies defaults as compatibility promises. The
   first source-level documentation pass now covers the main default-bearing
   public initializers and methods, including nil app-server request omissions,
   SwiftASB local-history/UI page sizes, cache-policy derivation, and explicit
@@ -286,24 +294,32 @@ workflow forces a release-boundary change before the v1 tag.
 - [x] Update stale release references after the `v0.9.3` patch release.
   Decision: README now names `v0.9.3` as the current released baseline and no
   longer describes the package as early development.
-- [ ] Finish DocC symbol comments for the supported lifecycle, not just the
+- [x] Finish DocC symbol comments for the supported lifecycle, not just the
   conceptual articles.
-  Progress: the first source-level documentation pass now covers
+  Decision: the source-level documentation pass now covers
   `CodexAppServer`, `CodexThread`, and `CodexTurnHandle` lifecycle entrypoints,
   defaults, response routing, completion handoff, diagnostics, and history
-  access. The remaining pre-v1 work is a targeted skim for stable public values
-  whose generated docs are still too terse for a first-time consumer.
+  access, plus the stable public value types for model, MCP, thread-management,
+  approval, elicitation, diagnostics, compatibility, and app-server bootstrap
+  surfaces.
 - [x] Add copy-pasteable DocC walkthroughs for: starting and initializing an
   app-server, starting a thread and turn, observing turn progress, answering an
   approval request, handling diagnostics, reading recent history, and using
   recent file/command companions in a SwiftUI view model.
   Decision: covered by the startup, progress/approval, diagnostics/history, and
   SwiftUI observable companion walkthroughs in `Sources/SwiftASB/SwiftASB.docc/`.
-- [ ] Keep README product-facing and concise, but make sure it names every
+- [x] Keep README product-facing and concise, but make sure it names every
   v1-supported surface that a new consumer is expected to trust.
-- [ ] Keep `CONTRIBUTING.md` focused on contributor workflow, generated schema
+  Decision: README stays consumer-facing and names the supported app-server
+  lifecycle, SwiftUI observable companions, diagnostics, model/MCP snapshots,
+  local history, live probes, and the v1 compatibility boundary without
+  duplicating maintainer workflow details.
+- [x] Keep `CONTRIBUTING.md` focused on contributor workflow, generated schema
   refreshes, live-test flags, validation commands, release workflow, and
   temporary compatibility-shim policy.
+  Decision: CONTRIBUTING remains the maintainer workflow home for local
+  validation, schema generation, opt-in live tests, release steps, and temporary
+  compatibility cleanup policy.
 - [x] Run and keep clean the Xcode DocC validation path before the v1 tag.
   Decision: `xcodebuild docbuild -scheme SwiftASB -destination
   generic/platform=macOS -derivedDataPath tmp/xcode-docc/DerivedData` passed on
@@ -311,12 +327,21 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### Test And Runtime Confidence
 
-- [ ] Keep default `swift test` deterministic and local, with fake transport
+- [x] Keep default `swift test` deterministic and local, with fake transport
   coverage for public API behavior.
-- [ ] Keep live Codex CLI tests opt-in, because the installed CLI and prompt
+  Decision: the default deterministic suite passed on 2026-05-02 with 147 Swift
+  Testing tests; live Codex tests remained skipped unless their explicit
+  environment flags or wrapper scripts were used.
+- [x] Keep live Codex CLI tests opt-in, because the installed CLI and prompt
   behavior remain external local dependencies.
-- [ ] Run the opt-in live probes before v1 and record any observed behavior
+  Decision: live probes remain opt-in through `SWIFTASB_ENABLE_LIVE_CODEX_*`
+  flags and the `scripts/run-live-codex-*.sh` wrappers.
+- [x] Run the opt-in live probes before v1 and record any observed behavior
   changes in `ROADMAP.md` or maintainer docs.
+  Decision: the 2026-05-02 live confidence run passed the approval probe,
+  multi-turn file mutation scenario, and rollback scenario against
+  `codex-cli 0.128.0`; observed approval behavior changes are recorded in
+  [Live App-Server Findings](#live-app-server-findings).
 - [x] Resolve or deliberately narrow the subprocess timing flake where child
   process exit can sometimes surface as `unexpectedEndOfStream` with retained
   stderr instead of `processTerminated`.
@@ -324,12 +349,19 @@ workflow forces a release-boundary change before the v1 tag.
   now accepts either process termination or stdout EOF when the same fake child
   process exits after writing stderr, while still asserting that the retained
   stderr ring contains the expected last 20 lines.
-- [ ] Decide whether the existing multi-turn live file-mutation scenario is
+- [x] Decide whether the existing multi-turn live file-mutation scenario is
   enough live coverage for v1, or whether v1 needs another deterministic real
   app-server scenario.
-- [ ] Confirm approval/server-request coverage still proves the request,
+  Decision: enough for v1 when paired with the deterministic raw command
+  approval probe and rollback probe. Additional permissions/MCP server-request
+  families are post-v1 expansion work, not a v1 blocker.
+- [x] Confirm approval/server-request coverage still proves the request,
   response, `serverRequest/resolved`, and terminal-turn path through the real
   app-server with a mock Responses provider.
+  Decision: `scripts/run-live-codex-approval-probe.sh` passed on 2026-05-02,
+  including the deterministic raw command approval path through real app-server
+  request delivery, SwiftASB response, `serverRequest/resolved`, command
+  completion, follow-up mock Responses call, and terminal `turn/completed`.
 
 ### Compatibility And Generated Wire
 
@@ -468,19 +500,15 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   approval requests for workspace-write command, file-create, or file-edit
   turns in the current live runtime. The approval/server-request probe records
   those turns as completed command calls with no accepted approval kinds.
-- Setting the isolated live-test Codex config and request payloads to
-  `approval_policy = "untrusted"`, `approvals_reviewer = "user"`, and
-  `sandbox_mode = "workspace-write"` does change behavior, but not into a clean
-  typed approval flow. The command starts, no approval request is surfaced, the
-  turn times out, and the app-server transport is no longer usable for follow-up
-  `thread/start` calls.
-- A read-only sandbox write request currently attempts the command, leaves the
-  target file absent, and times out without surfacing a typed approval request or
-  completion when run after the workspace-write `.onRequest` candidates. Under
-  the stricter `.untrusted` probe, the app-server transport stops before the
-  read-only candidate can start. Keep both as live findings while we decide
-  whether SwiftASB needs a stronger timeout, blocked-call, or server-request
-  validation surface for this app-server behavior.
+- Current v1 confidence run, 2026-05-02 with `codex-cli 0.128.0`: the isolated
+  live-test Codex config using `approval_policy = "untrusted"`,
+  `approvals_reviewer = "user"`, `sandbox_mode = "workspace-write"`, and an
+  untrusted project now produces clean typed approval flow for command read,
+  file create, file edit, and a read-only sandbox write candidate. SwiftASB
+  accepted those approvals through the public surfaces, each turn completed, and
+  the report recorded concrete command/file-edit call kinds plus expected file
+  outcomes. This supersedes the earlier timeout finding from the exploratory
+  `.onRequest`/strict-probe attempts.
 - `scripts/run-live-codex-approval-probe.sh` is the preferred exploratory
   validation for approval/server-request candidates. It opts into the live probe
   and writes `live-approval-server-request-probe.json` under
@@ -501,6 +529,14 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   request delivery plus `serverRequest/resolved` is now covered through the real
   app-server; the remaining live approval findings are prompt-driven runtime
   behavior and additional server-request families.
+- Test coverage audit, 2026-05-02: the default deterministic suite now has 147
+  Swift Testing tests and directly covers the public `CodexAppServerError`
+  description/wrapping contract in addition to the existing protocol, transport,
+  public-client, observable companion, generated-wire, diagnostics, approval,
+  elicitation, model, MCP, thread-management, and history coverage. The
+  remaining intentional gap is not local unit coverage; it is live breadth for
+  future server-request families such as permissions and MCP elicitation when
+  SwiftASB chooses to promote those as stronger public runtime guarantees.
 
 ### Test Coverage Gap Register
 
@@ -541,6 +577,9 @@ runtime.
   stable consumer contract now: pending responses must fail and retain recent
   stderr, whether the child-process race surfaces as process termination or
   stdout EOF first.
+- Public app-server error coverage now directly asserts that invalid-state
+  reasons pass through unchanged and that internal transport/protocol failures
+  wrap into descriptive operation-scoped `CodexAppServerError` values.
 - Schema drift guardrails now include generated-wire fixture payloads for
   `thread/read`, `thread/turns/list`, command-execution thread items,
   active thread status flags, additive thread fields, and

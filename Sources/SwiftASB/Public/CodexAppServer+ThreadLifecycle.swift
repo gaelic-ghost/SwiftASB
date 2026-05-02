@@ -172,6 +172,7 @@ extension CodexAppServer {
         }
     }
 
+    /// App-server response and runtime defaults for a started, resumed, or forked thread.
     public struct ThreadSession: Sendable, Equatable {
         public let approvalPolicy: ApprovalPolicy
         public let approvalsReviewer: ApprovalsReviewer
@@ -185,6 +186,7 @@ extension CodexAppServer {
         public let thread: ThreadInfo
     }
 
+    /// Metadata for a stored or active Codex thread.
     public struct ThreadInfo: Sendable, Equatable {
         public let id: String
         public let cliVersion: String
@@ -218,29 +220,35 @@ extension CodexAppServer {
         }
     }
 
+    /// Stored thread metadata plus the optional turns returned by a read request.
     public struct ThreadReadResult: Sendable, Equatable {
         public let thread: ThreadInfo
         public let turns: [TurnInfo]
     }
 
+    /// Request used to start app-server context compaction for a thread.
     public struct ThreadCompactRequest: Sendable, Equatable {
         public var threadID: String
 
+        /// Creates a thread-compaction request.
         public init(threadID: String) {
             self.threadID = threadID
         }
     }
 
+    /// Sort key for stored-thread listing.
     public enum ThreadListSortKey: String, Sendable, Equatable {
         case createdAt
         case updatedAt
     }
 
+    /// Sort direction for stored-thread listing.
     public enum ThreadListSortDirection: String, Sendable, Equatable {
         case asc
         case desc
     }
 
+    /// Source family filter for stored-thread listing.
     public enum ThreadListSourceKind: String, Sendable, Equatable {
         case appServer
         case cli
@@ -287,11 +295,13 @@ extension CodexAppServer {
         }
     }
 
+    /// One page of stored-thread list results.
     public struct ThreadListPage: Sendable, Equatable {
         public let nextCursor: String?
         public let threads: [ThreadInfo]
     }
 
+    /// Sort direction for stored turn-history paging.
     public enum ThreadTurnsSortDirection: String, Sendable, Equatable {
         case asc
         case desc
@@ -320,12 +330,14 @@ extension CodexAppServer {
         }
     }
 
+    /// One page of stored turn-history results.
     public struct ThreadTurnsPage: Sendable, Equatable {
         public let backwardsCursor: String?
         public let nextCursor: String?
         public let turns: [TurnInfo]
     }
 
+    /// Current app-server status for a thread.
     public struct ThreadStatus: Sendable, Equatable {
         public let type: ThreadStatusType
         public let activeFlags: [ThreadActiveFlag]
