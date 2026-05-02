@@ -1,6 +1,7 @@
 import Foundation
 
 extension CodexAppServer {
+    /// Request used to start a turn in an existing thread.
     public struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: ApprovalPolicy?
         public var approvalsReviewer: ApprovalsReviewer?
@@ -14,6 +15,11 @@ extension CodexAppServer {
         public var summary: ReasoningSummary?
         public var threadID: String
 
+        /// Creates a turn-start request.
+        ///
+        /// Nil option fields are omitted from the app-server request so the
+        /// turn inherits the thread or Codex runtime defaults. Provide values
+        /// only for the turn-specific settings the caller wants to override.
         public init(
             threadID: String,
             input: [TurnInput],
@@ -54,6 +60,7 @@ extension CodexAppServer {
         public let status: TurnStatus
     }
 
+    /// One input item for a turn-start request.
     public struct TurnInput: Sendable, Equatable {
         public enum Kind: String, Sendable, Equatable {
             case image, localImage, mention, skill, text
@@ -65,6 +72,11 @@ extension CodexAppServer {
         public var path: String?
         public var name: String?
 
+        /// Creates a turn input item.
+        ///
+        /// Nil payload fields are omitted. The caller is responsible for
+        /// supplying the field that matches `kind`, such as `text` for text
+        /// input or `path` for local image input.
         public init(
             kind: Kind,
             text: String? = nil,
@@ -79,6 +91,7 @@ extension CodexAppServer {
             self.name = name
         }
 
+        /// Creates a plain text turn input item.
         public static func text(_ text: String) -> Self {
             .init(kind: .text, text: text)
         }

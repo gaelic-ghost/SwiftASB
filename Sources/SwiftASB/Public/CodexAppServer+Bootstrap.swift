@@ -1,6 +1,7 @@
 import Foundation
 
 extension CodexAppServer {
+    /// Process-launch configuration for the local Codex app-server subprocess.
     public struct CLIExecutableDiagnostics: Sendable, Equatable {
         public enum Source: Sendable, Equatable {
             case explicit
@@ -22,12 +23,20 @@ extension CodexAppServer {
         public let compatibility: Compatibility
     }
 
+    /// Runtime configuration used when SwiftASB launches the local Codex app-server.
     public struct Configuration: Sendable, Equatable {
         public var codexExecutableURL: URL?
         public var arguments: [String]
         public var currentDirectoryURL: URL?
         public var environment: [String: String]?
 
+        /// Creates launch configuration for the app-server subprocess.
+        ///
+        /// Omitting `codexExecutableURL` lets SwiftASB discover `codex` from the
+        /// supported local install locations. Omitting `arguments` starts the
+        /// standard stdio app-server command. Omitting `currentDirectoryURL` or
+        /// `environment` lets the launched process inherit the caller's current
+        /// process defaults.
         public init(
             codexExecutableURL: URL? = nil,
             arguments: [String] = ["app-server", "--listen", "stdio://"],
@@ -41,10 +50,15 @@ extension CodexAppServer {
         }
     }
 
+    /// Client handshake payload sent to Codex after the app-server process starts.
     public struct InitializeRequest: Sendable, Equatable {
         public var capabilities: InitializeCapabilities
         public var clientInfo: ClientInfo
 
+        /// Creates an initialize request.
+        ///
+        /// Omitting `capabilities` sends an empty capability set, leaving Codex
+        /// to use its default notification behavior.
         public init(
             capabilities: InitializeCapabilities = .init(),
             clientInfo: ClientInfo
@@ -54,10 +68,15 @@ extension CodexAppServer {
         }
     }
 
+    /// Optional client capabilities advertised during initialization.
     public struct InitializeCapabilities: Sendable, Equatable {
         public var experimentalAPI: Bool?
         public var optOutNotificationMethods: [String]?
 
+        /// Creates capability settings for the initialize handshake.
+        ///
+        /// Nil properties are omitted from the app-server request, so the Codex
+        /// app-server keeps ownership of its default capability behavior.
         public init(
             experimentalAPI: Bool? = nil,
             optOutNotificationMethods: [String]? = nil
@@ -67,11 +86,15 @@ extension CodexAppServer {
         }
     }
 
+    /// Identifies the SwiftASB consumer during initialization.
     public struct ClientInfo: Sendable, Equatable {
         public var name: String
         public var title: String?
         public var version: String
 
+        /// Creates client metadata for the initialize handshake.
+        ///
+        /// Omitting `title` sends only the required client name and version.
         public init(
             name: String,
             title: String? = nil,

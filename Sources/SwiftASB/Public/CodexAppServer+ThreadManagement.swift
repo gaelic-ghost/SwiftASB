@@ -23,6 +23,9 @@ public extension CodexAppServer {
         public var gitInfo: ThreadMetadataGitInfoUpdate?
         public var threadID: String
 
+        /// Creates a thread-metadata update request.
+        ///
+        /// Omitting `gitInfo` sends no Git metadata patch.
         public init(
             threadID: String,
             gitInfo: ThreadMetadataGitInfoUpdate? = nil
@@ -37,6 +40,10 @@ public extension CodexAppServer {
         public var originURL: ThreadMetadataFieldUpdate
         public var sha: ThreadMetadataFieldUpdate
 
+        /// Creates a Git metadata patch.
+        ///
+        /// Each field defaults to `.unchanged`, so callers only need to set the
+        /// metadata fields they want Codex to replace or clear.
         public init(
             branch: ThreadMetadataFieldUpdate = .unchanged,
             originURL: ThreadMetadataFieldUpdate = .unchanged,

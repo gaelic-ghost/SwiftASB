@@ -56,6 +56,16 @@ for try await event in turn.events {
 
 Diagnostics are passive runtime signals. They explain warnings, guardian warnings, model reroutes, and model verification results, but they are not requests that the app can answer. Observe app-wide diagnostics through ``CodexAppServer/diagnosticEvents()``, or handle targeted diagnostics from ``CodexThreadEvent/diagnostic(_:)`` and ``CodexTurnEvent/diagnostic(_:)``.
 
+## Stream Semantics
+
+Thread and turn streams are the canonical lifecycle surface. Observable companions are current-state mirrors built from those streams and from selected internal delta feeds.
+
+``CodexThread/events`` buffers thread events until the handle stream is observed. If a terminal thread event arrives before observation, SwiftASB yields that terminal event and then finishes the stream. ``CodexTurnHandle/events`` buffers the earliest active-turn events that can arrive before callers start iterating, yields terminal completion before finishing, and otherwise behaves as a live stream.
+
+``CodexAppServer/diagnosticEvents()`` buffers app-wide diagnostics until the first subscriber. Diagnostics are passive: they can be logged, rendered, or correlated with thread and turn identifiers, but they are not approval or elicitation requests.
+
+Streams finish normally when SwiftASB stops the app-server through ``CodexAppServer/stop()``. If the app-server event feed fails unexpectedly, the public throwing streams finish by throwing a ``CodexAppServerError`` that describes the broken feed. Live-only observable companion inputs, such as command-output and file-output delta feeds, are not replayed if they arrive before the companion exists.
+
 ## Steering And Interruption
 
 Use ``CodexTurnHandle/steerText(_:)`` when the user adds instructions to the active turn. Use ``CodexTurnHandle/interrupt()`` when the user intentionally stops it.

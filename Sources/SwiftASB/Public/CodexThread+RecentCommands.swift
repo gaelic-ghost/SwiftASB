@@ -12,6 +12,11 @@ extension CodexThread {
             public let protectedCommandBuffer: Int
             public let protectedRecentCompletedCommands: Int
 
+            /// Creates a recent-command residency policy.
+            ///
+            /// Numeric inputs are normalized to safe minimums. Omitting
+            /// `maximumResidentOutputCost` disables output-cost trimming and
+            /// keeps residency bounded only by command counts.
             public init(
                 maxResidentCommands: Int,
                 minimumResidentCommands: Int = 1,
@@ -26,6 +31,7 @@ extension CodexThread {
                 self.protectedRecentCompletedCommands = max(0, protectedRecentCompletedCommands)
             }
 
+            /// Creates the default recent-command cache policy for a page size.
             public static func automatic(pageSize: Int) -> Self {
                 let normalizedPageSize = max(1, pageSize)
                 return .init(
@@ -254,6 +260,9 @@ extension CodexThread {
             residencyTask?.cancel()
         }
 
+        /// Loads commands older than the current resident window.
+        ///
+        /// Omitting `limit` uses this companion's resident page limit.
         public func loadOlderCommands(limit: Int? = nil) async throws {
             guard !isLoadingOlderCommands else { return }
             guard let oldestCommand = commands.last else { return }

@@ -185,7 +185,7 @@ public enum CodexCommandAction: Sendable, Equatable {
         public let name: String
         public let path: String
 
-        public init(command: String, name: String, path: String) {
+        init(command: String, name: String, path: String) {
             self.command = command
             self.name = name
             self.path = path
@@ -196,7 +196,7 @@ public enum CodexCommandAction: Sendable, Equatable {
         public let command: String
         public let path: String?
 
-        public init(command: String, path: String?) {
+        init(command: String, path: String?) {
             self.command = command
             self.path = path
         }
@@ -207,7 +207,7 @@ public enum CodexCommandAction: Sendable, Equatable {
         public let path: String?
         public let query: String?
 
-        public init(command: String, path: String?, query: String?) {
+        init(command: String, path: String?, query: String?) {
             self.command = command
             self.path = path
             self.query = query
@@ -217,7 +217,7 @@ public enum CodexCommandAction: Sendable, Equatable {
     public struct Unknown: Sendable, Equatable {
         public let command: String
 
-        public init(command: String) {
+        init(command: String) {
             self.command = command
         }
     }
@@ -243,6 +243,10 @@ public struct CodexPermissionProfile: Sendable, Equatable {
         public let read: [String]?
         public let write: [String]?
 
+        /// Creates a filesystem permission profile.
+        ///
+        /// Nil access lists are omitted from the response, leaving any existing
+        /// Codex permission behavior unchanged for that access direction.
         public init(read: [String]? = nil, write: [String]? = nil) {
             self.read = read
             self.write = write
@@ -252,6 +256,9 @@ public struct CodexPermissionProfile: Sendable, Equatable {
     public struct Network: Sendable, Equatable {
         public let enabled: Bool?
 
+        /// Creates a network permission profile.
+        ///
+        /// Omitting `enabled` sends no network permission change.
         public init(enabled: Bool? = nil) {
             self.enabled = enabled
         }
@@ -260,6 +267,9 @@ public struct CodexPermissionProfile: Sendable, Equatable {
     public let fileSystem: FileSystem?
     public let network: Network?
 
+    /// Creates a permission profile response.
+    ///
+    /// Nil sections are omitted from the response.
     public init(
         fileSystem: FileSystem? = nil,
         network: Network? = nil
@@ -316,7 +326,7 @@ public struct CodexToolUserInputRequest: Sendable, Equatable {
             public let description: String
             public let label: String
 
-            public init(description: String, label: String) {
+            init(description: String, label: String) {
                 self.description = description
                 self.label = label
             }
@@ -329,7 +339,11 @@ public struct CodexToolUserInputRequest: Sendable, Equatable {
         public let options: [Option]?
         public let question: String
 
-        public init(
+        /// Creates a tool-user-input question.
+        ///
+        /// `isOther` and `isSecret` default to ordinary visible input, and
+        /// omitting `options` leaves the question as free-form input.
+        init(
             header: String,
             id: String,
             isOther: Bool = false,
@@ -378,7 +392,7 @@ public struct CodexMcpServerElicitationRequest: Sendable, Equatable {
         public let message: String
         public let requestedSchema: CodexAppServer.JSONValue
 
-        public init(
+        init(
             message: String,
             requestedSchema: CodexAppServer.JSONValue
         ) {
@@ -392,7 +406,7 @@ public struct CodexMcpServerElicitationRequest: Sendable, Equatable {
         public let message: String
         public let url: String
 
-        public init(
+        init(
             elicitationID: String,
             message: String,
             url: String
@@ -434,7 +448,7 @@ public enum CodexApprovalResponse: Sendable, Equatable {
 public enum CodexCommandExecutionApprovalResponse: Sendable, Equatable {
     case accept
     case acceptForSession
-    case acceptWithExecpolicyAmendment([String])
+    case acceptWithExecPolicyAmendment([String])
     case applyNetworkPolicyAmendment(CodexNetworkPolicyAmendment)
     case decline
     case cancel
@@ -453,6 +467,11 @@ public struct CodexPermissionsApprovalResponse: Sendable, Equatable {
     public let permissions: CodexPermissionProfile
     public let scope: Scope
 
+    /// Creates a permissions approval response.
+    ///
+    /// The default `.turn` scope applies the granted permissions only to the
+    /// current turn. Pass `.session` when the caller intentionally wants the
+    /// grant to remain active for the rest of the Codex session.
     public init(
         permissions: CodexPermissionProfile,
         scope: Scope = .turn
@@ -484,14 +503,17 @@ public struct CodexToolUserInputResponse: Sendable, Equatable {
 }
 
 public struct CodexMcpServerElicitationResponse: Sendable, Equatable {
-	public enum Action: String, Sendable, Equatable {
-		case accept, decline, cancel
-	}
+    public enum Action: String, Sendable, Equatable {
+        case accept, decline, cancel
+    }
 
     public let action: Action
     public let content: CodexAppServer.JSONValue?
     public let metadata: CodexAppServer.JSONValue?
 
+    /// Creates an MCP elicitation response.
+    ///
+    /// Nil `content` and `metadata` values are omitted from the response.
     public init(
         action: Action,
         content: CodexAppServer.JSONValue? = nil,

@@ -4864,7 +4864,7 @@ struct CodexAppServerTests {
 
         try await turnHandle.respond(
             to: approvalRequest,
-            with: .commandExecution(.accept)
+            with: .commandExecution(.acceptWithExecPolicyAmendment(["workspace-write"]))
         )
 
         await transport.emitServerRequestResolved(
@@ -4891,7 +4891,9 @@ struct CodexAppServerTests {
         )
         #expect(responseObject["id"] as? String == "approval-1")
         let responseResult = try #require(responseObject["result"] as? [String: Any])
-        #expect(responseResult["decision"] as? String == "accept")
+        let decision = try #require(responseResult["decision"] as? [String: Any])
+        let amendment = try #require(decision["acceptWithExecpolicyAmendment"] as? [String: Any])
+        #expect(amendment["execpolicy_amendment"] as? [String] == ["workspace-write"])
 
         await client.stop()
     }

@@ -12,6 +12,11 @@ extension CodexThread {
             public let protectedFileBuffer: Int
             public let protectedRecentCompletedFiles: Int
 
+            /// Creates a recent-file residency policy.
+            ///
+            /// Numeric inputs are normalized to safe minimums. Omitting
+            /// `maximumResidentPayloadCost` disables payload-cost trimming and
+            /// keeps residency bounded only by file counts.
             public init(
                 maxResidentFiles: Int,
                 minimumResidentFiles: Int = 1,
@@ -26,6 +31,7 @@ extension CodexThread {
                 self.protectedRecentCompletedFiles = max(0, protectedRecentCompletedFiles)
             }
 
+            /// Creates the default recent-file cache policy for a page size.
             public static func automatic(pageSize: Int) -> Self {
                 let normalizedPageSize = max(1, pageSize)
                 return .init(
@@ -292,6 +298,9 @@ extension CodexThread {
             residencyTask?.cancel()
         }
 
+        /// Loads files older than the current resident window.
+        ///
+        /// Omitting `limit` uses this companion's resident page limit.
         public func loadOlderFiles(limit: Int? = nil) async throws {
             guard !isLoadingOlderFiles else { return }
             guard let oldestFile = files.last else { return }

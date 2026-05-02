@@ -17,6 +17,11 @@ extension CodexThread {
             public let protectedTurnBuffer: Int
             public let veryFastScrollVelocityThreshold: Double
 
+            /// Creates a recent-turn residency policy.
+            ///
+            /// Numeric inputs are normalized to safe minimums. Omitting
+            /// `maximumResidentItemCost` disables item-cost trimming and keeps
+            /// residency bounded only by turn counts.
             public init(
                 maxResidentTurns: Int,
                 minimumResidentTurns: Int = 1,
@@ -53,10 +58,15 @@ extension CodexThread {
                 self.maxPrefetchPagesPerPass = max(1, maxPrefetchPagesPerPass)
             }
 
+            /// Creates the default recent-turn cache policy for a page size.
             public static func automatic(pageSize: Int) -> Self {
                 chatUI(pageSize: pageSize)
             }
 
+            /// Creates a balanced cache policy for a chat-style timeline.
+            ///
+            /// The default `pageSize` of 12 matches
+            /// `CodexThread.makeRecentTurns(limit:)`.
             public static func chatUI(pageSize: Int = 12) -> Self {
                 let normalizedPageSize = max(1, pageSize)
                 return .init(
@@ -73,6 +83,7 @@ extension CodexThread {
                 )
             }
 
+            /// Creates a larger cache policy for an inspector or detail view.
             public static func inspector(pageSize: Int = 24) -> Self {
                 let normalizedPageSize = max(1, pageSize)
                 return .init(
@@ -89,6 +100,7 @@ extension CodexThread {
                 )
             }
 
+            /// Creates a smaller cache policy for a narrow history rail.
             public static func historyRail(pageSize: Int = 8) -> Self {
                 let normalizedPageSize = max(1, pageSize)
                 return .init(
@@ -234,6 +246,9 @@ extension CodexThread {
             viewportTask?.cancel()
         }
 
+        /// Loads turns older than the current resident window.
+        ///
+        /// Omitting `limit` uses this companion's resident page limit.
         public func loadOlderTurns(limit: Int? = nil) async throws {
             guard !isLoadingOlderTurns else { return }
             guard let oldestOrderIndex = turns.last?.orderIndex else { return }
@@ -262,6 +277,9 @@ extension CodexThread {
             }
         }
 
+        /// Loads turns newer than the current resident window.
+        ///
+        /// Omitting `limit` uses this companion's resident page limit.
         public func loadNewerTurns(limit: Int? = nil) async throws {
             guard !isLoadingNewerTurns else { return }
             guard let newestOrderIndex = turns.first?.orderIndex else { return }

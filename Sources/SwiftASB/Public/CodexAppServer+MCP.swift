@@ -1,4 +1,5 @@
 public extension CodexAppServer {
+    /// Request used to read app-server MCP status snapshots.
     struct McpServerStatusListRequest: Sendable, Equatable {
         public enum Detail: String, Sendable, Equatable {
             case full
@@ -9,6 +10,10 @@ public extension CodexAppServer {
         public var detail: Detail?
         public var limit: Int?
 
+        /// Creates an MCP status-list request.
+        ///
+        /// Nil pagination and detail fields are omitted, which lets the
+        /// app-server choose its default page and detail level.
         public init(
             cursor: String? = nil,
             limit: Int? = nil,

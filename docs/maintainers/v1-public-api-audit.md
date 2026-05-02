@@ -7,24 +7,31 @@ wire family.
 
 ## Current Public Source Inventory
 
+The source inventory below tracks the files that own hand-shaped public API.
+The generated symbol ledger for this pass lives in
+[`v1-public-api-symbol-inventory.md`](./v1-public-api-symbol-inventory.md).
+That ledger was generated from SwiftPM's public symbol graph and currently
+records 1,117 public/open symbols: 171 types, 72 initializers, 60 methods or
+type methods, 226 enum cases, and 588 properties.
+
 | File | Lines | Audit focus |
 | --- | ---: | --- |
-| `Sources/SwiftASB/Public/CodexAppServer.swift` | 4035 | Root actor runtime, transport lifecycle, event fanout, local history reconciliation, stream registration, and protocol conversion internals. |
-| `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift` | 731 | Recent-turn observable companion and turn-snapshot conversion helpers. |
-| `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift` | 709 | Recent-file observable companion and file-snapshot conversion helpers. |
-| `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift` | 674 | Recent-command observable companion and command-snapshot conversion helpers. |
-| `Sources/SwiftASB/Public/CodexTurnHandle.swift` | 695 | Review turn-event naming, minimap shape, completion snapshot surface, steering/interrupt names, and public event payload values. |
-| `Sources/SwiftASB/Public/CodexInteractiveRequests.swift` | 504 | Review approval and elicitation naming, request/response ownership, unknown action surfaces, permission-profile naming, and response defaults. |
-| `Sources/SwiftASB/Public/CodexThread.swift` | 472 | Thread handle, history-window type, turn-start request, thread-scoped actions, and public thread event payloads. |
-| `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift` | 300 | Thread start/resume/fork/list/read/turn-page request and result values. |
+| `Sources/SwiftASB/Public/CodexAppServer.swift` | 4062 | Root actor runtime, transport lifecycle, event fanout, local history reconciliation, stream registration, and protocol conversion internals. |
+| `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift` | 749 | Recent-turn observable companion and turn-snapshot conversion helpers. |
+| `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift` | 718 | Recent-file observable companion and file-snapshot conversion helpers. |
+| `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift` | 683 | Recent-command observable companion and command-snapshot conversion helpers. |
+| `Sources/SwiftASB/Public/CodexTurnHandle.swift` | 704 | Review turn-event naming, minimap shape, completion snapshot surface, steering/interrupt names, and public event payload values. |
+| `Sources/SwiftASB/Public/CodexInteractiveRequests.swift` | 526 | Review approval and elicitation naming, request/response ownership, unknown action surfaces, permission-profile naming, and response defaults. |
+| `Sources/SwiftASB/Public/CodexThread.swift` | 543 | Thread handle, history-window type, turn-start request, thread-scoped actions, and public thread event payloads. |
+| `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift` | 334 | Thread start/resume/fork/list/read/turn-page request and result values. |
 | `Sources/SwiftASB/Public/CodexThread+Dashboard.swift` | 224 | Thread-level SwiftUI dashboard companion. |
 | `Sources/SwiftASB/Public/CodexDiagnostics.swift` | 156 | Review diagnostic event naming, model reroute/verification vocabulary, and future-proofing for unknown wire values. |
-| `Sources/SwiftASB/Public/CodexAppServer+MCP.swift` | 157 | Review app-wide MCP capability snapshot names and `JSONValue` exposure in MCP metadata/schema fields. |
-| `Sources/SwiftASB/Public/CodexAppServer+Models.swift` | 120 | Review model-list names, pagination naming, and whether account/marketplace-adjacent fields stay intentionally absent. |
+| `Sources/SwiftASB/Public/CodexAppServer+MCP.swift` | 162 | Review app-wide MCP capability snapshot names and `JSONValue` exposure in MCP metadata/schema fields. |
+| `Sources/SwiftASB/Public/CodexAppServer+Models.swift` | 125 | Review model-list names, pagination naming, and whether account/marketplace-adjacent fields stay intentionally absent. |
 | `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift` | 117 | Compatibility enums, sandbox/approval/reasoning vocabulary, and public `JSONValue`. |
-| `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift` | 104 | Review thread set-name, metadata update, rollback request/result names, and null/omitted field terminology. |
-| `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift` | 93 | CLI diagnostics, launch configuration, initialization request/session values. |
-| `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift` | 87 | Turn start request/session/info/input values. |
+| `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift` | 111 | Review thread set-name, metadata update, rollback request/result names, and null/omitted field terminology. |
+| `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift` | 116 | CLI diagnostics, launch configuration, initialization request/session values. |
+| `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift` | 100 | Turn start request/session/info/input values. |
 | `Sources/SwiftASB/Public/CodexErrors.swift` | 45 | Review public error cases, wording, and whether stream failures consistently wrap transport/protocol causes. |
 
 ## V1 Surface Promise
@@ -132,6 +139,22 @@ Use these decisions for every public symbol:
 
 ### API Honesty Fixes Before V1
 
+- Remove stale public placeholders that are not part of the supported consumer
+  lifecycle. The package-template `SwiftASB` namespace enum is no longer public;
+  consumers should depend on the concrete owners `CodexAppServer`,
+  `CodexThread`, and `CodexTurnHandle` instead.
+- Keep app-server-authored interactive request payload values readable without
+  making every nested payload constructible. Command-action payloads,
+  tool-user-input question payloads, and MCP elicitation prompt payloads are
+  now internally constructed from app-server requests; response values remain
+  public-initializable where consumers need to answer.
+- Keep passive diagnostic payloads readable through `CodexDiagnosticEvent`
+  without giving them public constructors. This matches the broader event model:
+  SwiftASB creates app-server-originated events, while consumers inspect them.
+- Keep model-list public fields scoped to picker and capability needs.
+  Marketplace-adjacent model upgrade fields are decoded by the internal wire
+  layer but are no longer copied into the public `CodexAppServer.Model` shape
+  for v1.
 - The unreachable public diagnostic `unknown(String)` cases have been removed
   from `CodexModelReroute.Reason` and `CodexModelVerification`. Strict
   generated-wire enum decoding cannot reach them today, so keeping them would
@@ -139,12 +162,50 @@ Use these decisions for every public symbol:
 - `CodexCommandExecutionApprovalRequest.proposedExecpolicyAmendment` has been
   corrected to `proposedExecPolicyAmendment` on the public API surface while
   still mapping from the current generated-wire spelling internally.
+- `CodexCommandExecutionApprovalResponse.acceptWithExecpolicyAmendment(_:)`
+  has been corrected to `acceptWithExecPolicyAmendment(_:)` on the public API
+  surface for the same reason. The private protocol decision type still uses
+  the app-server's `acceptWithExecpolicyAmendment` wire spelling and
+  `execpolicy_amendment` payload key so existing Codex app-server builds keep
+  accepting the response.
 - Compact one-line public declarations such as
   `CodexPermissionsApprovalResponse.Scope` should remain expanded for generated
   docs readability.
 - Review every public `JSONValue` exposure and keep it only where the upstream
   app-server payload is genuinely dynamic, such as output schemas, MCP metadata,
   MCP elicitation content, and unknown structured context.
+
+### Field, Default, And Enum Vocabulary Review
+
+- Field names should stay Swift-native where SwiftASB owns the public shape and
+  preserve app-server terms only when the consumer is choosing a real Codex
+  option. Identifier fields such as `threadID`, `turnID`, `itemID`, and
+  `requestID` are stable; route and filesystem fields such as
+  `currentDirectoryPath` are stable because they describe the caller input
+  rather than the wire spelling.
+- Compatibility fields that mirror upstream behavior should keep the Codex
+  vocabulary but use normal Swift casing. The execution-policy approval pair is
+  the current example: public request/response values use
+  `proposedExecPolicyAmendment` and `acceptWithExecPolicyAmendment(_:)`, while
+  private conversion code preserves the upstream wire spelling.
+- Default arguments should be treated as compatibility promises. Current
+  defaults are mostly nil/pass-through values, local cache policies, pagination
+  limits, binary discovery behavior, and
+  `CodexPermissionsApprovalResponse.scope = .turn`; each needs symbol comments
+  before v1 so consumers know whether SwiftASB or the Codex app-server owns the
+  default. The first default-argument documentation pass now covers the main
+  public defaults: process launch configuration, initialization capabilities,
+  thread and turn request omissions, model/MCP/thread pagination requests,
+  metadata field updates, permission responses, local history page sizes, and
+  recent observable companion cache policies.
+- Enum vocabulary should favor stable SwiftASB jobs over generated-wire terms.
+  Keep public app-server option names such as `dangerFullAccess`, `xhigh`,
+  `oAuth`, and `nux` only where the value is an upstream option a caller may
+  already recognize from Codex configuration or CLI output.
+- Public dynamic JSON fields remain acceptable only for genuinely open
+  app-server payloads: MCP metadata, output schemas, elicitation content, and
+  unknown structured context. They should not become a shortcut around typed
+  public modeling for the supported lifecycle.
 
 ### Docs Required Before Freeze
 
@@ -209,7 +270,9 @@ Use these decisions for every public symbol:
   post-v1.
   Decision: rollback stays public; forensic archival stays post-v1 and must be
   documented.
-- [ ] Review metadata field-update naming for replace/clear/unchanged semantics.
+- [x] Review metadata field-update naming for replace/clear/unchanged semantics.
+  Decision: keep the explicit replace/clear/unchanged names for v1 because they
+  describe the upstream null-versus-omitted semantics clearly at the call site.
 
 ### Turn Lifecycle
 
@@ -235,8 +298,14 @@ Use these decisions for every public symbol:
   Decision: stable vocabulary for v1.
 - [x] Review `CodexTurnEvent` case names and payload names.
   Decision: stable vocabulary for v1.
-- [ ] Confirm thread and turn streams document buffering, terminal events,
+- [x] Confirm thread and turn streams document buffering, terminal events,
   thrown errors, and shutdown behavior consistently.
+  Decision: documented. Thread streams buffer unobserved thread events and yield
+  terminal events before finishing. Turn streams buffer only the early
+  active-turn events SwiftASB marks for pre-observation delivery plus terminal
+  completion. Diagnostic streams buffer until the first subscriber. Observable
+  companions are current-state mirrors; internal activity and delta feeds are
+  live-only rather than replayable event logs.
 - [x] Confirm event payload structs carry the minimal identifiers consumers need
   without requiring raw wire access.
   Decision: current payloads carry thread/turn/item identifiers where consumers
@@ -258,7 +327,10 @@ Use these decisions for every public symbol:
 - [x] Review `CodexApprovalResponse` and `CodexElicitationResponse` response
   shapes and whether the owning answer methods are discoverable.
   Decision: stable paired request/response model; examples should teach
-  `thread.respond(...)` and `turn.respond(...)`.
+  `thread.respond(...)` and `turn.respond(...)`. The command execution response
+  case now uses the corrected public spelling
+  `acceptWithExecPolicyAmendment(_:)`; private protocol conversion keeps the
+  current app-server wire spelling.
 - [x] Review `CodexPermissionProfile` and sandbox/network terminology against
   the public compatibility promise.
   Decision: stable enough for v1, but symbol comments should define omitted
@@ -288,7 +360,8 @@ Use these decisions for every public symbol:
 - [x] Review `CodexThread.Dashboard` as the thread-level current-state mirror.
   Decision: stable SwiftUI companion.
 - [x] Review `CodexTurnHandle.Minimap` as the active-turn current-state mirror.
-  Decision: stable SwiftUI companion; review duplicate construction surface.
+  Decision: stable SwiftUI companion; keep the `minimap` property as the single
+  construction and observation surface.
 - [x] Review `RecentTurns`, `RecentFiles`, and `RecentCommands` names, cache
   policies, selection behavior, slimming behavior, and rehydration semantics.
   Decision: stable concepts; docs required for cache and rehydration behavior.
@@ -302,14 +375,51 @@ Use these decisions for every public symbol:
   post-v1.
   Decision: post-v1.
 
+### Access Control Tightening
+
+- [x] Remove stale public placeholder namespaces.
+  Decision: the template-era `SwiftASB` enum is not a consumer API and is no
+  longer public.
+- [x] Review public observable companion state for accidental construction or
+  mutation surfaces.
+  Decision: `Dashboard.ActivityState` and companion initializers are internal.
+  Dashboard, minimap, recent-turn, recent-file, and recent-command presentation
+  properties remain public read-only or `public private(set)` as appropriate for
+  SwiftUI observation. The remaining mutable public companion fields are
+  caller-owned UI inputs such as selection, scroll position, visible IDs, and
+  scroll activity.
+- [x] Review request and response values for public constructor needs.
+  Decision: caller-authored request, configuration, and response values keep
+  public initializers. App-server-authored pages, snapshots, request roots,
+  command actions, tool-user-input questions, MCP elicitation prompt payloads,
+  diagnostics, model-list upgrade details, and observable companion snapshots
+  stay readable without public construction unless examples or tests later prove
+  that ability is necessary.
+- [x] Review passive diagnostic payload construction.
+  Decision: diagnostic payload structs stay public and readable, but their
+  constructors are internal because consumers observe diagnostics rather than
+  emitting them through SwiftASB.
+- [x] Review marketplace-adjacent model-list fields.
+  Decision: `Model.upgrade`, `Model.upgradeInfo`, and `ModelUpgradeInfo` are
+  not part of the v1 model-picker promise. Keep the generated wire fields
+  internal until SwiftASB owns a public marketplace or upgrade workflow.
+- [x] Regenerate the symbol inventory after this access-control tightening pass.
+  Decision: the ledger now records 1,117 exported public/open symbols after the
+  placeholder, request-payload constructor, diagnostic-constructor, and
+  marketplace-adjacent model-field narrowing.
+
 ### Documentation Requirements
 
 - [ ] Add symbol comments for every stable v1 public type and method that is not
   self-explanatory from its declaration.
+  Progress: default-bearing public initializers and methods now document whether
+  omission delegates to Codex, chooses a SwiftASB local-history/UI default, or
+  applies an explicit safety default such as `.turn` or `.unchanged`.
 - [ ] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.
-- [ ] Update stale README release references before the next release.
+- [x] Update stale README release references before the next release.
+  Decision: README now names `v0.9.1` as the current released baseline.
 - [ ] Confirm README, DocC, and this audit use the same v1 release boundary.
 
 ## Initial Risk Notes

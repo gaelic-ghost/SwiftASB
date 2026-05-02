@@ -33,7 +33,7 @@ public struct CodexRuntimeWarning: Sendable, Equatable {
     public let message: String
     public let threadID: String?
 
-    public init(message: String, threadID: String?) {
+    init(message: String, threadID: String?) {
         self.message = message
         self.threadID = threadID
     }
@@ -43,7 +43,7 @@ public struct CodexGuardianWarning: Sendable, Equatable {
     public let message: String
     public let threadID: String
 
-    public init(message: String, threadID: String) {
+    init(message: String, threadID: String) {
         self.message = message
         self.threadID = threadID
     }
@@ -56,7 +56,7 @@ public struct CodexModelReroute: Sendable, Equatable {
     public let toModel: String
     public let turnID: String
 
-    public init(
+    init(
         fromModel: String,
         reason: Reason,
         threadID: String,
@@ -80,7 +80,7 @@ public struct CodexModelVerificationDiagnostic: Sendable, Equatable {
     public let turnID: String
     public let verifications: [CodexModelVerification]
 
-    public init(
+    init(
         threadID: String,
         turnID: String,
         verifications: [CodexModelVerification]
