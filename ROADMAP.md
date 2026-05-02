@@ -133,7 +133,12 @@ That means the current priority order is:
    diagnostics/history/SwiftUI walkthroughs accurate, add any remaining symbol
    comments where generated documentation is still too terse, and keep the
    Xcode `docbuild` validation path clean.
-4. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` now that the first resident-window, cache-policy, payload-slimming, centered-window, file-centric, and command-centric surfaces are shipped. The remaining work is calibration and heuristics, not proving the model exists.
+4. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` after v1 as
+   real UI usage teaches better calibration. The v1 review keeps the separate
+   turn/file/command companions, current cache-policy names and defaults,
+   selection/visibility protection, slimming behavior, and rehydration model as
+   stable enough; remaining work is calibration and richer previews, not proving
+   the model exists.
 5. Keep v0.128 schema additions classified before public promotion: `excludeTurns` remains public on resume/fork request models because it directly supports the existing paged history model; `permissionProfile`, `activePermissionProfile`, and request-side `permissions` stay internal until SwiftASB owns a deliberate public permission-profile model; `hooks/list` is a near-term post-v1 diagnostics/capability target; `ModelProviderCapabilitiesRead*` is a clean app-wide capability candidate; thread goals, realtime, fuzzy file search sessions, remote-control status, marketplace/account-management families, and guardian denied-action approval remain post-v1 until their consumer workflows are clearer. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian warning families are public diagnostics.
 6. Do not add `RecentActivity` for v1. The separate `RecentTurns`, `RecentFiles`, and `RecentCommands` types are the clearer consumer surface, and a mixed feed would add more confusion than value right now.
 7. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
@@ -349,19 +354,43 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### History And Observable Companions
 
-- [ ] Review `RecentTurns`, `RecentFiles`, and `RecentCommands` cache-policy
+- [x] Review `RecentTurns`, `RecentFiles`, and `RecentCommands` cache-policy
   names, defaults, selection behavior, slimming behavior, and rehydration
   semantics before v1.
-- [ ] Decide whether archive-aware retention and eviction is a v1 blocker or a
+  Decision: keep the separate companion families for v1. `RecentTurns` keeps
+  named `chatUI`, `inspector`, and `historyRail` presets, while
+  `RecentFiles` and `RecentCommands` keep automatic page-size-derived policies
+  until real UI usage justifies more presets. Selection and visible-ID inputs
+  remain caller-owned UI hints; presentation snapshots stay read-only. Payload
+  and item slimming remains a cache-residency detail, and protected slimmed
+  entries rehydrate from local history when selected or visible. Unsafe numeric
+  cache-policy inputs are normalized consistently across all three companion
+  families.
+- [x] Decide whether archive-aware retention and eviction is a v1 blocker or a
   documented post-v1 history-store enhancement.
-- [ ] Decide whether broader public cursor semantics, transcript search, or
+  Decision: post-v1. The v1 local-history promise is current non-archived cache
+  use plus archive-state drift correction, not a durable archived-thread
+  retention contract.
+- [x] Decide whether broader public cursor semantics, transcript search, or
   richer non-UI history query helpers are post-v1.
-- [ ] Keep `RecentActivity` out of v1 unless a real consumer workflow needs a
+  Decision: post-v1. Keep the current local `HistoryWindow` reads plus centered
+  turn/item windows as the v1 non-UI surface; do not expose a broader public
+  cursor or transcript-search contract before the local completeness model has
+  more production mileage.
+- [x] Keep `RecentActivity` out of v1 unless a real consumer workflow needs a
   mixed timeline; the current decision is to keep file, command, and turn
   companions separate.
-- [ ] Confirm history reads prefer local data only when local completeness is
+  Decision: keep `RecentTurns`, `RecentFiles`, and `RecentCommands` separate
+  for v1. A mixed feed remains post-v1 unless a concrete app workflow proves it
+  improves scanning more than it muddies the ownership model.
+- [x] Confirm history reads prefer local data only when local completeness is
   trustworthy, and still expose upstream failures through low-level APIs where
   callers need them.
+  Decision: recent observables and local window helpers prefer the local history
+  store only after SwiftASB has useful local completeness, and they degrade to
+  empty local-only startup for known ephemeral or pre-materialized live history
+  responses. Low-level `CodexAppServer.listThreadTurns(...)` remains the direct
+  app-server paging surface and still reports upstream protocol failures.
 
 ### Packaging And Release Verification
 

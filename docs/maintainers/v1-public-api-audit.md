@@ -365,7 +365,12 @@ Use these decisions for every public symbol:
   construction and observation surface.
 - [x] Review `RecentTurns`, `RecentFiles`, and `RecentCommands` names, cache
   policies, selection behavior, slimming behavior, and rehydration semantics.
-  Decision: stable concepts; docs required for cache and rehydration behavior.
+  Decision: stable for v1. Keep the three separate companion families, keep
+  `RecentTurns` presets plus automatic page-size-derived file/command policies,
+  keep caller-owned selection and visible-ID hints as the public UI input
+  surface, and keep slimming/rehydration as cache-residency behavior. Unsafe
+  numeric cache-policy inputs are normalized consistently across all three
+  companion families.
 - [x] Review `HistoryWindow` naming and local-history window helper names.
   Decision: stable enough for v1; examples should show ordinary recent/older/
   newer reads.
