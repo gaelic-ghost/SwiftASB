@@ -130,7 +130,7 @@ That means the current priority order is:
 2. Continue public API curation before v1: the first model/MCP/thread-management source split is done and the first DocC public-surface map now exists, but the package still needs more source splitting where it reduces file sprawl, tighter names and defaults, deeper source-level symbol documentation, and a final pass to make the first-class package surface feel intentionally designed rather than merely accumulated.
 3. Expand DocC before v1: keep the first `SwiftASB.docc` catalog current, add deeper symbol comments where the generated documentation is too terse, add more copy-pasteable walkthroughs, and keep the Xcode `docbuild` validation path clean.
 4. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` now that the first resident-window, cache-policy, payload-slimming, centered-window, file-centric, and command-centric surfaces are shipped. The remaining work is calibration and heuristics, not proving the model exists.
-5. Keep the v0.125 additions classified before public promotion: `excludeTurns` is public on resume/fork request models because it directly supports the existing paged history model, `marketplace/upgrade` and the `amazonBedrock` account variant remain internal because SwiftASB does not yet own marketplace or account-management APIs, and the stricter tagged `permissionProfile` shape is handled by a temporary compatibility shim until the older loose shape leaves the rolling support window. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, warning/model-verification/guardian warning families are public diagnostics, and guardian denied-action approval remains internal until its control-flow job is clear.
+5. Keep v0.128 schema additions classified before public promotion: `excludeTurns` remains public on resume/fork request models because it directly supports the existing paged history model; `permissionProfile`, `activePermissionProfile`, and request-side `permissions` stay internal until SwiftASB owns a deliberate public permission-profile model; `hooks/list` is a near-term post-v1 diagnostics/capability target; `ModelProviderCapabilitiesRead*` is a clean app-wide capability candidate; thread goals, realtime, fuzzy file search sessions, remote-control status, marketplace/account-management families, and guardian denied-action approval remain post-v1 until their consumer workflows are clearer. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian warning families are public diagnostics.
 6. Do not add `RecentActivity` for v1. The separate `RecentTurns`, `RecentFiles`, and `RecentCommands` types are the clearer consumer surface, and a mixed feed would add more confusion than value right now.
 7. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
 8. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
@@ -176,6 +176,11 @@ These are intentionally outside the v1 promise unless a concrete consumer
 workflow forces a release-boundary change before the v1 tag.
 
 - [ ] Guardian denied-action approval with a stable request and response model.
+- [ ] Hooks list surface near-term after v1. Treat `hooks/list` as one of the
+  first post-v1 schema promotions: expose per-cwd hook metadata, warnings, and
+  load errors through a deliberate diagnostics/capability API so Swift clients
+  can show what hooks are active before a turn runs. Keep hook enable/disable
+  mutation post-v1+ until the configuration-writing UX is clearer.
 - [ ] Marketplace upgrade surfaces.
 - [ ] Account-management variants, including provider-specific account families
   such as Amazon Bedrock.
@@ -292,20 +297,20 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### Compatibility And Generated Wire
 
-- [ ] Audit active compatibility shims and give each one a removal trigger tied
+- [x] Audit active compatibility shims and give each one a removal trigger tied
   to the rolling Codex CLI support window.
-- [ ] Revisit the v0.125 `permissionProfile` compatibility shim when the support
-  window no longer includes the older loose shape.
-- [ ] Confirm the promoted generated-wire snapshot matches the Codex CLI schema
+  Progress: the v0.125 permission-profile decode shim is removed as part of the
+  v0.128 support-window advance; no generated-wire drift shim remains active.
+- [x] Remove the v0.125 `permissionProfile` compatibility shim when the support
+  window advanced beyond the older loose shape.
+- [x] Confirm the promoted generated-wire snapshot matches the Codex CLI schema
   version included in the v1 compatibility window.
-- [ ] Classify the Codex CLI `v0.128.0` schema diff before promotion. Initial
-  findings: the stable-only dump filtered experimental permission-profile
-  fields, while an experimental dump keeps `permissionProfile` and adds
-  `activePermissionProfile` plus request-side `permissions` selection.
-  `HooksList*`, `ModelProviderCapabilitiesRead*`,
-  `RemoteControlStatusChangedNotification`, and thread-goal notifications are
-  new families; `ghost_commit` and sandbox read-only access roots still need
-  compatibility decisions rather than a blind generated snapshot swap.
+- [x] Classify the Codex CLI `v0.128.0` schema diff before promotion. Decision:
+  generated permission-profile shapes remain internal, `hooks/list` is a
+  near-term post-v1 diagnostics/capability target, model-provider capabilities
+  are a clean public candidate, and thread goals, realtime, fuzzy file search,
+  remote-control status, marketplace/account-management families, and guardian
+  denied-action approval stay post-v1.
 - [ ] Confirm generated wire stays internal in docs, source organization, and
   public examples.
 - [ ] Re-run schema drift fixture coverage after any promoted generated-wire
@@ -438,7 +443,7 @@ runtime.
   `CodexTurnHandle`, `respond(...)` writes the expected JSON-RPC result,
   `serverRequest/resolved` clears the route, and wrong-surface, wrong-kind,
   already-resolved, and wrong-thread responses fail with descriptive errors. The
-  opt-in live raw mock-Responses probe now proves the real v0.125.0 app-server
+  opt-in live raw mock-Responses probe now proves the real app-server
   can reach a command item plus `waitingOnApproval`, deliver an answerable
   `item/commandExecution/requestApproval` request with numeric id `0`, accept
   SwiftASB's response, emit `serverRequest/resolved`, complete the command, make
@@ -493,10 +498,10 @@ lifecycle, not as a convenience-API expansion.
 - Centered local history reads through `windowAroundTurn(...)` and
   `windowAroundItem(...)` before any broader cursor or transcript-search
   contract.
-- A `v0.125.0` schema compatibility pass has refreshed the staging generator,
-  updated the rolling compatibility window, exposed additive history-friendly
-  resume/fork request flags, and covered the stricter `permissionProfile`
-  generation with an explicit temporary compatibility shim.
+- A `v0.128.0` experimental schema compatibility pass has refreshed the staging
+  generator, updated the rolling compatibility window, kept generated
+  permission-profile shapes internal, removed the older permission-profile
+  compatibility shim, and recorded `hooks/list` as a near-term post-v1 target.
 - API curation and DocC docs good enough that a Swift consumer can understand
   the supported package surface without reading maintainer notes.
 

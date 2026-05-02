@@ -3309,10 +3309,15 @@ private extension CodexAppServer.ThreadStartRequest {
             config: config?.mapValues(\.wireValue),
             cwd: currentDirectoryPath,
             developerInstructions: developerInstructions,
+            dynamicTools: nil,
+            environments: nil,
             ephemeral: ephemeral,
+            experimentalRawEvents: nil,
+            mockExperimentalField: nil,
             model: model,
             modelProvider: modelProvider,
-            permissionProfile: nil,
+            permissions: nil,
+            persistExtendedHistory: nil,
             personality: personality?.wireValue,
             sandbox: sandboxMode?.wireValue,
             serviceName: serviceName,
@@ -3370,13 +3375,16 @@ private extension CodexAppServer.TurnStartRequest {
         CodexWireTurnStartParams(
             approvalPolicy: approvalPolicy?.wireValue,
             approvalsReviewer: approvalsReviewer?.wireValue,
+            collaborationMode: nil,
             cwd: currentDirectoryPath,
             effort: effort?.wireValue,
+            environments: nil,
             input: input.map(\.wireValue),
             model: model,
             outputSchema: outputSchema?.wireValue,
-            permissionProfile: nil,
+            permissions: nil,
             personality: personality?.wireValue,
+            responsesapiClientMetadata: nil,
             sandboxPolicy: nil,
             serviceTier: serviceTier?.wireValue,
             summary: summary?.wireValue,
@@ -3671,34 +3679,13 @@ private extension CodexAppServer.SandboxPolicy {
     init(wireValue: CodexWireSandboxPolicy) {
         self.init(
             type: .init(wireValue: wireValue.type),
-            access: wireValue.access.map { CodexAppServer.ReadOnlyAccess(wireValue: $0) },
+            access: nil,
             networkAccess: wireValue.networkAccess.map { CodexAppServer.NetworkAccess(wireValue: $0) },
             excludeSlashTmp: wireValue.excludeSlashTmp,
             excludeTmpdirEnvVar: wireValue.excludeTmpdirEnvVar,
-            readOnlyAccess: wireValue.readOnlyAccess.map { CodexAppServer.ReadOnlyAccess(wireValue: $0) },
+            readOnlyAccess: nil,
             writableRoots: wireValue.writableRoots ?? []
         )
-    }
-}
-
-private extension CodexAppServer.ReadOnlyAccess {
-    init(wireValue: CodexWireReadOnlyAccess) {
-        self.init(
-            includePlatformDefaults: wireValue.includePlatformDefaults,
-            readableRoots: wireValue.readableRoots ?? [],
-            type: .init(wireValue: wireValue.type)
-        )
-    }
-}
-
-private extension CodexAppServer.ReadOnlyAccessType {
-    init(wireValue: CodexWireReadOnlyAccessType) {
-        switch wireValue {
-        case .fullAccess:
-            self = .fullAccess
-        case .restricted:
-            self = .restricted
-        }
     }
 }
 

@@ -261,10 +261,11 @@ notification families at all:
   they plan to hydrate turn history through `thread/turns/list`
 - `permissionProfile` is generated and decoded internally, but the public API
   still accepts the existing hand-owned sandbox and approval settings until a
-  deliberate permission-profile model is designed. The v0.125 tagged
-  `permissionProfile` schema is supported through a hand-owned compatibility
-  decoder while the documented compatibility window still includes older CLI
-  minors.
+  deliberate permission-profile model is designed. The v0.128 experimental
+  schema keeps `permissionProfile`, adds `activePermissionProfile`, and moves
+  request-side overrides toward named `permissions` profile selection; SwiftASB
+  keeps those generated shapes internal until the public model is deliberately
+  designed.
 - device-key, marketplace-removal, marketplace-upgrade, account-provider, and
   add-credits email endpoints remain outside the first lifecycle boundary
 
@@ -319,10 +320,10 @@ The current remaining promotion questions are therefore narrower than before:
 2. should `FileChangePatchUpdatedNotification` enrich `RecentFiles` with
    structured patch previews, and if so, what stable file-diff model should the
    package own instead of leaking generated wire shapes?
-3. should `permissionProfile` become a public request/defaults model, or stay
+3. should permission profiles become a public request/defaults model, or stay
    internal while the current sandbox and approval request models are enough?
-   The current decoder shim is temporary and should be removed once the rolling
-   support window no longer includes the older loose shape.
+   The next design should account for both the full active runtime
+   `permissionProfile` and the named/provenance-oriented `activePermissionProfile`.
 4. diagnostics and control flows stay separate. Warning, guardian-warning,
    model-reroute, and model-verification families are passive public diagnostic
    events. Guardian denied-action approval stays internal until SwiftASB owns a
