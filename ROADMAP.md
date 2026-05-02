@@ -441,15 +441,103 @@ workflow forces a release-boundary change before the v1 tag.
 
 - [ ] Confirm Swift Package Index listing and DocC rendering after the latest
   public tag is indexed.
-- [ ] Run `swift test`, `git diff --check`, and
+  Decision: post-tag follow-up. This cannot be completed until the public
+  `v1.0.0` tag is published and indexed.
+- [x] Run `swift test`, `git diff --check`, and
   `bash scripts/repo-maintenance/validate-all.sh` before the v1 release branch.
-- [ ] Run Xcode DocC validation before the v1 release branch.
-- [ ] Decide whether another targeted `v0.9.x` patch release is needed before
+  Decision: `swift build`, `swift test`,
+  `bash scripts/repo-maintenance/validate-all.sh`, and `git diff --check`
+  passed on the `release/v1.0.0` branch on 2026-05-02.
+- [x] Run Xcode DocC validation before the v1 release branch.
+  Decision: `xcodebuild docbuild -scheme SwiftASB -destination
+  generic/platform=macOS -derivedDataPath tmp/xcode-docc/DerivedData` passed on
+  the `release/v1.0.0` branch on 2026-05-02.
+- [x] Decide whether another targeted `v0.9.x` patch release is needed before
   `v1.0.0`, or whether the remaining work should go straight into the v1
   release branch.
-- [ ] Prepare v1 release notes with explicit sections for public surface,
+  Decision: no additional `v0.9.x` patch is needed. The remaining work should go
+  straight into the `v1.0.0` release branch.
+- [x] Prepare v1 release notes with explicit sections for public surface,
   intentionally internal surfaces, compatibility window, migration notes,
   validation performed, and known post-v1 work.
+  Decision: the v1 release notes draft below is the source text for the GitHub
+  release object.
+
+### V1 Release Notes Draft
+
+#### Public Surface
+
+- `CodexAppServer` is the root owner for starting/stopping the local Codex
+  app-server subprocess, initializing the session, starting/resuming/forking
+  threads, paging stored threads and turns, listing models, listing MCP server
+  statuses, and reading passive diagnostics.
+- `CodexThread` is the conversation-scoped owner for starting turns, observing
+  thread events, naming threads, updating thread metadata, compacting context,
+  rolling back trailing turns, reading local history windows, and creating
+  SwiftUI-friendly observable companions.
+- `CodexTurnHandle` is the active-turn owner for observing turn events,
+  answering approval and elicitation requests, steering text, interrupting
+  work, reading the minimap, and completing into a sealed turn snapshot.
+- SwiftUI companion surfaces are stable for v1: `Dashboard`, `Minimap`,
+  `RecentTurns`, `RecentFiles`, and `RecentCommands`.
+- Public diagnostics cover runtime warnings, guardian warnings, model reroutes,
+  and model-verification events through hand-owned Swift values.
+
+#### Intentionally Internal Surfaces
+
+- Generated `CodexWire...` models remain internal scaffolding and are not part
+  of the public Swift API.
+- Broader app-server families remain post-v1 until their consumer workflows are
+  clearer, including guardian denied-action approval, marketplace/account
+  management, remote-control status, thread goals, realtime, fuzzy file search,
+  hook mutation, external-agent config import, richer MCP progress, and
+  structured patch previews.
+- A one-shot `run(...)` convenience API is intentionally deferred until the
+  lower-level lifecycle has more production mileage.
+
+#### Compatibility Window
+
+- The first v1 compatibility promise is intentionally narrow: reviewed support
+  for Codex CLI `0.128.x`.
+- SwiftASB discovers `codex` from an explicit executable URL, `PATH`, common
+  Homebrew locations, or the npm global prefix, and exposes startup diagnostics
+  through `cliExecutableDiagnostics()`.
+- Future Codex CLI schema dumps must be classified before generated shapes are
+  promoted to public or observable behavior.
+
+#### Migration Notes
+
+- Existing `v0.9.x` consumers should update the SwiftPM dependency to
+  `from: "1.0.0"` once the tag is published.
+- The v1 API surface has removed stale pre-v1 compatibility shims and phantom
+  fields that no longer exist in the reviewed `v0.128.0` schema.
+- Same-thread overlapping turns are rejected client-side with
+  `CodexAppServerError.invalidState`; use separate threads for concurrent
+  turns.
+- Prompt-driven approval behavior remains runtime-dependent. Deterministic
+  approval regression coverage uses the real app-server with a local mock
+  Responses provider.
+
+#### Validation Performed
+
+- `swift build`
+- `swift test`
+- `bash scripts/repo-maintenance/validate-all.sh`
+- `git diff --check`
+- `xcodebuild docbuild -scheme SwiftASB -destination generic/platform=macOS -derivedDataPath tmp/xcode-docc/DerivedData`
+- `scripts/run-live-codex-approval-probe.sh`
+- `scripts/run-live-codex-file-scenario.sh`
+- `scripts/run-live-codex-rollback-scenario.sh`
+
+#### Known Post-V1 Work
+
+- Confirm Swift Package Index listing and DocC rendering after the public tag is
+  indexed.
+- Promote `hooks/list` as a near-term diagnostics/capability surface.
+- Add broader live server-request coverage for permissions and MCP elicitation
+  if those become stronger public runtime guarantees.
+- Continue tuning recent companion cache calibration, richer file previews,
+  archive-aware retention, and rollback forensic archival.
 
 ## Live App-Server Findings
 

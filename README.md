@@ -16,7 +16,7 @@
 
 ### Status
 
-SwiftASB is a pre-1.0 package with a supported interactive lifecycle and an active v1 API freeze in progress. `v0.9.3` is the current released baseline.
+SwiftASB has a supported v1 public API for the core Codex app-server lifecycle. `v0.9.3` is the current released baseline.
 
 ### What This Project Is
 
@@ -233,7 +233,7 @@ Contributor validation commands, live test flags, and the Xcode DocC build comma
 
 ## Release Notes
 
-`ROADMAP.md` tracks milestone status and the next release-facing work. `v0.9.3` is already tagged as the current released baseline, and the roadmap plus git history remain the source of truth for what has shipped versus what is intentionally open.
+`ROADMAP.md` tracks milestone status and release-facing work. `v0.9.3` is the current released baseline, and the roadmap plus git history remain the source of truth for what has shipped versus what is intentionally open.
 
 ## License
 
