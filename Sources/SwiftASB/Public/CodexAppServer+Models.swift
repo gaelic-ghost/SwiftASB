@@ -20,11 +20,13 @@ public extension CodexAppServer {
         }
     }
 
+    /// One page of app-server model catalog results.
     struct ModelListPage: Sendable, Equatable {
         public let models: [Model]
         public let nextCursor: String?
     }
 
+    /// Model option reported by the app-server for picker and capability UI.
     struct Model: Sendable, Equatable, Identifiable {
         public let additionalSpeedTiers: [String]?
         public let availabilityNux: ModelAvailabilityNux?
@@ -40,15 +42,18 @@ public extension CodexAppServer {
         public let supportsPersonality: Bool?
     }
 
+    /// App-server model-availability note shown to users when present.
     struct ModelAvailabilityNux: Sendable, Equatable {
         public let message: String
     }
 
+    /// Input modality supported by a model.
     enum InputModality: String, Sendable, Equatable {
         case image
         case text
     }
 
+    /// Reasoning-effort option advertised for a model.
     struct ReasoningEffortOption: Sendable, Equatable {
         public let description: String
         public let reasoningEffort: ReasoningEffort

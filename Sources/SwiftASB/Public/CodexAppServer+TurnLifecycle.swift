@@ -47,10 +47,12 @@ extension CodexAppServer {
         }
     }
 
+    /// App-server response for a newly started turn.
     public struct TurnSession: Sendable, Equatable {
         public let turn: TurnInfo
     }
 
+    /// Metadata for a turn known to the app-server.
     public struct TurnInfo: Sendable, Equatable {
         public let completedAt: Int?
         public let durationMS: Int?

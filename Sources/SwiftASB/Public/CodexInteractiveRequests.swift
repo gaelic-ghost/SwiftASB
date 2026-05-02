@@ -1,5 +1,6 @@
 import Foundation
 
+/// Interactive request family emitted by Codex while a turn is waiting on caller input.
 public enum CodexInteractiveRequestKind: String, Sendable, Equatable {
     case commandExecutionApproval
     case fileChangeApproval
@@ -8,6 +9,7 @@ public enum CodexInteractiveRequestKind: String, Sendable, Equatable {
     case mcpServerElicitation
 }
 
+/// Confirmation that an interactive request was answered and resolved by the app-server.
 public struct CodexInteractiveRequestResolved: Sendable, Equatable {
     public let threadID: String
     public let turnID: String?
@@ -28,6 +30,7 @@ public struct CodexInteractiveRequestResolved: Sendable, Equatable {
     }
 }
 
+/// Approval request that must be answered before Codex can continue a turn.
 public enum CodexApprovalRequest: Sendable, Equatable {
     case commandExecution(CodexCommandExecutionApprovalRequest)
     case fileChange(CodexFileChangeApprovalRequest)
@@ -78,6 +81,7 @@ public enum CodexApprovalRequest: Sendable, Equatable {
     }
 }
 
+/// Command-execution approval request emitted by Codex.
 public struct CodexCommandExecutionApprovalRequest: Sendable, Equatable {
     public let threadID: String
     public let turnID: String
@@ -122,6 +126,7 @@ public struct CodexCommandExecutionApprovalRequest: Sendable, Equatable {
     }
 }
 
+/// File-change approval request emitted by Codex.
 public struct CodexFileChangeApprovalRequest: Sendable, Equatable {
     public let threadID: String
     public let turnID: String
@@ -148,6 +153,7 @@ public struct CodexFileChangeApprovalRequest: Sendable, Equatable {
     }
 }
 
+/// Permissions approval request emitted by Codex.
 public struct CodexPermissionsApprovalRequest: Sendable, Equatable {
     public let threadID: String
     public let turnID: String
@@ -174,6 +180,7 @@ public struct CodexPermissionsApprovalRequest: Sendable, Equatable {
     }
 }
 
+/// Structured command action attached to a command-execution approval request.
 public enum CodexCommandAction: Sendable, Equatable {
     case read(Read)
     case listFiles(ListFiles)
@@ -223,7 +230,9 @@ public enum CodexCommandAction: Sendable, Equatable {
     }
 }
 
+/// Network-policy change proposed by Codex or returned by a caller.
 public struct CodexNetworkPolicyAmendment: Sendable, Equatable {
+    /// Network-policy action requested for one host.
     public enum Action: String, Sendable, Equatable {
         case allow
         case deny
@@ -238,7 +247,9 @@ public struct CodexNetworkPolicyAmendment: Sendable, Equatable {
     }
 }
 
+/// Permission profile used when answering a permissions approval request.
 public struct CodexPermissionProfile: Sendable, Equatable {
+    /// Filesystem permission section of a Codex permission profile.
     public struct FileSystem: Sendable, Equatable {
         public let read: [String]?
         public let write: [String]?
@@ -253,6 +264,7 @@ public struct CodexPermissionProfile: Sendable, Equatable {
         }
     }
 
+    /// Network permission section of a Codex permission profile.
     public struct Network: Sendable, Equatable {
         public let enabled: Bool?
 
@@ -279,6 +291,7 @@ public struct CodexPermissionProfile: Sendable, Equatable {
     }
 }
 
+/// Elicitation request that asks the caller to provide user or MCP-server input.
 public enum CodexElicitationRequest: Sendable, Equatable {
     case toolUserInput(CodexToolUserInputRequest)
     case mcpServer(CodexMcpServerElicitationRequest)
@@ -320,8 +333,11 @@ public enum CodexElicitationRequest: Sendable, Equatable {
     }
 }
 
+/// Tool user-input request emitted by Codex.
 public struct CodexToolUserInputRequest: Sendable, Equatable {
+    /// One question in a tool user-input request.
     public struct Question: Sendable, Equatable {
+        /// One selectable option in a tool user-input question.
         public struct Option: Sendable, Equatable {
             public let description: String
             public let label: String
@@ -382,12 +398,15 @@ public struct CodexToolUserInputRequest: Sendable, Equatable {
     }
 }
 
+/// MCP-server elicitation request emitted by Codex.
 public struct CodexMcpServerElicitationRequest: Sendable, Equatable {
+    /// MCP elicitation presentation mode.
     public enum Mode: Sendable, Equatable {
         case form(Form)
         case url(URLPrompt)
     }
 
+    /// Form-style MCP elicitation payload.
     public struct Form: Sendable, Equatable {
         public let message: String
         public let requestedSchema: CodexAppServer.JSONValue
@@ -401,6 +420,7 @@ public struct CodexMcpServerElicitationRequest: Sendable, Equatable {
         }
     }
 
+    /// URL-style MCP elicitation payload.
     public struct URLPrompt: Sendable, Equatable {
         public let elicitationID: String
         public let message: String
@@ -439,12 +459,14 @@ public struct CodexMcpServerElicitationRequest: Sendable, Equatable {
     }
 }
 
+/// Approval response sent by the caller to unblock a waiting turn.
 public enum CodexApprovalResponse: Sendable, Equatable {
     case commandExecution(CodexCommandExecutionApprovalResponse)
     case fileChange(CodexFileChangeApprovalResponse)
     case permissions(CodexPermissionsApprovalResponse)
 }
 
+/// Command-execution approval response sent by the caller.
 public enum CodexCommandExecutionApprovalResponse: Sendable, Equatable {
     case accept
     case acceptForSession
@@ -454,11 +476,14 @@ public enum CodexCommandExecutionApprovalResponse: Sendable, Equatable {
     case cancel
 }
 
+/// File-change approval response sent by the caller.
 public enum CodexFileChangeApprovalResponse: String, Sendable, Equatable {
     case accept, acceptForSession, decline, cancel
 }
 
+/// Permissions approval response sent by the caller.
 public struct CodexPermissionsApprovalResponse: Sendable, Equatable {
+    /// Duration of a permissions grant.
     public enum Scope: String, Sendable, Equatable {
         case turn
         case session
@@ -481,12 +506,15 @@ public struct CodexPermissionsApprovalResponse: Sendable, Equatable {
     }
 }
 
+/// Elicitation response sent by the caller to unblock a waiting turn.
 public enum CodexElicitationResponse: Sendable, Equatable {
     case toolUserInput(CodexToolUserInputResponse)
     case mcpServer(CodexMcpServerElicitationResponse)
 }
 
+/// Tool user-input response sent by the caller.
 public struct CodexToolUserInputResponse: Sendable, Equatable {
+    /// Answer values for one tool user-input question.
     public struct Answer: Sendable, Equatable {
         public let answers: [String]
 
@@ -502,7 +530,9 @@ public struct CodexToolUserInputResponse: Sendable, Equatable {
     }
 }
 
+/// MCP-server elicitation response sent by the caller.
 public struct CodexMcpServerElicitationResponse: Sendable, Equatable {
+    /// MCP elicitation outcome.
     public enum Action: String, Sendable, Equatable {
         case accept, decline, cancel
     }

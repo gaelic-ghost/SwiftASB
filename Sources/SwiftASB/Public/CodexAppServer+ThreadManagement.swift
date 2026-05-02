@@ -1,24 +1,29 @@
 public extension CodexAppServer {
+    /// Request used to set a stored thread name.
     struct ThreadSetNameRequest: Sendable, Equatable {
         public var name: String
         public var threadID: String
 
+        /// Creates a thread-name update request.
         public init(threadID: String, name: String) {
             self.threadID = threadID
             self.name = name
         }
     }
 
+    /// Request used to roll back trailing turns from a stored thread.
     struct ThreadRollbackRequest: Sendable, Equatable {
         public var numberOfTurns: Int
         public var threadID: String
 
+        /// Creates a thread-rollback request.
         public init(threadID: String, numberOfTurns: Int) {
             self.threadID = threadID
             self.numberOfTurns = numberOfTurns
         }
     }
 
+    /// Request used to patch stored thread metadata.
     struct ThreadMetadataUpdateRequest: Sendable, Equatable {
         public var gitInfo: ThreadMetadataGitInfoUpdate?
         public var threadID: String
@@ -35,6 +40,7 @@ public extension CodexAppServer {
         }
     }
 
+    /// Git metadata patch for a stored thread.
     struct ThreadMetadataGitInfoUpdate: Sendable, Equatable {
         public var branch: ThreadMetadataFieldUpdate
         public var originURL: ThreadMetadataFieldUpdate
@@ -55,12 +61,14 @@ public extension CodexAppServer {
         }
     }
 
+    /// Patch operation for one stored thread metadata field.
     enum ThreadMetadataFieldUpdate: Sendable, Equatable {
         case unchanged
         case clear
         case replace(String)
     }
 
+    /// Stored Git metadata reported for a thread.
     struct GitInfo: Sendable, Equatable {
         public let branch: String?
         public let originURL: String?

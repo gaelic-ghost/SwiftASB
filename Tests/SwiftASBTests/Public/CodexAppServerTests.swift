@@ -4,6 +4,63 @@ import Testing
 
 @Suite("CodexAppServer", .serialized)
 struct CodexAppServerTests {
+    @Test("describes public app-server errors with operation context")
+    func describesPublicAppServerErrorsWithOperationContext() {
+        let invalidState = CodexAppServerError.invalidState(reason: "Initialize the app-server before starting a thread.")
+        #expect(invalidState.errorDescription == "Initialize the app-server before starting a thread.")
+
+        let transportFailure = CodexAppServerError.transportFailure(
+            operation: "thread/start",
+            reason: "Codex app-server transport has not been started yet."
+        )
+        #expect(
+            transportFailure.errorDescription
+                == "Codex app-server transport failed during thread/start: Codex app-server transport has not been started yet."
+        )
+
+        let protocolFailure = CodexAppServerError.protocolFailure(
+            operation: "turn/start",
+            reason: "Failed to decode Codex app-server response for turn/start: missing turn id"
+        )
+        #expect(
+            protocolFailure.errorDescription
+                == "Codex app-server protocol handling failed during turn/start: Failed to decode Codex app-server response for turn/start: missing turn id"
+        )
+    }
+
+    @Test("wraps internal transport and protocol failures as public app-server errors")
+    func wrapsInternalFailuresAsPublicAppServerErrors() {
+        let existing = CodexAppServerError.invalidState(reason: "already public")
+        #expect(CodexAppServerError.wrap(existing, operation: "initialize") == existing)
+
+        let transportWrapped = CodexAppServerError.wrap(
+            CodexTransportError.notStarted,
+            operation: "thread/start"
+        )
+        #expect(
+            transportWrapped
+                == .transportFailure(
+                    operation: "thread/start",
+                    reason: "Codex app-server transport has not been started yet."
+                )
+        )
+
+        let protocolWrapped = CodexAppServerError.wrap(
+            CodexProtocolError.responseDecodingFailed(
+                context: "turn/start",
+                reason: "missing turn id"
+            ),
+            operation: "turn/start"
+        )
+        #expect(
+            protocolWrapped
+                == .protocolFailure(
+                    operation: "turn/start",
+                    reason: "Failed to decode Codex app-server response for turn/start: missing turn id"
+                )
+        )
+    }
+
     @Test("requires initialize before starting a thread")
     func requiresInitializeBeforeStartingThread() async throws {
         let transport = FakeCodexAppServerTransport()

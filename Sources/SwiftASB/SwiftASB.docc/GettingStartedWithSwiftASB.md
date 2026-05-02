@@ -73,7 +73,6 @@ Call ``CodexAppServer/start()`` before every other protocol operation. Then call
 
 ### Startup
 
-- ``CodexAppServer``
 - ``CodexAppServer/start()``
 - ``CodexAppServer/stop()``
 - ``CodexAppServer/initialize(_:)``

@@ -1,8 +1,9 @@
 import Foundation
 
 extension CodexAppServer {
-    /// Process-launch configuration for the local Codex app-server subprocess.
+    /// Diagnostics for the local Codex executable selected at startup.
     public struct CLIExecutableDiagnostics: Sendable, Equatable {
+        /// Local install location SwiftASB used to find the Codex executable.
         public enum Source: Sendable, Equatable {
             case explicit
             case path
@@ -11,6 +12,7 @@ extension CodexAppServer {
             case npmGlobal(prefix: String)
         }
 
+        /// Compatibility result for the selected Codex CLI version.
         public enum Compatibility: Sendable, Equatable {
             case supported(documentedWindow: String)
             case outsideDocumentedWindow(documentedWindow: String)
@@ -106,6 +108,7 @@ extension CodexAppServer {
         }
     }
 
+    /// Session metadata returned by the app-server after initialization.
     public struct InitializeSession: Sendable, Equatable {
         public let codexHome: String
         public let platformFamily: String
