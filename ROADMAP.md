@@ -67,7 +67,7 @@
 | Thread-scoped recent-file observable | `Partially shipped` | `CodexThread.makeRecentFiles(limit:)` now vends a file-centric recent-files observable that hydrates from persisted file-change items, keeps one resident entry per file-change item, enriches live entries from `item/fileChange/outputDelta`, can load older file entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-payload slimming with automatic payload rehydration for protected files. Live probing exercises a real create/edit/delete scenario, and recent-file startup now inherits the same empty local-only degradation as recent-turns for the known live history-unavailable responses. The current weighting now accounts for diff structure and line volume, and shell summaries prefer concise edit summaries over raw terminal status when sealed payload is available. The remaining open work is better payload-cost calibration at the margins and deciding whether `FileChangePatchUpdatedNotification` should enrich the observable with structured patch previews. |
 | Thread-scoped recent-command observable | `Partially shipped` | `CodexThread.makeRecentCommands(limit:)` now vends a command-centric recent-commands observable that hydrates from persisted `commandExecution` items, keeps one resident entry per command item, enriches live entries from `item/commandExecution/outputDelta`, can load older command entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-output slimming with automatic output rehydration for protected commands. Recent-command startup now inherits the same empty local-only degradation as recent-turns for the known live history-unavailable responses. Current output weighting accounts for output size and line structure, and shell summaries prefer concise command and output summaries over raw transport detail. The remaining open work is better output-cost calibration and sharper shell-summary heuristics. |
 | Non-UI local history-reading helpers | `Partially shipped` | `CodexThread` now exposes a lightweight `HistoryWindow` page shape for recent local history, older or newer local windows around a known boundary turn id, centered `windowAroundTurn(...)` reads, centered `windowAroundItem(...)` reads, direct `ClosedTurn` reads for one turn, and convenience array helpers over those same windows. This gives non-UI callers an intentional path into the local history store without binding a UI-oriented observable, while still deferring a broader public cursor model, transcript search surface, and richer history-query helpers. |
-| Public API curation | `Partially shipped` | The first source-organization pass has split app-wide model, MCP, and thread-management value types into dedicated `CodexAppServer+...` files while preserving `CodexAppServer` as the single connection-wide owner. The first DocC catalog now maps the main handles and lifecycle concepts, and the first source-level comment pass covers the supported lifecycle entrypoints, defaults, response routing, and completion handoff; final name/default review and any targeted source splits remain before v1. |
+| Public API curation | `Partially shipped` | The source-organization pass has split app-wide model, MCP, thread-management, history, and observable companion values into focused public files while preserving `CodexAppServer`, `CodexThread`, and `CodexTurnHandle` as the three real owners. The connected public-surface review keeps that ownership model for v1; remaining curation is limited to targeted symbol comments and any final name/default issues found during release prep. |
 | DocC documentation | `Partially shipped` | `Sources/SwiftASB/SwiftASB.docc/` now contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, generated-wire boundary notes, and copy-pasteable walkthroughs for startup, progress/approval handling, diagnostics/history, and SwiftUI observable companions. The catalog is validated through Xcode `docbuild`; remaining v1 work is a final stale-link/prose pass and any symbol comments that still read too terse. |
 | Swift Package Index readiness | `Partially shipped` | `.spi.yml` declares `SwiftASB` as the documentation target so Swift Package Index can build the intended DocC catalog. The actual listing still needs confirmation after the package is publicly indexed and tagged for the release slice. |
 | Contributor documentation split | `Shipped` | `README.md` is now focused on Swift and SwiftUI package users, while `CONTRIBUTING.md` owns contributor setup, validation, DocC, live-test flags, generated-wire refresh, and PR expectations. |
@@ -127,7 +127,12 @@ The package can now:
 That means the current priority order is:
 
 1. Re-evaluate whether the remaining Milestone 5 gaps are small enough to call this a credible first interactive lifecycle release candidate now that deterministic approval completion, diagnostics, rollback, file mutation, history hydration, and subprocess failure-mode coverage all exist.
-2. Continue public API curation before v1: the first model/MCP/thread-management source split is done and the first DocC public-surface map now exists, but the package still needs more source splitting where it reduces file sprawl, tighter names and defaults, deeper source-level symbol documentation, and a final pass to make the first-class package surface feel intentionally designed rather than merely accumulated.
+2. Finish targeted public API release prep before v1. The connected surface
+   review keeps the current owner model: `CodexAppServer` owns subprocess and
+   app-wide operations, `CodexThread` owns conversation-scoped actions, history,
+   and companions, and `CodexTurnHandle` owns active-turn control. Remaining
+   curation is limited to targeted symbol comments and any final name/default
+   issues found during release prep.
 3. Finish the DocC release-readiness pass before v1: keep the first
    `SwiftASB.docc` catalog current, keep the new startup/progress/approval/
    diagnostics/history/SwiftUI walkthroughs accurate, add any remaining symbol
@@ -239,10 +244,18 @@ workflow forces a release-boundary change before the v1 tag.
   Progress: observable companion state has been reviewed. Companion construction
   stays internal, presentation state is read-only or `public private(set)`, and
   the mutable public companion fields are limited to caller-owned UI inputs.
-- [ ] Review `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`,
+- [x] Review `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`,
   `Minimap`, `RecentTurns`, `RecentFiles`, `RecentCommands`, history-window
   helpers, diagnostics, approval, elicitation, model, MCP, and thread-management
   surfaces as one connected API rather than as separate shipped slices.
+  Decision: keep the connected v1 owner model. `CodexAppServer` remains the
+  root subprocess owner and low-level app-wide operation surface;
+  `CodexThread` remains the high-level conversation handle for thread-scoped
+  actions, history, request routing, and SwiftUI companions; `CodexTurnHandle`
+  remains the active-turn control and completion surface. Dashboard, minimap,
+  recent-turn, recent-file, and recent-command companions are current-state or
+  bounded-history mirrors, not alternate protocol owners. Diagnostics remain
+  passive events, and model/MCP reads remain app-wide snapshots.
 - [ ] Split any remaining oversized public source files where the split removes
   real navigation cost or clarifies ownership boundaries.
 - [ ] Tighten public names and parameter labels so callers can understand the
