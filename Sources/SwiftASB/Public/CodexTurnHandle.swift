@@ -288,6 +288,15 @@ public struct CodexTurnHandle: Sendable {
     private let minimapStorage: MinimapStorage
     public let threadID: String
     public let turn: CodexAppServer.TurnInfo
+
+    /// Typed events for this active turn.
+    ///
+    /// SwiftASB buffers the earliest turn events that can arrive before the
+    /// caller starts iterating, then streams live events until the turn emits a
+    /// terminal completion event. The completion event is yielded before the
+    /// stream finishes. The stream finishes normally when SwiftASB stops the
+    /// app-server and finishes by throwing when the underlying app-server event
+    /// feed fails unexpectedly.
     public let events: AsyncThrowingStream<CodexTurnEvent, Error>
 
     internal init(
@@ -304,6 +313,11 @@ public struct CodexTurnHandle: Sendable {
         self.events = events
     }
 
+    /// Observable current-state mirror for this turn.
+    ///
+    /// The minimap is attached when the turn handle is created. It mirrors
+    /// selected latest state from the turn event stream and is not a replayable
+    /// event log.
     @MainActor
     public var minimap: Minimap {
         minimapStorage.minimap

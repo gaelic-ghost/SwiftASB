@@ -53,6 +53,8 @@ Use the named cache-policy presets first:
 
 Use these for "what is happening now" UI. Use history windows or closed turns for completed transcript data.
 
+These companions are not alternate event logs. `Dashboard` starts from the current thread snapshot and aggregate activity state, then mirrors later thread and activity updates. `Minimap`, `RecentTurns`, `RecentFiles`, and `RecentCommands` listen to live feeds after they are created; command-output and file-output deltas that arrive before a recent companion exists are not replayed as delta events, though completed history can still be rehydrated from the local history store.
+
 ## Topics
 
 ### History Reads

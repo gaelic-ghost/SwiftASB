@@ -226,9 +226,13 @@ workflow forces a release-boundary change before the v1 tag.
   public initializers and methods, including nil app-server request omissions,
   SwiftASB local-history/UI page sizes, cache-policy derivation, and explicit
   response/update safety defaults.
-- [ ] Make sure public stream semantics are consistent: when streams buffer,
+- [x] Make sure public stream semantics are consistent: when streams buffer,
   when they finish, whether they throw, and which owner is responsible for
   answering or observing each event.
+  Decision: documented in source comments, DocC, and the v1 audit. Thread and
+  turn lifecycle streams are the canonical public event surfaces; diagnostics
+  are passive app-wide signals; observable companions are current-state mirrors
+  over live feeds rather than replayable logs.
 
 ### Documentation And Examples
 
@@ -256,9 +260,13 @@ workflow forces a release-boundary change before the v1 tag.
   behavior remain external local dependencies.
 - [ ] Run the opt-in live probes before v1 and record any observed behavior
   changes in `ROADMAP.md` or maintainer docs.
-- [ ] Resolve or deliberately narrow the subprocess timing flake where child
+- [x] Resolve or deliberately narrow the subprocess timing flake where child
   process exit can sometimes surface as `unexpectedEndOfStream` with retained
   stderr instead of `processTerminated`.
+  Decision: narrowed to the stable consumer contract. The subprocess-edge test
+  now accepts either process termination or stdout EOF when the same fake child
+  process exits after writing stderr, while still asserting that the retained
+  stderr ring contains the expected last 20 lines.
 - [ ] Decide whether the existing multi-turn live file-mutation scenario is
   enough live coverage for v1, or whether v1 needs another deterministic real
   app-server scenario.
@@ -429,14 +437,10 @@ runtime.
   recent-stderr retention, malformed stdout followed by a later valid response,
   and late duplicate response lines after a pending request has already been
   fulfilled.
-- Follow-up: `CodexAppServerTransportTests.failsPendingResponsesWithProcessTermination`
-  has shown a timing-sensitive classification flake in full-suite runs. The
-  intended assertion is `CodexTransportError.processTerminated`, but one
-  review run observed `unexpectedEndOfStream` with the expected retained stderr
-  lines instead; the same focused test and the next full-suite run passed. We
-  should tighten the transport's subprocess-exit versus stdout-end ordering, or
-  narrow the test assertion to the stable consumer contract if both errors are
-  legitimately possible from the same child-process timing window.
+- The subprocess-exit versus stdout-end ordering is intentionally tested by
+  stable consumer contract now: pending responses must fail and retain recent
+  stderr, whether the child-process race surfaces as process termination or
+  stdout EOF first.
 - Schema drift guardrails now include generated-wire fixture payloads for
   `thread/read`, `thread/turns/list`, command-execution thread items,
   active thread status flags, additive thread fields, and

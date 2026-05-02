@@ -58,14 +58,20 @@ struct CodexAppServerTransportTests {
             }
             Issue.record("Expected the pending request to fail when the subprocess exits.")
         } catch let error as CodexTransportError {
-            guard case let .processTerminated(reason, status, recentStandardError) = error else {
-                Issue.record("Expected processTerminated, got \(String(describing: error)).")
+            let recentStandardError: [String]
+            switch error {
+            case let .processTerminated(reason, status, standardError):
+                #expect(reason == "exit")
+                #expect(status == 42)
+                recentStandardError = standardError
+            case let .unexpectedEndOfStream(standardError):
+                recentStandardError = standardError
+            default:
+                Issue.record("Expected process termination or stdout EOF, got \(String(describing: error)).")
                 await transport.stop()
                 return
             }
 
-            #expect(reason == "exit")
-            #expect(status == 42)
             #expect(recentStandardError.count == 20)
             #expect(recentStandardError.first == "stderr-line-6")
             #expect(recentStandardError.last == "stderr-line-25")

@@ -211,6 +211,13 @@ public actor CodexAppServer {
         return .init(resolution: resolution)
     }
 
+    /// Subscribes to app-wide diagnostic events.
+    ///
+    /// Diagnostics are passive signals, not answerable requests. Events that
+    /// arrive before the first subscriber are buffered and delivered to the
+    /// first diagnostic stream. The stream finishes normally when the app-server
+    /// is stopped through SwiftASB and finishes by throwing when the underlying
+    /// event feed fails unexpectedly.
     public func diagnosticEvents() -> AsyncThrowingStream<CodexDiagnosticEvent, Error> {
         makeDiagnosticEventStream()
     }

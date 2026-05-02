@@ -16,22 +16,22 @@ type methods, 226 enum cases, and 594 properties.
 
 | File | Lines | Audit focus |
 | --- | ---: | --- |
-| `Sources/SwiftASB/Public/CodexAppServer.swift` | 4035 | Root actor runtime, transport lifecycle, event fanout, local history reconciliation, stream registration, and protocol conversion internals. |
-| `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift` | 731 | Recent-turn observable companion and turn-snapshot conversion helpers. |
-| `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift` | 709 | Recent-file observable companion and file-snapshot conversion helpers. |
-| `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift` | 674 | Recent-command observable companion and command-snapshot conversion helpers. |
-| `Sources/SwiftASB/Public/CodexTurnHandle.swift` | 690 | Review turn-event naming, minimap shape, completion snapshot surface, steering/interrupt names, and public event payload values. |
-| `Sources/SwiftASB/Public/CodexInteractiveRequests.swift` | 504 | Review approval and elicitation naming, request/response ownership, unknown action surfaces, permission-profile naming, and response defaults. |
-| `Sources/SwiftASB/Public/CodexThread.swift` | 472 | Thread handle, history-window type, turn-start request, thread-scoped actions, and public thread event payloads. |
-| `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift` | 300 | Thread start/resume/fork/list/read/turn-page request and result values. |
+| `Sources/SwiftASB/Public/CodexAppServer.swift` | 4062 | Root actor runtime, transport lifecycle, event fanout, local history reconciliation, stream registration, and protocol conversion internals. |
+| `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift` | 749 | Recent-turn observable companion and turn-snapshot conversion helpers. |
+| `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift` | 718 | Recent-file observable companion and file-snapshot conversion helpers. |
+| `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift` | 683 | Recent-command observable companion and command-snapshot conversion helpers. |
+| `Sources/SwiftASB/Public/CodexTurnHandle.swift` | 704 | Review turn-event naming, minimap shape, completion snapshot surface, steering/interrupt names, and public event payload values. |
+| `Sources/SwiftASB/Public/CodexInteractiveRequests.swift` | 526 | Review approval and elicitation naming, request/response ownership, unknown action surfaces, permission-profile naming, and response defaults. |
+| `Sources/SwiftASB/Public/CodexThread.swift` | 543 | Thread handle, history-window type, turn-start request, thread-scoped actions, and public thread event payloads. |
+| `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift` | 334 | Thread start/resume/fork/list/read/turn-page request and result values. |
 | `Sources/SwiftASB/Public/CodexThread+Dashboard.swift` | 224 | Thread-level SwiftUI dashboard companion. |
 | `Sources/SwiftASB/Public/CodexDiagnostics.swift` | 156 | Review diagnostic event naming, model reroute/verification vocabulary, and future-proofing for unknown wire values. |
-| `Sources/SwiftASB/Public/CodexAppServer+MCP.swift` | 157 | Review app-wide MCP capability snapshot names and `JSONValue` exposure in MCP metadata/schema fields. |
-| `Sources/SwiftASB/Public/CodexAppServer+Models.swift` | 120 | Review model-list names, pagination naming, and whether account/marketplace-adjacent fields stay intentionally absent. |
+| `Sources/SwiftASB/Public/CodexAppServer+MCP.swift` | 162 | Review app-wide MCP capability snapshot names and `JSONValue` exposure in MCP metadata/schema fields. |
+| `Sources/SwiftASB/Public/CodexAppServer+Models.swift` | 125 | Review model-list names, pagination naming, and whether account/marketplace-adjacent fields stay intentionally absent. |
 | `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift` | 117 | Compatibility enums, sandbox/approval/reasoning vocabulary, and public `JSONValue`. |
-| `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift` | 104 | Review thread set-name, metadata update, rollback request/result names, and null/omitted field terminology. |
-| `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift` | 93 | CLI diagnostics, launch configuration, initialization request/session values. |
-| `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift` | 87 | Turn start request/session/info/input values. |
+| `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift` | 111 | Review thread set-name, metadata update, rollback request/result names, and null/omitted field terminology. |
+| `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift` | 116 | CLI diagnostics, launch configuration, initialization request/session values. |
+| `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift` | 100 | Turn start request/session/info/input values. |
 | `Sources/SwiftASB/Public/CodexErrors.swift` | 45 | Review public error cases, wording, and whether stream failures consistently wrap transport/protocol causes. |
 
 ## V1 Surface Promise
@@ -282,8 +282,14 @@ Use these decisions for every public symbol:
   Decision: stable vocabulary for v1.
 - [x] Review `CodexTurnEvent` case names and payload names.
   Decision: stable vocabulary for v1.
-- [ ] Confirm thread and turn streams document buffering, terminal events,
+- [x] Confirm thread and turn streams document buffering, terminal events,
   thrown errors, and shutdown behavior consistently.
+  Decision: documented. Thread streams buffer unobserved thread events and yield
+  terminal events before finishing. Turn streams buffer only the early
+  active-turn events SwiftASB marks for pre-observation delivery plus terminal
+  completion. Diagnostic streams buffer until the first subscriber. Observable
+  companions are current-state mirrors; internal activity and delta feeds are
+  live-only rather than replayable event logs.
 - [x] Confirm event payload structs carry the minimal identifiers consumers need
   without requiring raw wire access.
   Decision: current payloads carry thread/turn/item identifiers where consumers

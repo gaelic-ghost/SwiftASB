@@ -80,6 +80,14 @@ public struct CodexThread: Sendable {
     public let reasoningEffort: CodexAppServer.ReasoningEffort?
     public let sandboxPolicy: CodexAppServer.SandboxPolicy
     public let serviceTier: CodexAppServer.ServiceTier?
+
+    /// Typed events for this thread.
+    ///
+    /// Thread events are buffered until the handle's stream is observed, then
+    /// delivered in order. Terminal thread events, such as close, are delivered
+    /// before the stream finishes. The stream finishes normally when SwiftASB
+    /// stops the app-server and finishes by throwing when the underlying
+    /// app-server event feed fails unexpectedly.
     public let events: AsyncThrowingStream<CodexThreadEvent, Error>
 
     private let appServer: CodexAppServer
@@ -154,6 +162,12 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Creates an observable dashboard for this thread.
+    ///
+    /// The dashboard consumes the thread event stream plus live aggregate
+    /// activity updates. It is a current-state mirror rather than a replayable
+    /// event log; activity updates that arrive before the dashboard exists are
+    /// represented only by the initial activity snapshot.
     @MainActor
     public func makeDashboard() async -> Dashboard {
         let events = await appServer.threadEventStream(threadID: id)
@@ -310,6 +324,9 @@ public struct CodexThread: Sendable {
     ///
     /// The default `limit` of 12 controls the initial resident page. Omitting
     /// `cachePolicy` derives SwiftASB's automatic cache policy from that limit.
+    /// The companion listens to this thread's live turn-event feed as a
+    /// current-state mirror; it records load errors on the companion and stops
+    /// updating when the event feed finishes.
     @MainActor
     public func makeRecentTurns(
         limit: Int = 12,
@@ -333,6 +350,9 @@ public struct CodexThread: Sendable {
     ///
     /// The default `limit` of 12 controls the initial resident page. Omitting
     /// `cachePolicy` derives SwiftASB's automatic cache policy from that limit.
+    /// The companion listens to live turn events and file-output deltas as a
+    /// current-state mirror; missed file deltas are not replayed after the
+    /// stream is created.
     @MainActor
     public func makeRecentFiles(
         limit: Int = 12,
@@ -357,6 +377,9 @@ public struct CodexThread: Sendable {
     ///
     /// The default `limit` of 12 controls the initial resident page. Omitting
     /// `cachePolicy` derives SwiftASB's automatic cache policy from that limit.
+    /// The companion listens to live turn events and command-output deltas as a
+    /// current-state mirror; missed command deltas are not replayed after the
+    /// stream is created.
     @MainActor
     public func makeRecentCommands(
         limit: Int = 12,
