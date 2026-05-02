@@ -205,6 +205,17 @@ workflow forces a release-boundary change before the v1 tag.
 - [ ] For each public symbol, decide whether it is stable for v1, should be
   renamed before v1, should become internal, or should move behind a narrower
   owning type.
+  Progress: the access-control audit is now explicit. The first tightening pass
+  removes the stale public `SwiftASB` namespace placeholder and narrows
+  app-server-authored interactive request and passive diagnostic payload
+  constructors so the package no longer exports template-era, request
+  fabrication, or diagnostic-emission surfaces that consumers should not depend
+  on.
+- [ ] Audit access control symbol-by-symbol before docs/examples: remove stale
+  public placeholders, keep observable snapshots read-only unless callers need
+  to construct them, keep request/response values constructible where consumers
+  need to send or test them, and regenerate the public symbol inventory after
+  each tightening pass.
 - [ ] Review `CodexAppServer`, `CodexThread`, `CodexTurnHandle`, `Dashboard`,
   `Minimap`, `RecentTurns`, `RecentFiles`, `RecentCommands`, history-window
   helpers, diagnostics, approval, elicitation, model, MCP, and thread-management

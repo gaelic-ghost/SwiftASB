@@ -11,7 +11,7 @@ The source inventory below tracks the files that own hand-shaped public API.
 The generated symbol ledger for this pass lives in
 [`v1-public-api-symbol-inventory.md`](./v1-public-api-symbol-inventory.md).
 That ledger was generated from SwiftPM's public symbol graph and currently
-records 1,137 public/open symbols: 173 types, 84 initializers, 60 methods or
+records 1,124 public/open symbols: 172 types, 72 initializers, 60 methods or
 type methods, 226 enum cases, and 594 properties.
 
 | File | Lines | Audit focus |
@@ -139,6 +139,18 @@ Use these decisions for every public symbol:
 
 ### API Honesty Fixes Before V1
 
+- Remove stale public placeholders that are not part of the supported consumer
+  lifecycle. The package-template `SwiftASB` namespace enum is no longer public;
+  consumers should depend on the concrete owners `CodexAppServer`,
+  `CodexThread`, and `CodexTurnHandle` instead.
+- Keep app-server-authored interactive request payload values readable without
+  making every nested payload constructible. Command-action payloads,
+  tool-user-input question payloads, and MCP elicitation prompt payloads are
+  now internally constructed from app-server requests; response values remain
+  public-initializable where consumers need to answer.
+- Keep passive diagnostic payloads readable through `CodexDiagnosticEvent`
+  without giving them public constructors. This matches the broader event model:
+  SwiftASB creates app-server-originated events, while consumers inspect them.
 - The unreachable public diagnostic `unknown(String)` cases have been removed
   from `CodexModelReroute.Reason` and `CodexModelVerification`. Strict
   generated-wire enum decoding cannot reach them today, so keeping them would
@@ -358,6 +370,32 @@ Use these decisions for every public symbol:
 - [x] Confirm archive-aware retention and rollback forensic archival stay
   post-v1.
   Decision: post-v1.
+
+### Access Control Tightening
+
+- [x] Remove stale public placeholder namespaces.
+  Decision: the template-era `SwiftASB` enum is not a consumer API and is no
+  longer public.
+- [ ] Review public observable companion state for accidental construction or
+  mutation surfaces.
+  Decision so far: `Dashboard.ActivityState` is already internal, while
+  dashboard, minimap, recent-turn, recent-file, and recent-command presentation
+  properties remain public read-only or `public private(set)` as appropriate for
+  SwiftUI observation.
+- [ ] Review request and response values for public constructor needs.
+  Decision so far: caller-authored request and response values keep public
+  initializers. App-server-authored pages, snapshots, request roots, command
+  actions, tool-user-input questions, and MCP elicitation prompt payloads stay
+  readable without gaining public construction unless examples or tests need
+  that ability.
+- [x] Review passive diagnostic payload construction.
+  Decision: diagnostic payload structs stay public and readable, but their
+  constructors are internal because consumers observe diagnostics rather than
+  emitting them through SwiftASB.
+- [x] Regenerate the symbol inventory after this access-control tightening pass.
+  Decision: the ledger now records 1,124 exported public/open symbols after the
+  placeholder, request-payload constructor, and diagnostic-constructor
+  narrowing.
 
 ### Documentation Requirements
 

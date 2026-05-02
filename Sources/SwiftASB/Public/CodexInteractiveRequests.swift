@@ -185,7 +185,7 @@ public enum CodexCommandAction: Sendable, Equatable {
         public let name: String
         public let path: String
 
-        public init(command: String, name: String, path: String) {
+        init(command: String, name: String, path: String) {
             self.command = command
             self.name = name
             self.path = path
@@ -196,7 +196,7 @@ public enum CodexCommandAction: Sendable, Equatable {
         public let command: String
         public let path: String?
 
-        public init(command: String, path: String?) {
+        init(command: String, path: String?) {
             self.command = command
             self.path = path
         }
@@ -207,7 +207,7 @@ public enum CodexCommandAction: Sendable, Equatable {
         public let path: String?
         public let query: String?
 
-        public init(command: String, path: String?, query: String?) {
+        init(command: String, path: String?, query: String?) {
             self.command = command
             self.path = path
             self.query = query
@@ -217,7 +217,7 @@ public enum CodexCommandAction: Sendable, Equatable {
     public struct Unknown: Sendable, Equatable {
         public let command: String
 
-        public init(command: String) {
+        init(command: String) {
             self.command = command
         }
     }
@@ -326,7 +326,7 @@ public struct CodexToolUserInputRequest: Sendable, Equatable {
             public let description: String
             public let label: String
 
-            public init(description: String, label: String) {
+            init(description: String, label: String) {
                 self.description = description
                 self.label = label
             }
@@ -343,7 +343,7 @@ public struct CodexToolUserInputRequest: Sendable, Equatable {
         ///
         /// `isOther` and `isSecret` default to ordinary visible input, and
         /// omitting `options` leaves the question as free-form input.
-        public init(
+        init(
             header: String,
             id: String,
             isOther: Bool = false,
@@ -392,7 +392,7 @@ public struct CodexMcpServerElicitationRequest: Sendable, Equatable {
         public let message: String
         public let requestedSchema: CodexAppServer.JSONValue
 
-        public init(
+        init(
             message: String,
             requestedSchema: CodexAppServer.JSONValue
         ) {
@@ -406,7 +406,7 @@ public struct CodexMcpServerElicitationRequest: Sendable, Equatable {
         public let message: String
         public let url: String
 
-        public init(
+        init(
             elicitationID: String,
             message: String,
             url: String
