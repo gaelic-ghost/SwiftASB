@@ -4,16 +4,24 @@ set -eu
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 SCHEMA_PARENT=${CODEX_SCHEMA_ROOT:-"$ROOT_DIR/codex-schemas"}
 CODEX_BIN=${CODEX_BIN:-codex}
-include_experimental=false
+include_experimental=true
 force=false
 
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/dump-codex-schemas.sh [--experimental] [--force]
+  scripts/dump-codex-schemas.sh [--experimental] [--stable] [--force]
 
 Checks the installed Codex CLI version, then dumps the app-server JSON Schema
 bundle into codex-schemas/vX.Y.Z when that version has not been dumped yet.
+The default dump includes experimental methods and fields because SwiftASB uses
+the versioned schema as the maintainer source for generated wire review.
+
+Options:
+  --experimental
+             Include experimental methods and fields. This is the default.
+  --stable   Dump only the stable app-server schema surface for comparison.
+  --force    Replace an existing dump for the detected Codex CLI version.
 
 Environment:
   CODEX_BIN  Codex CLI executable to inspect and run. Defaults to codex.
@@ -27,6 +35,10 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --experimental)
       include_experimental=true
+      shift
+      ;;
+    --stable)
+      include_experimental=false
       shift
       ;;
     --force)
@@ -87,7 +99,13 @@ else
   out_dir="$schema_dir"
 fi
 
-printf 'Dumping Codex CLI %s app-server schemas to %s\n' "$schema_version" "$schema_dir"
+if [ "$include_experimental" = true ]; then
+  schema_variant="experimental"
+else
+  schema_variant="stable"
+fi
+
+printf 'Dumping Codex CLI %s %s app-server schemas to %s\n' "$schema_version" "$schema_variant" "$schema_dir"
 
 if [ "$include_experimental" = true ]; then
   "$CODEX_BIN" app-server generate-json-schema --experimental --out "$out_dir"
