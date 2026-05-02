@@ -3117,7 +3117,7 @@ private extension CodexCommandExecutionApprovalResponse {
             decision = .accept
         case .acceptForSession:
             decision = .acceptForSession
-        case let .acceptWithExecpolicyAmendment(amendment):
+        case let .acceptWithExecPolicyAmendment(amendment):
             decision = .acceptWithExecpolicyAmendment(amendment)
         case let .applyNetworkPolicyAmendment(amendment):
             decision = .applyNetworkPolicyAmendment(amendment)

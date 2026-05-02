@@ -213,9 +213,17 @@ workflow forces a release-boundary change before the v1 tag.
   real navigation cost or clarifies ownership boundaries.
 - [ ] Tighten public names and parameter labels so callers can understand the
   operation without reading generated-wire terminology.
+  Progress: the first field/default/enum vocabulary pass corrected the public
+  execution-policy approval response case to
+  `acceptWithExecPolicyAmendment(_:)`, matching the already-corrected
+  `proposedExecPolicyAmendment` request field while keeping the private
+  app-server wire spelling for compatibility.
 - [ ] Review default arguments for compatibility risk before v1, especially
   cache-policy defaults, history limits, binary-discovery defaults, and request
   options that mirror upstream Codex behavior.
+  Progress: the audit now classifies defaults as compatibility promises. The
+  remaining work is source-level symbol documentation that says whether each
+  default is owned by SwiftASB or delegated to the Codex app-server.
 - [ ] Make sure public stream semantics are consistent: when streams buffer,
   when they finish, whether they throw, and which owner is responsible for
   answering or observing each event.

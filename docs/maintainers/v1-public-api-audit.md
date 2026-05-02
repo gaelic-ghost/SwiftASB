@@ -146,12 +146,46 @@ Use these decisions for every public symbol:
 - `CodexCommandExecutionApprovalRequest.proposedExecpolicyAmendment` has been
   corrected to `proposedExecPolicyAmendment` on the public API surface while
   still mapping from the current generated-wire spelling internally.
+- `CodexCommandExecutionApprovalResponse.acceptWithExecpolicyAmendment(_:)`
+  has been corrected to `acceptWithExecPolicyAmendment(_:)` on the public API
+  surface for the same reason. The private protocol decision type still uses
+  the app-server's `acceptWithExecpolicyAmendment` wire spelling and
+  `execpolicy_amendment` payload key so existing Codex app-server builds keep
+  accepting the response.
 - Compact one-line public declarations such as
   `CodexPermissionsApprovalResponse.Scope` should remain expanded for generated
   docs readability.
 - Review every public `JSONValue` exposure and keep it only where the upstream
   app-server payload is genuinely dynamic, such as output schemas, MCP metadata,
   MCP elicitation content, and unknown structured context.
+
+### Field, Default, And Enum Vocabulary Review
+
+- Field names should stay Swift-native where SwiftASB owns the public shape and
+  preserve app-server terms only when the consumer is choosing a real Codex
+  option. Identifier fields such as `threadID`, `turnID`, `itemID`, and
+  `requestID` are stable; route and filesystem fields such as
+  `currentDirectoryPath` are stable because they describe the caller input
+  rather than the wire spelling.
+- Compatibility fields that mirror upstream behavior should keep the Codex
+  vocabulary but use normal Swift casing. The execution-policy approval pair is
+  the current example: public request/response values use
+  `proposedExecPolicyAmendment` and `acceptWithExecPolicyAmendment(_:)`, while
+  private conversion code preserves the upstream wire spelling.
+- Default arguments should be treated as compatibility promises. Current
+  defaults are mostly nil/pass-through values, local cache policies, pagination
+  limits, binary discovery behavior, and
+  `CodexPermissionsApprovalResponse.scope = .turn`; each needs symbol comments
+  before v1 so consumers know whether SwiftASB or the Codex app-server owns the
+  default.
+- Enum vocabulary should favor stable SwiftASB jobs over generated-wire terms.
+  Keep public app-server option names such as `dangerFullAccess`, `xhigh`,
+  `oAuth`, and `nux` only where the value is an upstream option a caller may
+  already recognize from Codex configuration or CLI output.
+- Public dynamic JSON fields remain acceptable only for genuinely open
+  app-server payloads: MCP metadata, output schemas, elicitation content, and
+  unknown structured context. They should not become a shortcut around typed
+  public modeling for the supported lifecycle.
 
 ### Docs Required Before Freeze
 
@@ -267,7 +301,10 @@ Use these decisions for every public symbol:
 - [x] Review `CodexApprovalResponse` and `CodexElicitationResponse` response
   shapes and whether the owning answer methods are discoverable.
   Decision: stable paired request/response model; examples should teach
-  `thread.respond(...)` and `turn.respond(...)`.
+  `thread.respond(...)` and `turn.respond(...)`. The command execution response
+  case now uses the corrected public spelling
+  `acceptWithExecPolicyAmendment(_:)`; private protocol conversion keeps the
+  current app-server wire spelling.
 - [x] Review `CodexPermissionProfile` and sandbox/network terminology against
   the public compatibility promise.
   Decision: stable enough for v1, but symbol comments should define omitted

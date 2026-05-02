@@ -434,7 +434,7 @@ public enum CodexApprovalResponse: Sendable, Equatable {
 public enum CodexCommandExecutionApprovalResponse: Sendable, Equatable {
     case accept
     case acceptForSession
-    case acceptWithExecpolicyAmendment([String])
+    case acceptWithExecPolicyAmendment([String])
     case applyNetworkPolicyAmendment(CodexNetworkPolicyAmendment)
     case decline
     case cancel
@@ -484,9 +484,9 @@ public struct CodexToolUserInputResponse: Sendable, Equatable {
 }
 
 public struct CodexMcpServerElicitationResponse: Sendable, Equatable {
-	public enum Action: String, Sendable, Equatable {
-		case accept, decline, cancel
-	}
+    public enum Action: String, Sendable, Equatable {
+        case accept, decline, cancel
+    }
 
     public let action: Action
     public let content: CodexAppServer.JSONValue?

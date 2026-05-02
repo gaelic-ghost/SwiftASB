@@ -494,7 +494,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexCommandAction.search(_:)` - `case search(CodexCommandAction.Search)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
 - `CodexCommandAction.unknown(_:)` - `case unknown(CodexCommandAction.Unknown)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
 - `CodexCommandExecutionApprovalResponse.acceptForSession` - `case acceptForSession` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
-- `CodexCommandExecutionApprovalResponse.acceptWithExecpolicyAmendment(_:)` - `case acceptWithExecpolicyAmendment([String])` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandExecutionApprovalResponse.acceptWithExecPolicyAmendment(_:)` - `case acceptWithExecPolicyAmendment([String])` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
 - `CodexCommandExecutionApprovalResponse.accept` - `case accept` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
 - `CodexCommandExecutionApprovalResponse.applyNetworkPolicyAmendment(_:)` - `case applyNetworkPolicyAmendment(CodexNetworkPolicyAmendment)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
 - `CodexCommandExecutionApprovalResponse.cancel` - `case cancel` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
