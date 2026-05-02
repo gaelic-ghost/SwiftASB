@@ -1,9 +1,14 @@
 public extension CodexAppServer {
+    /// Request used to read the app-server's current model catalog.
     struct ModelListRequest: Sendable, Equatable {
         public var cursor: String?
         public var includeHidden: Bool?
         public var limit: Int?
 
+        /// Creates a model-list request.
+        ///
+        /// Nil pagination and visibility fields are omitted, which lets the
+        /// app-server choose its default catalog page and hidden-model policy.
         public init(
             cursor: String? = nil,
             limit: Int? = nil,

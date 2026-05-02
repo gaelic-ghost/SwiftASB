@@ -222,8 +222,10 @@ workflow forces a release-boundary change before the v1 tag.
   cache-policy defaults, history limits, binary-discovery defaults, and request
   options that mirror upstream Codex behavior.
   Progress: the audit now classifies defaults as compatibility promises. The
-  remaining work is source-level symbol documentation that says whether each
-  default is owned by SwiftASB or delegated to the Codex app-server.
+  first source-level documentation pass now covers the main default-bearing
+  public initializers and methods, including nil app-server request omissions,
+  SwiftASB local-history/UI page sizes, cache-policy derivation, and explicit
+  response/update safety defaults.
 - [ ] Make sure public stream semantics are consistent: when streams buffer,
   when they finish, whether they throw, and which owner is responsible for
   answering or observing each event.

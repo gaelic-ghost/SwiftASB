@@ -114,6 +114,10 @@ public actor CodexAppServer {
     private var hasCompletedInitializeHandshake = false
     private var isStopping = false
 
+    /// Creates a client for a locally launched Codex app-server.
+    ///
+    /// Omitting `configuration` uses SwiftASB's standard app-server launch
+    /// command and local Codex executable discovery.
     public init(configuration: Configuration = .init()) {
         self.transport = CodexAppServerTransport(
             configuration: CodexAppServerTransport.Configuration(
@@ -237,6 +241,10 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reads the app-server's current model catalog.
+    ///
+    /// Omitting `request` sends an empty list request, leaving pagination and
+    /// hidden-model behavior to the app-server defaults.
     public func listModels(_ request: ModelListRequest = .init()) async throws -> ModelListPage {
         try requireInitialized(for: "model/list")
 
@@ -266,6 +274,10 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reads the app-server's current MCP server status snapshots.
+    ///
+    /// Omitting `request` sends an empty status-list request, leaving
+    /// pagination and detail level to the app-server defaults.
     public func listMcpServerStatuses(
         _ request: McpServerStatusListRequest = .init()
     ) async throws -> McpServerStatusPage {
@@ -297,6 +309,10 @@ public actor CodexAppServer {
         }
     }
 
+    /// Starts a new Codex thread.
+    ///
+    /// Omitting `request` sends an empty thread-start request, letting Codex
+    /// choose its configured model, sandbox, approval, and storage defaults.
     public func startThread(_ request: ThreadStartRequest = .init()) async throws -> CodexThread {
         try requireInitialized(for: "thread/start")
 
@@ -513,6 +529,10 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reads a page of stored Codex threads.
+    ///
+    /// Omitting `request` sends an empty thread-list request, leaving page
+    /// size, sort order, filters, and archive visibility to the app-server.
     public func listThreads(_ request: ThreadListRequest = .init()) async throws -> ThreadListPage {
         try requireInitialized(for: "thread/list")
 

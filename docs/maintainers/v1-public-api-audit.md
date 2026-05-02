@@ -177,7 +177,11 @@ Use these decisions for every public symbol:
   limits, binary discovery behavior, and
   `CodexPermissionsApprovalResponse.scope = .turn`; each needs symbol comments
   before v1 so consumers know whether SwiftASB or the Codex app-server owns the
-  default.
+  default. The first default-argument documentation pass now covers the main
+  public defaults: process launch configuration, initialization capabilities,
+  thread and turn request omissions, model/MCP/thread pagination requests,
+  metadata field updates, permission responses, local history page sizes, and
+  recent observable companion cache policies.
 - Enum vocabulary should favor stable SwiftASB jobs over generated-wire terms.
   Keep public app-server option names such as `dangerFullAccess`, `xhigh`,
   `oAuth`, and `nux` only where the value is an upstream option a caller may
@@ -353,6 +357,9 @@ Use these decisions for every public symbol:
 
 - [ ] Add symbol comments for every stable v1 public type and method that is not
   self-explanatory from its declaration.
+  Progress: default-bearing public initializers and methods now document whether
+  omission delegates to Codex, chooses a SwiftASB local-history/UI default, or
+  applies an explicit safety default such as `.turn` or `.unchanged`.
 - [ ] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.

@@ -1,6 +1,7 @@
 import Foundation
 
 extension CodexAppServer {
+    /// Request used to create a new Codex thread.
     public struct ThreadStartRequest: Sendable, Equatable {
         public var approvalPolicy: ApprovalPolicy?
         public var approvalsReviewer: ApprovalsReviewer?
@@ -17,6 +18,12 @@ extension CodexAppServer {
         public var serviceTier: ServiceTier?
         public var sessionStartSource: SessionStartSource?
 
+        /// Creates a thread-start request.
+        ///
+        /// Nil option fields are omitted from the app-server request, which
+        /// lets Codex apply its current runtime or configuration defaults. Set
+        /// `ephemeral` only when the caller needs to override the app-server's
+        /// storage choice for the new thread.
         public init(
             approvalPolicy: ApprovalPolicy? = nil,
             approvalsReviewer: ApprovalsReviewer? = nil,
@@ -50,6 +57,7 @@ extension CodexAppServer {
         }
     }
 
+    /// Request used to reopen an existing Codex thread.
     public struct ThreadResumeRequest: Sendable, Equatable {
         public var approvalPolicy: ApprovalPolicy?
         public var approvalsReviewer: ApprovalsReviewer?
@@ -66,6 +74,12 @@ extension CodexAppServer {
         public var serviceTier: ServiceTier?
         public var threadID: String
 
+        /// Creates a thread-resume request.
+        ///
+        /// Nil option fields are omitted from the app-server request so the
+        /// resumed thread keeps Codex-owned defaults. Set `excludeTurns` when
+        /// the caller wants Codex to resume the thread without embedding prior
+        /// turns in the response payload.
         public init(
             threadID: String,
             approvalPolicy: ApprovalPolicy? = nil,
@@ -99,6 +113,7 @@ extension CodexAppServer {
         }
     }
 
+    /// Request used to fork an existing Codex thread into a new thread.
     public struct ThreadForkRequest: Sendable, Equatable {
         public var approvalPolicy: ApprovalPolicy?
         public var approvalsReviewer: ApprovalsReviewer?
@@ -116,6 +131,12 @@ extension CodexAppServer {
         public var serviceTier: ServiceTier?
         public var threadID: String
 
+        /// Creates a thread-fork request.
+        ///
+        /// Nil option fields are omitted from the app-server request so the
+        /// fork inherits Codex-owned defaults. Set `excludeTurns` when the
+        /// caller plans to page history separately, and set `ephemeral` only to
+        /// override the app-server's storage choice for the fork.
         public init(
             threadID: String,
             approvalPolicy: ApprovalPolicy? = nil,
@@ -179,10 +200,15 @@ extension CodexAppServer {
         public let updatedAt: Int
     }
 
+    /// Request used to read a stored thread snapshot.
     public struct ThreadReadRequest: Sendable, Equatable {
         public var includeTurns: Bool
         public var threadID: String
 
+        /// Creates a thread-read request.
+        ///
+        /// `includeTurns` defaults to `false` so a basic read returns thread
+        /// metadata without asking Codex for the heavier turn list payload.
         public init(
             threadID: String,
             includeTurns: Bool = false
@@ -234,6 +260,10 @@ extension CodexAppServer {
         public var sortKey: ThreadListSortKey?
         public var sourceKinds: [ThreadListSourceKind]?
 
+        /// Creates a thread-list request.
+        ///
+        /// Nil filters and pagination fields are omitted, which lets the
+        /// app-server choose its default page, sort, and visibility behavior.
         public init(
             cursor: String? = nil,
             limit: Int? = nil,
@@ -273,6 +303,10 @@ extension CodexAppServer {
         public var sortDirection: ThreadTurnsSortDirection?
         public var threadID: String
 
+        /// Creates a paged turn-list request for a stored thread.
+        ///
+        /// Nil pagination and sort fields are omitted, which keeps the
+        /// app-server in charge of its default page size and ordering.
         public init(
             threadID: String,
             limit: Int? = nil,

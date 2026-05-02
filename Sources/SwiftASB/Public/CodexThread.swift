@@ -2,6 +2,7 @@ import Foundation
 import Observation
 
 public struct CodexThread: Sendable {
+    /// A local-history window read from a thread.
     public struct HistoryWindow: Sendable, Equatable {
         public let threadID: String
         public let turns: [CodexTurnHandle.ClosedTurn]
@@ -25,6 +26,7 @@ public struct CodexThread: Sendable {
         }
     }
 
+    /// Request used to start a turn from this thread handle.
     public struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: CodexAppServer.ApprovalPolicy?
         public var approvalsReviewer: CodexAppServer.ApprovalsReviewer?
@@ -37,6 +39,11 @@ public struct CodexThread: Sendable {
         public var serviceTier: CodexAppServer.ServiceTier?
         public var summary: CodexAppServer.ReasoningSummary?
 
+        /// Creates a thread-scoped turn-start request.
+        ///
+        /// Nil option fields are omitted from the app-server request so the
+        /// turn inherits this thread's defaults. Provide values only for the
+        /// settings that should differ for this turn.
         public init(
             input: [CodexAppServer.TurnInput],
             approvalPolicy: CodexAppServer.ApprovalPolicy? = nil,
@@ -97,6 +104,7 @@ public struct CodexThread: Sendable {
         self.events = events
     }
 
+    /// Starts a turn from a fully-shaped request.
     public func startTurn(_ request: TurnStartRequest) async throws -> CodexTurnHandle {
         try await appServer.startTurn(
             .init(
@@ -115,6 +123,9 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Starts a turn containing one text input item.
+    ///
+    /// Nil option fields inherit this thread's defaults for the new turn.
     public func startTextTurn(
         _ text: String,
         approvalPolicy: CodexAppServer.ApprovalPolicy? = nil,
@@ -200,18 +211,28 @@ public struct CodexThread: Sendable {
         try await appServer.closedTurn(threadID: id, turnID: turnID)
     }
 
+    /// Reads the most recent completed turns from local history.
+    ///
+    /// The default `limit` of 12 is a SwiftASB convenience for compact UI
+    /// summaries; pass a different limit when the caller owns the paging size.
     public func readRecentTurnHistoryWindow(
         limit: Int = 12
     ) async throws -> HistoryWindow {
         try await appServer.recentClosedTurnWindow(threadID: id, limit: limit)
     }
 
+    /// Reads the most recent completed turns from local history.
+    ///
+    /// The default `limit` of 12 matches `readRecentTurnHistoryWindow(limit:)`.
     public func readRecentTurnHistory(
         limit: Int = 12
     ) async throws -> [CodexTurnHandle.ClosedTurn] {
         try await readRecentTurnHistoryWindow(limit: limit).turns
     }
 
+    /// Reads a page of completed turns older than the given turn.
+    ///
+    /// The default `limit` of 12 is a SwiftASB local-history page size.
     public func readOlderTurnHistoryWindow(
         olderThan turnID: String,
         limit: Int = 12
@@ -223,6 +244,9 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Reads completed turns older than the given turn.
+    ///
+    /// The default `limit` of 12 matches `readOlderTurnHistoryWindow(olderThan:limit:)`.
     public func readOlderTurnHistory(
         olderThan turnID: String,
         limit: Int = 12
@@ -230,6 +254,9 @@ public struct CodexThread: Sendable {
         try await readOlderTurnHistoryWindow(olderThan: turnID, limit: limit).turns
     }
 
+    /// Reads a page of completed turns newer than the given turn.
+    ///
+    /// The default `limit` of 12 is a SwiftASB local-history page size.
     public func readNewerTurnHistoryWindow(
         newerThan turnID: String,
         limit: Int = 12
@@ -241,6 +268,9 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Reads completed turns newer than the given turn.
+    ///
+    /// The default `limit` of 12 matches `readNewerTurnHistoryWindow(newerThan:limit:)`.
     public func readNewerTurnHistory(
         newerThan turnID: String,
         limit: Int = 12
@@ -248,6 +278,9 @@ public struct CodexThread: Sendable {
         try await readNewerTurnHistoryWindow(newerThan: turnID, limit: limit).turns
     }
 
+    /// Reads a local-history window centered around a turn.
+    ///
+    /// The default `limit` of 12 is a SwiftASB local-history page size.
     public func windowAroundTurn(
         _ turnID: String,
         limit: Int = 12
@@ -259,6 +292,9 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Reads a local-history window centered around an item.
+    ///
+    /// The default `limit` of 12 is a SwiftASB local-history page size.
     public func windowAroundItem(
         _ itemID: String,
         limit: Int = 12
@@ -270,6 +306,10 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Creates an observable recent-turn companion for this thread.
+    ///
+    /// The default `limit` of 12 controls the initial resident page. Omitting
+    /// `cachePolicy` derives SwiftASB's automatic cache policy from that limit.
     @MainActor
     public func makeRecentTurns(
         limit: Int = 12,
@@ -289,6 +329,10 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Creates an observable recent-file companion for this thread.
+    ///
+    /// The default `limit` of 12 controls the initial resident page. Omitting
+    /// `cachePolicy` derives SwiftASB's automatic cache policy from that limit.
     @MainActor
     public func makeRecentFiles(
         limit: Int = 12,
@@ -309,6 +353,10 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Creates an observable recent-command companion for this thread.
+    ///
+    /// The default `limit` of 12 controls the initial resident page. Omitting
+    /// `cachePolicy` derives SwiftASB's automatic cache policy from that limit.
     @MainActor
     public func makeRecentCommands(
         limit: Int = 12,
