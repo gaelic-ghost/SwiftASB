@@ -13,7 +13,7 @@ wire family.
 | `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift` | 731 | Recent-turn observable companion and turn-snapshot conversion helpers. |
 | `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift` | 709 | Recent-file observable companion and file-snapshot conversion helpers. |
 | `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift` | 674 | Recent-command observable companion and command-snapshot conversion helpers. |
-| `Sources/SwiftASB/Public/CodexTurnHandle.swift` | 695 | Review turn-event naming, minimap shape, close-to-snapshot surface, steering/interrupt names, and public event payload values. |
+| `Sources/SwiftASB/Public/CodexTurnHandle.swift` | 695 | Review turn-event naming, minimap shape, completion snapshot surface, steering/interrupt names, and public event payload values. |
 | `Sources/SwiftASB/Public/CodexInteractiveRequests.swift` | 504 | Review approval and elicitation naming, request/response ownership, unknown action surfaces, permission-profile naming, and response defaults. |
 | `Sources/SwiftASB/Public/CodexThread.swift` | 472 | Thread handle, history-window type, turn-start request, thread-scoped actions, and public thread event payloads. |
 | `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift` | 300 | Thread start/resume/fork/list/read/turn-page request and result values. |
@@ -78,7 +78,7 @@ Use these decisions for every public symbol:
   companions.
 - Keep `CodexTurnHandle` as the active-turn handle. It should remain the
   consumer surface for turn events, steering, interruption, request responses,
-  and closing an active turn into a sealed local-history snapshot.
+  and completing an active turn into a sealed local-history snapshot.
 - Keep approval and elicitation as typed public request/response values. The
   generated JSON-RPC request identifier stays internal; consumers answer by
   passing the request object back with the typed response.
@@ -118,20 +118,17 @@ Use these decisions for every public symbol:
   `CodexModelVerificationDiagnostic` because it is a payload nested inside
   `CodexDiagnosticEvent.modelVerification`, where the `Event` suffix reads
   redundant at the call site.
-- Keep `CodexThread.TurnRequest` only if the scoped call
-  `thread.startTurn(.init(...))` remains clear in examples. If examples need to
-  mention both `CodexThread.TurnRequest` and `CodexAppServer.TurnStartRequest`,
-  rename the thread-scoped value before v1.
+- `CodexThread.TurnStartRequest` is the thread-scoped turn-start value so it
+  matches the app-root turn-start job name.
 - Keep `CodexThread.compactContext()` and `CodexAppServer.compactThread(_:)` as
   the likely final pair: the thread handle uses the user-facing job name, while
   the app-server root keeps the protocol-shaped lower-level action name.
-- Document `CodexTurnHandle.close()` precisely. It reads the completed turn into
-  a local `ClosedTurn` snapshot; it does not send a server-side "close this
-  running turn" command.
-- Decide whether `CodexTurnHandle.minimap` and `makeMinimap()` should both stay.
-  If both remain, docs should explain that the property creates a live companion
-  from the current handle state, while the async method gives symmetry with
-  `CodexThread.makeDashboard()`.
+- `CodexTurnHandle.complete()` reads the completed turn into a local
+  `ClosedTurn` snapshot; it does not send a server-side command to terminate a
+  running turn.
+- `CodexTurnHandle.minimap` is the single public minimap surface. The
+  removed method spelling is intentionally absent before v1 so consumers do not
+  need to choose between two spellings for the same live companion.
 
 ### API Honesty Fixes Before V1
 
@@ -219,16 +216,15 @@ Use these decisions for every public symbol:
 - [x] Review `TurnStartRequest`, `TurnInput`, `TurnInfo`, `TurnSession`, and
   turn status vocabulary.
   Decision: stable as the app-root turn entrypoint.
-- [x] Review `CodexThread.TurnRequest` versus
+- [x] Review `CodexThread.TurnStartRequest` versus
   `CodexAppServer.TurnStartRequest`; decide whether both names are clear enough.
-  Decision: conditional; keep only if examples remain clear without extra
-  explanation.
+  Decision: rename the thread-scoped request to `TurnStartRequest`.
 - [x] Review `CodexThread.startTurn(_:)` and `startTextTurn(...)` defaults.
   Decision: stable consumer-facing conveniences.
 - [x] Review `CodexTurnHandle.steer(_:)`, `steerText(_:)`, `interrupt()`, and
-  `close()` naming.
-  Decision: keep steering and interruption names; document `close()` snapshot
-  semantics before freeze.
+  `complete()` naming.
+  Decision: keep steering and interruption names; use `complete()` for the
+  completed-snapshot handoff before freeze.
 - [x] Review `CodexTurnHandle.ClosedTurn` and `ClosedTurn.Item` as the sealed
   turn snapshot shape for v1.
   Decision: stable as the local-history shape.

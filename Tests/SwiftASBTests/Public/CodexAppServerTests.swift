@@ -660,8 +660,8 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
-    @Test("closes a completed turn handle into a final sealed turn snapshot")
-    func closesCompletedTurnHandle() async throws {
+    @Test("completes a turn handle into a final sealed turn snapshot")
+    func completesTurnHandle() async throws {
         let transport = FakeCodexAppServerTransport()
         let client = CodexAppServer(transport: transport)
 
@@ -716,7 +716,7 @@ struct CodexAppServerTests {
         await transport.emitTurnCompleted(threadID: thread.id, turnID: turn.turn.id)
         _ = try await eventTask.value
 
-        let closedTurn = try await turn.close()
+        let closedTurn = try await turn.complete()
         #expect(closedTurn.id == turn.turn.id)
         #expect(closedTurn.threadID == thread.id)
         #expect(closedTurn.status == "completed")
@@ -726,8 +726,8 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
-    @Test("closing a completed turn finishes its live turn stream")
-    func closingCompletedTurnFinishesTurnStream() async throws {
+    @Test("completing a turn finishes its live turn stream")
+    func completingTurnFinishesTurnStream() async throws {
         let transport = FakeCodexAppServerTransport()
         let client = CodexAppServer(transport: transport)
 
@@ -782,7 +782,7 @@ struct CodexAppServerTests {
         await transport.emitTurnCompleted(threadID: thread.id, turnID: turn.turn.id)
         _ = try await eventTask.value
 
-        _ = try await turn.close()
+        _ = try await turn.complete()
         let nextEvent = try await nextTurnEventOrEnd(from: turn.events)
         #expect(nextEvent == nil)
 

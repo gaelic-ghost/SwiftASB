@@ -617,8 +617,8 @@ Recommended first UI-facing shape:
 
 Recommended completed-turn handoff shape:
 
-- add `CodexTurnHandle.close(...)`
-- `close(...)` should:
+- add `CodexTurnHandle.complete(...)`
+- `complete(...)` should:
   - return a value-typed sealed final turn representation
   - unregister the handle's live stream bookkeeping from the owning app-server
   - detach the handle from future observation updates
@@ -742,7 +742,7 @@ Recommended first implementation inside this phase:
   that window by turn id
 - preserve sort order by turn recency while still using canonical upstream page
   direction and cursor semantics when app-server fallback is needed
-- add `CodexTurnHandle.close(...)` as the explicit boundary from live handle to
+- add `CodexTurnHandle.complete(...)` as the explicit boundary from live handle to
   sealed completed-turn value
 - keep `Dashboard` and `Minimap` as current-state summaries, not transcript
   owners
@@ -754,7 +754,7 @@ Current status:
   recent-turn observable
 - the first load path prefers the local history store and falls back to
   `thread/turns/list` when local recent turns are not resident yet
-- `CodexTurnHandle.close()` now exists as the explicit handoff from a completed
+- `CodexTurnHandle.complete()` now exists as the explicit handoff from a completed
   live handle to a caller-owned sealed turn value
 - explicit older/newer scroll-window expansion over whole-turn pages now
   exists, still preferring local Core Data windows before falling back to

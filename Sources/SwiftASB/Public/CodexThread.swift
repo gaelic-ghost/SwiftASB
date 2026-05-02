@@ -25,7 +25,7 @@ public struct CodexThread: Sendable {
         }
     }
 
-    public struct TurnRequest: Sendable, Equatable {
+    public struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: CodexAppServer.ApprovalPolicy?
         public var approvalsReviewer: CodexAppServer.ApprovalsReviewer?
         public var currentDirectoryPath: String?
@@ -97,7 +97,7 @@ public struct CodexThread: Sendable {
         self.events = events
     }
 
-    public func startTurn(_ request: TurnRequest) async throws -> CodexTurnHandle {
+    public func startTurn(_ request: TurnStartRequest) async throws -> CodexTurnHandle {
         try await appServer.startTurn(
             .init(
                 threadID: id,
