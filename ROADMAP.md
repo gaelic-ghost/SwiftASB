@@ -291,8 +291,8 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### Documentation And Examples
 
-- [x] Update stale release references after the `v0.9.3` patch release.
-  Decision: README now names `v0.9.3` as the current released baseline and no
+- [x] Update stale release references after the `v1.0.0` patch release.
+  Decision: README now names `v1.0.0` as the current released baseline and no
   longer describes the package as early development.
 - [x] Finish DocC symbol comments for the supported lifecycle, not just the
   conceptual articles.
