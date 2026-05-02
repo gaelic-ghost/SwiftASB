@@ -3408,6 +3408,58 @@ struct CodexAppServerTests {
         #expect(inspector.maxPrefetchPagesPerPass > historyRail.maxPrefetchPagesPerPass)
     }
 
+    @Test("recent companion cache policies normalize unsafe numeric inputs")
+    func recentCompanionCachePoliciesNormalizeUnsafeNumericInputs() {
+        let turns = CodexThread.RecentTurns.CachePolicy(
+            maxResidentTurns: 0,
+            minimumResidentTurns: 10,
+            maximumResidentItemCost: 0,
+            protectedTurnBuffer: -1,
+            protectedRecentCompletedTurns: 10,
+            edgePrefetchThreshold: -1,
+            jitterScrollVelocityThreshold: -1,
+            fastScrollVelocityThreshold: -1,
+            veryFastScrollVelocityThreshold: -2,
+            maxPrefetchPagesPerPass: 0
+        )
+        #expect(turns.maxResidentTurns == 1)
+        #expect(turns.minimumResidentTurns == 1)
+        #expect(turns.maximumResidentItemCost == 1)
+        #expect(turns.protectedTurnBuffer == 0)
+        #expect(turns.protectedRecentCompletedTurns == 1)
+        #expect(turns.edgePrefetchThreshold == 0)
+        #expect(turns.jitterScrollVelocityThreshold == 0)
+        #expect(turns.fastScrollVelocityThreshold == 0)
+        #expect(turns.veryFastScrollVelocityThreshold == 0)
+        #expect(turns.maxPrefetchPagesPerPass == 1)
+
+        let files = CodexThread.RecentFiles.CachePolicy(
+            maxResidentFiles: 0,
+            minimumResidentFiles: 10,
+            maximumResidentPayloadCost: 0,
+            protectedFileBuffer: -1,
+            protectedRecentCompletedFiles: -1
+        )
+        #expect(files.maxResidentFiles == 1)
+        #expect(files.minimumResidentFiles == 1)
+        #expect(files.maximumResidentPayloadCost == 1)
+        #expect(files.protectedFileBuffer == 0)
+        #expect(files.protectedRecentCompletedFiles == 0)
+
+        let commands = CodexThread.RecentCommands.CachePolicy(
+            maxResidentCommands: 0,
+            minimumResidentCommands: 10,
+            maximumResidentOutputCost: 0,
+            protectedCommandBuffer: -1,
+            protectedRecentCompletedCommands: -1
+        )
+        #expect(commands.maxResidentCommands == 1)
+        #expect(commands.minimumResidentCommands == 1)
+        #expect(commands.maximumResidentOutputCost == 1)
+        #expect(commands.protectedCommandBuffer == 0)
+        #expect(commands.protectedRecentCompletedCommands == 0)
+    }
+
     @Test("item-cost eviction removes the oldest completed turns once the resident item budget is exceeded")
     func itemCostEvictionRemovesOldestCompletedTurns() async throws {
         let transport = FakeCodexAppServerTransport(

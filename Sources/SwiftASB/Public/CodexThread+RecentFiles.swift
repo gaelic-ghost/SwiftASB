@@ -26,7 +26,7 @@ extension CodexThread {
             ) {
                 self.maxResidentFiles = max(1, maxResidentFiles)
                 self.minimumResidentFiles = max(1, min(minimumResidentFiles, self.maxResidentFiles))
-                self.maximumResidentPayloadCost = maximumResidentPayloadCost
+                self.maximumResidentPayloadCost = maximumResidentPayloadCost.map { max(1, $0) }
                 self.protectedFileBuffer = max(0, protectedFileBuffer)
                 self.protectedRecentCompletedFiles = max(0, protectedRecentCompletedFiles)
             }

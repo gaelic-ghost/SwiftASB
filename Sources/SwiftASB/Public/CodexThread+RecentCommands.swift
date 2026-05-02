@@ -26,7 +26,7 @@ extension CodexThread {
             ) {
                 self.maxResidentCommands = max(1, maxResidentCommands)
                 self.minimumResidentCommands = max(1, min(minimumResidentCommands, self.maxResidentCommands))
-                self.maximumResidentOutputCost = maximumResidentOutputCost
+                self.maximumResidentOutputCost = maximumResidentOutputCost.map { max(1, $0) }
                 self.protectedCommandBuffer = max(0, protectedCommandBuffer)
                 self.protectedRecentCompletedCommands = max(0, protectedRecentCompletedCommands)
             }
