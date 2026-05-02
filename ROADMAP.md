@@ -40,7 +40,7 @@
 | --- | --- | --- |
 | Bundled schema-driven wire generation | `Shipped internally` | `scripts/generate-wire-types.sh` derives from the bundled v2 schema, patches dynamic JSON to `CodexWireJSONValue`, and validates the staged Swift output. |
 | Promoted generated v2 wire snapshot | `Shipped internally` | `Sources/SwiftASB/Generated/CodexWire/Latest/` now contains a wider lifecycle batch covering bootstrap plus many thread, turn, item, reasoning, and tool-progress notifications, alongside the hand-owned `CodexWireInitializeResponse` shim. |
-| Codex CLI `v0.125.0` schema review | `In progress` | The local `codex-schemas/v0.125.0/` dump has been compared against `v0.124.0`, the default staging codegen path now targets `v0.125.0`, and the public compatibility window now spans `0.123.x` through `0.125.x`. `thread/resume` and `thread/fork` now expose the additive `excludeTurns` request knob. The stricter v0.125 `permissionProfile` wire shape is covered by an explicit compatibility shim instead of a blind generated snapshot swap. |
+| Codex CLI schema review | `In progress` | The local `codex-schemas/v0.128.0/` dump exists for the currently installed `codex-cli 0.128.0`, and `scripts/dump-codex-schemas.sh` now makes future versioned dumps repeatable. The v0.128 generated batch typechecks, but it is not a blind promotion candidate: the thread/turn roots no longer expose the same `permissionProfile` fields that the v0.125 compatibility shim and tests cover, while new hooks/model-provider/remote-control/thread-goal schema families need classification before promotion. |
 | Stdio subprocess transport | `Shipped internally` | The transport launches `codex app-server --listen stdio://`, frames newline-delimited JSON, correlates request IDs, and captures stderr for diagnostics. |
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
 | Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/rollback`, `thread/name/set`, `thread/metadata/update`, `thread/turns/list`, `model/list`, `mcpServerStatus/list`, and `turn/start` are encoded through the protocol layer. |
@@ -298,6 +298,12 @@ workflow forces a release-boundary change before the v1 tag.
   window no longer includes the older loose shape.
 - [ ] Confirm the promoted generated-wire snapshot matches the Codex CLI schema
   version included in the v1 compatibility window.
+- [ ] Classify the Codex CLI `v0.128.0` schema diff before promotion. Initial
+  findings: `HooksList*`, `ModelProviderCapabilitiesRead*`,
+  `RemoteControlStatusChangedNotification`, and thread-goal notifications are
+  new families; `permissionProfile`, `ghost_commit`, and sandbox read-only
+  access roots changed or disappeared from the currently generated batch and
+  need compatibility decisions rather than a blind generated snapshot swap.
 - [ ] Confirm generated wire stays internal in docs, source organization, and
   public examples.
 - [ ] Re-run schema drift fixture coverage after any promoted generated-wire
