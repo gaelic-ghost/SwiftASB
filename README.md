@@ -186,7 +186,7 @@ The current public lifecycle contract is intentionally narrow and explicit:
 - The generated wire layer stays internal.
 - A one-shot `run(...)` convenience API is intentionally deferred.
 
-The current Codex CLI compatibility window is `0.123.x` through `0.125.x`. New upstream schema features are classified before they become public Swift API.
+The reviewed generated-wire baseline currently targets the experimental `v0.128.0` Codex CLI schema. Newer Codex CLI schemas are dumped and classified before their generated shapes are promoted or exposed through public Swift API.
 
 ## Development
 

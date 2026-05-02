@@ -26,8 +26,8 @@ struct CodexAppServerTests {
                 launchArgumentsPrefix: [],
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
-                versionString: "codex-cli 0.123.0",
-                compatibility: .supported(documentedWindow: "0.123.x through 0.125.x")
+                versionString: "codex-cli 0.128.0",
+                compatibility: .supported(documentedWindow: "0.128.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -37,8 +37,8 @@ struct CodexAppServerTests {
         let diagnostics = try await client.cliExecutableDiagnostics()
         #expect(diagnostics.source == .homebrewAppleSilicon)
         #expect(diagnostics.resolvedExecutablePath == "/opt/homebrew/bin/codex")
-        #expect(diagnostics.versionString == "codex-cli 0.123.0")
-        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.123.x through 0.125.x"))
+        #expect(diagnostics.versionString == "codex-cli 0.128.0")
+        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.128.x"))
 
         await client.stop()
     }
@@ -366,7 +366,7 @@ struct CodexAppServerTests {
         #expect(initializeSession.codexHome == "/Users/galew/.codex")
         #expect(initializeSession.platformFamily == "unix")
         #expect(initializeSession.platformOS == "macos")
-        #expect(initializeSession.userAgent == "codex-cli/0.121.0")
+        #expect(initializeSession.userAgent == "codex-cli/0.128.0")
 
         let thread = try await client.startThread(
             .init(
@@ -795,7 +795,7 @@ struct CodexAppServerTests {
             threadListResult: [
                 "data": [
                     [
-                        "cliVersion": "0.121.0",
+                        "cliVersion": "0.128.0",
                         "createdAt": 1713350000,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
@@ -867,7 +867,7 @@ struct CodexAppServerTests {
         await transport.setThreadListResult([
             "data": [
                 [
-                    "cliVersion": "0.121.0",
+                    "cliVersion": "0.128.0",
                     "createdAt": 1713350000,
                     "cwd": "/tmp/project",
                     "ephemeral": false,
@@ -922,7 +922,7 @@ struct CodexAppServerTests {
                 ],
                 "serviceTier": "fast",
                 "thread": [
-                    "cliVersion": "0.121.0",
+                    "cliVersion": "0.128.0",
                     "createdAt": 1713350000,
                     "cwd": "/tmp/project",
                     "ephemeral": false,
@@ -1027,7 +1027,7 @@ struct CodexAppServerTests {
                 ],
                 "serviceTier": "fast",
                 "thread": [
-                    "cliVersion": "0.121.0",
+                    "cliVersion": "0.128.0",
                     "createdAt": 1713350010,
                     "cwd": "/tmp/project",
                     "ephemeral": true,
@@ -3950,7 +3950,7 @@ struct CodexAppServerTests {
         let transport = FakeCodexAppServerTransport(
             threadReadResult: [
                 "thread": [
-                    "cliVersion": "0.121.0",
+                    "cliVersion": "0.128.0",
                     "createdAt": 1713350000,
                     "cwd": "/tmp/project",
                     "ephemeral": false,
@@ -4065,7 +4065,7 @@ struct CodexAppServerTests {
         let transport = FakeCodexAppServerTransport(
             threadReadResult: [
                 "thread": [
-                    "cliVersion": "0.121.0",
+                    "cliVersion": "0.128.0",
                     "createdAt": 1713350000,
                     "cwd": "/tmp/project",
                     "ephemeral": false,
@@ -5735,7 +5735,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "codexHome": "/Users/galew/.codex",
                     "platformFamily": "unix",
                     "platformOs": "macos",
-                    "userAgent": "codex-cli/0.121.0",
+                    "userAgent": "codex-cli/0.128.0",
                 ]
             )
         case "model/list":
@@ -5833,7 +5833,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 id: id,
                 result: [
                     "thread": [
-                        "cliVersion": "0.121.0",
+                        "cliVersion": "0.128.0",
                         "createdAt": 1713350000,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
@@ -5858,7 +5858,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 id: id,
                 result: [
                     "thread": [
-                        "cliVersion": "0.121.0",
+                        "cliVersion": "0.128.0",
                         "createdAt": 1713350000,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
@@ -5917,7 +5917,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     ],
                     "serviceTier": "fast",
                     "thread": [
-                        "cliVersion": "0.121.0",
+                        "cliVersion": "0.128.0",
                         "createdAt": 1713350000,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
@@ -5937,7 +5937,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 result: threadListResult ?? [
                     "data": [
                         [
-                            "cliVersion": "0.121.0",
+                            "cliVersion": "0.128.0",
                             "createdAt": 1713350000,
                             "cwd": "/tmp/project",
                             "ephemeral": false,
@@ -5959,7 +5959,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 id: id,
                 result: threadReadResult ?? [
                     "thread": [
-                        "cliVersion": "0.121.0",
+                        "cliVersion": "0.128.0",
                         "createdAt": 1713350000,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
@@ -6019,7 +6019,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     ],
                     "serviceTier": "fast",
                     "thread": [
-                        "cliVersion": "0.121.0",
+                        "cliVersion": "0.128.0",
                         "createdAt": 1713350010,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
@@ -6070,7 +6070,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     ],
                     "serviceTier": "fast",
                     "thread": [
-                        "cliVersion": "0.121.0",
+                        "cliVersion": "0.128.0",
                         "createdAt": 1713350000,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
@@ -6354,7 +6354,7 @@ private actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     func emitThreadStarted(threadID: String) {
         let payload = payloadObject([
             "thread": [
-                "cliVersion": "0.121.0",
+                "cliVersion": "0.128.0",
                 "createdAt": 1713350000,
                 "cwd": "/tmp/project",
                 "ephemeral": false,

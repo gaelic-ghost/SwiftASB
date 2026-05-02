@@ -44,13 +44,14 @@ The first interactive lifecycle release does not support:
 
 ## Codex CLI Compatibility Policy
 
-`SwiftASB` intentionally uses a rolling compatibility window for the local
-Codex CLI runtime.
+`SwiftASB` currently uses a narrow compatibility window for the local Codex CLI
+runtime while the app-server schema is moving quickly before v1.
 
 Current policy:
 
-- support the latest public Codex CLI release
-- support the prior two minor versions as well
+- support the latest reviewed public Codex CLI minor release
+- widen back to a rolling window only after the latest generated-wire and public
+  API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
 
 Practical implications:
@@ -59,7 +60,7 @@ Practical implications:
 - expect many upstream releases to be additive rather than immediately breaking
 - when a newer CLI exposes extra app-server behavior, treat that as a possible
   late additive promotion or gated capability rather than as proof that the
-  older supported window is no longer valid
+  reviewed support window is no longer valid
 - if a newly introduced upstream change is genuinely incompatible with the
   written public lifecycle boundary, tighten the support statement explicitly
   in docs and tests instead of letting drift stay implicit
@@ -261,10 +262,11 @@ notification families at all:
   they plan to hydrate turn history through `thread/turns/list`
 - `permissionProfile` is generated and decoded internally, but the public API
   still accepts the existing hand-owned sandbox and approval settings until a
-  deliberate permission-profile model is designed. The v0.125 tagged
-  `permissionProfile` schema is supported through a hand-owned compatibility
-  decoder while the documented compatibility window still includes older CLI
-  minors.
+  deliberate permission-profile model is designed. The v0.128 experimental
+  schema keeps `permissionProfile`, adds `activePermissionProfile`, and moves
+  request-side overrides toward named `permissions` profile selection; SwiftASB
+  keeps those generated shapes internal until the public model is deliberately
+  designed.
 - device-key, marketplace-removal, marketplace-upgrade, account-provider, and
   add-credits email endpoints remain outside the first lifecycle boundary
 
@@ -319,10 +321,10 @@ The current remaining promotion questions are therefore narrower than before:
 2. should `FileChangePatchUpdatedNotification` enrich `RecentFiles` with
    structured patch previews, and if so, what stable file-diff model should the
    package own instead of leaking generated wire shapes?
-3. should `permissionProfile` become a public request/defaults model, or stay
+3. should permission profiles become a public request/defaults model, or stay
    internal while the current sandbox and approval request models are enough?
-   The current decoder shim is temporary and should be removed once the rolling
-   support window no longer includes the older loose shape.
+   The next design should account for both the full active runtime
+   `permissionProfile` and the named/provenance-oriented `activePermissionProfile`.
 4. diagnostics and control flows stay separate. Warning, guardian-warning,
    model-reroute, and model-verification families are passive public diagnostic
    events. Guardian denied-action approval stays internal until SwiftASB owns a

@@ -145,6 +145,23 @@ Use the generated-wire entrypoint when refreshing Codex schema-derived models:
 scripts/generate-wire-types.sh
 ```
 
+Dump the installed Codex CLI's app-server schemas when a new CLI version is
+available:
+
+```bash
+scripts/dump-codex-schemas.sh
+```
+
+The dump script reads `codex --version`, writes the current experimental
+schema bundle under `codex-schemas/vX.Y.Z/` when that version is missing, and
+leaves existing dumps untouched unless `--force` is passed. Experimental dumps
+are the SwiftASB maintainer default because generated-wire review needs fields
+that only appear when `codex app-server generate-json-schema --experimental`
+is used. Pass `--stable` only for explicit stable-surface comparisons; stable
+comparison dumps write to `codex-schemas/vX.Y.Z-stable/` so they cannot replace
+the experimental baseline. Set `CODEX_BIN` to test a specific Codex CLI
+executable and `CODEX_SCHEMA_ROOT` to write into a temporary parent directory.
+
 Check whitespace before staging:
 
 ```bash

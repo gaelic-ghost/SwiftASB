@@ -40,7 +40,7 @@
 | --- | --- | --- |
 | Bundled schema-driven wire generation | `Shipped internally` | `scripts/generate-wire-types.sh` derives from the bundled v2 schema, patches dynamic JSON to `CodexWireJSONValue`, and validates the staged Swift output. |
 | Promoted generated v2 wire snapshot | `Shipped internally` | `Sources/SwiftASB/Generated/CodexWire/Latest/` now contains a wider lifecycle batch covering bootstrap plus many thread, turn, item, reasoning, and tool-progress notifications, alongside the hand-owned `CodexWireInitializeResponse` shim. |
-| Codex CLI `v0.125.0` schema review | `In progress` | The local `codex-schemas/v0.125.0/` dump has been compared against `v0.124.0`, the default staging codegen path now targets `v0.125.0`, and the public compatibility window now spans `0.123.x` through `0.125.x`. `thread/resume` and `thread/fork` now expose the additive `excludeTurns` request knob. The stricter v0.125 `permissionProfile` wire shape is covered by an explicit compatibility shim instead of a blind generated snapshot swap. |
+| Codex CLI schema review | `In progress` | The local `codex-schemas/v0.128.0/` dump exists for the currently installed `codex-cli 0.128.0`, and `scripts/dump-codex-schemas.sh` now makes future versioned experimental dumps repeatable by default. The v0.128 experimental generated batch needs classification before promotion: permission profiles are still present behind the experimental schema surface, while new active-permission-profile, permissions-selection, hooks/model-provider/remote-control/thread-goal schema families need public/observable/internal decisions. |
 | Stdio subprocess transport | `Shipped internally` | The transport launches `codex app-server --listen stdio://`, frames newline-delimited JSON, correlates request IDs, and captures stderr for diagnostics. |
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
 | Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/rollback`, `thread/name/set`, `thread/metadata/update`, `thread/turns/list`, `model/list`, `mcpServerStatus/list`, and `turn/start` are encoded through the protocol layer. |
@@ -76,8 +76,8 @@
 | Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, request resolution is tracked by JSON-RPC request id, and deterministic command-approval completion is covered through the real app-server with a mock Responses provider. Diagnostics are now separated from control flows: passive warning/model/guardian signals are public diagnostics, while guardian denied-action approval remains internal until SwiftASB owns a stable request/response model for it. |
 | Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list`, seeds previously unknown local threads from paged history, widens persisted turn identity to stay thread-scoped across forks, and records explicit fork lineage while preserving conservative reconciliation that keeps richer local detail when upstream stored history is thinner. Public history paging/search helpers and archive-retention policy are still open. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
-| Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a rolling support window of the latest public Codex CLI release plus the prior two minor versions, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
-| README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current rolling Codex CLI compatibility window, but richer examples are still open. |
+| Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a current-reviewed Codex CLI support window of `0.128.x`, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
+| README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current Codex CLI compatibility window, but richer examples are still open. |
 | End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including app-wide capability snapshots, a thread-name smoke path, same-thread concurrency probing, deterministic command-approval completion through a mock Responses provider, a best-effort prompt-driven approval-path probe, approval/server-request candidate probing, a disposable live rollback scenario, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The approval/server-request probe, file scenario, and rollback scenario can be run directly through `scripts/run-live-codex-approval-probe.sh`, `scripts/run-live-codex-file-scenario.sh`, and `scripts/run-live-codex-rollback-scenario.sh`; the first two write JSON diagnostic reports under `tmp/live-codex-reports/`. The default test suite still relies on a deterministic fake transport seam for most public-client behavior because the current prompt-driven runtime does not reliably force an approval request on demand. |
 | FSL-1.1-ALv2 licensing | `Shipped` | The repo now carries the `FSL-1.1-ALv2` license text, README references the live license surface, and each released version converts to Apache 2.0 two years after it is first made available. |
 
@@ -130,10 +130,10 @@ That means the current priority order is:
 2. Continue public API curation before v1: the first model/MCP/thread-management source split is done and the first DocC public-surface map now exists, but the package still needs more source splitting where it reduces file sprawl, tighter names and defaults, deeper source-level symbol documentation, and a final pass to make the first-class package surface feel intentionally designed rather than merely accumulated.
 3. Expand DocC before v1: keep the first `SwiftASB.docc` catalog current, add deeper symbol comments where the generated documentation is too terse, add more copy-pasteable walkthroughs, and keep the Xcode `docbuild` validation path clean.
 4. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` now that the first resident-window, cache-policy, payload-slimming, centered-window, file-centric, and command-centric surfaces are shipped. The remaining work is calibration and heuristics, not proving the model exists.
-5. Keep the v0.125 additions classified before public promotion: `excludeTurns` is public on resume/fork request models because it directly supports the existing paged history model, `marketplace/upgrade` and the `amazonBedrock` account variant remain internal because SwiftASB does not yet own marketplace or account-management APIs, and the stricter tagged `permissionProfile` shape is handled by a temporary compatibility shim until the older loose shape leaves the rolling support window. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, warning/model-verification/guardian warning families are public diagnostics, and guardian denied-action approval remains internal until its control-flow job is clear.
+5. Keep v0.128 schema additions classified before public promotion: `excludeTurns` remains public on resume/fork request models because it directly supports the existing paged history model; `permissionProfile`, `activePermissionProfile`, and request-side `permissions` stay internal until SwiftASB owns a deliberate public permission-profile model; `hooks/list` is a near-term post-v1 diagnostics/capability target; `ModelProviderCapabilitiesRead*` is a clean app-wide capability candidate; thread goals, realtime, fuzzy file search sessions, remote-control status, marketplace/account-management families, and guardian denied-action approval remain post-v1 until their consumer workflows are clearer. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian warning families are public diagnostics.
 6. Do not add `RecentActivity` for v1. The separate `RecentTurns`, `RecentFiles`, and `RecentCommands` types are the clearer consumer surface, and a mixed feed would add more confusion than value right now.
 7. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
-8. Add any sharper binary-discovery diagnostics we want alongside the rolling compatibility window before a first broader release.
+8. Add any sharper binary-discovery diagnostics we want alongside the current-reviewed compatibility window before a first broader release.
 9. Revisit whether a convenience `run(...)` API is earned only after the lower-level lifecycle and release boundary both feel complete.
 
 ## V1 Readiness Checklist
@@ -176,6 +176,11 @@ These are intentionally outside the v1 promise unless a concrete consumer
 workflow forces a release-boundary change before the v1 tag.
 
 - [ ] Guardian denied-action approval with a stable request and response model.
+- [ ] Hooks list surface near-term after v1. Treat `hooks/list` as one of the
+  first post-v1 schema promotions: expose per-cwd hook metadata, warnings, and
+  load errors through a deliberate diagnostics/capability API so Swift clients
+  can show what hooks are active before a turn runs. Keep hook enable/disable
+  mutation post-v1+ until the configuration-writing UX is clearer.
 - [ ] Marketplace upgrade surfaces.
 - [ ] Account-management variants, including provider-specific account families
   such as Amazon Bedrock.
@@ -202,7 +207,7 @@ workflow forces a release-boundary change before the v1 tag.
   the SwiftPM public symbol graph for the v1 freeze, while
   `docs/maintainers/v1-public-api-audit.md` remains the durable decision
   checklist.
-- [ ] For each public symbol, decide whether it is stable for v1, should be
+- [x] For each public symbol, decide whether it is stable for v1, should be
   renamed before v1, should become internal, or should move behind a narrower
   owning type.
   Progress: the access-control audit is now explicit. The first tightening pass
@@ -213,6 +218,10 @@ workflow forces a release-boundary change before the v1 tag.
   on. The second pass also removes marketplace-adjacent model upgrade fields
   from the public model-list shape while keeping the generated wire decode
   internal.
+  Decision: completed in `docs/maintainers/v1-public-api-audit.md` and the
+  regenerated symbol inventory. The final pre-v1 public graph records 1,107
+  public/open symbols after the v0.128 sandbox-field cleanup, with no generated
+  `CodexWire...` names exposed through the `SwiftASB` product.
 - [ ] Audit access control symbol-by-symbol before docs/examples: remove stale
   public placeholders, keep observable snapshots read-only unless callers need
   to construct them, keep request/response values constructible where consumers
@@ -292,18 +301,37 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### Compatibility And Generated Wire
 
-- [ ] Audit active compatibility shims and give each one a removal trigger tied
-  to the rolling Codex CLI support window.
-- [ ] Revisit the v0.125 `permissionProfile` compatibility shim when the support
-  window no longer includes the older loose shape.
-- [ ] Confirm the promoted generated-wire snapshot matches the Codex CLI schema
+- [x] Audit active compatibility shims and give each one a removal trigger tied
+  to the Codex CLI support window.
+  Progress: the v0.125 permission-profile decode shim is removed as part of the
+  v0.128 support-window advance; no generated-wire drift shim remains active.
+- [x] Remove the v0.125 `permissionProfile` compatibility shim when the support
+  window advanced beyond the older loose shape.
+- [x] Confirm the promoted generated-wire snapshot matches the Codex CLI schema
   version included in the v1 compatibility window.
-- [ ] Confirm generated wire stays internal in docs, source organization, and
+- [x] Classify the Codex CLI `v0.128.0` schema diff before promotion. Decision:
+  generated permission-profile shapes remain internal, `hooks/list` is a
+  near-term post-v1 diagnostics/capability target, model-provider capabilities
+  are a clean public candidate, and thread goals, realtime, fuzzy file search,
+  remote-control status, marketplace/account-management families, and guardian
+  denied-action approval stay post-v1.
+- [x] Confirm generated wire stays internal in docs, source organization, and
   public examples.
-- [ ] Re-run schema drift fixture coverage after any promoted generated-wire
+  Decision: generated wire remains internal scaffolding. Public docs and README
+  describe hand-owned SwiftASB values, generated-wire references stay in
+  maintainer docs/scripts/internal protocol tests, and repo-maintenance
+  validation now fails if generated sources declare public symbols or public
+  declarations expose `CodexWire...` names.
+- [x] Re-run schema drift fixture coverage after any promoted generated-wire
   refresh.
-- [ ] Decide whether v1 should support only the latest documented rolling window
+  Progress: `swift test` has been rerun after the v0.128 promoted-wire refresh
+  and exercises the v0.128 permission-profile fixtures, request/response
+  envelopes, notification fixtures, and public conversion paths.
+- [x] Decide whether v1 should support only the latest documented rolling window
   or whether a shorter first-v1 compatibility promise is more honest.
+  Decision: use a narrow `0.128.x` support window for the first v1 boundary,
+  then widen deliberately after generated-wire and public API review catches up
+  with later Codex CLI releases.
 
 ### History And Observable Companions
 
@@ -430,7 +458,7 @@ runtime.
   `CodexTurnHandle`, `respond(...)` writes the expected JSON-RPC result,
   `serverRequest/resolved` clears the route, and wrong-surface, wrong-kind,
   already-resolved, and wrong-thread responses fail with descriptive errors. The
-  opt-in live raw mock-Responses probe now proves the real v0.125.0 app-server
+  opt-in live raw mock-Responses probe now proves the real app-server
   can reach a command item plus `waitingOnApproval`, deliver an answerable
   `item/commandExecution/requestApproval` request with numeric id `0`, accept
   SwiftASB's response, emit `serverRequest/resolved`, complete the command, make
@@ -485,10 +513,10 @@ lifecycle, not as a convenience-API expansion.
 - Centered local history reads through `windowAroundTurn(...)` and
   `windowAroundItem(...)` before any broader cursor or transcript-search
   contract.
-- A `v0.125.0` schema compatibility pass has refreshed the staging generator,
-  updated the rolling compatibility window, exposed additive history-friendly
-  resume/fork request flags, and covered the stricter `permissionProfile`
-  generation with an explicit temporary compatibility shim.
+- A `v0.128.0` experimental schema compatibility pass has refreshed the staging
+  generator, updated the Codex CLI compatibility window, kept generated
+  permission-profile shapes internal, removed the older permission-profile
+  compatibility shim, and recorded `hooks/list` as a near-term post-v1 target.
 - API curation and DocC docs good enough that a Swift consumer can understand
   the supported package surface without reading maintainer notes.
 
@@ -500,8 +528,8 @@ lifecycle, not as a convenience-API expansion.
   lifecycle.
 - Keep default local tests deterministic, narrow or document the known
   subprocess timing flake, and run the opt-in live probes before the v1 tag.
-- Audit active compatibility shims and tie each removal trigger to the rolling
-  Codex CLI support window.
+- Audit active compatibility shims and tie each removal trigger to the current
+  reviewed Codex CLI support window.
 - Confirm Swift Package Index listing and DocC rendering after the latest public
   tag is indexed.
 

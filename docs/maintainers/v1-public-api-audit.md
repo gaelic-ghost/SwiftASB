@@ -10,9 +10,10 @@ wire family.
 The source inventory below tracks the files that own hand-shaped public API.
 The generated symbol ledger for this pass lives in
 [`v1-public-api-symbol-inventory.md`](./v1-public-api-symbol-inventory.md).
-That ledger was generated from SwiftPM's public symbol graph and currently
-records 1,117 public/open symbols: 171 types, 72 initializers, 60 methods or
-type methods, 226 enum cases, and 588 properties.
+That ledger was generated from SwiftPM's public symbol graph after the v0.128
+generated-wire promotion and final pre-v1 public-surface tightening. It
+currently records 1,107 public/open symbols: 169 types, 71 initializers, 60
+methods or type methods, 224 enum cases, and 583 properties.
 
 | File | Lines | Audit focus |
 | --- | ---: | --- |
@@ -404,9 +405,9 @@ Use these decisions for every public symbol:
   not part of the v1 model-picker promise. Keep the generated wire fields
   internal until SwiftASB owns a public marketplace or upgrade workflow.
 - [x] Regenerate the symbol inventory after this access-control tightening pass.
-  Decision: the ledger now records 1,117 exported public/open symbols after the
-  placeholder, request-payload constructor, diagnostic-constructor, and
-  marketplace-adjacent model-field narrowing.
+  Decision: the ledger now records 1,107 exported public/open symbols after the
+  placeholder, request-payload constructor, diagnostic-constructor,
+  marketplace-adjacent model-field narrowing, and v0.128 sandbox-field cleanup.
 
 ### Documentation Requirements
 
@@ -439,3 +440,8 @@ Use these decisions for every public symbol:
 - The generated-wire boundary is already clear in principle, but every public
   API example should be checked so it never teaches consumers to depend on
   `CodexWire...` types.
+- The final v1 public-symbol pass found no generated `CodexWire...` names in
+  the exported `SwiftASB` symbol graph. `validate-all` now checks that generated
+  sources stay internal and public declarations avoid `CodexWire...` names, so
+  future generated-wire promotions fail maintainer validation if they leak
+  through the public product.

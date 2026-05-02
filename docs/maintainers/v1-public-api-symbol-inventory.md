@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02. This is a maintainer ledger for the v1 public API freeze; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening. This is a maintainer ledger for the v1 public API freeze; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1117
-- Public/open types: 171
-- Public/open initializers: 72
+- Public/open symbols: 1107
+- Public/open types: 169
+- Public/open initializers: 71
 - Public/open methods and type methods: 60
-- Public/open enum cases: 226
-- Public/open properties: 588
+- Public/open enum cases: 224
+- Public/open properties: 583
 
 ## Public Types
 
@@ -42,8 +42,6 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.ModelListRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.NetworkAccess` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.Personality` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccess` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccessType` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffortOption` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.ReasoningSummary` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
@@ -199,7 +197,6 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.McpServerStatusListRequest.init(cursor:limit:detail:)` - `init(cursor: String? = nil, limit: Int? = nil, detail: CodexAppServer.McpServerStatusListRequest.Detail? = nil)` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.ModelListRequest.init(cursor:limit:includeHidden:)` - `init(cursor: String? = nil, limit: Int? = nil, includeHidden: Bool? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.Personality.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccessType.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningSummary.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.SandboxMode.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
@@ -413,8 +410,6 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.Personality.friendly` - `case friendly` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.Personality.none` - `case none` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.Personality.pragmatic` - `case pragmatic` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccessType.fullAccess` - `case fullAccess` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.ReadOnlyAccessType.restricted` - `case restricted` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort.high` - `case high` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort.low` - `case low` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort.medium` - `case medium` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift

@@ -389,11 +389,11 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
     private func describe(_ compatibility: CodexCLIExecutableResolver.Compatibility) -> String {
         switch compatibility {
         case let .supported(documentedWindow):
-            return "Version is within SwiftASB's documented rolling support window (\(documentedWindow))."
+            return "Version is within SwiftASB's documented reviewed support window (\(documentedWindow))."
         case let .outsideDocumentedWindow(documentedWindow):
-            return "Version is outside SwiftASB's documented rolling support window (\(documentedWindow))."
+            return "Version is outside SwiftASB's documented reviewed support window (\(documentedWindow))."
         case let .unknownVersionFormat(documentedWindow):
-            return "Version string could not be parsed against SwiftASB's documented rolling support window (\(documentedWindow))."
+            return "Version string could not be parsed against SwiftASB's documented reviewed support window (\(documentedWindow))."
         }
     }
 }

@@ -72,22 +72,10 @@ extension CodexAppServer {
 
     public struct SandboxPolicy: Sendable, Equatable {
         public let type: SandboxPolicyType
-        public let access: ReadOnlyAccess?
         public let networkAccess: NetworkAccess?
         public let excludeSlashTmp: Bool?
         public let excludeTmpdirEnvVar: Bool?
-        public let readOnlyAccess: ReadOnlyAccess?
         public let writableRoots: [String]
-    }
-
-    public struct ReadOnlyAccess: Sendable, Equatable {
-        public let includePlatformDefaults: Bool?
-        public let readableRoots: [String]
-        public let type: ReadOnlyAccessType
-    }
-
-    public enum ReadOnlyAccessType: String, Sendable, Equatable {
-        case fullAccess, restricted
     }
 
     public enum NetworkAccess: Sendable, Equatable {

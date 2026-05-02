@@ -111,12 +111,6 @@ actor ThreadHistoryStore {
     }
 
     struct SandboxPolicySnapshot: Codable, Sendable, Equatable {
-        struct ReadOnlyAccessSnapshot: Codable, Sendable, Equatable {
-            let includePlatformDefaults: Bool?
-            let readableRoots: [String]
-            let type: String
-        }
-
         enum NetworkAccessSnapshot: Codable, Sendable, Equatable {
             case explicit(Bool)
             case enabled
@@ -124,11 +118,9 @@ actor ThreadHistoryStore {
         }
 
         let type: String
-        let access: ReadOnlyAccessSnapshot?
         let networkAccess: NetworkAccessSnapshot?
         let excludeSlashTmp: Bool?
         let excludeTmpdirEnvVar: Bool?
-        let readOnlyAccess: ReadOnlyAccessSnapshot?
         let writableRoots: [String]
     }
 
@@ -549,11 +541,9 @@ actor ThreadHistoryStore {
             let sandboxPolicy = try Self.decode(SandboxPolicySnapshot.self, from: defaults.sandboxPolicyData)
                 ?? .init(
                     type: "",
-                    access: nil,
                     networkAccess: nil,
                     excludeSlashTmp: nil,
                     excludeTmpdirEnvVar: nil,
-                    readOnlyAccess: nil,
                     writableRoots: []
                 )
             let turnRequest = HistoryTurn.fetchRequest()
@@ -1592,22 +1582,10 @@ private extension ThreadHistoryStore.SandboxPolicySnapshot {
     init(_ policy: CodexAppServer.SandboxPolicy) {
         self.init(
             type: policy.type.rawValue,
-            access: policy.access.map(Self.ReadOnlyAccessSnapshot.init),
             networkAccess: policy.networkAccess.map(Self.NetworkAccessSnapshot.init),
             excludeSlashTmp: policy.excludeSlashTmp,
             excludeTmpdirEnvVar: policy.excludeTmpdirEnvVar,
-            readOnlyAccess: policy.readOnlyAccess.map(Self.ReadOnlyAccessSnapshot.init),
             writableRoots: policy.writableRoots
-        )
-    }
-}
-
-private extension ThreadHistoryStore.SandboxPolicySnapshot.ReadOnlyAccessSnapshot {
-    init(_ access: CodexAppServer.ReadOnlyAccess) {
-        self.init(
-            includePlatformDefaults: access.includePlatformDefaults,
-            readableRoots: access.readableRoots,
-            type: access.type.rawValue
         )
     }
 }

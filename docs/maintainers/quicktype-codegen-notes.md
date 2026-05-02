@@ -70,43 +70,42 @@ inspecting upstream schema changes or quicktype regressions.
 
 ## Current generated batch
 
-The default generated batch currently stages against the local `v0.125.0` schema dump:
+The default generated batch currently stages against the local experimental
+`v0.128.0` schema dump:
 
-- `SCHEMA_VERSION=v0.125.0`
+- `SCHEMA_VERSION=v0.128.0`
 - promoted output:
   `Sources/SwiftASB/Generated/CodexWire/Latest/CodexLifecycleV2Batch+JSONValue.swift`
 
 The promoted `Latest` snapshot is intentionally not swapped blindly just
-because staging generation succeeds. The v0.125 dump tightens
-`permissionProfile` from a loose optional-field object into a tagged shape, and
-the package still documents a rolling compatibility window covering older CLI
-minors. Promote that generated change only after adding or confirming a
-compatibility-aware decode path for older payloads.
+because staging generation succeeds. The v0.128 experimental dump keeps
+`permissionProfile`, adds `activePermissionProfile`, adds request-side
+`permissions` profile selection, and removes older `GhostCommit` and
+`ReadOnlyAccess` generated definitions. Promote generated changes only after
+classifying public, observable-only, and internal effects.
 
 ## Compatibility Shim Policy
 
-SwiftASB supports a rolling Codex CLI window, so temporary compatibility shims
-are expected. They must stay explicit, tested, and removable.
+SwiftASB's Codex CLI support window may widen or narrow as app-server schemas
+move, so temporary compatibility shims are expected. They must stay explicit,
+tested, and removable.
 
 When adding a compatibility shim:
 
 1. Put the shim in a dedicated hand-owned file, not inside the promoted
    generated batch.
 2. Name the older and newer wire shapes it bridges.
-3. Add tests for every supported shape in the current rolling window.
+3. Add tests for every supported shape in the current support window.
 4. Document the removal trigger in the shim comment and in maintainer docs.
-5. Revisit the shim whenever the rolling compatibility window advances.
+5. Revisit the shim whenever the compatibility window advances.
 
 When the oldest affected Codex CLI minor drops out of the documented support
 window, remove the shim in the same change that advances the window unless a
 newer live-runtime probe proves the older shape can still appear.
 
-The current compatibility shim is:
-
-- `CodexWirePermissionProfileCompatibility.swift`, which lets the promoted
-  wire layer decode older loose `permissionProfile.fileSystem.entries` payloads
-  and v0.125 tagged filesystem permission payloads, including
-  `type: "unrestricted"` payloads that do not carry sandbox entries.
+There are currently no hand-owned generated-wire compatibility shims for
+versioned schema drift. `CodexWireInitializeResponse.swift` remains hand-owned
+because the bundled v2 schema still does not expose `InitializeResponse`.
 
 ### V2 lifecycle batch
 
