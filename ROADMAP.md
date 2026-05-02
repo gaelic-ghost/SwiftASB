@@ -212,6 +212,19 @@ workflow forces a release-boundary change before the v1 tag.
 - [ ] Rollback forensic archival that preserves full removed-turn payloads.
 - [ ] One-shot `run(...)` convenience API after the lower-level lifecycle is
   stable enough to hide honestly.
+- [ ] `swiftasb-skills` plugin guidance for agents building with SwiftASB.
+  Treat the forthcoming plugin as a first-class development aide: document the
+  recommended agent workflow for adding SwiftASB to a package, choosing the
+  right public owner (`CodexAppServer`, `CodexThread`, or `CodexTurnHandle`),
+  handling approvals and diagnostics without raw wire models, running
+  deterministic and live validation, and keeping examples aligned with the
+  current Codex CLI compatibility window.
+- [ ] Basic SwiftUI component library for SwiftASB consumers. Start with small,
+  copyable components that demonstrate the stable observable companions:
+  dashboard status, turn minimap call snapshots, recent turns, recent files,
+  recent commands, diagnostics, and approval/elicitation prompts. Keep this as a
+  development aide and example surface first; do not let it blur the core
+  package API or force an app-specific design system into the library.
 
 ### Public API Curation
 
@@ -291,7 +304,7 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### Documentation And Examples
 
-- [x] Update stale release references after the `v1.0.0` patch release.
+- [x] Update stale release references after the `v1.0.0` release.
   Decision: README now names `v1.0.0` as the current released baseline and no
   longer describes the package as early development.
 - [x] Finish DocC symbol comments for the supported lifecycle, not just the
