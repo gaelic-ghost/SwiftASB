@@ -71,7 +71,7 @@
 | DocC documentation | `Partially shipped` | `Sources/SwiftASB/SwiftASB.docc/` now contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, and generated-wire boundary notes. The catalog is validated through Xcode `docbuild`; deeper symbol comments and more examples still remain before v1. |
 | Swift Package Index readiness | `Partially shipped` | `.spi.yml` declares `SwiftASB` as the documentation target so Swift Package Index can build the intended DocC catalog. The actual listing still needs confirmation after the package is publicly indexed and tagged for the release slice. |
 | Contributor documentation split | `Shipped` | `README.md` is now focused on Swift and SwiftUI package users, while `CONTRIBUTING.md` owns contributor setup, validation, DocC, live-test flags, generated-wire refresh, and PR expectations. |
-| `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `close()` handoff into a caller-owned sealed turn snapshot. |
+| `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `complete()` handoff into a caller-owned sealed turn snapshot. |
 | Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Raw command-output and file-change-output deltas now stay internal as transport detail but drive the shipped `RecentCommands` and `RecentFiles` companions, and streamed payloads are preserved when later completed snapshots are thinner. Richer MCP-progress detail still remains internal, while warning, guardian-warning, model-reroute, and model-verification notifications now surface through hand-owned diagnostic events. |
 | Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, request resolution is tracked by JSON-RPC request id, and deterministic command-approval completion is covered through the real app-server with a mock Responses provider. Diagnostics are now separated from control flows: passive warning/model/guardian signals are public diagnostics, while guardian denied-action approval remains internal until SwiftASB owns a stable request/response model for it. |
 | Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list`, seeds previously unknown local threads from paged history, widens persisted turn identity to stay thread-scoped across forks, and records explicit fork lineage while preserving conservative reconciliation that keeps richer local detail when upstream stored history is thinner. Public history paging/search helpers and archive-retention policy are still open. |
@@ -220,8 +220,9 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### Documentation And Examples
 
-- [ ] Update any stale release references, including README text that still
-  names `v0.8.6` as the experimental baseline after `v0.8.7`.
+- [x] Update stale release references after the `v0.9.1` patch release.
+  Decision: README now names `v0.9.1` as the current released baseline and no
+  longer describes the package as early development.
 - [ ] Expand DocC symbol comments for the supported lifecycle, not just the
   conceptual articles.
 - [ ] Add copy-pasteable DocC walkthroughs for: starting and initializing an
@@ -291,7 +292,9 @@ workflow forces a release-boundary change before the v1 tag.
 - [ ] Run `swift test`, `git diff --check`, and
   `bash scripts/repo-maintenance/validate-all.sh` before the v1 release branch.
 - [ ] Run Xcode DocC validation before the v1 release branch.
-- [ ] Decide whether to cut a `v0.9.0` release candidate before `v1.0.0`.
+- [ ] Decide whether another targeted `v0.9.x` patch release is needed before
+  `v1.0.0`, or whether the remaining work should go straight into the v1
+  release branch.
 - [ ] Prepare v1 release notes with explicit sections for public surface,
   intentionally internal surfaces, compatibility window, migration notes,
   validation performed, and known post-v1 work.
@@ -434,19 +437,19 @@ runtime.
 
 ## Proposed Next Release Slice
 
-Treat the next release candidate as a "first interactive lifecycle" release, not
-as a convenience-API release.
+Treat the remaining pre-v1 work as release-hardening for the first interactive
+lifecycle, not as a convenience-API expansion.
 
-### Must ship in the next slice
+### Shipped in the v0.9.x lifecycle slice
 
 - Enough notification coverage that a consumer can build a multi-turn interactive flow without dropping to raw payloads.
-- A unified observable current-state model for in-flight call activity and blocked thread state so UI consumers can show "what is happening right now" without replaying raw deltas themselves.
+- Observable current-state companions for in-flight call activity and blocked thread state so UI consumers can show "what is happening right now" without replaying raw deltas themselves.
 - A written release boundary that says what is public, what stays internal scaffolding, and what is intentionally unsupported.
 - A maintainer-facing classification of generated notification families as public now, observable-only for now, or internal-only for now.
 - The first deliberate public thread-management expansion beyond `thread/start`, with `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list` now landed.
-- Version-compatibility guidance and any remaining discovery diagnostics for the local Codex CLI runtime.
-- Any remaining protocol/event promotion work that is actually required to support the release boundary we claim, especially deciding how much richer tool, file-edit, and MCP detail should escape the current summary mirrors or instead feed future companion observables.
-- A written and implemented boundary for recent completed turns: thread-scoped recent-turn observables for UI, plus explicit `CodexTurnHandle.close(...)` for caller-owned sealed turn values.
+- Version-compatibility guidance and baseline discovery diagnostics for the local Codex CLI runtime.
+- Protocol/event promotion required to support the current release boundary, with richer tool, file-edit, and MCP detail feeding companion observables rather than widening into raw generated public payloads.
+- A written and implemented boundary for recent completed turns: thread-scoped recent-turn observables for UI, plus explicit `CodexTurnHandle.complete()` for caller-owned sealed turn values.
 - Centered local history reads through `windowAroundTurn(...)` and
   `windowAroundItem(...)` before any broader cursor or transcript-search
   contract.
@@ -457,7 +460,20 @@ as a convenience-API release.
 - API curation and DocC docs good enough that a Swift consumer can understand
   the supported package surface without reading maintainer notes.
 
-### Explicitly defer unless one of the above forces it
+### Remaining pre-v1 hardening
+
+- Complete the public API inventory and freeze decisions recorded in
+  `docs/maintainers/v1-public-api-audit.md`.
+- Add source-level symbol documentation and DocC walkthroughs for the supported
+  lifecycle.
+- Keep default local tests deterministic, narrow or document the known
+  subprocess timing flake, and run the opt-in live probes before the v1 tag.
+- Audit active compatibility shims and tie each removal trigger to the rolling
+  Codex CLI support window.
+- Confirm Swift Package Index listing and DocC rendering after the latest public
+  tag is indexed.
+
+### Explicitly defer unless pre-v1 hardening forces it
 
 - A one-shot `run(...)` convenience API.
 - Broader sugar beyond `startTextTurn(...)`.
@@ -643,7 +659,8 @@ In Progress
 - [x] Add a thread-scoped turn start API so normal consumers do not carry raw thread IDs around.
 - [x] Add a simple text-only turn convenience on `CodexThread` for the common case.
 - [x] Add live observable thread state via `CodexThread.Dashboard` and `makeDashboard()`.
-- [x] Add live observable turn state via `CodexTurnHandle.Minimap` and `makeMinimap()`.
+- [x] Add live observable turn state via `CodexTurnHandle.Minimap` and the
+  `minimap` property.
 - [x] Decide whether additional convenience APIs belong as observable companions, async helpers, or neither.
   Decision: defer new convenience APIs for now; keep the current handle model and revisit helpers only after the interactive lifecycle is complete enough to hide honestly.
 - [x] Decide how much terminal-event buffering should remain implicit versus explicit in the public API.
