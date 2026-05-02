@@ -7,13 +7,20 @@ wire family.
 
 ## Current Public Source Inventory
 
+The source inventory below tracks the files that own hand-shaped public API.
+The generated symbol ledger for this pass lives in
+[`v1-public-api-symbol-inventory.md`](./v1-public-api-symbol-inventory.md).
+That ledger was generated from SwiftPM's public symbol graph and currently
+records 1,137 public/open symbols: 173 types, 84 initializers, 60 methods or
+type methods, 226 enum cases, and 594 properties.
+
 | File | Lines | Audit focus |
 | --- | ---: | --- |
 | `Sources/SwiftASB/Public/CodexAppServer.swift` | 4035 | Root actor runtime, transport lifecycle, event fanout, local history reconciliation, stream registration, and protocol conversion internals. |
 | `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift` | 731 | Recent-turn observable companion and turn-snapshot conversion helpers. |
 | `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift` | 709 | Recent-file observable companion and file-snapshot conversion helpers. |
 | `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift` | 674 | Recent-command observable companion and command-snapshot conversion helpers. |
-| `Sources/SwiftASB/Public/CodexTurnHandle.swift` | 695 | Review turn-event naming, minimap shape, completion snapshot surface, steering/interrupt names, and public event payload values. |
+| `Sources/SwiftASB/Public/CodexTurnHandle.swift` | 690 | Review turn-event naming, minimap shape, completion snapshot surface, steering/interrupt names, and public event payload values. |
 | `Sources/SwiftASB/Public/CodexInteractiveRequests.swift` | 504 | Review approval and elicitation naming, request/response ownership, unknown action surfaces, permission-profile naming, and response defaults. |
 | `Sources/SwiftASB/Public/CodexThread.swift` | 472 | Thread handle, history-window type, turn-start request, thread-scoped actions, and public thread event payloads. |
 | `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift` | 300 | Thread start/resume/fork/list/read/turn-page request and result values. |
@@ -209,7 +216,9 @@ Use these decisions for every public symbol:
   post-v1.
   Decision: rollback stays public; forensic archival stays post-v1 and must be
   documented.
-- [ ] Review metadata field-update naming for replace/clear/unchanged semantics.
+- [x] Review metadata field-update naming for replace/clear/unchanged semantics.
+  Decision: keep the explicit replace/clear/unchanged names for v1 because they
+  describe the upstream null-versus-omitted semantics clearly at the call site.
 
 ### Turn Lifecycle
 
@@ -288,7 +297,8 @@ Use these decisions for every public symbol:
 - [x] Review `CodexThread.Dashboard` as the thread-level current-state mirror.
   Decision: stable SwiftUI companion.
 - [x] Review `CodexTurnHandle.Minimap` as the active-turn current-state mirror.
-  Decision: stable SwiftUI companion; review duplicate construction surface.
+  Decision: stable SwiftUI companion; keep the `minimap` property as the single
+  construction and observation surface.
 - [x] Review `RecentTurns`, `RecentFiles`, and `RecentCommands` names, cache
   policies, selection behavior, slimming behavior, and rehydration semantics.
   Decision: stable concepts; docs required for cache and rehydration behavior.
@@ -309,7 +319,8 @@ Use these decisions for every public symbol:
 - [ ] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.
-- [ ] Update stale README release references before the next release.
+- [x] Update stale README release references before the next release.
+  Decision: README now names `v0.9.1` as the current released baseline.
 - [ ] Confirm README, DocC, and this audit use the same v1 release boundary.
 
 ## Initial Risk Notes

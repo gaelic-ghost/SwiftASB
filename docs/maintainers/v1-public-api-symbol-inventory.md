@@ -1,0 +1,638 @@
+# V1 Public API Symbol Inventory
+
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02. This is a maintainer ledger for the v1 public API freeze; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+
+## Summary
+
+- Public/open symbols: 1137
+- Public/open types: 173
+- Public/open initializers: 84
+- Public/open methods and type methods: 60
+- Public/open enum cases: 226
+- Public/open properties: 594
+
+## Public Types
+
+- `CodexAppServer.ApprovalPolicy` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ApprovalsReviewer` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Compatibility` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Source` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.CLIExecutableDiagnostics` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.ClientInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.Configuration` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.GitInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.GranularApprovalPolicy` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.InitializeCapabilities` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.InitializeRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.InitializeSession` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.InputModality` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.JSONValue` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.McpResourceTemplate` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpResource` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatus.AuthStatus` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatusListRequest.Detail` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatusListRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatusPage` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatus` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpTool` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.ModelAvailabilityNux` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.ModelListPage` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.ModelListRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.ModelUpgradeInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.Model` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.NetworkAccess` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.Personality` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReadOnlyAccessType` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReadOnlyAccess` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningEffortOption` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.ReasoningEffort` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningSummary` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxMode` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxPolicyType` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxPolicy` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ServiceTier` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SessionStartSource` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadActiveFlag` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadCompactRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadForkRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListPage` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSortDirection` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSortKey` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSourceKind` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadMetadataFieldUpdate` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadMetadataGitInfoUpdate` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadMetadataUpdateRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadReadRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadReadResult` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadResumeRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadRollbackRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadSession` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSetNameRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadStartRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadStatusType` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadStatus` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadTurnsListRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadTurnsPage` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadTurnsSortDirection` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.TurnInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnInput.Kind` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnInput` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnSession` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnStartRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnStatus` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServerError` (`enum`) - Sources/SwiftASB/Public/CodexErrors.swift
+- `CodexAppServer` (`class`) - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexApprovalRequest` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexApprovalResponse` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.ListFiles` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.Read` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.Search` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.Unknown` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandExecutionApprovalRequest` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandExecutionApprovalResponse` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexDiagnosticEvent` (`enum`) - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexElicitationRequest` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexElicitationResponse` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexFileChangeApprovalRequest` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexFileChangeApprovalResponse` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexGuardianWarning` (`struct`) - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexInteractiveRequestKind` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexInteractiveRequestResolved` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationRequest.Form` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationRequest.Mode` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationRequest.URLPrompt` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationRequest` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationResponse.Action` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationResponse` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexModelReroute.Reason` (`enum`) - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexModelReroute` (`struct`) - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexModelVerificationDiagnostic` (`struct`) - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexModelVerification` (`enum`) - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexNetworkPolicyAmendment.Action` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexNetworkPolicyAmendment` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionProfile.FileSystem` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionProfile.Network` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionProfile` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionsApprovalRequest` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionsApprovalResponse.Scope` (`enum`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionsApprovalResponse` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexRuntimeWarning` (`struct`) - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexThread.Dashboard.ActivityStatus` (`enum`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Entry.Kind` (`enum`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Entry` (`struct`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.EventName` (`enum`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.ExecutionMode` (`enum`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.HandlerType` (`enum`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Scope` (`enum`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Status` (`enum`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun` (`struct`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard` (`class`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.HistoryWindow` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.RecentCommands.CachePolicy` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentCommands.CommandSnapshot.Status` (`enum`) - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentCommands.CommandSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentCommands` (`class`) - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentFiles.CachePolicy` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentFiles.FileSnapshot.Status` (`enum`) - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentFiles.FileSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentFiles` (`class`) - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentTurns.CachePolicy` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.ScrollActivityPhase` (`enum`) - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.TurnSnapshot.Item` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.TurnSnapshot.TokenUsage` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.TurnSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns` (`class`) - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.TurnStartRequest` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadArchived` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadClosed` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent` (`enum`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadNameUpdated` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadStarted` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadStatusChanged` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadTokenUsageUpdated.Usage` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadTokenUsageUpdated` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadUnarchived` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexToolUserInputRequest.Question.Option` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexToolUserInputRequest.Question` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexToolUserInputRequest` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexToolUserInputResponse.Answer` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexToolUserInputResponse` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexTurnAgentMessageDelta` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnCompletion` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnDiffUpdate` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent` (`enum`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.ClosedTurn.Item` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.ClosedTurn.TokenUsage` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.ClosedTurn` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Kind` (`enum`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Status` (`enum`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap` (`class`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind` (`enum`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItemCompleted` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItemStarted` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnPlanDelta` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnPlanUpdate.Step.Status` (`enum`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnPlanUpdate.Step` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnPlanUpdate` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnReasoningSummaryPartAdded` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnReasoningSummaryTextDelta` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnReasoningTextDelta` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnStarted` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `SwiftASB` (`enum`) - Sources/SwiftASB/SwiftASB.swift
+
+## Public Initializers And Methods
+
+- `CodexAppServer.ApprovalsReviewer.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ClientInfo.init(name:title:version:)` - `init(name: String, title: String? = nil, version: String)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.Configuration.init(codexExecutableURL:arguments:currentDirectoryURL:environment:)` - `init(codexExecutableURL: URL? = nil, arguments: [String] = ["app-server", "--listen", "stdio://"], currentDirectoryURL: URL? = nil, environment: [String : String]? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.GranularApprovalPolicy.init(mcpElicitations:requestPermissions:rules:sandboxApproval:skillApproval:)` - `init(mcpElicitations: Bool, requestPermissions: Bool? = nil, rules: Bool, sandboxApproval: Bool, skillApproval: Bool? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.InitializeCapabilities.init(experimentalAPI:optOutNotificationMethods:)` - `init(experimentalAPI: Bool? = nil, optOutNotificationMethods: [String]? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.InitializeRequest.init(capabilities:clientInfo:)` - `init(capabilities: CodexAppServer.InitializeCapabilities = .init(), clientInfo: CodexAppServer.ClientInfo)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.InputModality.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.McpServerStatus.AuthStatus.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.McpServerStatusListRequest.Detail.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.McpServerStatusListRequest.init(cursor:limit:detail:)` - `init(cursor: String? = nil, limit: Int? = nil, detail: CodexAppServer.McpServerStatusListRequest.Detail? = nil)` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.ModelListRequest.init(cursor:limit:includeHidden:)` - `init(cursor: String? = nil, limit: Int? = nil, includeHidden: Bool? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.Personality.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ReadOnlyAccessType.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ReasoningEffort.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ReasoningSummary.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.SandboxMode.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.SandboxPolicyType.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ServiceTier.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.SessionStartSource.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ThreadActiveFlag.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ThreadCompactRequest.init(threadID:)` - `init(threadID: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadForkRequest.init(threadID:approvalPolicy:approvalsReviewer:baseInstructions:config:currentDirectoryPath:developerInstructions:ephemeral:excludeTurns:model:modelProvider:personality:sandboxMode:serviceName:serviceTier:)` - `init(threadID: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, baseInstructions: String? = nil, config: [String : CodexAppServer.JSONValue]? = nil, currentDirectoryPath: String? = nil, developerInstructions: String? = nil, ephemeral: Bool? = nil, excludeTurns: Bool? = nil, model: String? = nil, modelProvider: String? = nil, personality: CodexAppServer.Personality? = nil, sandboxMode: CodexAppServer.SandboxMode? = nil, serviceName: String? = nil, serviceTier: CodexAppServer.ServiceTier? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListRequest.init(cursor:limit:sortKey:sortDirection:modelProviders:sourceKinds:archived:currentDirectoryPath:searchTerm:)` - `init(cursor: String? = nil, limit: Int? = nil, sortKey: CodexAppServer.ThreadListSortKey? = nil, sortDirection: CodexAppServer.ThreadListSortDirection? = nil, modelProviders: [String]? = nil, sourceKinds: [CodexAppServer.ThreadListSourceKind]? = nil, archived: Bool? = nil, currentDirectoryPath: String? = nil, searchTerm: String? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSortDirection.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ThreadListSortKey.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ThreadListSourceKind.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ThreadMetadataGitInfoUpdate.init(branch:originURL:sha:)` - `init(branch: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged, originURL: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged, sha: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadMetadataUpdateRequest.init(threadID:gitInfo:)` - `init(threadID: String, gitInfo: CodexAppServer.ThreadMetadataGitInfoUpdate? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadReadRequest.init(threadID:includeTurns:)` - `init(threadID: String, includeTurns: Bool = false)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadResumeRequest.init(threadID:approvalPolicy:approvalsReviewer:baseInstructions:config:currentDirectoryPath:developerInstructions:excludeTurns:model:modelProvider:personality:sandboxMode:serviceName:serviceTier:)` - `init(threadID: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, baseInstructions: String? = nil, config: [String : CodexAppServer.JSONValue]? = nil, currentDirectoryPath: String? = nil, developerInstructions: String? = nil, excludeTurns: Bool? = nil, model: String? = nil, modelProvider: String? = nil, personality: CodexAppServer.Personality? = nil, sandboxMode: CodexAppServer.SandboxMode? = nil, serviceName: String? = nil, serviceTier: CodexAppServer.ServiceTier? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadRollbackRequest.init(threadID:numberOfTurns:)` - `init(threadID: String, numberOfTurns: Int)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadSetNameRequest.init(threadID:name:)` - `init(threadID: String, name: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadStartRequest.init(approvalPolicy:approvalsReviewer:baseInstructions:config:currentDirectoryPath:developerInstructions:ephemeral:model:modelProvider:personality:sandboxMode:serviceName:serviceTier:sessionStartSource:)` - `init(approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, baseInstructions: String? = nil, config: [String : CodexAppServer.JSONValue]? = nil, currentDirectoryPath: String? = nil, developerInstructions: String? = nil, ephemeral: Bool? = nil, model: String? = nil, modelProvider: String? = nil, personality: CodexAppServer.Personality? = nil, sandboxMode: CodexAppServer.SandboxMode? = nil, serviceName: String? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, sessionStartSource: CodexAppServer.SessionStartSource? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadStatusType.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.ThreadTurnsListRequest.init(threadID:limit:cursor:sortDirection:)` - `init(threadID: String, limit: Int? = nil, cursor: String? = nil, sortDirection: CodexAppServer.ThreadTurnsSortDirection? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadTurnsSortDirection.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.TurnInput.Kind.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.TurnInput.init(kind:text:url:path:name:)` - `init(kind: CodexAppServer.TurnInput.Kind, text: String? = nil, url: String? = nil, path: String? = nil, name: String? = nil)` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnInput.text(_:)` - `static func text(_ text: String) -> CodexAppServer.TurnInput` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnStartRequest.init(threadID:input:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)` - `init(threadID: String, input: [CodexAppServer.TurnInput], approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil)` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnStatus.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexAppServer.cliExecutableDiagnostics()` - `func cliExecutableDiagnostics() async throws -> CodexAppServer.CLIExecutableDiagnostics` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.compactThread(_:)` - `func compactThread(_ request: CodexAppServer.ThreadCompactRequest) async throws` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.diagnosticEvents()` - `func diagnosticEvents() -> AsyncThrowingStream<CodexDiagnosticEvent, any Error>` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.forkThread(_:)` - `func forkThread(_ request: CodexAppServer.ThreadForkRequest) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.init(configuration:)` - `init(configuration: CodexAppServer.Configuration = .init())` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.initialize(_:)` - `func initialize(_ request: CodexAppServer.InitializeRequest) async throws -> CodexAppServer.InitializeSession` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.listMcpServerStatuses(_:)` - `func listMcpServerStatuses(_ request: CodexAppServer.McpServerStatusListRequest = .init()) async throws -> CodexAppServer.McpServerStatusPage` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.listModels(_:)` - `func listModels(_ request: CodexAppServer.ModelListRequest = .init()) async throws -> CodexAppServer.ModelListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.listThreadTurns(_:)` - `func listThreadTurns(_ request: CodexAppServer.ThreadTurnsListRequest) async throws -> CodexAppServer.ThreadTurnsPage` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.listThreads(_:)` - `func listThreads(_ request: CodexAppServer.ThreadListRequest = .init()) async throws -> CodexAppServer.ThreadListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.readThread(_:)` - `func readThread(_ request: CodexAppServer.ThreadReadRequest) async throws -> CodexAppServer.ThreadReadResult` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.resumeThread(_:)` - `func resumeThread(_ request: CodexAppServer.ThreadResumeRequest) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.rollbackThread(_:)` - `func rollbackThread(_ request: CodexAppServer.ThreadRollbackRequest) async throws -> CodexAppServer.ThreadInfo` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.setThreadName(_:)` - `func setThreadName(_ request: CodexAppServer.ThreadSetNameRequest) async throws` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.start()` - `func start() async throws` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.startThread(_:)` - `func startThread(_ request: CodexAppServer.ThreadStartRequest = .init()) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.startTurn(_:)` - `func startTurn(_ request: CodexAppServer.TurnStartRequest) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.stop()` - `func stop() async` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.updateThreadMetadata(_:)` - `func updateThreadMetadata(_ request: CodexAppServer.ThreadMetadataUpdateRequest) async throws -> CodexAppServer.ThreadInfo` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexCommandAction.ListFiles.init(command:path:)` - `init(command: String, path: String?)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.Read.init(command:name:path:)` - `init(command: String, name: String, path: String)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.Search.init(command:path:query:)` - `init(command: String, path: String?, query: String?)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.Unknown.init(command:)` - `init(command: String)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexFileChangeApprovalResponse.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexGuardianWarning.init(message:threadID:)` - `init(message: String, threadID: String)` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexInteractiveRequestKind.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexMcpServerElicitationRequest.Form.init(message:requestedSchema:)` - `init(message: String, requestedSchema: CodexAppServer.JSONValue)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationRequest.URLPrompt.init(elicitationID:message:url:)` - `init(elicitationID: String, message: String, url: String)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationResponse.Action.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexMcpServerElicitationResponse.init(action:content:metadata:)` - `init(action: CodexMcpServerElicitationResponse.Action, content: CodexAppServer.JSONValue? = nil, metadata: CodexAppServer.JSONValue? = nil)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexModelReroute.init(fromModel:reason:threadID:toModel:turnID:)` - `init(fromModel: String, reason: CodexModelReroute.Reason, threadID: String, toModel: String, turnID: String)` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexModelVerificationDiagnostic.init(threadID:turnID:verifications:)` - `init(threadID: String, turnID: String, verifications: [CodexModelVerification])` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexNetworkPolicyAmendment.Action.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexNetworkPolicyAmendment.init(action:host:)` - `init(action: CodexNetworkPolicyAmendment.Action, host: String)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionProfile.FileSystem.init(read:write:)` - `init(read: [String]? = nil, write: [String]? = nil)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionProfile.Network.init(enabled:)` - `init(enabled: Bool? = nil)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionProfile.init(fileSystem:network:)` - `init(fileSystem: CodexPermissionProfile.FileSystem? = nil, network: CodexPermissionProfile.Network? = nil)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionsApprovalResponse.Scope.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexPermissionsApprovalResponse.init(permissions:scope:)` - `init(permissions: CodexPermissionProfile, scope: CodexPermissionsApprovalResponse.Scope = .turn)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexRuntimeWarning.init(message:threadID:)` - `init(message: String, threadID: String?)` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexThread.Dashboard.ActivityStatus.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.Dashboard.HookRun.Entry.Kind.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.Dashboard.HookRun.EventName.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.Dashboard.HookRun.ExecutionMode.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.Dashboard.HookRun.HandlerType.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.Dashboard.HookRun.Scope.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.Dashboard.HookRun.Status.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.RecentCommands.CachePolicy.automatic(pageSize:)` - `static func automatic(pageSize: Int) -> CodexThread.RecentCommands.CachePolicy` - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentCommands.CachePolicy.init(maxResidentCommands:minimumResidentCommands:maximumResidentOutputCost:protectedCommandBuffer:protectedRecentCompletedCommands:)` - `init(maxResidentCommands: Int, minimumResidentCommands: Int = 1, maximumResidentOutputCost: Int? = nil, protectedCommandBuffer: Int = 1, protectedRecentCompletedCommands: Int = 1)` - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentCommands.CommandSnapshot.Status.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.RecentCommands.loadOlderCommands(limit:)` - `@MainActor func loadOlderCommands(limit: Int? = nil) async throws` - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentCommands.updateVisibleCommandIDs(_:)` - `@MainActor func updateVisibleCommandIDs(_ ids: [String])` - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentFiles.CachePolicy.automatic(pageSize:)` - `static func automatic(pageSize: Int) -> CodexThread.RecentFiles.CachePolicy` - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentFiles.CachePolicy.init(maxResidentFiles:minimumResidentFiles:maximumResidentPayloadCost:protectedFileBuffer:protectedRecentCompletedFiles:)` - `init(maxResidentFiles: Int, minimumResidentFiles: Int = 1, maximumResidentPayloadCost: Int? = nil, protectedFileBuffer: Int = 1, protectedRecentCompletedFiles: Int = 1)` - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentFiles.FileSnapshot.Status.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.RecentFiles.loadOlderFiles(limit:)` - `@MainActor func loadOlderFiles(limit: Int? = nil) async throws` - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentFiles.updateVisibleFileIDs(_:)` - `@MainActor func updateVisibleFileIDs(_ ids: [String])` - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentTurns.CachePolicy.automatic(pageSize:)` - `static func automatic(pageSize: Int) -> CodexThread.RecentTurns.CachePolicy` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.CachePolicy.chatUI(pageSize:)` - `static func chatUI(pageSize: Int = 12) -> CodexThread.RecentTurns.CachePolicy` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.CachePolicy.historyRail(pageSize:)` - `static func historyRail(pageSize: Int = 8) -> CodexThread.RecentTurns.CachePolicy` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.CachePolicy.init(maxResidentTurns:minimumResidentTurns:maximumResidentItemCost:protectedTurnBuffer:protectedRecentCompletedTurns:edgePrefetchThreshold:jitterScrollVelocityThreshold:fastScrollVelocityThreshold:veryFastScrollVelocityThreshold:maxPrefetchPagesPerPass:)` - `init(maxResidentTurns: Int, minimumResidentTurns: Int = 1, maximumResidentItemCost: Int? = nil, protectedTurnBuffer: Int = 2, protectedRecentCompletedTurns: Int = 2, edgePrefetchThreshold: Int = 1, jitterScrollVelocityThreshold: Double = 120, fastScrollVelocityThreshold: Double = 1_200, veryFastScrollVelocityThreshold: Double = 2_400, maxPrefetchPagesPerPass: Int = 3)` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.CachePolicy.inspector(pageSize:)` - `static func inspector(pageSize: Int = 24) -> CodexThread.RecentTurns.CachePolicy` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.ScrollActivityPhase.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexThread.RecentTurns.loadNewerTurns(limit:)` - `@MainActor func loadNewerTurns(limit: Int? = nil) async throws` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.loadOlderTurns(limit:)` - `@MainActor func loadOlderTurns(limit: Int? = nil) async throws` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.updateScrollActivity(phase:verticalVelocityPointsPerSecond:)` - `@MainActor func updateScrollActivity(phase: CodexThread.RecentTurns.ScrollActivityPhase, verticalVelocityPointsPerSecond: Double? = nil)` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.updateVisibleTurnIDs(_:)` - `@MainActor func updateVisibleTurnIDs(_ ids: [String])` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.TurnStartRequest.init(input:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)` - `init(input: [CodexAppServer.TurnInput], approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.compactContext()` - `func compactContext() async throws` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.makeDashboard()` - `@MainActor func makeDashboard() async -> CodexThread.Dashboard` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.makeRecentCommands(limit:cachePolicy:)` - `@MainActor func makeRecentCommands(limit: Int = 12, cachePolicy: CodexThread.RecentCommands.CachePolicy? = nil) async throws -> CodexThread.RecentCommands` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.makeRecentFiles(limit:cachePolicy:)` - `@MainActor func makeRecentFiles(limit: Int = 12, cachePolicy: CodexThread.RecentFiles.CachePolicy? = nil) async throws -> CodexThread.RecentFiles` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.makeRecentTurns(limit:cachePolicy:)` - `@MainActor func makeRecentTurns(limit: Int = 12, cachePolicy: CodexThread.RecentTurns.CachePolicy? = nil) async throws -> CodexThread.RecentTurns` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readNewerTurnHistory(newerThan:limit:)` - `func readNewerTurnHistory(newerThan turnID: String, limit: Int = 12) async throws -> [CodexTurnHandle.ClosedTurn]` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readNewerTurnHistoryWindow(newerThan:limit:)` - `func readNewerTurnHistoryWindow(newerThan turnID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readOlderTurnHistory(olderThan:limit:)` - `func readOlderTurnHistory(olderThan turnID: String, limit: Int = 12) async throws -> [CodexTurnHandle.ClosedTurn]` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readOlderTurnHistoryWindow(olderThan:limit:)` - `func readOlderTurnHistoryWindow(olderThan turnID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readRecentTurnHistory(limit:)` - `func readRecentTurnHistory(limit: Int = 12) async throws -> [CodexTurnHandle.ClosedTurn]` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readRecentTurnHistoryWindow(limit:)` - `func readRecentTurnHistoryWindow(limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readTurnHistory(turnID:)` - `func readTurnHistory(turnID: String) async throws -> CodexTurnHandle.ClosedTurn?` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.respond(to:with:)` - `func respond(to request: CodexApprovalRequest, with response: CodexApprovalResponse) async throws` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.respond(to:with:)` - `func respond(to request: CodexElicitationRequest, with response: CodexElicitationResponse) async throws` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.rollbackLastTurns(_:)` - `func rollbackLastTurns(_ count: Int) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.setName(_:)` - `func setName(_ name: String) async throws` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)` - `func startTextTurn(_ text: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.startTurn(_:)` - `func startTurn(_ request: CodexThread.TurnStartRequest) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.updateMetadata(gitInfo:)` - `func updateMetadata(gitInfo: CodexAppServer.ThreadMetadataGitInfoUpdate) async throws -> CodexAppServer.ThreadInfo` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.windowAroundItem(_:limit:)` - `func windowAroundItem(_ itemID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.windowAroundTurn(_:limit:)` - `func windowAroundTurn(_ turnID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexToolUserInputRequest.Question.Option.init(description:label:)` - `init(description: String, label: String)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexToolUserInputRequest.Question.init(header:id:isOther:isSecret:options:question:)` - `init(header: String, id: String, isOther: Bool = false, isSecret: Bool = false, options: [CodexToolUserInputRequest.Question.Option]? = nil, question: String)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexToolUserInputResponse.Answer.init(answers:)` - `init(answers: [String])` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexToolUserInputResponse.init(answers:)` - `init(answers: [String : CodexToolUserInputResponse.Answer])` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Kind.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexTurnHandle.Minimap.CallSnapshot.Status.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexTurnHandle.complete()` - `@discardableResult func complete() async throws -> CodexTurnHandle.ClosedTurn` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.interrupt()` - `func interrupt() async throws` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.respond(to:with:)` - `func respond(to request: CodexApprovalRequest, with response: CodexApprovalResponse) async throws` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.respond(to:with:)` - `func respond(to request: CodexElicitationRequest, with response: CodexElicitationResponse) async throws` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.steer(_:)` - `func steer(_ input: [CodexAppServer.TurnInput]) async throws` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.steerText(_:)` - `func steerText(_ text: String) async throws` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+- `CodexTurnPlanUpdate.Step.Status.init(rawValue:)` - `init?(rawValue: String)` - symbol graph
+
+## Callables With Default Arguments
+
+- `CodexAppServer.ClientInfo.init(name:title:version:)` - `init(name: String, title: String? = nil, version: String)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.Configuration.init(codexExecutableURL:arguments:currentDirectoryURL:environment:)` - `init(codexExecutableURL: URL? = nil, arguments: [String] = ["app-server", "--listen", "stdio://"], currentDirectoryURL: URL? = nil, environment: [String : String]? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.GranularApprovalPolicy.init(mcpElicitations:requestPermissions:rules:sandboxApproval:skillApproval:)` - `init(mcpElicitations: Bool, requestPermissions: Bool? = nil, rules: Bool, sandboxApproval: Bool, skillApproval: Bool? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.InitializeCapabilities.init(experimentalAPI:optOutNotificationMethods:)` - `init(experimentalAPI: Bool? = nil, optOutNotificationMethods: [String]? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.InitializeRequest.init(capabilities:clientInfo:)` - `init(capabilities: CodexAppServer.InitializeCapabilities = .init(), clientInfo: CodexAppServer.ClientInfo)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.McpServerStatusListRequest.init(cursor:limit:detail:)` - `init(cursor: String? = nil, limit: Int? = nil, detail: CodexAppServer.McpServerStatusListRequest.Detail? = nil)` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.ModelListRequest.init(cursor:limit:includeHidden:)` - `init(cursor: String? = nil, limit: Int? = nil, includeHidden: Bool? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.ThreadForkRequest.init(threadID:approvalPolicy:approvalsReviewer:baseInstructions:config:currentDirectoryPath:developerInstructions:ephemeral:excludeTurns:model:modelProvider:personality:sandboxMode:serviceName:serviceTier:)` - `init(threadID: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, baseInstructions: String? = nil, config: [String : CodexAppServer.JSONValue]? = nil, currentDirectoryPath: String? = nil, developerInstructions: String? = nil, ephemeral: Bool? = nil, excludeTurns: Bool? = nil, model: String? = nil, modelProvider: String? = nil, personality: CodexAppServer.Personality? = nil, sandboxMode: CodexAppServer.SandboxMode? = nil, serviceName: String? = nil, serviceTier: CodexAppServer.ServiceTier? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListRequest.init(cursor:limit:sortKey:sortDirection:modelProviders:sourceKinds:archived:currentDirectoryPath:searchTerm:)` - `init(cursor: String? = nil, limit: Int? = nil, sortKey: CodexAppServer.ThreadListSortKey? = nil, sortDirection: CodexAppServer.ThreadListSortDirection? = nil, modelProviders: [String]? = nil, sourceKinds: [CodexAppServer.ThreadListSourceKind]? = nil, archived: Bool? = nil, currentDirectoryPath: String? = nil, searchTerm: String? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadMetadataGitInfoUpdate.init(branch:originURL:sha:)` - `init(branch: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged, originURL: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged, sha: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadMetadataUpdateRequest.init(threadID:gitInfo:)` - `init(threadID: String, gitInfo: CodexAppServer.ThreadMetadataGitInfoUpdate? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadReadRequest.init(threadID:includeTurns:)` - `init(threadID: String, includeTurns: Bool = false)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadResumeRequest.init(threadID:approvalPolicy:approvalsReviewer:baseInstructions:config:currentDirectoryPath:developerInstructions:excludeTurns:model:modelProvider:personality:sandboxMode:serviceName:serviceTier:)` - `init(threadID: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, baseInstructions: String? = nil, config: [String : CodexAppServer.JSONValue]? = nil, currentDirectoryPath: String? = nil, developerInstructions: String? = nil, excludeTurns: Bool? = nil, model: String? = nil, modelProvider: String? = nil, personality: CodexAppServer.Personality? = nil, sandboxMode: CodexAppServer.SandboxMode? = nil, serviceName: String? = nil, serviceTier: CodexAppServer.ServiceTier? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadStartRequest.init(approvalPolicy:approvalsReviewer:baseInstructions:config:currentDirectoryPath:developerInstructions:ephemeral:model:modelProvider:personality:sandboxMode:serviceName:serviceTier:sessionStartSource:)` - `init(approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, baseInstructions: String? = nil, config: [String : CodexAppServer.JSONValue]? = nil, currentDirectoryPath: String? = nil, developerInstructions: String? = nil, ephemeral: Bool? = nil, model: String? = nil, modelProvider: String? = nil, personality: CodexAppServer.Personality? = nil, sandboxMode: CodexAppServer.SandboxMode? = nil, serviceName: String? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, sessionStartSource: CodexAppServer.SessionStartSource? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadTurnsListRequest.init(threadID:limit:cursor:sortDirection:)` - `init(threadID: String, limit: Int? = nil, cursor: String? = nil, sortDirection: CodexAppServer.ThreadTurnsSortDirection? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.TurnInput.init(kind:text:url:path:name:)` - `init(kind: CodexAppServer.TurnInput.Kind, text: String? = nil, url: String? = nil, path: String? = nil, name: String? = nil)` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnStartRequest.init(threadID:input:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)` - `init(threadID: String, input: [CodexAppServer.TurnInput], approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil)` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.init(configuration:)` - `init(configuration: CodexAppServer.Configuration = .init())` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.listMcpServerStatuses(_:)` - `func listMcpServerStatuses(_ request: CodexAppServer.McpServerStatusListRequest = .init()) async throws -> CodexAppServer.McpServerStatusPage` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.listModels(_:)` - `func listModels(_ request: CodexAppServer.ModelListRequest = .init()) async throws -> CodexAppServer.ModelListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.listThreads(_:)` - `func listThreads(_ request: CodexAppServer.ThreadListRequest = .init()) async throws -> CodexAppServer.ThreadListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.startThread(_:)` - `func startThread(_ request: CodexAppServer.ThreadStartRequest = .init()) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexMcpServerElicitationResponse.init(action:content:metadata:)` - `init(action: CodexMcpServerElicitationResponse.Action, content: CodexAppServer.JSONValue? = nil, metadata: CodexAppServer.JSONValue? = nil)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionProfile.FileSystem.init(read:write:)` - `init(read: [String]? = nil, write: [String]? = nil)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionProfile.Network.init(enabled:)` - `init(enabled: Bool? = nil)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionProfile.init(fileSystem:network:)` - `init(fileSystem: CodexPermissionProfile.FileSystem? = nil, network: CodexPermissionProfile.Network? = nil)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionsApprovalResponse.init(permissions:scope:)` - `init(permissions: CodexPermissionProfile, scope: CodexPermissionsApprovalResponse.Scope = .turn)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexThread.RecentCommands.CachePolicy.init(maxResidentCommands:minimumResidentCommands:maximumResidentOutputCost:protectedCommandBuffer:protectedRecentCompletedCommands:)` - `init(maxResidentCommands: Int, minimumResidentCommands: Int = 1, maximumResidentOutputCost: Int? = nil, protectedCommandBuffer: Int = 1, protectedRecentCompletedCommands: Int = 1)` - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentCommands.loadOlderCommands(limit:)` - `@MainActor func loadOlderCommands(limit: Int? = nil) async throws` - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentFiles.CachePolicy.init(maxResidentFiles:minimumResidentFiles:maximumResidentPayloadCost:protectedFileBuffer:protectedRecentCompletedFiles:)` - `init(maxResidentFiles: Int, minimumResidentFiles: Int = 1, maximumResidentPayloadCost: Int? = nil, protectedFileBuffer: Int = 1, protectedRecentCompletedFiles: Int = 1)` - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentFiles.loadOlderFiles(limit:)` - `@MainActor func loadOlderFiles(limit: Int? = nil) async throws` - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentTurns.CachePolicy.chatUI(pageSize:)` - `static func chatUI(pageSize: Int = 12) -> CodexThread.RecentTurns.CachePolicy` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.CachePolicy.historyRail(pageSize:)` - `static func historyRail(pageSize: Int = 8) -> CodexThread.RecentTurns.CachePolicy` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.CachePolicy.init(maxResidentTurns:minimumResidentTurns:maximumResidentItemCost:protectedTurnBuffer:protectedRecentCompletedTurns:edgePrefetchThreshold:jitterScrollVelocityThreshold:fastScrollVelocityThreshold:veryFastScrollVelocityThreshold:maxPrefetchPagesPerPass:)` - `init(maxResidentTurns: Int, minimumResidentTurns: Int = 1, maximumResidentItemCost: Int? = nil, protectedTurnBuffer: Int = 2, protectedRecentCompletedTurns: Int = 2, edgePrefetchThreshold: Int = 1, jitterScrollVelocityThreshold: Double = 120, fastScrollVelocityThreshold: Double = 1_200, veryFastScrollVelocityThreshold: Double = 2_400, maxPrefetchPagesPerPass: Int = 3)` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.CachePolicy.inspector(pageSize:)` - `static func inspector(pageSize: Int = 24) -> CodexThread.RecentTurns.CachePolicy` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.loadNewerTurns(limit:)` - `@MainActor func loadNewerTurns(limit: Int? = nil) async throws` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.loadOlderTurns(limit:)` - `@MainActor func loadOlderTurns(limit: Int? = nil) async throws` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.updateScrollActivity(phase:verticalVelocityPointsPerSecond:)` - `@MainActor func updateScrollActivity(phase: CodexThread.RecentTurns.ScrollActivityPhase, verticalVelocityPointsPerSecond: Double? = nil)` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.TurnStartRequest.init(input:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)` - `init(input: [CodexAppServer.TurnInput], approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.makeRecentCommands(limit:cachePolicy:)` - `@MainActor func makeRecentCommands(limit: Int = 12, cachePolicy: CodexThread.RecentCommands.CachePolicy? = nil) async throws -> CodexThread.RecentCommands` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.makeRecentFiles(limit:cachePolicy:)` - `@MainActor func makeRecentFiles(limit: Int = 12, cachePolicy: CodexThread.RecentFiles.CachePolicy? = nil) async throws -> CodexThread.RecentFiles` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.makeRecentTurns(limit:cachePolicy:)` - `@MainActor func makeRecentTurns(limit: Int = 12, cachePolicy: CodexThread.RecentTurns.CachePolicy? = nil) async throws -> CodexThread.RecentTurns` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readNewerTurnHistory(newerThan:limit:)` - `func readNewerTurnHistory(newerThan turnID: String, limit: Int = 12) async throws -> [CodexTurnHandle.ClosedTurn]` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readNewerTurnHistoryWindow(newerThan:limit:)` - `func readNewerTurnHistoryWindow(newerThan turnID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readOlderTurnHistory(olderThan:limit:)` - `func readOlderTurnHistory(olderThan turnID: String, limit: Int = 12) async throws -> [CodexTurnHandle.ClosedTurn]` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readOlderTurnHistoryWindow(olderThan:limit:)` - `func readOlderTurnHistoryWindow(olderThan turnID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readRecentTurnHistory(limit:)` - `func readRecentTurnHistory(limit: Int = 12) async throws -> [CodexTurnHandle.ClosedTurn]` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readRecentTurnHistoryWindow(limit:)` - `func readRecentTurnHistoryWindow(limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)` - `func startTextTurn(_ text: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.windowAroundItem(_:limit:)` - `func windowAroundItem(_ itemID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.windowAroundTurn(_:limit:)` - `func windowAroundTurn(_ turnID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexToolUserInputRequest.Question.init(header:id:isOther:isSecret:options:question:)` - `init(header: String, id: String, isOther: Bool = false, isSecret: Bool = false, options: [CodexToolUserInputRequest.Question.Option]? = nil, question: String)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+
+## Public Enum Cases
+
+- `CodexAppServer.ApprovalPolicy.granular(_:)` - `case granular(CodexAppServer.GranularApprovalPolicy)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ApprovalPolicy.never` - `case never` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ApprovalPolicy.onFailure` - `case onFailure` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ApprovalPolicy.onRequest` - `case onRequest` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ApprovalPolicy.untrusted` - `case untrusted` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ApprovalsReviewer.autoReview` - `case autoReview` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ApprovalsReviewer.guardianSubagent` - `case guardianSubagent` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ApprovalsReviewer.user` - `case user` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Compatibility.outsideDocumentedWindow(documentedWindow:)` - `case outsideDocumentedWindow(documentedWindow: String)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Compatibility.supported(documentedWindow:)` - `case supported(documentedWindow: String)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Compatibility.unknownVersionFormat(documentedWindow:)` - `case unknownVersionFormat(documentedWindow: String)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Source.explicit` - `case explicit` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Source.homebrewAppleSilicon` - `case homebrewAppleSilicon` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Source.homebrewIntel` - `case homebrewIntel` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Source.npmGlobal(prefix:)` - `case npmGlobal(prefix: String)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.CLIExecutableDiagnostics.Source.path` - `case path` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
+- `CodexAppServer.InputModality.image` - `case image` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.InputModality.text` - `case text` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.JSONValue.array(_:)` - `case array([CodexAppServer.JSONValue])` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.JSONValue.bool(_:)` - `case bool(Bool)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.JSONValue.double(_:)` - `case double(Double)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.JSONValue.integer(_:)` - `case integer(Int)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.JSONValue.null` - `case null` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.JSONValue.object(_:)` - `case object([String : CodexAppServer.JSONValue])` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.JSONValue.string(_:)` - `case string(String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.McpServerStatus.AuthStatus.bearerToken` - `case bearerToken` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatus.AuthStatus.notLoggedIn` - `case notLoggedIn` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatus.AuthStatus.oAuth` - `case oAuth` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatus.AuthStatus.unsupported` - `case unsupported` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatusListRequest.Detail.full` - `case full` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.McpServerStatusListRequest.Detail.toolsAndAuthOnly` - `case toolsAndAuthOnly` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
+- `CodexAppServer.NetworkAccess.enabled` - `case enabled` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.NetworkAccess.explicit(_:)` - `case explicit(Bool)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.NetworkAccess.restricted` - `case restricted` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.Personality.friendly` - `case friendly` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.Personality.none` - `case none` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.Personality.pragmatic` - `case pragmatic` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReadOnlyAccessType.fullAccess` - `case fullAccess` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReadOnlyAccessType.restricted` - `case restricted` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningEffort.high` - `case high` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningEffort.low` - `case low` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningEffort.medium` - `case medium` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningEffort.minimal` - `case minimal` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningEffort.none` - `case none` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningEffort.xhigh` - `case xhigh` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningSummary.auto` - `case auto` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningSummary.concise` - `case concise` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningSummary.detailed` - `case detailed` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ReasoningSummary.none` - `case none` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxMode.dangerFullAccess` - `case dangerFullAccess` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxMode.readOnly` - `case readOnly` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxMode.workspaceWrite` - `case workspaceWrite` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxPolicyType.dangerFullAccess` - `case dangerFullAccess` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxPolicyType.externalSandbox` - `case externalSandbox` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxPolicyType.readOnly` - `case readOnly` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SandboxPolicyType.workspaceWrite` - `case workspaceWrite` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ServiceTier.fast` - `case fast` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ServiceTier.flex` - `case flex` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SessionStartSource.clear` - `case clear` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.SessionStartSource.startup` - `case startup` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadActiveFlag.waitingOnApproval` - `case waitingOnApproval` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadActiveFlag.waitingOnUserInput` - `case waitingOnUserInput` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadListSortDirection.asc` - `case asc` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSortDirection.desc` - `case desc` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSortKey.createdAt` - `case createdAt` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSortKey.updatedAt` - `case updatedAt` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSourceKind.appServer` - `case appServer` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSourceKind.cli` - `case cli` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSourceKind.exec` - `case exec` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSourceKind.unknown` - `case unknown` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadListSourceKind.vscode` - `case vscode` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadMetadataFieldUpdate.clear` - `case clear` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadMetadataFieldUpdate.replace(_:)` - `case replace(String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadMetadataFieldUpdate.unchanged` - `case unchanged` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
+- `CodexAppServer.ThreadStatusType.active` - `case active` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadStatusType.idle` - `case idle` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadStatusType.notLoaded` - `case notLoaded` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadStatusType.systemError` - `case systemError` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.ThreadTurnsSortDirection.asc` - `case asc` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadTurnsSortDirection.desc` - `case desc` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.TurnInput.Kind.image` - `case image` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnInput.Kind.localImage` - `case localImage` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnInput.Kind.mention` - `case mention` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnInput.Kind.skill` - `case skill` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnInput.Kind.text` - `case text` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
+- `CodexAppServer.TurnStatus.completed` - `case completed` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.TurnStatus.failed` - `case failed` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.TurnStatus.inProgress` - `case inProgress` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServer.TurnStatus.interrupted` - `case interrupted` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
+- `CodexAppServerError.invalidState(reason:)` - `case invalidState(reason: String)` - Sources/SwiftASB/Public/CodexErrors.swift
+- `CodexAppServerError.protocolFailure(operation:reason:)` - `case protocolFailure(operation: String, reason: String)` - Sources/SwiftASB/Public/CodexErrors.swift
+- `CodexAppServerError.transportFailure(operation:reason:)` - `case transportFailure(operation: String, reason: String)` - Sources/SwiftASB/Public/CodexErrors.swift
+- `CodexApprovalRequest.commandExecution(_:)` - `case commandExecution(CodexCommandExecutionApprovalRequest)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexApprovalRequest.fileChange(_:)` - `case fileChange(CodexFileChangeApprovalRequest)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexApprovalRequest.permissions(_:)` - `case permissions(CodexPermissionsApprovalRequest)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexApprovalResponse.commandExecution(_:)` - `case commandExecution(CodexCommandExecutionApprovalResponse)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexApprovalResponse.fileChange(_:)` - `case fileChange(CodexFileChangeApprovalResponse)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexApprovalResponse.permissions(_:)` - `case permissions(CodexPermissionsApprovalResponse)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.listFiles(_:)` - `case listFiles(CodexCommandAction.ListFiles)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.read(_:)` - `case read(CodexCommandAction.Read)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.search(_:)` - `case search(CodexCommandAction.Search)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandAction.unknown(_:)` - `case unknown(CodexCommandAction.Unknown)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandExecutionApprovalResponse.acceptForSession` - `case acceptForSession` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandExecutionApprovalResponse.acceptWithExecpolicyAmendment(_:)` - `case acceptWithExecpolicyAmendment([String])` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandExecutionApprovalResponse.accept` - `case accept` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandExecutionApprovalResponse.applyNetworkPolicyAmendment(_:)` - `case applyNetworkPolicyAmendment(CodexNetworkPolicyAmendment)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandExecutionApprovalResponse.cancel` - `case cancel` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexCommandExecutionApprovalResponse.decline` - `case decline` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexDiagnosticEvent.guardianWarning(_:)` - `case guardianWarning(CodexGuardianWarning)` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexDiagnosticEvent.modelRerouted(_:)` - `case modelRerouted(CodexModelReroute)` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexDiagnosticEvent.modelVerification(_:)` - `case modelVerification(CodexModelVerificationDiagnostic)` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexDiagnosticEvent.warning(_:)` - `case warning(CodexRuntimeWarning)` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexElicitationRequest.mcpServer(_:)` - `case mcpServer(CodexMcpServerElicitationRequest)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexElicitationRequest.toolUserInput(_:)` - `case toolUserInput(CodexToolUserInputRequest)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexElicitationResponse.mcpServer(_:)` - `case mcpServer(CodexMcpServerElicitationResponse)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexElicitationResponse.toolUserInput(_:)` - `case toolUserInput(CodexToolUserInputResponse)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexFileChangeApprovalResponse.acceptForSession` - `case acceptForSession` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexFileChangeApprovalResponse.accept` - `case accept` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexFileChangeApprovalResponse.cancel` - `case cancel` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexFileChangeApprovalResponse.decline` - `case decline` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexInteractiveRequestKind.commandExecutionApproval` - `case commandExecutionApproval` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexInteractiveRequestKind.fileChangeApproval` - `case fileChangeApproval` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexInteractiveRequestKind.mcpServerElicitation` - `case mcpServerElicitation` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexInteractiveRequestKind.permissionsApproval` - `case permissionsApproval` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexInteractiveRequestKind.toolUserInput` - `case toolUserInput` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationRequest.Mode.form(_:)` - `case form(CodexMcpServerElicitationRequest.Form)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationRequest.Mode.url(_:)` - `case url(CodexMcpServerElicitationRequest.URLPrompt)` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationResponse.Action.accept` - `case accept` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationResponse.Action.cancel` - `case cancel` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexMcpServerElicitationResponse.Action.decline` - `case decline` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexModelReroute.Reason.highRiskCyberActivity` - `case highRiskCyberActivity` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexModelVerification.trustedAccessForCyber` - `case trustedAccessForCyber` - Sources/SwiftASB/Public/CodexDiagnostics.swift
+- `CodexNetworkPolicyAmendment.Action.allow` - `case allow` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexNetworkPolicyAmendment.Action.deny` - `case deny` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionsApprovalResponse.Scope.session` - `case session` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexPermissionsApprovalResponse.Scope.turn` - `case turn` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
+- `CodexThread.Dashboard.ActivityStatus.errored` - `case errored` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.ActivityStatus.idle` - `case idle` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.ActivityStatus.inProgress` - `case inProgress` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Entry.Kind.context` - `case context` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Entry.Kind.error` - `case error` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Entry.Kind.feedback` - `case feedback` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Entry.Kind.stop` - `case stop` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Entry.Kind.warning` - `case warning` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.EventName.permissionRequest` - `case permissionRequest` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.EventName.postToolUse` - `case postToolUse` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.EventName.preToolUse` - `case preToolUse` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.EventName.sessionStart` - `case sessionStart` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.EventName.stop` - `case stop` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.EventName.userPromptSubmit` - `case userPromptSubmit` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.ExecutionMode.async` - `case async` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.ExecutionMode.sync` - `case sync` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.HandlerType.agent` - `case agent` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.HandlerType.command` - `case command` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.HandlerType.prompt` - `case prompt` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Scope.thread` - `case thread` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Scope.turn` - `case turn` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Status.blocked` - `case blocked` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Status.completed` - `case completed` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Status.failed` - `case failed` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Status.running` - `case running` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.Status.stopped` - `case stopped` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.RecentCommands.CommandSnapshot.Status.completed` - `case completed` - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentCommands.CommandSnapshot.Status.errored` - `case errored` - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentCommands.CommandSnapshot.Status.inProgress` - `case inProgress` - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
+- `CodexThread.RecentFiles.FileSnapshot.Status.completed` - `case completed` - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentFiles.FileSnapshot.Status.errored` - `case errored` - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentFiles.FileSnapshot.Status.inProgress` - `case inProgress` - Sources/SwiftASB/Public/CodexThread+RecentFiles.swift
+- `CodexThread.RecentTurns.ScrollActivityPhase.animating` - `case animating` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.ScrollActivityPhase.decelerating` - `case decelerating` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.ScrollActivityPhase.idle` - `case idle` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.ScrollActivityPhase.interacting` - `case interacting` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.RecentTurns.ScrollActivityPhase.tracking` - `case tracking` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThreadEvent.approvalRequested(_:)` - `case approvalRequested(CodexApprovalRequest)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.archived(_:)` - `case archived(CodexThreadArchived)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.closed(_:)` - `case closed(CodexThreadClosed)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.diagnostic(_:)` - `case diagnostic(CodexDiagnosticEvent)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.elicitationRequested(_:)` - `case elicitationRequested(CodexElicitationRequest)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.nameUpdated(_:)` - `case nameUpdated(CodexThreadNameUpdated)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.serverRequestResolved(_:)` - `case serverRequestResolved(CodexInteractiveRequestResolved)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.started(_:)` - `case started(CodexThreadStarted)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.statusChanged(_:)` - `case statusChanged(CodexThreadStatusChanged)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.tokenUsageUpdated(_:)` - `case tokenUsageUpdated(CodexThreadTokenUsageUpdated)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThreadEvent.unarchived(_:)` - `case unarchived(CodexThreadUnarchived)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexTurnEvent.agentMessageDelta(_:)` - `case agentMessageDelta(CodexTurnAgentMessageDelta)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.approvalRequested(_:)` - `case approvalRequested(CodexApprovalRequest)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.completed(_:)` - `case completed(CodexTurnCompletion)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.diagnostic(_:)` - `case diagnostic(CodexDiagnosticEvent)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.diffUpdated(_:)` - `case diffUpdated(CodexTurnDiffUpdate)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.elicitationRequested(_:)` - `case elicitationRequested(CodexElicitationRequest)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.itemCompleted(_:)` - `case itemCompleted(CodexTurnItemCompleted)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.itemStarted(_:)` - `case itemStarted(CodexTurnItemStarted)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.planDelta(_:)` - `case planDelta(CodexTurnPlanDelta)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.planUpdated(_:)` - `case planUpdated(CodexTurnPlanUpdate)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.reasoningSummaryPartAdded(_:)` - `case reasoningSummaryPartAdded(CodexTurnReasoningSummaryPartAdded)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.reasoningSummaryTextDelta(_:)` - `case reasoningSummaryTextDelta(CodexTurnReasoningSummaryTextDelta)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.reasoningTextDelta(_:)` - `case reasoningTextDelta(CodexTurnReasoningTextDelta)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.serverRequestResolved(_:)` - `case serverRequestResolved(CodexInteractiveRequestResolved)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnEvent.started(_:)` - `case started(CodexTurnStarted)` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Kind.collabTool` - `case collabTool` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Kind.command` - `case command` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Kind.dynamicTool` - `case dynamicTool` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Kind.fileEdit` - `case fileEdit` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Kind.mcp` - `case mcp` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Status.completed` - `case completed` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Status.errored` - `case errored` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnHandle.Minimap.CallSnapshot.Status.inProgress` - `case inProgress` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.agentMessage` - `case agentMessage` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.collabAgentToolCall` - `case collabAgentToolCall` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.commandExecution` - `case commandExecution` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.contextCompaction` - `case contextCompaction` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.dynamicToolCall` - `case dynamicToolCall` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.enteredReviewMode` - `case enteredReviewMode` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.exitedReviewMode` - `case exitedReviewMode` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.fileChange` - `case fileChange` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.hookPrompt` - `case hookPrompt` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.imageGeneration` - `case imageGeneration` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.imageView` - `case imageView` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.mcpToolCall` - `case mcpToolCall` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.plan` - `case plan` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.reasoning` - `case reasoning` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.userMessage` - `case userMessage` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.webSearch` - `case webSearch` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnPlanUpdate.Step.Status.completed` - `case completed` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnPlanUpdate.Step.Status.inProgress` - `case inProgress` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnPlanUpdate.Step.Status.pending` - `case pending` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+
+## Public Property Counts By Source File
+
+- `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 19 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 15 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 34 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 26 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 90 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift`: 12 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift`: 23 public properties
+- `Sources/SwiftASB/Public/CodexDiagnostics.swift`: 14 public properties
+- `Sources/SwiftASB/Public/CodexErrors.swift`: 1 public property
+- `Sources/SwiftASB/Public/CodexInteractiveRequests.swift`: 74 public properties
+- `Sources/SwiftASB/Public/CodexThread+Dashboard.swift`: 28 public properties
+- `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift`: 25 public properties
+- `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift`: 25 public properties
+- `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift`: 54 public properties
+- `Sources/SwiftASB/Public/CodexThread.swift`: 46 public properties
+- `Sources/SwiftASB/Public/CodexTurnHandle.swift`: 108 public properties

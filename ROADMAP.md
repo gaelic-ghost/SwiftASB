@@ -196,10 +196,12 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### Public API Curation
 
-- [ ] Inventory every public type, initializer, method, enum case, and default
+- [x] Inventory every public type, initializer, method, enum case, and default
   argument under `Sources/SwiftASB/Public/`.
-  Working note: use `docs/maintainers/v1-public-api-audit.md` as the durable
-  audit checklist.
+  Decision: `docs/maintainers/v1-public-api-symbol-inventory.md` now records
+  the SwiftPM public symbol graph for the v1 freeze, while
+  `docs/maintainers/v1-public-api-audit.md` remains the durable decision
+  checklist.
 - [ ] For each public symbol, decide whether it is stable for v1, should be
   renamed before v1, should become internal, or should move behind a narrower
   owning type.
