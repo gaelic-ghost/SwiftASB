@@ -79,6 +79,7 @@
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a current-reviewed Codex CLI support window of `0.128.x`, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
 | README-level consumer docs | `Partially shipped` | The README now covers installation, runtime assumptions, a minimal usage example, an explicit `Supported Today` section, an interactive lifecycle example covering stream handling plus steering and interruption, and the current Codex CLI compatibility window, but richer examples are still open. |
+| Agent workflow guidance | `Shipped / ongoing` | SwiftASB-specific Codex guidance now ships through `socket`'s [`swiftasb-skills`](https://github.com/gaelic-ghost/socket/tree/main/plugins/swiftasb-skills) plugin, with skills for explaining SwiftASB, choosing an integration shape, building SwiftUI-facing app state, and diagnosing integration failures. This repo now points package users and maintainers at that plugin while keeping SwiftASB source, DocC, tests, generated-wire review, and release notes here as the package source of truth. |
 | End-to-end subprocess integration tests | `Partially shipped` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including raw transport startup, single-turn completion, cross-thread completion, app-wide capability snapshots, thread-name mutation, stored-history materialization, same-thread concurrency probing, deterministic command and permissions approvals through a mock Responses provider, a best-effort prompt-driven approval-path probe, a disposable live rollback scenario, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The umbrella runner is `scripts/run-live-codex-integration-tests.sh`; it defaults to the release-gate set and exposes focused modes for smoke, transport, capability, thread, turn, approval, file-scenario, rollback, same-thread, and all opt-in live tests. Stored-history materialization remains in focused `thread`/`all` runs instead of the release-gate smoke group because the live app-server can delay history materialization. |
 | Apache 2.0 licensing | `Shipped` | The repo now carries the Apache License, Version 2.0 text, and README plus contributor docs describe current releases as Apache 2.0 licensed. |
 
@@ -213,13 +214,14 @@ workflow forces a release-boundary change before the v1 tag.
 - [ ] Rollback forensic archival that preserves full removed-turn payloads.
 - [ ] One-shot `run(...)` convenience API after the lower-level lifecycle is
   stable enough to hide honestly.
-- [ ] `swiftasb-skills` plugin guidance for agents building with SwiftASB.
-  Treat the forthcoming plugin as a first-class development aide: document the
-  recommended agent workflow for adding SwiftASB to a package, choosing the
-  right public owner (`CodexAppServer`, `CodexThread`, or `CodexTurnHandle`),
-  handling approvals and diagnostics without raw wire models, running
-  deterministic and live validation, and keeping examples aligned with the
-  current Codex CLI compatibility window.
+- [x] `swiftasb-skills` plugin guidance for agents building with SwiftASB.
+  Decision: `socket` now owns the Codex-visible
+  [`swiftasb-skills`](https://github.com/gaelic-ghost/socket/tree/main/plugins/swiftasb-skills)
+  plugin with `explain-swiftasb`, `choose-integration-shape`,
+  `build-swiftui-app`, and `diagnose-integration` skills. Keep this repo's
+  package docs and DocC as the source of truth for SwiftASB behavior, then sync
+  the plugin when public API, examples, compatibility windows, diagnostics,
+  approval handling, validation, or recommended integration shape changes.
 - [ ] Basic SwiftUI component library for SwiftASB consumers. Start with small,
   copyable components that demonstrate the stable observable companions:
   dashboard status, turn minimap call snapshots, recent turns, recent files,
