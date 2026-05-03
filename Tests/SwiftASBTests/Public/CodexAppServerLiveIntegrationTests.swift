@@ -437,7 +437,7 @@ struct CodexAppServerLiveIntegrationTests {
         let harness = try LiveCodexHarness()
         defer { harness.cleanup() }
 
-        let client = try await makeInitializedLiveClient(using: harness)
+        let client = try await makeInitializedLiveClient(using: harness, experimentalAPI: true)
         do {
             let threadA = try await startThread(
                 on: client,
@@ -1366,7 +1366,7 @@ struct CodexAppServerLiveIntegrationTests {
         let granularCreateURL = harness.approvalProbeWorkspace
             .appendingPathComponent("behavior-matrix-granular-create.txt", isDirectory: false)
 
-        let client = try await makeInitializedLiveClient(using: harness)
+        let client = try await makeInitializedLiveClient(using: harness, experimentalAPI: true)
         do {
             let cases = [
                 LiveBehaviorMatrixCase(
@@ -1458,6 +1458,72 @@ struct CodexAppServerLiveIntegrationTests {
             await client.stop()
             throw error
         }
+    }
+
+    @Test(
+        "records live server-request family coverage status",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_SERVER_REQUEST_TESTS"] == "1",
+            "Requires explicit opt-in because this test records live Codex server-request coverage status."
+        )
+    )
+    func recordsLiveServerRequestFamilyCoverageStatus() throws {
+        let harness = try LiveCodexHarness(configMode: .approvalProbe)
+        defer { harness.cleanup() }
+
+        let report = LiveServerRequestFamilyCoverageReport(
+            codexConfig: harness.codexConfigSummary,
+            families: [
+                .init(
+                    family: "commandExecutionApproval",
+                    publicSurface: "CodexTurnHandle.respond(to:with:)",
+                    deterministicFakeTransportCoverage: true,
+                    liveProbeCoverage: true,
+                    liveProbeScript: "scripts/run-live-codex-approval-probe.sh",
+                    status: "covered",
+                    notes: "The focused approval probe drives the real app-server with a mock Responses shell_command call and asserts request delivery, response, serverRequest/resolved, command completion, and terminal turn completion."
+                ),
+                .init(
+                    family: "permissionsApproval",
+                    publicSurface: "CodexTurnHandle.respond(to:with:)",
+                    deterministicFakeTransportCoverage: true,
+                    liveProbeCoverage: true,
+                    liveProbeScript: "scripts/run-live-codex-approval-probe.sh",
+                    status: "covered",
+                    notes: "The focused approval probe drives the real app-server with request_permissions_tool enabled and asserts the permissions request, response, serverRequest/resolved, and terminal turn completion."
+                ),
+                .init(
+                    family: "toolUserInput",
+                    publicSurface: "CodexTurnHandle.respond(to:with:)",
+                    deterministicFakeTransportCoverage: true,
+                    liveProbeCoverage: false,
+                    liveProbeScript: nil,
+                    status: "blocked",
+                    notes: "The public fake-transport suite proves routing and response behavior, but this branch does not have a reliable current Codex mock Responses reproducer that forces item/tool/requestUserInput through the real app-server."
+                ),
+                .init(
+                    family: "mcpServerElicitation",
+                    publicSurface: "CodexThread.respond(to:with:) when turnId is null; CodexTurnHandle.respond(to:with:) when turn-routed",
+                    deterministicFakeTransportCoverage: true,
+                    liveProbeCoverage: false,
+                    liveProbeScript: nil,
+                    status: "blocked",
+                    notes: "The public fake-transport suite proves routing and response behavior, but a real app-server probe still needs a local MCP server fixture that can deterministically request elicitation during a turn."
+                ),
+            ],
+            sourceNotes: [
+                "OpenAI app-server docs describe item/tool/requestUserInput as a server-originated request that resolves with serverRequest/resolved.",
+                "OpenAI app-server docs describe mcpServer/elicitation/request as an MCP-server-originated structured input request that resolves with serverRequest/resolved.",
+            ]
+        )
+
+        try harness.writeReport(report, fileName: "live-server-request-family-coverage.json")
+        #expect(report.families.count == 4)
+        #expect(report.families.filter(\.liveProbeCoverage).map(\.family) == [
+            "commandExecutionApproval",
+            "permissionsApproval",
+        ])
     }
 
     @Test(
@@ -2102,6 +2168,22 @@ private struct LiveBehaviorMatrixReport: Codable, Equatable {
     let history: HistoryResult
     let sameThread: SameThreadResult
     let cliDiagnostics: CLIDiagnosticsResult
+}
+
+private struct LiveServerRequestFamilyCoverageReport: Codable, Equatable {
+    struct Family: Codable, Equatable {
+        let family: String
+        let publicSurface: String
+        let deterministicFakeTransportCoverage: Bool
+        let liveProbeCoverage: Bool
+        let liveProbeScript: String?
+        let status: String
+        let notes: String
+    }
+
+    let codexConfig: LiveApprovalProbeReport.CodexConfig?
+    let families: [Family]
+    let sourceNotes: [String]
 }
 
 private struct LiveFileMutationScenarioReport: Codable, Equatable {
@@ -3073,7 +3155,10 @@ private extension CodexAppServer.ApprovalPolicy {
     }
 }
 
-private func makeInitializedLiveClient(using harness: LiveCodexHarness) async throws -> CodexAppServer {
+private func makeInitializedLiveClient(
+    using harness: LiveCodexHarness,
+    experimentalAPI: Bool? = nil
+) async throws -> CodexAppServer {
     let client = CodexAppServer(configuration: harness.configuration)
     try await client.start()
 
@@ -3082,6 +3167,7 @@ private func makeInitializedLiveClient(using harness: LiveCodexHarness) async th
             try await client.initialize(
                 .init(
                     capabilities: .init(
+                        experimentalAPI: experimentalAPI,
                         optOutNotificationMethods: [
                             "account/rateLimits/updated",
                             "hook/completed",

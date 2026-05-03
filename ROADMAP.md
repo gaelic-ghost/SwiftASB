@@ -750,7 +750,17 @@ runtime can be driven with a mock Responses provider.
 
 - [x] Permissions approval / request-permissions tool path.
 - [ ] Tool user input.
+  Status: deterministic fake-transport coverage exists for public routing and
+  response behavior, and `scripts/run-live-codex-server-request-probes.sh` now
+  records this family in the live coverage report. The remaining gap is a
+  reliable current Codex mock Responses reproducer that forces
+  `item/tool/requestUserInput` through the real app-server.
 - [ ] MCP server elicitation.
+  Status: deterministic fake-transport coverage exists for public routing and
+  response behavior, and `scripts/run-live-codex-server-request-probes.sh` now
+  records this family in the live coverage report. The remaining gap is a local
+  MCP server fixture that deterministically asks for elicitation during a live
+  turn.
 - [ ] Guardian denied-action approval after SwiftASB owns a stable public model.
 - [ ] Future promoted surfaces such as `hooks/list` and model-provider
   capabilities when they become public or observable contracts.
@@ -767,7 +777,7 @@ Planned script entrypoints:
 - [x] `scripts/run-live-codex-integration-tests.sh`
 - [x] `scripts/run-live-codex-release-gate.sh`
 - [x] `scripts/run-live-codex-behavior-matrix.sh`
-- [ ] Add a focused mode or companion script for remaining answerable
+- [x] Add a focused mode or companion script for remaining answerable
   server-request families once tool-user-input and MCP elicitation probes are
   promoted into live coverage.
 

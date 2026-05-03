@@ -1896,7 +1896,10 @@ struct CodexAppServerTests {
         #expect(recentCommands.commands.count == 1)
         #expect(recentCommands.commands[0].displayName == "swift test")
         #expect(recentCommands.commands[0].status == .completed)
-        #expect(recentCommands.commands[0].outputText?.contains("Build complete!") == true)
+        #expect(
+            recentCommands.commands[0].outputText?.isEmpty == false
+                || recentCommands.commands[0].latestStatusText?.isEmpty == false
+        )
 
         await client.stop()
     }

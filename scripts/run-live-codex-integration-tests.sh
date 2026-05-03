@@ -17,6 +17,7 @@ Modes:
   turn            Run public single-turn and cross-thread probes.
   approval        Run command, permissions, and exploratory approval live probes.
   behavior-matrix Run observational approval, sandbox, history, and diagnostics probes.
+  server-requests Run answerable server-request coverage probes and report gaps.
   file-scenario   Run the multi-turn create/edit/delete file scenario.
   rollback        Run the disposable stored-thread rollback scenario.
   same-thread     Run the observational same-thread overlap probe.
@@ -79,6 +80,9 @@ case "$mode" in
         ;;
     behavior-matrix)
         sh "$REPO_ROOT/scripts/run-live-codex-behavior-matrix.sh"
+        ;;
+    server-requests)
+        sh "$REPO_ROOT/scripts/run-live-codex-server-request-probes.sh"
         ;;
     file-scenario)
         sh "$REPO_ROOT/scripts/run-live-codex-file-scenario.sh"
