@@ -13,10 +13,10 @@ printf '%s\n' 'Running SwiftASB live Codex server-request probes.'
 printf '%s\n' 'Step 1/3: deterministic command and permissions approval probes'
 sh "$REPO_ROOT/scripts/run-live-codex-approval-probe.sh"
 
-printf '%s\n' 'Step 2/3: deterministic tool-user-input and regular MCP elicitation probes'
+printf '%s\n' 'Step 2/3: deterministic tool-user-input, regular MCP, and app-connector MCP elicitation probes'
 env SWIFTASB_ENABLE_LIVE_CODEX_SERVER_REQUEST_TESTS=1 \
     SWIFTASB_LIVE_CODEX_REPORT_DIR="$SWIFTASB_LIVE_CODEX_REPORT_DIR" \
-    swift test --filter 'CodexAppServerLiveIntegrationTests/(completesDeterministicToolUserInputThroughRawRealAppServer|recordsDeterministicRegularMcpElicitationFixtureBehaviorThroughRawRealAppServer)'
+    swift test --filter 'CodexAppServerLiveIntegrationTests/(completesDeterministicToolUserInputThroughRawRealAppServer|recordsDeterministicRegularMcpElicitationFixtureBehaviorThroughRawRealAppServer|completesDeterministicAppConnectorMcpElicitationThroughRawRealAppServer)'
 
 printf '%s\n' 'Step 3/3: server-request family coverage report'
 env SWIFTASB_ENABLE_LIVE_CODEX_SERVER_REQUEST_TESTS=1 \

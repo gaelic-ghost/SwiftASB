@@ -756,14 +756,15 @@ runtime can be driven with a mock Responses provider.
   collaboration mode. The probe asserts `item/tool/requestUserInput` delivery,
   SwiftASB's JSON-RPC response, `serverRequest/resolved`, and terminal turn
   completion.
-- [ ] MCP server elicitation.
-  Status: deterministic fake-transport coverage proves public routing and
-  response behavior, and the opt-in live server-request runner now drives a
-  regular stdio MCP fixture through the real app-server. That fixture proves the
-  model-to-MCP tool path is deterministic, but the plain stdio MCP path does
-  not deterministically surface `mcpServer/elicitation/request`; the remaining
-  live gap is an app-connector MCP elicitation fixture matching upstream Codex
-  app-server coverage.
+- [x] MCP server elicitation.
+  Decision: deterministic fake-transport coverage proves public routing and
+  response behavior, and the opt-in live server-request runner now drives an
+  app-connector MCP fixture through the real app-server. The probe asserts MCP
+  tool-call delivery, `mcpServer/elicitation/request` delivery, SwiftASB's
+  JSON-RPC response, `serverRequest/resolved`, and terminal turn completion.
+  The regular stdio MCP fixture remains in the runner as model-to-MCP tool-path
+  evidence, while app-connector MCP is the deterministic live elicitation
+  coverage source.
 - [ ] Guardian denied-action approval after SwiftASB owns a stable public model.
 - [ ] Future promoted surfaces such as `hooks/list` and model-provider
   capabilities when they become public or observable contracts.
