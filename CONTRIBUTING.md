@@ -117,8 +117,18 @@ env SWIFTASB_ENABLE_LIVE_CODEX_ROLLBACK_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SAME_THREAD_TESTS=1 swift test
 ```
 
-Run the release-gate live probe set before patch releases when the local Codex
-CLI is available and the release needs real-runtime confidence:
+Use the live integration-test runner when the local Codex CLI is available and
+the change needs real-runtime confidence:
+
+```bash
+scripts/run-live-codex-integration-tests.sh
+```
+
+The default mode runs the maintained release-gate live probe set. Pass `all` to
+run every opt-in `CodexAppServer` live integration test, or pass `approval`,
+`file-scenario`, or `rollback` to run one focused group.
+
+The release-gate wrapper remains available for patch-release prep:
 
 ```bash
 scripts/run-live-codex-release-gate.sh
