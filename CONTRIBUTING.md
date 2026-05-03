@@ -7,6 +7,7 @@ Use this guide when changing the package itself. The README is for Swift and Swi
 - [Overview](#overview)
 - [Contribution Workflow](#contribution-workflow)
 - [Local Setup](#local-setup)
+- [Agent Guidance](#agent-guidance)
 - [Development Expectations](#development-expectations)
 - [Pull Request Expectations](#pull-request-expectations)
 - [Communication](#communication)
@@ -69,6 +70,19 @@ The deterministic app-server approval test uses a different shape. It still laun
 The live file-scenario probe is also observational around approval shape, but deterministic around filesystem outcome. It creates an isolated temporary workspace, asks the real Codex CLI to create, edit, and delete files across multiple turns, accepts approval requests when the runtime raises them, and verifies the final files on disk.
 
 The live rollback probe uses a disposable non-ephemeral thread with harmless text-only turns. It verifies that `rollbackLastTurns(1)` succeeds against the real app-server and that SwiftASB records the local rollback marker for the removed trailing turn.
+
+## Agent Guidance
+
+SwiftASB-specific agent workflows live in the [`swiftasb-skills`](https://github.com/gaelic-ghost/socket/tree/main/plugins/swiftasb-skills) plugin in `socket`, not inside this Swift package. Keep that boundary intentional: this repository owns SwiftASB source, public API, generated-wire review, DocC, tests, and release notes; the plugin owns Codex-visible workflow guidance for agents helping users adopt or debug SwiftASB.
+
+Use the plugin when a change affects agent-facing guidance for:
+
+- explaining whether SwiftASB fits a Swift app or package
+- choosing an integration shape and the right public owner: `CodexAppServer`, `CodexThread`, or `CodexTurnHandle`
+- building SwiftUI state around dashboard, minimap, diagnostics, approval, and recent-history companions
+- diagnosing integration failures across dependency wiring, Codex CLI discovery, app-server startup, turn lifecycle, approvals, diagnostics, MCP status, history, and live-test isolation
+
+When SwiftASB public API or behavior changes, update this repo's README, DocC, tests, and roadmap first. Then update `socket`'s `swiftasb-skills` guidance in a separate Socket branch if the agent workflow would otherwise name stale symbols, describe unsupported behavior, or miss a new recommended integration path.
 
 ## Development Expectations
 

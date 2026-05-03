@@ -8,6 +8,7 @@
 - [Quick Start](#quick-start)
 - [Requirements](#requirements)
 - [Usage](#usage)
+- [Codex Agent Guidance](#codex-agent-guidance)
 - [Development](#development)
 - [Repo Structure](#repo-structure)
 - [Release Notes](#release-notes)
@@ -197,6 +198,19 @@ The current public lifecycle contract is intentionally narrow and explicit:
 - A one-shot `run(...)` convenience API is intentionally deferred.
 
 The reviewed generated-wire baseline currently targets the experimental `v0.128.0` Codex CLI schema. Newer Codex CLI schemas are dumped and classified before their generated shapes are promoted or exposed through public Swift API.
+
+## Codex Agent Guidance
+
+SwiftASB-specific Codex guidance ships separately in the [`swiftasb-skills`](https://github.com/gaelic-ghost/socket/tree/main/plugins/swiftasb-skills) plugin in `socket`. Use that plugin when asking an agent to explain SwiftASB, choose an integration shape, build a SwiftUI-facing integration, or diagnose a SwiftASB runtime problem.
+
+The current skills are:
+
+- `explain-swiftasb`, for adoption fit, runtime tradeoffs, public API boundaries, and licensing.
+- `choose-integration-shape`, for deciding whether `CodexAppServer`, `CodexThread`, or `CodexTurnHandle` should own a piece of app work.
+- `build-swiftui-app`, for SwiftUI app features that use SwiftASB observable companions.
+- `diagnose-integration`, for failures around package wiring, Codex CLI discovery, app-server startup, turns, approvals, diagnostics, MCP status, history, and live-test isolation.
+
+Use `swiftasb-skills` for SwiftASB-specific workflow guidance, and use Apple development guidance for SwiftUI, AppKit, Xcode, and Apple framework lifecycle rules.
 
 ## Development
 
