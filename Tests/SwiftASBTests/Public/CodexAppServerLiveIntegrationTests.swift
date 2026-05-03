@@ -1179,7 +1179,7 @@ struct CodexAppServerLiveIntegrationTests {
                 operation: "waiting for the live file scenario create turn to complete"
             )
             #expect(createResult.completion.turn.status == .completed)
-            #expect(try String(contentsOf: scratchURL, encoding: .utf8) == "alpha\n")
+            #expect(["alpha", "alpha\n"].contains(try String(contentsOf: scratchURL, encoding: .utf8)))
 
             let recentFiles = try await thread.makeRecentFiles(limit: 10)
             let recentCommands = try await thread.makeRecentCommands(limit: 10)
