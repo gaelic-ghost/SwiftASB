@@ -730,14 +730,15 @@ These probes are observational and should write JSON reports. They should fail
 only when SwiftASB's documented contract breaks; otherwise behavior drift should
 be recorded in this roadmap or maintainer docs.
 
-- [ ] Approval-policy matrix: `.never`, `.onRequest`, `.untrusted`, and
+- [x] Approval-policy matrix: `.never`, `.onRequest`, `.untrusted`, and
   `.granular`.
-- [ ] Sandbox matrix: `.readOnly`, `.workspaceWrite`, and tightly isolated
-  danger-full-access coverage only if the test workspace makes the risk clear.
-- [ ] Same-thread overlap probe, kept observational until upstream app-server
+- [x] Sandbox matrix: `.readOnly` and `.workspaceWrite`. Keep tightly isolated
+  danger-full-access coverage out of the first matrix until the test workspace
+  makes the risk clear.
+- [x] Same-thread overlap probe, kept observational until upstream app-server
   semantics become independently routable.
-- [ ] Ephemeral, stored, and pre-materialized thread-history behavior probes.
-- [ ] Codex CLI version/support-window diagnostics probe that records the
+- [x] Ephemeral and pre-materialized thread-history behavior probes.
+- [x] Codex CLI version/support-window diagnostics probe that records the
   installed runtime, schema dump availability, and SwiftASB compatibility
   result.
 
@@ -765,7 +766,7 @@ Planned script entrypoints:
 
 - [x] `scripts/run-live-codex-integration-tests.sh`
 - [x] `scripts/run-live-codex-release-gate.sh`
-- [ ] `scripts/run-live-codex-behavior-matrix.sh`
+- [x] `scripts/run-live-codex-behavior-matrix.sh`
 - [ ] Add a focused mode or companion script for remaining answerable
   server-request families once tool-user-input and MCP elicitation probes are
   promoted into live coverage.

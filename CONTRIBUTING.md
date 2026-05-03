@@ -126,6 +126,7 @@ env SWIFTASB_ENABLE_LIVE_CODEX_THREAD_MANAGEMENT_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SINGLE_TURN_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_CROSS_THREAD_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_PROBE_TESTS=1 swift test
+env SWIFTASB_ENABLE_LIVE_CODEX_BEHAVIOR_MATRIX_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_FILE_SCENARIO_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_ROLLBACK_TESTS=1 swift test
 env SWIFTASB_ENABLE_LIVE_CODEX_SAME_THREAD_TESTS=1 swift test
@@ -140,14 +141,23 @@ scripts/run-live-codex-integration-tests.sh
 
 The default mode runs the maintained release-gate live probe set. Pass `all` to
 run every opt-in `CodexAppServer` live integration test, or pass `smoke`,
-`transport`, `capability`, `thread`, `turn`, `approval`, `file-scenario`,
-`rollback`, or `same-thread` to run one focused group.
+`transport`, `capability`, `thread`, `turn`, `approval`, `behavior-matrix`,
+`file-scenario`, `rollback`, or `same-thread` to run one focused group.
 
 The release-gate wrapper remains available for patch-release prep:
 
 ```bash
 scripts/run-live-codex-release-gate.sh
 ```
+
+Run the observational behavior matrix:
+
+```bash
+scripts/run-live-codex-behavior-matrix.sh
+```
+
+That wrapper writes the live behavior report to
+`tmp/live-codex-reports/live-behavior-matrix.json`.
 
 That wrapper runs smoke probes, deterministic approval/server-request probes,
 the multi-turn create/edit/delete file scenario, and the disposable rollback
