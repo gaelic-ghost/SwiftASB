@@ -1128,6 +1128,190 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "completes deterministic permissions approval through the raw real app-server",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_PROBE_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI."
+        ),
+        .timeLimit(.minutes(2))
+    )
+    func completesDeterministicPermissionsApprovalThroughRawRealAppServer() async throws {
+        let mockResponses = try await MockResponsesServer(
+            responses: [
+                .requestPermissions(
+                    callID: "permissions-call",
+                    reason: "Need write access to the live test workspace.",
+                    writePaths: ["/tmp/swiftasb-permissions-placeholder"]
+                ),
+                .assistantMessage("PERMISSIONS_ACCEPTED_DONE"),
+            ]
+        )
+        defer { mockResponses.stop() }
+
+        let harness = try LiveCodexHarness(
+            configMode: .mockResponses(
+                baseURL: mockResponses.baseURL.absoluteString,
+                requestPermissionsTool: true
+            )
+        )
+        defer { harness.cleanup() }
+
+        let transport = CodexAppServerTransport(
+            configuration: .init(
+                codexExecutableURL: harness.codexExecutableURL,
+                currentDirectoryURL: harness.rootDirectoryURL,
+                environment: harness.configuration.environment
+            )
+        )
+        let protocolLayer = CodexAppServerProtocol()
+        let serverEvents = await transport.serverEvents()
+        var eventIterator = serverEvents.makeAsyncIterator()
+
+        do {
+            try await transport.start()
+
+            let initializeRequestID = CodexRPCRequestID.string("deterministic-permissions-initialize")
+            let initializePayload = try protocolLayer.makeInitializeRequest(
+                id: initializeRequestID,
+                params: CodexWireInitializeParams(
+                    capabilities: CodexWireInitializeCapabilities(
+                        experimentalAPI: nil,
+                        optOutNotificationMethods: [
+                            "account/rateLimits/updated",
+                            "hook/completed",
+                            "hook/started",
+                            "mcpServer/startupStatus/updated",
+                        ]
+                    ),
+                    clientInfo: .init(
+                        name: "SwiftASBDeterministicPermissionsTests",
+                        title: "SwiftASB Deterministic Permissions Tests",
+                        version: "0.1.0"
+                    )
+                )
+            )
+            let initializeResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic permissions initialize response"
+            ) {
+                try await transport.send(initializePayload, id: initializeRequestID)
+            }
+            _ = try protocolLayer.decodeInitializeResponse(
+                initializeResponsePayload,
+                expectedID: initializeRequestID
+            )
+
+            try await transport.sendNotification(
+                try protocolLayer.makeInitializedNotification(),
+                method: "initialized"
+            )
+
+            let threadRequestID = CodexRPCRequestID.string("deterministic-permissions-thread")
+            let threadStartPayload = try protocolLayer.makeThreadStartRequest(
+                id: threadRequestID,
+                params: CodexWireThreadStartParams(
+                    approvalPolicy: .enumeration(.untrusted),
+                    approvalsReviewer: .user,
+                    baseInstructions: nil,
+                    config: nil,
+                    cwd: harness.approvalProbeWorkspace.path,
+                    developerInstructions: "Use the model-provided tool call exactly as emitted.",
+                    dynamicTools: nil,
+                    environments: nil,
+                    ephemeral: true,
+                    experimentalRawEvents: nil,
+                    mockExperimentalField: nil,
+                    model: nil,
+                    modelProvider: nil,
+                    permissions: nil,
+                    persistExtendedHistory: nil,
+                    personality: nil,
+                    sandbox: .readOnly,
+                    serviceName: nil,
+                    serviceTier: nil,
+                    sessionStartSource: nil
+                )
+            )
+            let threadResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic permissions thread/start response"
+            ) {
+                try await transport.send(threadStartPayload, id: threadRequestID)
+            }
+            let threadResponse = try protocolLayer.decodeThreadStartResponse(
+                threadResponsePayload,
+                expectedID: threadRequestID
+            )
+
+            let turnRequestID = CodexRPCRequestID.string("deterministic-permissions-turn")
+            let turnStartPayload = try protocolLayer.makeTurnStartRequest(
+                id: turnRequestID,
+                params: CodexWireTurnStartParams(
+                    approvalPolicy: .enumeration(.untrusted),
+                    approvalsReviewer: .user,
+                    collaborationMode: nil,
+                    cwd: nil,
+                    effort: nil,
+                    environments: nil,
+                    input: [
+                        CodexWireUserInput(
+                            text: "Request the provided permissions, then report completion.",
+                            textElements: nil,
+                            type: .text,
+                            url: nil,
+                            path: nil,
+                            name: nil
+                        )
+                    ],
+                    model: nil,
+                    outputSchema: nil,
+                    permissions: nil,
+                    personality: nil,
+                    responsesapiClientMetadata: nil,
+                    sandboxPolicy: nil,
+                    serviceTier: nil,
+                    summary: CodexWireReasoningSummary.none,
+                    threadID: threadResponse.thread.id
+                )
+            )
+            let turnResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic permissions turn/start response"
+            ) {
+                try await transport.send(turnStartPayload, id: turnRequestID)
+            }
+            let turnResponse = try protocolLayer.decodeTurnStartResponse(
+                turnResponsePayload,
+                expectedID: turnRequestID
+            )
+
+            let approvalResult = try await awaitRawPermissionsApprovalCompletion(
+                eventIterator: &eventIterator,
+                protocolLayer: protocolLayer,
+                transport: transport,
+                threadID: threadResponse.thread.id,
+                turnID: turnResponse.turn.id,
+                operation: "waiting for deterministic raw permissions approval completion"
+            )
+            #expect(approvalResult.threadID == threadResponse.thread.id)
+            #expect(approvalResult.turnID == turnResponse.turn.id)
+            #expect(approvalResult.sawApprovalRequest)
+            #expect(approvalResult.sawServerRequestResolved)
+            #expect(approvalResult.sawWaitingOnApproval)
+            #expect(approvalResult.requestedWritePaths == ["/tmp/swiftasb-permissions-placeholder"])
+            #expect(approvalResult.requestReason == "Need write access to the live test workspace.")
+            #expect(approvalResult.completion.turn.status == .completed)
+            #expect(mockResponses.requestCount >= 2)
+
+            await transport.stop()
+        } catch {
+            await transport.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "runs a multi-turn live file mutation scenario",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
@@ -1898,6 +2082,26 @@ private struct MockResponsesEventStream: Encodable, Equatable {
         ])
     }
 
+    static func requestPermissions(
+        callID: String,
+        reason: String,
+        writePaths: [String]
+    ) throws -> Self {
+        let arguments = try jsonString([
+            "reason": reason,
+            "permissions": [
+                "file_system": [
+                    "write": writePaths,
+                ],
+            ],
+        ])
+        return try .init(events: [
+            responseCreated(id: "resp-permissions"),
+            functionCall(callID: callID, name: "request_permissions", arguments: arguments),
+            responseCompleted(id: "resp-permissions"),
+        ])
+    }
+
     static func assistantMessage(_ message: String) throws -> Self {
         try .init(events: [
             responseCreated(id: "resp-final"),
@@ -2231,6 +2435,17 @@ private struct RawCommandApprovalResult: Equatable, Sendable {
     let sawWaitingOnApproval: Bool
 }
 
+private struct RawPermissionsApprovalResult: Equatable, Sendable {
+    let completion: CodexWireTurnCompletedNotification
+    let threadID: String
+    let turnID: String
+    let requestedWritePaths: [String]?
+    let requestReason: String?
+    let sawApprovalRequest: Bool
+    let sawServerRequestResolved: Bool
+    let sawWaitingOnApproval: Bool
+}
+
 private func awaitRawCommandApprovalCompletion(
     eventIterator: inout AsyncStream<CodexRPCServerEvent>.Iterator,
     protocolLayer: CodexAppServerProtocol,
@@ -2290,8 +2505,91 @@ private func awaitRawCommandApprovalCompletion(
     throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
 }
 
+private func awaitRawPermissionsApprovalCompletion(
+    eventIterator: inout AsyncStream<CodexRPCServerEvent>.Iterator,
+    protocolLayer: CodexAppServerProtocol,
+    transport: CodexAppServerTransport,
+    threadID: String,
+    turnID: String,
+    operation: String
+) async throws -> RawPermissionsApprovalResult {
+    var requestedWritePaths: [String]?
+    var requestReason: String?
+    var sawApprovalRequest = false
+    var sawServerRequestResolved = false
+    var observedEvents: [String] = []
+
+    while let serverEvent = await eventIterator.next() {
+        guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
+            continue
+        }
+        observedEvents.append(String(describing: decodedEvent))
+
+        switch decodedEvent {
+        case let .threadStatusChanged(status)
+            where status.threadID == threadID
+                && status.status.activeFlags?.contains(.waitingOnApproval) == true:
+            continue
+        case let .permissionsApprovalRequested(request)
+            where request.threadID == threadID && request.turnID == turnID:
+            sawApprovalRequest = true
+            requestedWritePaths = request.permissions.fileSystem?.write
+            requestReason = request.reason
+            let responsePayload = try protocolLayer.makeServerResponse(
+                id: request.requestID,
+                result: RawPermissionsApprovalResponse(
+                    permissions: .init(
+                        fileSystem: .init(read: nil, write: request.permissions.fileSystem?.write),
+                        network: request.permissions.network.map { .init(enabled: $0.enabled) }
+                    ),
+                    scope: "turn"
+                )
+            )
+            try await transport.sendResponse(responsePayload, requestID: request.requestID)
+        case let .serverRequestResolved(notification)
+            where notification.threadID == threadID:
+            sawServerRequestResolved = true
+        case let .turnCompleted(completed)
+            where completed.threadID == threadID && completed.turn.id == turnID:
+            return .init(
+                completion: completed,
+                threadID: threadID,
+                turnID: turnID,
+                requestedWritePaths: requestedWritePaths,
+                requestReason: requestReason,
+                sawApprovalRequest: sawApprovalRequest,
+                sawServerRequestResolved: sawServerRequestResolved,
+                sawWaitingOnApproval: observedEvents.contains { $0.contains("waitingOnApproval") }
+            )
+        default:
+            continue
+        }
+    }
+
+    throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
+}
+
 private struct RawCommandExecutionApprovalResponse: Encodable {
     let decision: String
+}
+
+private struct RawPermissionsApprovalResponse: Encodable {
+    let permissions: RawPermissionProfile
+    let scope: String
+}
+
+private struct RawPermissionProfile: Encodable {
+    let fileSystem: FileSystem?
+    let network: Network?
+
+    struct FileSystem: Encodable {
+        let read: [String]?
+        let write: [String]?
+    }
+
+    struct Network: Encodable {
+        let enabled: Bool?
+    }
 }
 
 private func acceptanceResponse(for request: CodexApprovalRequest) -> CodexApprovalResponse {

@@ -124,13 +124,13 @@ CLI is available and the release needs real-runtime confidence:
 scripts/run-live-codex-release-gate.sh
 ```
 
-That wrapper runs the deterministic approval/server-request probe, the
-multi-turn create/edit/delete file scenario, and the disposable rollback
-scenario. Set `SWIFTASB_LIVE_CODEX_REPORT_DIR` to write JSON diagnostic reports
-outside `tmp/live-codex-reports/`.
+That wrapper runs deterministic approval/server-request probes, the multi-turn
+create/edit/delete file scenario, and the disposable rollback scenario. Set
+`SWIFTASB_LIVE_CODEX_REPORT_DIR` to write JSON diagnostic reports outside
+`tmp/live-codex-reports/`.
 
-Run only the deterministic approval/server-request coverage and the exploratory
-approval probe:
+Run only the deterministic command and permissions approval coverage plus the
+exploratory approval probe:
 
 ```bash
 scripts/run-live-codex-approval-probe.sh
