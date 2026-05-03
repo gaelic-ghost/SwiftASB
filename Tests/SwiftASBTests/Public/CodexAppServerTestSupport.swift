@@ -1,0 +1,1325 @@
+import Foundation
+import Testing
+@testable import SwiftASB
+
+@MainActor
+func waitForObservableState(
+    maxAttempts: Int = 200,
+    predicate: @MainActor () -> Bool
+) async {
+    for _ in 0..<maxAttempts {
+        if predicate() {
+            return
+        }
+        await Task.yield()
+    }
+}
+
+func waitForCondition(
+    maxAttempts: Int = 200,
+    predicate: @Sendable () async throws -> Bool
+) async throws {
+    for _ in 0..<maxAttempts {
+        if try await predicate() {
+            return
+        }
+        await Task.yield()
+    }
+}
+
+actor FakeCodexAppServerTransport: CodexAppServerTransporting {
+    struct RecordedResponse: Sendable, Equatable {
+        let requestID: CodexRPCRequestID
+        let payload: Data
+    }
+
+    private(set) var recordedMethods: [String] = []
+    private(set) var recordedResponses: [RecordedResponse] = []
+    private var recordedRequestPayloads: [String: [Data]] = [:]
+    private var threadListResult: [String: Any]?
+    private var threadReadResult: [String: Any]?
+    private var threadForkResult: [String: Any]?
+    private var threadResumeResult: [String: Any]?
+    private var threadStartIDQueue: [String]
+    private var threadTurnsListErrorMessage: String?
+    private var threadTurnsListResult: [String: Any]?
+    private var threadTurnsListResultQueue: [[String: Any]]
+    private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
+    private var started = false
+    private var initializedSeen = false
+    private var serverEventContinuation: AsyncStream<CodexRPCServerEvent>.Continuation?
+
+    init(
+        executableResolution: CodexCLIExecutableResolver.Resolution? = nil,
+        threadListResult: [String: Any]? = nil,
+        threadReadResult: [String: Any]? = nil,
+        threadForkResult: [String: Any]? = nil,
+        threadResumeResult: [String: Any]? = nil,
+        threadStartIDQueue: [String] = [],
+        threadTurnsListErrorMessage: String? = nil,
+        threadTurnsListResult: [String: Any]? = nil,
+        threadTurnsListResultQueue: [[String: Any]] = []
+    ) {
+        self.resolvedExecutable = executableResolution
+        self.threadListResult = threadListResult
+        self.threadReadResult = threadReadResult
+        self.threadForkResult = threadForkResult
+        self.threadResumeResult = threadResumeResult
+        self.threadStartIDQueue = threadStartIDQueue
+        self.threadTurnsListErrorMessage = threadTurnsListErrorMessage
+        self.threadTurnsListResult = threadTurnsListResult
+        self.threadTurnsListResultQueue = threadTurnsListResultQueue
+    }
+
+    func setThreadListResult(_ result: [String: Any]?) {
+        threadListResult = result
+    }
+
+    func start() throws {
+        started = true
+        initializedSeen = false
+    }
+
+    func stop() {
+        started = false
+        serverEventContinuation?.finish()
+        serverEventContinuation = nil
+    }
+
+    func send(_ requestPayload: Data, id: CodexRPCRequestID) async throws -> Data {
+        guard started else {
+            throw CodexTransportError.notStarted
+        }
+
+        let method = try requestMethod(from: requestPayload)
+        recordedMethods.append(method)
+        recordedRequestPayloads[method, default: []].append(requestPayload)
+
+        switch method {
+        case "initialize":
+            return responsePayload(
+                id: id,
+                result: [
+                    "codexHome": "/Users/galew/.codex",
+                    "platformFamily": "unix",
+                    "platformOs": "macos",
+                    "userAgent": "codex-cli/0.128.0",
+                ]
+            )
+        case "model/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "additionalSpeedTiers": ["fast", "flex"],
+                            "availabilityNux": [
+                                "message": "Available for this workspace.",
+                            ],
+                            "defaultReasoningEffort": "medium",
+                            "description": "Balanced general-purpose model.",
+                            "displayName": "GPT-5.4",
+                            "hidden": false,
+                            "id": "gpt-5.4",
+                            "inputModalities": ["text", "image"],
+                            "isDefault": true,
+                            "model": "gpt-5.4",
+                            "supportedReasoningEfforts": [
+                                [
+                                    "description": "Faster responses.",
+                                    "reasoningEffort": "low",
+                                ],
+                                [
+                                    "description": "Balanced responses.",
+                                    "reasoningEffort": "medium",
+                                ],
+                                [
+                                    "description": "Deeper reasoning.",
+                                    "reasoningEffort": "high",
+                                ],
+                            ],
+                            "supportsPersonality": true,
+                            "upgrade": NSNull(),
+                            "upgradeInfo": NSNull(),
+                        ],
+                    ],
+                    "nextCursor": "cursor-models-next",
+                ]
+            )
+        case "mcpServerStatus/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "authStatus": "oAuth",
+                            "name": "calendar",
+                            "resources": [
+                                [
+                                    "_meta": ["source": "fixture"],
+                                    "annotations": NSNull(),
+                                    "description": "Today's events.",
+                                    "icons": [],
+                                    "mimeType": "application/json",
+                                    "name": "today",
+                                    "size": 128,
+                                    "title": "Today",
+                                    "uri": "calendar://events/today",
+                                ],
+                            ],
+                            "resourceTemplates": [
+                                [
+                                    "annotations": NSNull(),
+                                    "description": "Events by date.",
+                                    "mimeType": "application/json",
+                                    "name": "events-by-date",
+                                    "title": "Events By Date",
+                                    "uriTemplate": "calendar://events/{date}",
+                                ],
+                            ],
+                            "tools": [
+                                "list_events": [
+                                    "_meta": ["source": "fixture"],
+                                    "annotations": NSNull(),
+                                    "description": "List calendar events.",
+                                    "icons": [],
+                                    "inputSchema": ["type": "object"],
+                                    "name": "list_events",
+                                    "outputSchema": ["type": "object"],
+                                    "title": "List Events",
+                                ],
+                            ],
+                        ],
+                    ],
+                    "nextCursor": NSNull(),
+                ]
+            )
+        case "thread/name/set":
+            return responsePayload(id: id, result: [:])
+        case "thread/metadata/update":
+            return responsePayload(
+                id: id,
+                result: [
+                    "thread": [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "gitInfo": [
+                            "branch": "main",
+                            "originUrl": NSNull(),
+                            "sha": "abc123",
+                        ],
+                        "id": "thread-123",
+                        "modelProvider": "openai",
+                        "name": "Hydrated Thread",
+                        "preview": "Hydrated thread preview",
+                        "source": "cli",
+                        "status": ["type": "active"],
+                        "turns": [],
+                        "updatedAt": 1713350006,
+                    ],
+                ]
+            )
+        case "thread/rollback":
+            return responsePayload(
+                id: id,
+                result: [
+                    "thread": [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-123",
+                        "modelProvider": "openai",
+                        "name": "Hydrated Thread",
+                        "preview": "Hydrated thread preview",
+                        "source": "cli",
+                        "status": ["type": "active"],
+                        "turns": [
+                            [
+                                "completedAt": 1713350004,
+                                "durationMs": 2000,
+                                "error": NSNull(),
+                                "id": "turn-older",
+                                "items": [
+                                    [
+                                        "id": "item-older-user",
+                                        "text": "Older prompt",
+                                        "type": "userMessage",
+                                    ],
+                                ],
+                                "startedAt": 1713350002,
+                                "status": "completed",
+                            ],
+                        ],
+                        "updatedAt": 1713350010,
+                    ],
+                ]
+            )
+        case "thread/start":
+            if !initializedSeen {
+                return errorPayload(
+                    id: id,
+                    code: -32000,
+                    message: "initialized notification missing"
+                )
+            }
+
+            let threadID = threadStartIDQueue.isEmpty ? "thread-123" : threadStartIDQueue.removeFirst()
+
+            return responsePayload(
+                id: id,
+                result: [
+                    "approvalPolicy": "on-request",
+                    "approvalsReviewer": "user",
+                    "cwd": "/tmp/project",
+                    "instructionSources": ["AGENTS.md"],
+                    "model": "gpt-5.4",
+                    "modelProvider": "openai",
+                    "reasoningEffort": "medium",
+                    "sandbox": [
+                        "type": "workspaceWrite",
+                        "networkAccess": "enabled",
+                        "writableRoots": ["/tmp/project"],
+                    ],
+                    "serviceTier": "fast",
+                    "thread": [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": threadID,
+                        "modelProvider": "openai",
+                        "preview": "Hello from the fake app-server",
+                        "source": "cli",
+                        "status": ["type": "active"],
+                        "turns": [],
+                        "updatedAt": 1713350001,
+                    ],
+                ]
+            )
+        case "thread/list":
+            return responsePayload(
+                id: id,
+                result: threadListResult ?? [
+                    "data": [
+                        [
+                            "cliVersion": "0.128.0",
+                            "createdAt": 1713350000,
+                            "cwd": "/tmp/project",
+                            "ephemeral": false,
+                            "id": "thread-123",
+                            "modelProvider": "openai",
+                            "name": "Hydrated Thread",
+                            "preview": "Hydrated thread preview",
+                            "source": "cli",
+                            "status": ["type": "notLoaded"],
+                            "turns": [],
+                            "updatedAt": 1713350005,
+                        ],
+                    ],
+                    "nextCursor": "cursor-next",
+                ]
+            )
+        case "thread/read":
+            return responsePayload(
+                id: id,
+                result: threadReadResult ?? [
+                    "thread": [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-123",
+                        "modelProvider": "openai",
+                        "name": "Hydrated Thread",
+                        "preview": "Hydrated thread preview",
+                        "source": "cli",
+                        "status": ["type": "notLoaded"],
+                        "turns": [
+                            [
+                                "completedAt": 1713350005,
+                                "durationMs": 3000,
+                                "error": NSNull(),
+                                "id": "turn-hydrated-1",
+                                "items": [
+                                    [
+                                        "id": "item-user-1",
+                                        "text": "Hydrated user prompt.",
+                                        "type": "userMessage",
+                                    ],
+                                    [
+                                        "id": "item-agent-1",
+                                        "status": "completed",
+                                        "text": "Hydrated reply from thread/read.",
+                                        "type": "agentMessage",
+                                    ],
+                                ],
+                                "startedAt": 1713350002,
+                                "status": "completed",
+                            ],
+                        ],
+                        "updatedAt": 1713350005,
+                    ],
+                ]
+            )
+        case "thread/compact/start":
+            return responsePayload(
+                id: id,
+                result: [:]
+            )
+        case "thread/fork":
+            return responsePayload(
+                id: id,
+                result: threadForkResult ?? [
+                    "approvalPolicy": "on-request",
+                    "approvalsReviewer": "user",
+                    "cwd": "/tmp/project",
+                    "instructionSources": ["AGENTS.md"],
+                    "model": "gpt-5.4",
+                    "modelProvider": "openai",
+                    "reasoningEffort": "medium",
+                    "sandbox": [
+                        "type": "workspaceWrite",
+                        "networkAccess": "enabled",
+                        "writableRoots": ["/tmp/project"],
+                    ],
+                    "serviceTier": "fast",
+                    "thread": [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350010,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "forkedFromId": "thread-123",
+                        "id": "thread-456",
+                        "modelProvider": "openai",
+                        "name": "Forked Thread",
+                        "preview": "Hydrated fork preview",
+                        "source": "cli",
+                        "status": ["type": "idle"],
+                        "turns": [
+                            [
+                                "completedAt": 1713350005,
+                                "durationMs": 3000,
+                                "error": NSNull(),
+                                "id": "turn-hydrated-1",
+                                "items": [
+                                    [
+                                        "id": "item-agent-1",
+                                        "status": "completed",
+                                        "text": "Forked reply from thread/fork.",
+                                        "type": "agentMessage",
+                                    ],
+                                ],
+                                "startedAt": 1713350002,
+                                "status": "completed",
+                            ],
+                        ],
+                        "updatedAt": 1713350011,
+                    ],
+                ]
+            )
+        case "thread/resume":
+            return responsePayload(
+                id: id,
+                result: threadResumeResult ?? [
+                    "approvalPolicy": "on-request",
+                    "approvalsReviewer": "user",
+                    "cwd": "/tmp/project",
+                    "instructionSources": ["AGENTS.md"],
+                    "model": "gpt-5.4",
+                    "modelProvider": "openai",
+                    "reasoningEffort": "medium",
+                    "sandbox": [
+                        "type": "workspaceWrite",
+                        "networkAccess": "enabled",
+                        "writableRoots": ["/tmp/project"],
+                    ],
+                    "serviceTier": "fast",
+                    "thread": [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-123",
+                        "modelProvider": "openai",
+                        "name": "Resumed Thread",
+                        "preview": "Hydrated resume preview",
+                        "source": "cli",
+                        "status": ["type": "idle"],
+                        "turns": [
+                            [
+                                "completedAt": 1713350005,
+                                "durationMs": 3000,
+                                "error": NSNull(),
+                                "id": "turn-hydrated-1",
+                                "items": [
+                                    [
+                                        "id": "item-agent-1",
+                                        "status": "completed",
+                                        "text": "Resumed reply from thread/resume.",
+                                        "type": "agentMessage",
+                                    ],
+                                ],
+                                "startedAt": 1713350002,
+                                "status": "completed",
+                            ],
+                        ],
+                        "updatedAt": 1713350005,
+                    ],
+                ]
+            )
+        case "thread/turns/list":
+            if let threadTurnsListErrorMessage {
+                return errorPayload(
+                    id: id,
+                    code: -32600,
+                    message: threadTurnsListErrorMessage
+                )
+            }
+            if !threadTurnsListResultQueue.isEmpty {
+                return responsePayload(
+                    id: id,
+                    result: threadTurnsListResultQueue.removeFirst()
+                )
+            }
+            return responsePayload(
+                id: id,
+                result: threadTurnsListResult ?? [
+                    "backwardsCursor": "cursor-newer",
+                    "data": [
+                        [
+                            "completedAt": 1713350100,
+                            "durationMs": 2500,
+                            "error": NSNull(),
+                            "id": "turn-newer",
+                            "items": [],
+                            "startedAt": 1713350050,
+                            "status": "completed",
+                        ],
+                        [
+                            "completedAt": 1713350005,
+                            "durationMs": 3000,
+                            "error": NSNull(),
+                            "id": "turn-older",
+                            "items": [],
+                            "startedAt": 1713350002,
+                            "status": "completed",
+                        ],
+                    ],
+                    "nextCursor": "cursor-older",
+                ]
+            )
+        case "turn/start":
+            return responsePayload(
+                id: id,
+                result: [
+                    "turn": [
+                        "completedAt": NSNull(),
+                        "durationMs": NSNull(),
+                        "error": NSNull(),
+                        "id": "turn-123",
+                        "items": [],
+                        "startedAt": 1713350002,
+                        "status": "inProgress",
+                    ],
+                ]
+            )
+        case "turn/steer":
+            return responsePayload(
+                id: id,
+                result: [
+                    "turnId": "turn-123",
+                ]
+            )
+        case "turn/interrupt":
+            return responsePayload(
+                id: id,
+                result: [:]
+            )
+        default:
+            return errorPayload(
+                id: id,
+                code: -32601,
+                message: "unsupported method in fake transport"
+            )
+        }
+    }
+
+    func sendNotification(_ notificationPayload: Data, method: String) throws {
+        guard started else {
+            throw CodexTransportError.notStarted
+        }
+
+        recordedMethods.append(method)
+
+        if method == "initialized" {
+            initializedSeen = true
+        }
+    }
+
+    func sendResponse(_ responsePayload: Data, requestID: CodexRPCRequestID) throws {
+        guard started else {
+            throw CodexTransportError.notStarted
+        }
+
+        recordedResponses.append(.init(requestID: requestID, payload: responsePayload))
+    }
+
+    func serverEvents() -> AsyncStream<CodexRPCServerEvent> {
+        AsyncStream { continuation in
+            serverEventContinuation = continuation
+            continuation.onTermination = { _ in
+                Task {
+                    await self.clearServerEventContinuation()
+                }
+            }
+        }
+    }
+
+    func executableResolution() -> CodexCLIExecutableResolver.Resolution? {
+        resolvedExecutable
+    }
+
+    func recordedRequestPayload(for method: String) -> Data? {
+        recordedRequestPayloads[method]?.last
+    }
+
+    func emitTurnCompleted(threadID: String, turnID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "turn": [
+                "completedAt": 1713350005,
+                "durationMs": 3000,
+                "error": NSNull(),
+                "id": turnID,
+                "items": [],
+                "startedAt": 1713350002,
+                "status": "completed",
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "turn/completed", payload: payload)
+        )
+    }
+
+    func emitCommandExecutionApprovalRequest(
+        requestID: CodexRPCRequestID,
+        threadID: String,
+        turnID: String,
+        itemID: String
+    ) {
+        let payload = payloadObject([
+            "command": "git status",
+            "commandActions": [
+                [
+                    "command": "git status",
+                    "type": "unknown",
+                ]
+            ],
+            "cwd": "/tmp/project",
+            "itemId": itemID,
+            "reason": "Needs approval to read repository state.",
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .request(
+                id: requestID,
+                method: "item/commandExecution/requestApproval",
+                payload: payload
+            )
+        )
+    }
+
+    func emitToolUserInputRequest(
+        requestID: CodexRPCRequestID,
+        threadID: String,
+        turnID: String,
+        itemID: String
+    ) {
+        let payload = payloadObject([
+            "itemId": itemID,
+            "questions": [
+                [
+                    "header": "Goal",
+                    "id": "goal",
+                    "options": [
+                        [
+                            "description": "Use the existing plan as-is.",
+                            "label": "Ship it",
+                        ],
+                        [
+                            "description": "Pause the implementation and revisit scope.",
+                            "label": "Replan",
+                        ],
+                    ],
+                    "question": "Which direction should we take?",
+                ]
+            ],
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .request(
+                id: requestID,
+                method: "item/tool/requestUserInput",
+                payload: payload
+            )
+        )
+    }
+
+    func emitMcpServerElicitationRequest(
+        requestID: CodexRPCRequestID,
+        threadID: String,
+        turnID: String?
+    ) {
+        var payload: [String: Any] = [
+            "message": "Do you want to connect the calendar server?",
+            "mode": "url",
+            "serverName": "calendar",
+            "threadId": threadID,
+            "url": "https://example.com/authorize",
+            "elicitationId": "elicitation-1",
+        ]
+        payload["turnId"] = turnID ?? NSNull()
+
+        serverEventContinuation?.yield(
+            .request(
+                id: requestID,
+                method: "mcpServer/elicitation/request",
+                payload: payloadObject(payload)
+            )
+        )
+    }
+
+    func emitServerRequestResolved(
+        threadID: String,
+        requestID: CodexRPCRequestID
+    ) {
+        let jsonRequestID: Any
+        switch requestID {
+        case let .string(value):
+            jsonRequestID = value
+        case let .int(value):
+            jsonRequestID = value
+        }
+
+        let payload = payloadObject([
+            "requestId": jsonRequestID,
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "serverRequest/resolved", payload: payload)
+        )
+    }
+
+    func emitThreadStarted(threadID: String) {
+        let payload = payloadObject([
+            "thread": [
+                "cliVersion": "0.128.0",
+                "createdAt": 1713350000,
+                "cwd": "/tmp/project",
+                "ephemeral": false,
+                "id": threadID,
+                "modelProvider": "openai",
+                "preview": "Hello from thread/started",
+                "source": "cli",
+                "status": ["type": "active"],
+                "turns": [],
+                "updatedAt": 1713350001,
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/started", payload: payload)
+        )
+    }
+
+    func emitThreadStatusChanged(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "status": [
+                "type": "active",
+                "activeFlags": ["waitingOnApproval"],
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/status/changed", payload: payload)
+        )
+    }
+
+    func emitThreadNameUpdated(threadID: String, threadName: String? = "Planning Thread") {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "threadName": threadName ?? NSNull(),
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/name/updated", payload: payload)
+        )
+    }
+
+    func emitThreadArchived(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/archived", payload: payload)
+        )
+    }
+
+    func emitThreadUnarchived(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/unarchived", payload: payload)
+        )
+    }
+
+    func emitThreadTokenUsageUpdated(threadID: String, turnID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "turnId": turnID,
+            "tokenUsage": [
+                "last": [
+                    "cachedInputTokens": 10,
+                    "inputTokens": 20,
+                    "outputTokens": 30,
+                    "reasoningOutputTokens": 5,
+                    "totalTokens": 65,
+                ],
+                "modelContextWindow": 200000,
+                "total": [
+                    "cachedInputTokens": 100,
+                    "inputTokens": 200,
+                    "outputTokens": 300,
+                    "reasoningOutputTokens": 50,
+                    "totalTokens": 650,
+                ],
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/tokenUsage/updated", payload: payload)
+        )
+    }
+
+    func emitThreadClosed(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/closed", payload: payload)
+        )
+    }
+
+    func emitHookStarted(
+        threadID: String,
+        turnID: String?,
+        hookID: String = "hook-1",
+        status: String = "running"
+    ) {
+        let payload = payloadObject([
+            "run": [
+                "displayOrder": 1,
+                "entries": [],
+                "eventName": "preToolUse",
+                "executionMode": "sync",
+                "handlerType": "command",
+                "id": hookID,
+                "scope": "turn",
+                "sourcePath": "/tmp/project/.codex/hooks/pre-tool-use.sh",
+                "startedAt": 1713350003,
+                "status": status,
+                "statusMessage": NSNull(),
+            ],
+            "threadId": threadID,
+            "turnId": turnID ?? NSNull(),
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "hook/started", payload: payload)
+        )
+    }
+
+    func emitHookCompleted(
+        threadID: String,
+        turnID: String?,
+        hookID: String = "hook-1",
+        status: String = "completed",
+        statusMessage: String? = nil
+    ) {
+        let jsonStatusMessage: Any = statusMessage ?? NSNull()
+        let payload = payloadObject([
+            "run": [
+                "completedAt": 1713350004,
+                "displayOrder": 1,
+                "durationMs": 150,
+                "entries": [
+                    [
+                        "kind": "feedback",
+                        "text": "Hook finished.",
+                    ]
+                ],
+                "eventName": "preToolUse",
+                "executionMode": "sync",
+                "handlerType": "command",
+                "id": hookID,
+                "scope": "turn",
+                "sourcePath": "/tmp/project/.codex/hooks/pre-tool-use.sh",
+                "startedAt": 1713350003,
+                "status": status,
+                "statusMessage": jsonStatusMessage,
+            ],
+            "threadId": threadID,
+            "turnId": turnID ?? NSNull(),
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "hook/completed", payload: payload)
+        )
+    }
+
+    func emitWarning(
+        threadID: String?,
+        message: String = "Runtime configuration is using a fallback."
+    ) {
+        let payload = payloadObject([
+            "message": message,
+            "threadId": threadID ?? NSNull(),
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "warning", payload: payload)
+        )
+    }
+
+    func emitGuardianWarning(
+        threadID: String,
+        message: String = "Guardian flagged this session for review."
+    ) {
+        let payload = payloadObject([
+            "message": message,
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "guardianWarning", payload: payload)
+        )
+    }
+
+    func emitModelRerouted(
+        threadID: String,
+        turnID: String,
+        fromModel: String = "gpt-5.4",
+        toModel: String = "gpt-5.4-safe"
+    ) {
+        let payload = payloadObject([
+            "fromModel": fromModel,
+            "reason": "highRiskCyberActivity",
+            "threadId": threadID,
+            "toModel": toModel,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "model/rerouted", payload: payload)
+        )
+    }
+
+    func emitModelVerification(
+        threadID: String,
+        turnID: String
+    ) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "turnId": turnID,
+            "verifications": ["trustedAccessForCyber"],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "model/verification", payload: payload)
+        )
+    }
+
+    func emitMalformedModelRerouted() {
+        let payload = payloadObject([
+            "fromModel": "gpt-5.4",
+            "reason": "unexpectedFutureReason",
+            "threadId": "thread-123",
+            "toModel": "gpt-5.4-safe",
+            "turnId": "turn-123",
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "model/rerouted", payload: payload)
+        )
+    }
+
+    func emitTurnStarted(threadID: String, turnID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+            "turn": [
+                "completedAt": NSNull(),
+                "durationMs": NSNull(),
+                "error": NSNull(),
+                "id": turnID,
+                "items": [],
+                "startedAt": 1713350002,
+                "status": "inProgress",
+            ],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "turn/started", payload: payload)
+        )
+    }
+
+    func emitTurnPlanUpdated(threadID: String, turnID: String) {
+        let payload = payloadObject([
+            "explanation": "Map richer progress notifications.",
+            "plan": [
+                [
+                    "status": "inProgress",
+                    "step": "Promote protocol events into CodexTurnEvent",
+                ],
+                [
+                    "status": "pending",
+                    "step": "Add consumer-facing stream tests",
+                ],
+            ],
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "turn/plan/updated", payload: payload)
+        )
+    }
+
+    func emitItemStarted(
+        threadID: String,
+        turnID: String,
+        itemID: String,
+        item: [String: Any]? = nil
+    ) {
+        let payload = payloadObject([
+            "item": item ?? [
+                "id": itemID,
+                "type": "plan",
+            ],
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/started", payload: payload)
+        )
+    }
+
+    func emitAgentMessageDelta(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "delta": "Working on it",
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/agentMessage/delta", payload: payload)
+        )
+    }
+
+    func emitFileChangeOutputDelta(
+        threadID: String,
+        turnID: String,
+        itemID: String,
+        delta: String
+    ) {
+        let payload = payloadObject([
+            "delta": delta,
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/fileChange/outputDelta", payload: payload)
+        )
+    }
+
+    func emitCommandExecutionOutputDelta(
+        threadID: String,
+        turnID: String,
+        itemID: String,
+        delta: String
+    ) {
+        let payload = payloadObject([
+            "delta": delta,
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/commandExecution/outputDelta", payload: payload)
+        )
+    }
+
+    func emitPlanDelta(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "delta": "Stream partial plan text",
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/plan/delta", payload: payload)
+        )
+    }
+
+    func emitReasoningTextDelta(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "contentIndex": 0,
+            "delta": "thinking...",
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/reasoning/textDelta", payload: payload)
+        )
+    }
+
+    func emitReasoningSummaryTextDelta(threadID: String, turnID: String, itemID: String) {
+        let payload = payloadObject([
+            "delta": "Summarizing the approach.",
+            "itemId": itemID,
+            "summaryIndex": 0,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/reasoning/summaryTextDelta", payload: payload)
+        )
+    }
+
+    func emitItemCompleted(
+        threadID: String,
+        turnID: String,
+        itemID: String,
+        item: [String: Any]? = nil
+    ) {
+        let payload = payloadObject([
+            "item": item ?? [
+                "id": itemID,
+                "status": "completed",
+                "text": "Done.",
+                "type": "agentMessage",
+            ],
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/completed", payload: payload)
+        )
+    }
+
+    private func requestMethod(from payload: Data) throws -> String {
+        let object = try #require(
+            try JSONSerialization.jsonObject(with: payload) as? [String: Any]
+        )
+        return try #require(object["method"] as? String)
+    }
+
+    private func responsePayload(id: CodexRPCRequestID, result: [String: Any]) -> Data {
+        payloadObject([
+            "id": id.jsonObjectValue,
+            "result": result,
+        ])
+    }
+
+    private func errorPayload(id: CodexRPCRequestID, code: Int, message: String) -> Data {
+        payloadObject([
+            "id": id.jsonObjectValue,
+            "error": [
+                "code": code,
+                "message": message,
+            ],
+        ])
+    }
+
+    private func payloadObject(_ object: [String: Any]) -> Data {
+        try! JSONSerialization.data(withJSONObject: object)
+    }
+
+    private func clearServerEventContinuation() {
+        serverEventContinuation = nil
+    }
+}
+
+func turnEvents(
+    from stream: AsyncThrowingStream<CodexTurnEvent, Error>,
+    count: Int
+) async throws -> [CodexTurnEvent] {
+    var iterator = stream.makeAsyncIterator()
+    var events: [CodexTurnEvent] = []
+
+    while events.count < count, let event = try await iterator.next() {
+        events.append(event)
+    }
+
+    return events
+}
+
+func diagnosticEvents(
+    from stream: AsyncThrowingStream<CodexDiagnosticEvent, Error>,
+    count: Int
+) async throws -> [CodexDiagnosticEvent] {
+    var iterator = stream.makeAsyncIterator()
+    var events: [CodexDiagnosticEvent] = []
+
+    while events.count < count, let event = try await iterator.next() {
+        events.append(event)
+    }
+
+    return events
+}
+
+func nextDiagnosticEventOrEnd(
+    from stream: AsyncThrowingStream<CodexDiagnosticEvent, Error>,
+    timeoutNanoseconds: UInt64 = 1_000_000_000
+) async throws -> CodexDiagnosticEvent? {
+    let iteratorTask = Task {
+        var iterator = stream.makeAsyncIterator()
+        return try await iterator.next()
+    }
+
+    let timeoutTask = Task {
+        try await Task.sleep(nanoseconds: timeoutNanoseconds)
+    }
+
+    defer {
+        iteratorTask.cancel()
+        timeoutTask.cancel()
+    }
+
+    return try await withThrowingTaskGroup(of: CodexDiagnosticEvent?.self) { group in
+        defer { group.cancelAll() }
+
+        group.addTask {
+            try await iteratorTask.value
+        }
+        group.addTask {
+            try await timeoutTask.value
+            throw TimeoutError()
+        }
+
+        let result = try await group.next()
+        return try #require(result)
+    }
+}
+
+func nextTurnEventOrEnd(
+    from stream: AsyncThrowingStream<CodexTurnEvent, Error>,
+    timeoutNanoseconds: UInt64 = 1_000_000_000
+) async throws -> CodexTurnEvent? {
+    let iteratorTask = Task {
+        var iterator = stream.makeAsyncIterator()
+        return try await iterator.next()
+    }
+
+    let timeoutTask = Task {
+        try await Task.sleep(nanoseconds: timeoutNanoseconds)
+    }
+
+    defer {
+        iteratorTask.cancel()
+        timeoutTask.cancel()
+    }
+
+    return try await withThrowingTaskGroup(of: CodexTurnEvent?.self) { group in
+        group.addTask {
+            try await iteratorTask.value
+        }
+        group.addTask {
+            try await timeoutTask.value
+            throw TimeoutError()
+        }
+
+        let result = try await group.next()
+        group.cancelAll()
+        return try #require(result)
+    }
+}
+
+func threadEvents(
+    from stream: AsyncThrowingStream<CodexThreadEvent, Error>,
+    count: Int
+) async throws -> [CodexThreadEvent] {
+    var iterator = stream.makeAsyncIterator()
+    var events: [CodexThreadEvent] = []
+
+    while events.count < count, let event = try await iterator.next() {
+        events.append(event)
+    }
+
+    return events
+}
+
+func temporarySQLiteHistoryStore() throws -> (ThreadHistoryStore, URL) {
+    let temporaryDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(
+        at: temporaryDirectory,
+        withIntermediateDirectories: true
+    )
+    let historyStore = try ThreadHistoryStore(
+        configuration: .init(
+            inMemory: false,
+            storeURL: temporaryDirectory.appendingPathComponent("ThreadHistory.sqlite")
+        )
+    )
+    return (historyStore, temporaryDirectory)
+}
+
+func tearDownTemporarySQLiteHistoryStore(
+    _ historyStore: ThreadHistoryStore,
+    directory: URL
+) async {
+    try? await historyStore.detachPersistentStoresForTeardown()
+    try? FileManager.default.removeItem(at: directory)
+}
+
+func settleObservableTeardown() async {
+    await Task.yield()
+    await Task.yield()
+}
+
+extension CodexRPCRequestID {
+    var jsonObjectValue: Any {
+        switch self {
+        case let .string(value):
+            value
+        case let .int(value):
+            value
+        }
+    }
+}
+
+struct TimeoutError: Error {}
