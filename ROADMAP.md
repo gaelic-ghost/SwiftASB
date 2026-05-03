@@ -154,7 +154,7 @@ That means the current priority order is:
 
 ## V1 Readiness Checklist
 
-This checklist records the work that made `SwiftASB` ready for the `v1.0.0`
+This checklist records the work that made `SwiftASB` ready for the `v1.0.1`
 tag. The goal was not to make every possible app-server feature public before
 v1. The goal was to make the supported lifecycle honest, durable, well
 documented, and intentionally shaped.
@@ -307,8 +307,8 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### Documentation And Examples
 
-- [x] Update stale release references after the `v1.0.0` release.
-  Decision: README now names `v1.0.0` as the current released baseline and no
+- [x] Update stale release references after the `v1.0.1` release.
+  Decision: README now names `v1.0.1` as the current released baseline and no
   longer describes the package as early development.
 - [x] Finish DocC symbol comments for the supported lifecycle, not just the
   conceptual articles.
@@ -471,10 +471,10 @@ workflow forces a release-boundary change before the v1 tag.
   the `release/v1.0.0` branch on 2026-05-02 and on the
   `release/v1.0.1-prep` branch on 2026-05-02.
 - [x] Decide whether another targeted `v0.9.x` patch release is needed before
-  `v1.0.0`, or whether the remaining work should go straight into the v1
+  `v1.0.1`, or whether the remaining work should go straight into the v1
   release branch.
   Decision: no additional `v0.9.x` patch is needed. The remaining work should go
-  straight into the `v1.0.0` release branch.
+  straight into the `v1.0.1` release branch.
 - [x] Prepare v1 release notes with explicit sections for public surface,
   intentionally internal surfaces, compatibility window, migration notes,
   validation performed, and known post-v1 work.
@@ -526,7 +526,7 @@ workflow forces a release-boundary change before the v1 tag.
 #### Migration Notes
 
 - Existing `v0.9.x` consumers should update the SwiftPM dependency to
-  `from: "1.0.0"` once the tag is published.
+  `from: "1.0.1"` once the tag is published.
 - The v1 API surface has removed stale pre-v1 compatibility shims and phantom
   fields that no longer exist in the reviewed `v0.128.0` schema.
 - Same-thread overlapping turns are rejected client-side with
