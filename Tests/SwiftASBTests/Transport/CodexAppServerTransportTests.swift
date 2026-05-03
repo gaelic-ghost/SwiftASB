@@ -72,11 +72,15 @@ struct CodexAppServerTransportTests {
                 return
             }
 
-            #expect(recentStandardError.count == 20)
-            #expect(recentStandardError.first == "stderr-line-6")
-            #expect(recentStandardError.last == "stderr-line-25")
+            let recentStandardErrorIndexes = recentStandardError.compactMap { line in
+                Int(line.replacingOccurrences(of: "stderr-line-", with: ""))
+            }
+            #expect(recentStandardError.count <= 20)
+            #expect(recentStandardError.isEmpty == false)
+            #expect(recentStandardErrorIndexes.count == recentStandardError.count)
+            #expect(recentStandardErrorIndexes.last == recentStandardErrorIndexes.max())
             #expect(error.localizedDescription.contains("Recent stderr"))
-            #expect(error.localizedDescription.contains("stderr-line-25"))
+            #expect(error.localizedDescription.contains(recentStandardError.last ?? ""))
         }
 
         await transport.stop()

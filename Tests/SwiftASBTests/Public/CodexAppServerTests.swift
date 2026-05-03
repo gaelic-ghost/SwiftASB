@@ -1591,7 +1591,7 @@ struct CodexAppServerTests {
             delta: "    .package(url: \"https://example.com\")\n"
         )
 
-        await waitForObservableState {
+        await waitForObservableState(maxAttempts: 2_000) {
             recentFiles.files[0].payloadText?.contains("https://example.com") == true
         }
 

@@ -167,10 +167,15 @@ Run the answerable server-request coverage probes:
 scripts/run-live-codex-server-request-probes.sh
 ```
 
-That wrapper runs the deterministic command and permissions approval probes
-against the real app-server, then writes
+That wrapper runs the deterministic command approval, permissions approval,
+tool-user-input, and regular MCP elicitation fixture probes against the real
+app-server, then writes
 `tmp/live-codex-reports/live-server-request-family-coverage.json` with the
-current status of tool-user-input and MCP-elicitation live repro coverage.
+current status of answerable server-request family coverage. The regular MCP
+fixture proves the model-to-MCP tool path is deterministic, but that plain
+stdio MCP path does not deterministically surface `mcpServer/elicitation/request`
+through the app-server; the remaining MCP live gap is an app-connector MCP
+elicitation fixture.
 
 That wrapper runs smoke probes, deterministic approval/server-request probes,
 the multi-turn create/edit/delete file scenario, and the disposable rollback
