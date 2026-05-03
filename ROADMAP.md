@@ -730,14 +730,15 @@ These probes are observational and should write JSON reports. They should fail
 only when SwiftASB's documented contract breaks; otherwise behavior drift should
 be recorded in this roadmap or maintainer docs.
 
-- [ ] Approval-policy matrix: `.never`, `.onRequest`, `.untrusted`, and
+- [x] Approval-policy matrix: `.never`, `.onRequest`, `.untrusted`, and
   `.granular`.
-- [ ] Sandbox matrix: `.readOnly`, `.workspaceWrite`, and tightly isolated
-  danger-full-access coverage only if the test workspace makes the risk clear.
-- [ ] Same-thread overlap probe, kept observational until upstream app-server
+- [x] Sandbox matrix: `.readOnly` and `.workspaceWrite`. Keep tightly isolated
+  danger-full-access coverage out of the first matrix until the test workspace
+  makes the risk clear.
+- [x] Same-thread overlap probe, kept observational until upstream app-server
   semantics become independently routable.
-- [ ] Ephemeral, stored, and pre-materialized thread-history behavior probes.
-- [ ] Codex CLI version/support-window diagnostics probe that records the
+- [x] Ephemeral and pre-materialized thread-history behavior probes.
+- [x] Codex CLI version/support-window diagnostics probe that records the
   installed runtime, schema dump availability, and SwiftASB compatibility
   result.
 
@@ -749,7 +750,17 @@ runtime can be driven with a mock Responses provider.
 
 - [x] Permissions approval / request-permissions tool path.
 - [ ] Tool user input.
+  Status: deterministic fake-transport coverage exists for public routing and
+  response behavior, and `scripts/run-live-codex-server-request-probes.sh` now
+  records this family in the live coverage report. The remaining gap is a
+  reliable current Codex mock Responses reproducer that forces
+  `item/tool/requestUserInput` through the real app-server.
 - [ ] MCP server elicitation.
+  Status: deterministic fake-transport coverage exists for public routing and
+  response behavior, and `scripts/run-live-codex-server-request-probes.sh` now
+  records this family in the live coverage report. The remaining gap is a local
+  MCP server fixture that deterministically asks for elicitation during a live
+  turn.
 - [ ] Guardian denied-action approval after SwiftASB owns a stable public model.
 - [ ] Future promoted surfaces such as `hooks/list` and model-provider
   capabilities when they become public or observable contracts.
@@ -765,8 +776,8 @@ Planned script entrypoints:
 
 - [x] `scripts/run-live-codex-integration-tests.sh`
 - [x] `scripts/run-live-codex-release-gate.sh`
-- [ ] `scripts/run-live-codex-behavior-matrix.sh`
-- [ ] Add a focused mode or companion script for remaining answerable
+- [x] `scripts/run-live-codex-behavior-matrix.sh`
+- [x] Add a focused mode or companion script for remaining answerable
   server-request families once tool-user-input and MCP elicitation probes are
   promoted into live coverage.
 
@@ -789,10 +800,11 @@ slice should either add focused modes around remaining promoted request
 families or broaden the release gate with startup, initialize, model/MCP,
 single-turn, and cross-thread probes if their runtime cost stays reasonable.
 
-## Proposed Next Release Slice
+## Previous V1 Release Slice
 
-Treat the remaining pre-v1 work as release-hardening for the first interactive
-lifecycle, not as a convenience-API expansion.
+This section records the release-hardening slice that produced the first
+interactive lifecycle release. Keep it as historical release-boundary context,
+not as the current maintainer priority.
 
 ### Shipped in the v0.9.x lifecycle slice
 
@@ -815,18 +827,17 @@ lifecycle, not as a convenience-API expansion.
   the supported package surface without reading maintainer notes, including
   walkthroughs for the primary v1 lifecycle jobs.
 
-### Remaining pre-v1 hardening
+### Remaining post-v1 follow-up
 
-- Complete the public API inventory and freeze decisions recorded in
+- [x] Complete the public API inventory and freeze decisions recorded in
   `docs/maintainers/v1-public-api-audit.md`.
-- Finish the remaining targeted source-level symbol documentation skim for the
-  supported lifecycle. The first walkthrough set has landed; keep it accurate
-  during the final release-readiness pass.
-- Keep default local tests deterministic, narrow or document the known
+- [x] Finish the targeted source-level symbol documentation skim for the
+  supported lifecycle.
+- [x] Keep default local tests deterministic, narrow or document the known
   subprocess timing flake, and run the opt-in live probes before the v1 tag.
-- Audit active compatibility shims and tie each removal trigger to the current
+- [x] Audit active compatibility shims and tie each removal trigger to the current
   reviewed Codex CLI support window.
-- Confirm Swift Package Index listing and DocC rendering after the latest public
+- [ ] Confirm Swift Package Index listing and DocC rendering after the latest public
   tag is indexed.
 
 ### Explicitly defer unless pre-v1 hardening forces it

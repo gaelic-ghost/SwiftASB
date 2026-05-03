@@ -199,13 +199,13 @@ Use these decisions for every public symbol:
 - Default arguments should be treated as compatibility promises. Current
   defaults are mostly nil/pass-through values, local cache policies, pagination
   limits, binary discovery behavior, and
-  `CodexPermissionsApprovalResponse.scope = .turn`; each needs symbol comments
-  before v1 so consumers know whether SwiftASB or the Codex app-server owns the
-  default. The first default-argument documentation pass now covers the main
-  public defaults: process launch configuration, initialization capabilities,
-  thread and turn request omissions, model/MCP/thread pagination requests,
-  metadata field updates, permission responses, local history page sizes, and
-  recent observable companion cache policies.
+  `CodexPermissionsApprovalResponse.scope = .turn`; the v1 source-comment pass
+  now documents whether SwiftASB or the Codex app-server owns those defaults.
+  The first default-argument documentation pass covers the main public defaults:
+  process launch configuration, initialization capabilities, thread and turn
+  request omissions, model/MCP/thread pagination requests, metadata field
+  updates, permission responses, local history page sizes, and recent observable
+  companion cache policies.
 - Enum vocabulary should favor stable SwiftASB jobs over generated-wire terms.
   Keep public app-server option names such as `dangerFullAccess`, `xhigh`,
   `oAuth`, and `nux` only where the value is an upstream option a caller may
@@ -342,8 +342,9 @@ Use these decisions for every public symbol:
   current app-server wire spelling.
 - [x] Review `CodexPermissionProfile` and sandbox/network terminology against
   the public compatibility promise.
-  Decision: stable enough for v1, but symbol comments should define omitted
-  values versus denied access.
+  Decision: stable enough for v1. Source comments now define omitted values
+  versus denied access where those distinctions are part of the public
+  compatibility promise.
 - [x] Confirm guardian denied-action approval stays internal and post-v1.
   Decision: keep it out of v1 until a real answerable guardian-control flow is
   designed.
@@ -424,15 +425,17 @@ Use these decisions for every public symbol:
 
 ### Documentation Requirements
 
-- [ ] Add symbol comments for every stable v1 public type and method that is not
+- [x] Add symbol comments for every stable v1 public type and method that is not
   self-explanatory from its declaration.
-  Progress: default-bearing public initializers and methods now document whether
-  omission delegates to Codex, chooses a SwiftASB local-history/UI default, or
-  applies an explicit safety default such as `.turn` or `.unchanged`. The first
-  source-level pass also covers the supported lifecycle entrypoints on
-  `CodexAppServer`, `CodexThread`, and `CodexTurnHandle`; the remaining pre-v1
-  work is a targeted skim for stable public values whose generated docs are
-  still too terse for a first-time consumer.
+  Decision: complete for the `v1.0.1` release boundary. Default-bearing public
+  initializers and methods now document whether omission delegates to Codex,
+  chooses a SwiftASB local-history/UI default, or applies an explicit safety
+  default such as `.turn` or `.unchanged`. The source-level pass also covers the
+  supported lifecycle entrypoints on `CodexAppServer`, `CodexThread`, and
+  `CodexTurnHandle`, plus the stable public value types for model, MCP,
+  thread-management, approval, elicitation, diagnostics, compatibility, and
+  app-server bootstrap surfaces. Future symbol-comment work is ordinary ongoing
+  docs refinement as the public API grows, not unfinished pre-v1 release work.
 - [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.

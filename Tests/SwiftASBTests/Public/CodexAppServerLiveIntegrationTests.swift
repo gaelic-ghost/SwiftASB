@@ -437,7 +437,7 @@ struct CodexAppServerLiveIntegrationTests {
         let harness = try LiveCodexHarness()
         defer { harness.cleanup() }
 
-        let client = try await makeInitializedLiveClient(using: harness)
+        let client = try await makeInitializedLiveClient(using: harness, experimentalAPI: true)
         do {
             let threadA = try await startThread(
                 on: client,
@@ -1341,6 +1341,192 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "records live approval, sandbox, history, and diagnostics behavior matrix",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_BEHAVIOR_MATRIX_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI and records observational runtime behavior."
+        ),
+        .timeLimit(.minutes(8))
+    )
+    func recordsLiveBehaviorMatrix() async throws {
+        let harness = try LiveCodexHarness(configMode: .approvalProbe)
+        defer { harness.cleanup() }
+
+        let readFixtureURL = harness.approvalProbeWorkspace
+            .appendingPathComponent("behavior-matrix-read.txt", isDirectory: false)
+        let readFixtureText = "behavior-matrix-\(UUID().uuidString)\n"
+        try Data(readFixtureText.utf8).write(to: readFixtureURL)
+        let expectedDigest = Data(SHA256.hash(data: Data(readFixtureText.utf8))).map {
+            String(format: "%02x", $0)
+        }.joined()
+
+        let untrustedCreateURL = harness.approvalProbeWorkspace
+            .appendingPathComponent("behavior-matrix-untrusted-create.txt", isDirectory: false)
+        let granularCreateURL = harness.approvalProbeWorkspace
+            .appendingPathComponent("behavior-matrix-granular-create.txt", isDirectory: false)
+
+        let client = try await makeInitializedLiveClient(using: harness, experimentalAPI: true)
+        do {
+            let cases = [
+                LiveBehaviorMatrixCase(
+                    label: "never-text-only",
+                    approvalPolicy: .never,
+                    sandboxMode: .workspaceWrite,
+                    prompt: prompt(label: "BEHAVIOR_MATRIX_NEVER_DONE"),
+                    expectedFinalText: "BEHAVIOR_MATRIX_NEVER_DONE",
+                    inspectedPath: nil
+                ),
+                LiveBehaviorMatrixCase(
+                    label: "on-request-command-read",
+                    approvalPolicy: .onRequest,
+                    sandboxMode: .workspaceWrite,
+                    prompt: """
+                    Use a shell command to print the SHA-256 digest of behavior-matrix-read.txt in the
+                    current working directory, then reply with exactly this text and nothing else:
+                    \(expectedDigest)
+                    """,
+                    expectedFinalText: expectedDigest,
+                    inspectedPath: readFixtureURL
+                ),
+                LiveBehaviorMatrixCase(
+                    label: "untrusted-file-create",
+                    approvalPolicy: .untrusted,
+                    sandboxMode: .workspaceWrite,
+                    prompt: """
+                    Create behavior-matrix-untrusted-create.txt with exactly this content:
+                    created by behavior matrix
+
+                    Then reply with exactly BEHAVIOR_MATRIX_UNTRUSTED_CREATE_DONE and nothing else.
+                    """,
+                    expectedFinalText: "BEHAVIOR_MATRIX_UNTRUSTED_CREATE_DONE",
+                    inspectedPath: untrustedCreateURL
+                ),
+                LiveBehaviorMatrixCase(
+                    label: "granular-read-only-write-candidate",
+                    approvalPolicy: .granular(
+                        .init(
+                            mcpElicitations: false,
+                            requestPermissions: true,
+                            rules: true,
+                            sandboxApproval: true
+                        )
+                    ),
+                    sandboxMode: .readOnly,
+                    prompt: """
+                    Create behavior-matrix-granular-create.txt with exactly this content:
+                    created from read-only granular behavior matrix
+
+                    Then reply with exactly BEHAVIOR_MATRIX_GRANULAR_CREATE_DONE and nothing else.
+                    """,
+                    expectedFinalText: "BEHAVIOR_MATRIX_GRANULAR_CREATE_DONE",
+                    inspectedPath: granularCreateURL
+                ),
+            ]
+
+            var caseResults: [LiveBehaviorMatrixReport.PolicySandboxResult] = []
+            for matrixCase in cases {
+                caseResults.append(
+                    await runBehaviorMatrixCase(
+                        matrixCase,
+                        on: client,
+                        harness: harness
+                    )
+                )
+            }
+
+            let history = await probeLiveHistoryMatrix(on: client, harness: harness)
+            let sameThread = await probeLiveSameThreadMatrix(on: client, harness: harness)
+            let diagnostics = await probeLiveCLIDiagnosticsMatrix(on: client)
+            let report = LiveBehaviorMatrixReport(
+                codexConfig: harness.codexConfigSummary,
+                workspacePath: harness.approvalProbeWorkspace.path,
+                policySandboxResults: caseResults,
+                history: history,
+                sameThread: sameThread,
+                cliDiagnostics: diagnostics
+            )
+            try harness.writeReport(report, fileName: "live-behavior-matrix.json")
+
+            #expect(caseResults.map(\.label) == cases.map(\.label))
+            #expect(history.ephemeralRecentTurns != nil || history.errorDescription != nil)
+            #expect(sameThread.outcome.isEmpty == false)
+            #expect(diagnostics.versionString.isEmpty == false || diagnostics.errorDescription != nil)
+
+            await client.stop()
+        } catch {
+            await client.stop()
+            throw error
+        }
+    }
+
+    @Test(
+        "records live server-request family coverage status",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_SERVER_REQUEST_TESTS"] == "1",
+            "Requires explicit opt-in because this test records live Codex server-request coverage status."
+        )
+    )
+    func recordsLiveServerRequestFamilyCoverageStatus() throws {
+        let harness = try LiveCodexHarness(configMode: .approvalProbe)
+        defer { harness.cleanup() }
+
+        let report = LiveServerRequestFamilyCoverageReport(
+            codexConfig: harness.codexConfigSummary,
+            families: [
+                .init(
+                    family: "commandExecutionApproval",
+                    publicSurface: "CodexTurnHandle.respond(to:with:)",
+                    deterministicFakeTransportCoverage: true,
+                    liveProbeCoverage: true,
+                    liveProbeScript: "scripts/run-live-codex-approval-probe.sh",
+                    status: "covered",
+                    notes: "The focused approval probe drives the real app-server with a mock Responses shell_command call and asserts request delivery, response, serverRequest/resolved, command completion, and terminal turn completion."
+                ),
+                .init(
+                    family: "permissionsApproval",
+                    publicSurface: "CodexTurnHandle.respond(to:with:)",
+                    deterministicFakeTransportCoverage: true,
+                    liveProbeCoverage: true,
+                    liveProbeScript: "scripts/run-live-codex-approval-probe.sh",
+                    status: "covered",
+                    notes: "The focused approval probe drives the real app-server with request_permissions_tool enabled and asserts the permissions request, response, serverRequest/resolved, and terminal turn completion."
+                ),
+                .init(
+                    family: "toolUserInput",
+                    publicSurface: "CodexTurnHandle.respond(to:with:)",
+                    deterministicFakeTransportCoverage: true,
+                    liveProbeCoverage: false,
+                    liveProbeScript: nil,
+                    status: "blocked",
+                    notes: "The public fake-transport suite proves routing and response behavior, but this branch does not have a reliable current Codex mock Responses reproducer that forces item/tool/requestUserInput through the real app-server."
+                ),
+                .init(
+                    family: "mcpServerElicitation",
+                    publicSurface: "CodexThread.respond(to:with:) when turnId is null; CodexTurnHandle.respond(to:with:) when turn-routed",
+                    deterministicFakeTransportCoverage: true,
+                    liveProbeCoverage: false,
+                    liveProbeScript: nil,
+                    status: "blocked",
+                    notes: "The public fake-transport suite proves routing and response behavior, but a real app-server probe still needs a local MCP server fixture that can deterministically request elicitation during a turn."
+                ),
+            ],
+            sourceNotes: [
+                "OpenAI app-server docs describe item/tool/requestUserInput as a server-originated request that resolves with serverRequest/resolved.",
+                "OpenAI app-server docs describe mcpServer/elicitation/request as an MCP-server-originated structured input request that resolves with serverRequest/resolved.",
+            ]
+        )
+
+        try harness.writeReport(report, fileName: "live-server-request-family-coverage.json")
+        #expect(report.families.count == 4)
+        #expect(report.families.filter(\.liveProbeCoverage).map(\.family) == [
+            "commandExecutionApproval",
+            "permissionsApproval",
+        ])
+    }
+
+    @Test(
         "runs a multi-turn live file mutation scenario",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
@@ -1835,6 +2021,15 @@ private struct LiveApprovalProbeCase {
     let inspectedPath: URL
 }
 
+private struct LiveBehaviorMatrixCase {
+    let label: String
+    let approvalPolicy: CodexAppServer.ApprovalPolicy
+    let sandboxMode: CodexAppServer.SandboxMode
+    let prompt: String
+    let expectedFinalText: String
+    let inspectedPath: URL?
+}
+
 private struct LiveApprovalProbeReport: Codable, Equatable {
     struct CodexConfig: Codable, Equatable {
         let approvalPolicy: String
@@ -1925,6 +2120,70 @@ private struct LiveApprovalProbeReport: Codable, Equatable {
     let codexConfig: CodexConfig?
     let workspacePath: String
     let results: [Result]
+}
+
+private struct LiveBehaviorMatrixReport: Codable, Equatable {
+    struct PolicySandboxResult: Codable, Equatable {
+        let label: String
+        let approvalPolicy: String
+        let sandboxMode: String
+        let threadID: String
+        let turnID: String
+        let status: String
+        let acceptedApprovalKinds: [String]
+        let callKinds: [String]
+        let callDisplayNames: [String]
+        let latestCompletedItemText: String?
+        let inspectedFile: LiveApprovalProbeReport.InspectedFile?
+        let matchedExpectedFinalText: Bool
+        let errorDescription: String?
+    }
+
+    struct HistoryResult: Codable, Equatable {
+        let ephemeralThreadID: String?
+        let ephemeralRecentTurns: Int?
+        let storedThreadID: String?
+        let storedRecentTurnsBeforeMaterialization: Int?
+        let errorDescription: String?
+    }
+
+    struct SameThreadResult: Codable, Equatable {
+        let threadID: String
+        let firstTurnID: String
+        let outcome: String
+        let errorDescription: String?
+        let firstTurnStatus: String?
+    }
+
+    struct CLIDiagnosticsResult: Codable, Equatable {
+        let resolvedExecutablePath: String?
+        let versionString: String
+        let compatibility: String
+        let errorDescription: String?
+    }
+
+    let codexConfig: LiveApprovalProbeReport.CodexConfig?
+    let workspacePath: String
+    let policySandboxResults: [PolicySandboxResult]
+    let history: HistoryResult
+    let sameThread: SameThreadResult
+    let cliDiagnostics: CLIDiagnosticsResult
+}
+
+private struct LiveServerRequestFamilyCoverageReport: Codable, Equatable {
+    struct Family: Codable, Equatable {
+        let family: String
+        let publicSurface: String
+        let deterministicFakeTransportCoverage: Bool
+        let liveProbeCoverage: Bool
+        let liveProbeScript: String?
+        let status: String
+        let notes: String
+    }
+
+    let codexConfig: LiveApprovalProbeReport.CodexConfig?
+    let families: [Family]
+    let sourceNotes: [String]
 }
 
 private struct LiveFileMutationScenarioReport: Codable, Equatable {
@@ -2346,6 +2605,188 @@ private func runApprovalProbeCaseReport(
     }
 }
 
+private func runBehaviorMatrixCase(
+    _ matrixCase: LiveBehaviorMatrixCase,
+    on client: CodexAppServer,
+    harness: LiveCodexHarness
+) async -> LiveBehaviorMatrixReport.PolicySandboxResult {
+    do {
+        let thread = try await startThread(
+            on: client,
+            workspacePath: harness.approvalProbeWorkspace.path,
+            label: "behavior-matrix-\(matrixCase.label)",
+            approvalPolicy: matrixCase.approvalPolicy,
+            approvalsReviewer: matrixCase.approvalPolicy.requiresUserReviewer ? .user : nil,
+            ephemeral: false,
+            sandboxMode: matrixCase.sandboxMode,
+            developerInstructions: """
+            You are running inside a SwiftASB live behavior-matrix probe.
+            Perform only the exact requested action.
+            If approval is requested, wait for the test harness to answer it.
+            Do not ask follow-up questions.
+            Reply only with the exact text requested by the user message.
+            """
+        )
+        let turn = try await startTurn(
+            on: thread,
+            prompt: matrixCase.prompt,
+            approvalPolicy: matrixCase.approvalPolicy,
+            approvalsReviewer: matrixCase.approvalPolicy.requiresUserReviewer ? .user : nil
+        )
+        let result = try await completeLiveTurnAcceptingApprovals(
+            turn,
+            timeoutSeconds: 90,
+            operation: "waiting for the \(matrixCase.label) behavior-matrix case to complete"
+        )
+        return .init(
+            label: matrixCase.label,
+            approvalPolicy: matrixCase.approvalPolicy.reportLabel,
+            sandboxMode: matrixCase.sandboxMode.rawValue,
+            threadID: thread.id,
+            turnID: result.completion.turn.id,
+            status: result.completion.turn.status.rawValue,
+            acceptedApprovalKinds: result.acceptedApprovalKinds,
+            callKinds: result.callSnapshots.map(\.kind.rawValue),
+            callDisplayNames: result.callSnapshots.map(\.displayName),
+            latestCompletedItemText: result.latestCompletedItemText,
+            inspectedFile: matrixCase.inspectedPath.map(LiveApprovalProbeReport.InspectedFile.init),
+            matchedExpectedFinalText: result.latestCompletedItemText == matrixCase.expectedFinalText,
+            errorDescription: nil
+        )
+    } catch {
+        return .init(
+            label: matrixCase.label,
+            approvalPolicy: matrixCase.approvalPolicy.reportLabel,
+            sandboxMode: matrixCase.sandboxMode.rawValue,
+            threadID: "",
+            turnID: "",
+            status: "failed",
+            acceptedApprovalKinds: [],
+            callKinds: [],
+            callDisplayNames: [],
+            latestCompletedItemText: nil,
+            inspectedFile: matrixCase.inspectedPath.map(LiveApprovalProbeReport.InspectedFile.init),
+            matchedExpectedFinalText: false,
+            errorDescription: String(describing: error)
+        )
+    }
+}
+
+private func probeLiveHistoryMatrix(
+    on client: CodexAppServer,
+    harness: LiveCodexHarness
+) async -> LiveBehaviorMatrixReport.HistoryResult {
+    do {
+        let ephemeralThread = try await startThread(
+            on: client,
+            workspacePath: harness.threadAWorkspace.path,
+            label: "behavior-matrix-ephemeral-history",
+            ephemeral: true
+        )
+        let ephemeralRecentTurns = try await ephemeralThread.makeRecentTurns(limit: 5)
+        let ephemeralCount = await MainActor.run { ephemeralRecentTurns.turns.count }
+
+        let storedThread = try await startThread(
+            on: client,
+            workspacePath: harness.threadBWorkspace.path,
+            label: "behavior-matrix-stored-history",
+            ephemeral: false
+        )
+        let storedRecentTurns = try await storedThread.makeRecentTurns(limit: 5)
+        let storedCount = await MainActor.run { storedRecentTurns.turns.count }
+
+        return .init(
+            ephemeralThreadID: ephemeralThread.id,
+            ephemeralRecentTurns: ephemeralCount,
+            storedThreadID: storedThread.id,
+            storedRecentTurnsBeforeMaterialization: storedCount,
+            errorDescription: nil
+        )
+    } catch {
+        return .init(
+            ephemeralThreadID: nil,
+            ephemeralRecentTurns: nil,
+            storedThreadID: nil,
+            storedRecentTurnsBeforeMaterialization: nil,
+            errorDescription: String(describing: error)
+        )
+    }
+}
+
+private func probeLiveSameThreadMatrix(
+    on client: CodexAppServer,
+    harness: LiveCodexHarness
+) async -> LiveBehaviorMatrixReport.SameThreadResult {
+    do {
+        let thread = try await startThread(
+            on: client,
+            workspacePath: harness.sameThreadWorkspace.path,
+            label: "behavior-matrix-same-thread"
+        )
+        let firstTurn = try await startTurn(
+            on: thread,
+            prompt: prompt(label: "BEHAVIOR_MATRIX_SAME_THREAD_FIRST_DONE")
+        )
+        let outcome = await startSecondSameThreadTurn(
+            on: thread,
+            prompt: prompt(label: "BEHAVIOR_MATRIX_SAME_THREAD_SECOND_DONE")
+        )
+
+        switch outcome {
+        case let .failed(errorDescription):
+            let completion = try? await awaitCompletion(
+                of: firstTurn,
+                timeoutSeconds: 45,
+                operation: "waiting for the first behavior-matrix same-thread turn to complete"
+            )
+            return .init(
+                threadID: thread.id,
+                firstTurnID: firstTurn.turn.id,
+                outcome: "rejected",
+                errorDescription: errorDescription,
+                firstTurnStatus: completion?.turn.status.rawValue
+            )
+        case .started:
+            return .init(
+                threadID: thread.id,
+                firstTurnID: firstTurn.turn.id,
+                outcome: "unexpectedly-started",
+                errorDescription: nil,
+                firstTurnStatus: nil
+            )
+        }
+    } catch {
+        return .init(
+            threadID: "",
+            firstTurnID: "",
+            outcome: "failed",
+            errorDescription: String(describing: error),
+            firstTurnStatus: nil
+        )
+    }
+}
+
+private func probeLiveCLIDiagnosticsMatrix(
+    on client: CodexAppServer
+) async -> LiveBehaviorMatrixReport.CLIDiagnosticsResult {
+    do {
+        let diagnostics = try await client.cliExecutableDiagnostics()
+        return .init(
+            resolvedExecutablePath: diagnostics.resolvedExecutablePath,
+            versionString: diagnostics.versionString,
+            compatibility: String(describing: diagnostics.compatibility),
+            errorDescription: nil
+        )
+    } catch {
+        return .init(
+            resolvedExecutablePath: nil,
+            versionString: "",
+            compatibility: "",
+            errorDescription: String(describing: error)
+        )
+    }
+}
+
 private func startApprovalProbeThread(
     on client: CodexAppServer,
     harness: LiveCodexHarness,
@@ -2686,7 +3127,38 @@ private extension CodexAppServer.TurnStatus {
     }
 }
 
-private func makeInitializedLiveClient(using harness: LiveCodexHarness) async throws -> CodexAppServer {
+private extension CodexAppServer.ApprovalPolicy {
+    var reportLabel: String {
+        switch self {
+        case .never:
+            return "never"
+        case .onFailure:
+            return "onFailure"
+        case .onRequest:
+            return "onRequest"
+        case .untrusted:
+            return "untrusted"
+        case let .granular(policy):
+            return """
+            granular(mcpElicitations:\(policy.mcpElicitations),requestPermissions:\(String(describing: policy.requestPermissions)),rules:\(policy.rules),sandboxApproval:\(policy.sandboxApproval),skillApproval:\(String(describing: policy.skillApproval)))
+            """
+        }
+    }
+
+    var requiresUserReviewer: Bool {
+        switch self {
+        case .never:
+            return false
+        case .onFailure, .onRequest, .untrusted, .granular:
+            return true
+        }
+    }
+}
+
+private func makeInitializedLiveClient(
+    using harness: LiveCodexHarness,
+    experimentalAPI: Bool? = nil
+) async throws -> CodexAppServer {
     let client = CodexAppServer(configuration: harness.configuration)
     try await client.start()
 
@@ -2695,6 +3167,7 @@ private func makeInitializedLiveClient(using harness: LiveCodexHarness) async th
             try await client.initialize(
                 .init(
                     capabilities: .init(
+                        experimentalAPI: experimentalAPI,
                         optOutNotificationMethods: [
                             "account/rateLimits/updated",
                             "hook/completed",
