@@ -742,7 +742,7 @@ Every promoted answerable server-request family should have both deterministic
 fake-transport unit coverage and an opt-in real app-server probe when the real
 runtime can be driven with a mock Responses provider.
 
-- [ ] Permissions approval / request-permissions tool path.
+- [x] Permissions approval / request-permissions tool path.
 - [ ] Tool user input.
 - [ ] MCP server elicitation.
 - [ ] Guardian denied-action approval after SwiftASB owns a stable public model.
@@ -772,10 +772,14 @@ The live script surface should support these environment knobs consistently:
 ### First Implementation Slice
 
 The first post-v1 live-testing slice is the consolidated release-gate runner.
-It should run the currently proven high-signal probes in order: deterministic
-approval/server-request, multi-turn file mutation, and rollback. The next slice
-should add the permissions approval mock-Responses probe, because permissions
-approval is the largest remaining answerable server-request family gap.
+It runs the currently proven high-signal probes in order: deterministic
+approval/server-request, multi-turn file mutation, and rollback. The permissions
+approval mock-Responses probe now covers the largest answerable server-request
+family gap. The next slice should either add the
+`scripts/run-live-codex-server-requests.sh` entrypoint around remaining promoted
+request families or broaden the release gate with startup, initialize,
+model/MCP, single-turn, and cross-thread probes if their runtime cost stays
+reasonable.
 
 ## Proposed Next Release Slice
 
