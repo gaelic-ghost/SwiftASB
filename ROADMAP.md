@@ -749,18 +749,21 @@ fake-transport unit coverage and an opt-in real app-server probe when the real
 runtime can be driven with a mock Responses provider.
 
 - [x] Permissions approval / request-permissions tool path.
-- [ ] Tool user input.
-  Status: deterministic fake-transport coverage exists for public routing and
-  response behavior, and `scripts/run-live-codex-server-request-probes.sh` now
-  records this family in the live coverage report. The remaining gap is a
-  reliable current Codex mock Responses reproducer that forces
-  `item/tool/requestUserInput` through the real app-server.
+- [x] Tool user input.
+  Decision: deterministic fake-transport coverage proves public routing and
+  response behavior, and the opt-in live server-request runner now drives the
+  real app-server with a mock Responses `request_user_input` call in plan
+  collaboration mode. The probe asserts `item/tool/requestUserInput` delivery,
+  SwiftASB's JSON-RPC response, `serverRequest/resolved`, and terminal turn
+  completion.
 - [ ] MCP server elicitation.
-  Status: deterministic fake-transport coverage exists for public routing and
-  response behavior, and `scripts/run-live-codex-server-request-probes.sh` now
-  records this family in the live coverage report. The remaining gap is a local
-  MCP server fixture that deterministically asks for elicitation during a live
-  turn.
+  Status: deterministic fake-transport coverage proves public routing and
+  response behavior, and the opt-in live server-request runner now drives a
+  regular stdio MCP fixture through the real app-server. That fixture proves the
+  model-to-MCP tool path is deterministic, but the plain stdio MCP path does
+  not deterministically surface `mcpServer/elicitation/request`; the remaining
+  live gap is an app-connector MCP elicitation fixture matching upstream Codex
+  app-server coverage.
 - [ ] Guardian denied-action approval after SwiftASB owns a stable public model.
 - [ ] Future promoted surfaces such as `hooks/list` and model-provider
   capabilities when they become public or observable contracts.

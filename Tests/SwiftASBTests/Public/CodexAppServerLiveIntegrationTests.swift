@@ -1341,6 +1341,362 @@ struct CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
+        "completes deterministic tool user input through the raw real app-server",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_SERVER_REQUEST_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI."
+        ),
+        .timeLimit(.minutes(2))
+    )
+    func completesDeterministicToolUserInputThroughRawRealAppServer() async throws {
+        let mockResponses = try await MockResponsesServer(
+            responses: [
+                .requestUserInput(callID: "tool-input-call"),
+                .assistantMessage("TOOL_USER_INPUT_DONE"),
+            ]
+        )
+        defer { mockResponses.stop() }
+
+        let harness = try LiveCodexHarness(
+            configMode: .mockResponses(baseURL: mockResponses.baseURL.absoluteString)
+        )
+        defer { harness.cleanup() }
+
+        let transport = CodexAppServerTransport(
+            configuration: .init(
+                codexExecutableURL: harness.codexExecutableURL,
+                currentDirectoryURL: harness.rootDirectoryURL,
+                environment: harness.configuration.environment
+            )
+        )
+        let protocolLayer = CodexAppServerProtocol()
+        let serverEvents = await transport.serverEvents()
+        var eventIterator = serverEvents.makeAsyncIterator()
+
+        do {
+            try await transport.start()
+
+            let initializeRequestID = CodexRPCRequestID.string("deterministic-tool-input-initialize")
+            let initializePayload = try protocolLayer.makeInitializeRequest(
+                id: initializeRequestID,
+                params: CodexWireInitializeParams(
+                    capabilities: CodexWireInitializeCapabilities(
+                        experimentalAPI: true,
+                        optOutNotificationMethods: [
+                            "account/rateLimits/updated",
+                            "hook/completed",
+                            "hook/started",
+                            "mcpServer/startupStatus/updated",
+                        ]
+                    ),
+                    clientInfo: .init(
+                        name: "SwiftASBDeterministicToolInputTests",
+                        title: "SwiftASB Deterministic Tool Input Tests",
+                        version: "0.1.0"
+                    )
+                )
+            )
+            let initializeResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic tool-user-input initialize response"
+            ) {
+                try await transport.send(initializePayload, id: initializeRequestID)
+            }
+            _ = try protocolLayer.decodeInitializeResponse(
+                initializeResponsePayload,
+                expectedID: initializeRequestID
+            )
+
+            try await transport.sendNotification(
+                try protocolLayer.makeInitializedNotification(),
+                method: "initialized"
+            )
+
+            let threadRequestID = CodexRPCRequestID.string("deterministic-tool-input-thread")
+            let threadStartPayload = try protocolLayer.makeThreadStartRequest(
+                id: threadRequestID,
+                params: CodexWireThreadStartParams(
+                    approvalPolicy: .enumeration(.never),
+                    approvalsReviewer: nil,
+                    baseInstructions: nil,
+                    config: nil,
+                    cwd: harness.approvalProbeWorkspace.path,
+                    developerInstructions: "Use the model-provided request_user_input tool call exactly as emitted.",
+                    dynamicTools: nil,
+                    environments: nil,
+                    ephemeral: true,
+                    experimentalRawEvents: nil,
+                    mockExperimentalField: nil,
+                    model: nil,
+                    modelProvider: nil,
+                    permissions: nil,
+                    persistExtendedHistory: nil,
+                    personality: nil,
+                    sandbox: .readOnly,
+                    serviceName: nil,
+                    serviceTier: nil,
+                    sessionStartSource: nil
+                )
+            )
+            let threadResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic tool-user-input thread/start response"
+            ) {
+                try await transport.send(threadStartPayload, id: threadRequestID)
+            }
+            let threadResponse = try protocolLayer.decodeThreadStartResponse(
+                threadResponsePayload,
+                expectedID: threadRequestID
+            )
+
+            let turnRequestID = CodexRPCRequestID.string("deterministic-tool-input-turn")
+            let turnStartPayload = try protocolLayer.makeTurnStartRequest(
+                id: turnRequestID,
+                params: CodexWireTurnStartParams(
+                    approvalPolicy: .enumeration(.never),
+                    approvalsReviewer: nil,
+                    collaborationMode: CodexWireCollaborationMode(
+                        mode: .plan,
+                        settings: CodexWireSettings(
+                            developerInstructions: nil,
+                            model: "mock-model",
+                            reasoningEffort: nil
+                        )
+                    ),
+                    cwd: nil,
+                    effort: nil,
+                    environments: nil,
+                    input: [
+                        CodexWireUserInput(
+                            text: "Ask the provided question, then report completion.",
+                            textElements: nil,
+                            type: .text,
+                            url: nil,
+                            path: nil,
+                            name: nil
+                        )
+                    ],
+                    model: nil,
+                    outputSchema: nil,
+                    permissions: nil,
+                    personality: nil,
+                    responsesapiClientMetadata: nil,
+                    sandboxPolicy: nil,
+                    serviceTier: nil,
+                    summary: CodexWireReasoningSummary.none,
+                    threadID: threadResponse.thread.id
+                )
+            )
+            let turnResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic tool-user-input turn/start response"
+            ) {
+                try await transport.send(turnStartPayload, id: turnRequestID)
+            }
+            let turnResponse = try protocolLayer.decodeTurnStartResponse(
+                turnResponsePayload,
+                expectedID: turnRequestID
+            )
+
+            let inputResult = try await awaitRawToolUserInputCompletion(
+                eventIterator: &eventIterator,
+                protocolLayer: protocolLayer,
+                transport: transport,
+                threadID: threadResponse.thread.id,
+                turnID: turnResponse.turn.id,
+                operation: "waiting for deterministic raw tool-user-input completion"
+            )
+            #expect(inputResult.threadID == threadResponse.thread.id)
+            #expect(inputResult.turnID == turnResponse.turn.id)
+            #expect(inputResult.questionIDs == ["direction"])
+            #expect(inputResult.sawElicitationRequest)
+            #expect(inputResult.sawServerRequestResolved)
+            #expect(inputResult.completion.turn.status == .completed)
+            #expect(mockResponses.requestCount >= 2)
+
+            await transport.stop()
+        } catch {
+            await transport.stop()
+            throw error
+        }
+    }
+
+    @Test(
+        "records deterministic regular MCP elicitation fixture behavior through the raw real app-server",
+        .enabled(
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
+                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_SERVER_REQUEST_TESTS"] == "1",
+            "Requires explicit opt-in because this test launches the local Codex CLI and a temporary MCP server fixture."
+        ),
+        .timeLimit(.minutes(2))
+    )
+    func recordsDeterministicRegularMcpElicitationFixtureBehaviorThroughRawRealAppServer() async throws {
+        let mockResponses = try await MockResponsesServer(
+            responses: [
+                .mcpElicitationToolCall(callID: "mcp-elicitation-call"),
+                .assistantMessage("MCP_ELICITATION_DONE"),
+            ]
+        )
+        defer { mockResponses.stop() }
+
+        let harness = try LiveCodexHarness(
+            configMode: .mockResponsesWithMcpElicitation(baseURL: mockResponses.baseURL.absoluteString)
+        )
+        defer { harness.cleanup() }
+
+        let transport = CodexAppServerTransport(
+            configuration: .init(
+                codexExecutableURL: harness.codexExecutableURL,
+                currentDirectoryURL: harness.rootDirectoryURL,
+                environment: harness.configuration.environment
+            )
+        )
+        let protocolLayer = CodexAppServerProtocol()
+        let serverEvents = await transport.serverEvents()
+        var eventIterator = serverEvents.makeAsyncIterator()
+
+        do {
+            try await transport.start()
+
+            let initializeRequestID = CodexRPCRequestID.string("deterministic-mcp-elicitation-initialize")
+            let initializePayload = try protocolLayer.makeInitializeRequest(
+                id: initializeRequestID,
+                params: CodexWireInitializeParams(
+                    capabilities: CodexWireInitializeCapabilities(
+                        experimentalAPI: nil,
+                        optOutNotificationMethods: [
+                            "account/rateLimits/updated",
+                            "hook/completed",
+                            "hook/started",
+                            "mcpServer/startupStatus/updated",
+                        ]
+                    ),
+                    clientInfo: .init(
+                        name: "SwiftASBDeterministicMcpElicitationTests",
+                        title: "SwiftASB Deterministic MCP Elicitation Tests",
+                        version: "0.1.0"
+                    )
+                )
+            )
+            let initializeResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic MCP elicitation initialize response"
+            ) {
+                try await transport.send(initializePayload, id: initializeRequestID)
+            }
+            _ = try protocolLayer.decodeInitializeResponse(
+                initializeResponsePayload,
+                expectedID: initializeRequestID
+            )
+
+            try await transport.sendNotification(
+                try protocolLayer.makeInitializedNotification(),
+                method: "initialized"
+            )
+
+            let threadRequestID = CodexRPCRequestID.string("deterministic-mcp-elicitation-thread")
+            let threadStartPayload = try protocolLayer.makeThreadStartRequest(
+                id: threadRequestID,
+                params: CodexWireThreadStartParams(
+                    approvalPolicy: .enumeration(.never),
+                    approvalsReviewer: nil,
+                    baseInstructions: nil,
+                    config: nil,
+                    cwd: harness.approvalProbeWorkspace.path,
+                    developerInstructions: "Use the model-provided MCP tool call exactly as emitted.",
+                    dynamicTools: nil,
+                    environments: nil,
+                    ephemeral: true,
+                    experimentalRawEvents: nil,
+                    mockExperimentalField: nil,
+                    model: nil,
+                    modelProvider: nil,
+                    permissions: nil,
+                    persistExtendedHistory: nil,
+                    personality: nil,
+                    sandbox: .readOnly,
+                    serviceName: nil,
+                    serviceTier: nil,
+                    sessionStartSource: nil
+                )
+            )
+            let threadResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic MCP elicitation thread/start response"
+            ) {
+                try await transport.send(threadStartPayload, id: threadRequestID)
+            }
+            let threadResponse = try protocolLayer.decodeThreadStartResponse(
+                threadResponsePayload,
+                expectedID: threadRequestID
+            )
+
+            let turnRequestID = CodexRPCRequestID.string("deterministic-mcp-elicitation-turn")
+            let turnStartPayload = try protocolLayer.makeTurnStartRequest(
+                id: turnRequestID,
+                params: CodexWireTurnStartParams(
+                    approvalPolicy: .enumeration(.never),
+                    approvalsReviewer: nil,
+                    collaborationMode: nil,
+                    cwd: nil,
+                    effort: nil,
+                    environments: nil,
+                    input: [
+                        CodexWireUserInput(
+                            text: "Call the provided MCP tool, then report completion.",
+                            textElements: nil,
+                            type: .text,
+                            url: nil,
+                            path: nil,
+                            name: nil
+                        )
+                    ],
+                    model: nil,
+                    outputSchema: nil,
+                    permissions: nil,
+                    personality: nil,
+                    responsesapiClientMetadata: nil,
+                    sandboxPolicy: nil,
+                    serviceTier: nil,
+                    summary: CodexWireReasoningSummary.none,
+                    threadID: threadResponse.thread.id
+                )
+            )
+            let turnResponsePayload = try await withTimeout(
+                seconds: 15,
+                operation: "waiting for deterministic MCP elicitation turn/start response"
+            ) {
+                try await transport.send(turnStartPayload, id: turnRequestID)
+            }
+            let turnResponse = try protocolLayer.decodeTurnStartResponse(
+                turnResponsePayload,
+                expectedID: turnRequestID
+            )
+
+            let elicitationResult = try await awaitRawMcpElicitationCompletion(
+                eventIterator: &eventIterator,
+                protocolLayer: protocolLayer,
+                transport: transport,
+                threadID: threadResponse.thread.id,
+                turnID: turnResponse.turn.id,
+                operation: "waiting for deterministic raw MCP elicitation completion"
+            )
+            #expect(elicitationResult.threadID == threadResponse.thread.id)
+            #expect(elicitationResult.turnID == turnResponse.turn.id)
+            #expect(elicitationResult.serverName == "swiftasb_elicitation")
+            #expect(elicitationResult.sawMcpToolCall)
+            #expect(elicitationResult.completion.turn.status == .completed)
+            #expect(mockResponses.requestCount >= 2)
+
+            await transport.stop()
+        } catch {
+            await transport.stop()
+            throw error
+        }
+    }
+
+    @Test(
         "records live approval, sandbox, history, and diagnostics behavior matrix",
         .enabled(
             if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
@@ -1497,19 +1853,19 @@ struct CodexAppServerLiveIntegrationTests {
                     family: "toolUserInput",
                     publicSurface: "CodexTurnHandle.respond(to:with:)",
                     deterministicFakeTransportCoverage: true,
-                    liveProbeCoverage: false,
-                    liveProbeScript: nil,
-                    status: "blocked",
-                    notes: "The public fake-transport suite proves routing and response behavior, but this branch does not have a reliable current Codex mock Responses reproducer that forces item/tool/requestUserInput through the real app-server."
+                    liveProbeCoverage: true,
+                    liveProbeScript: "scripts/run-live-codex-server-request-probes.sh",
+                    status: "covered",
+                    notes: "The focused server-request probe drives the real app-server with a mock Responses request_user_input call in plan collaboration mode and asserts request delivery, response, serverRequest/resolved, and terminal turn completion."
                 ),
                 .init(
                     family: "mcpServerElicitation",
                     publicSurface: "CodexThread.respond(to:with:) when turnId is null; CodexTurnHandle.respond(to:with:) when turn-routed",
                     deterministicFakeTransportCoverage: true,
                     liveProbeCoverage: false,
-                    liveProbeScript: nil,
+                    liveProbeScript: "scripts/run-live-codex-server-request-probes.sh",
                     status: "blocked",
-                    notes: "The public fake-transport suite proves routing and response behavior, but a real app-server probe still needs a local MCP server fixture that can deterministically request elicitation during a turn."
+                    notes: "The public fake-transport suite proves routing and response behavior. A regular stdio MCP fixture now proves the model-to-MCP tool path is deterministic, but this path does not deterministically surface mcpServer/elicitation/request through the app-server; the remaining live gap is an app-connector MCP elicitation fixture matching upstream Codex app-server coverage."
                 ),
             ],
             sourceNotes: [
@@ -1523,6 +1879,7 @@ struct CodexAppServerLiveIntegrationTests {
         #expect(report.families.filter(\.liveProbeCoverage).map(\.family) == [
             "commandExecutionApproval",
             "permissionsApproval",
+            "toolUserInput",
         ])
     }
 
@@ -1746,6 +2103,7 @@ private final class LiveCodexHarness {
         case standard
         case approvalProbe
         case mockResponses(baseURL: String, requestPermissionsTool: Bool = false)
+        case mockResponsesWithMcpElicitation(baseURL: String)
     }
 
     init(configMode: ConfigMode = .standard, fileManager: FileManager = .default) throws {
@@ -1774,10 +2132,16 @@ private final class LiveCodexHarness {
         try fileManager.createDirectory(at: fileScenarioWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: rollbackWorkspace, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: sameThreadWorkspace, withIntermediateDirectories: true)
+        let mcpElicitationServerScriptURL = rootDirectoryURL
+            .appendingPathComponent("swiftasb_mcp_elicitation_server.py", isDirectory: false)
+        if case .mockResponsesWithMcpElicitation = configMode {
+            try Data(Self.mcpElicitationServerPythonScript.utf8).write(to: mcpElicitationServerScriptURL)
+        }
         try Self.seedIsolatedCodexHome(
             at: codexHomeURL,
             configMode: configMode,
             projectRootURL: rootDirectoryURL,
+            mcpElicitationServerScriptURL: mcpElicitationServerScriptURL,
             fileManager: fileManager
         )
     }
@@ -1885,6 +2249,7 @@ private final class LiveCodexHarness {
         at codexHomeURL: URL,
         configMode: ConfigMode,
         projectRootURL: URL,
+        mcpElicitationServerScriptURL: URL,
         fileManager: FileManager
     ) throws {
         let sourceCodexHomeURL = fileManager.homeDirectoryForCurrentUser
@@ -1956,6 +2321,42 @@ private final class LiveCodexHarness {
             [projects.\(tomlQuotedString(projectRootURL.path))]
             trust_level = "untrusted"
             """
+        case let .mockResponsesWithMcpElicitation(baseURL):
+            isolatedConfig = """
+            model = "mock-model"
+            approval_policy = "untrusted"
+            approvals_reviewer = "user"
+            sandbox_mode = "read-only"
+            model_provider = "mock_provider"
+            suppress_unstable_features_warning = true
+
+            [features]
+            apps = false
+            exec_permission_approvals = true
+
+            [apps._default]
+            enabled = false
+
+            [model_providers.mock_provider]
+            name = "SwiftASB Mock Responses Provider"
+            base_url = "\(baseURL)/v1"
+            wire_api = "responses"
+            request_max_retries = 0
+            stream_max_retries = 0
+            supports_websockets = false
+
+            [mcp_servers.swiftasb_elicitation]
+            command = "/usr/bin/env"
+            args = ["python3", "\(tomlEscapedString(mcpElicitationServerScriptURL.path))"]
+            startup_timeout_sec = 5
+            enabled = true
+
+            [mcp_servers.swiftasb_elicitation.tools.ask]
+            approval_mode = "approve"
+
+            [projects.\(tomlQuotedString(projectRootURL.path))]
+            trust_level = "trusted"
+            """
         }
         try Data(isolatedConfig.utf8).write(to: configURL)
     }
@@ -1965,7 +2366,7 @@ private final class LiveCodexHarness {
         projectRootURL: URL
     ) -> LiveApprovalProbeReport.CodexConfig? {
         switch configMode {
-        case .standard, .mockResponses:
+        case .standard, .mockResponses, .mockResponsesWithMcpElicitation:
             nil
         case .approvalProbe:
             .init(
@@ -1984,6 +2385,97 @@ private final class LiveCodexHarness {
             .replacingOccurrences(of: "\"", with: "\\\"")
         return "\"\(escapedValue)\""
     }
+
+    private static func tomlEscapedString(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+    }
+
+    private static let mcpElicitationServerPythonScript = """
+    import json
+    import sys
+
+    def send(message):
+        sys.stdout.write(json.dumps(message, separators=(",", ":")) + "\\n")
+        sys.stdout.flush()
+
+    def success(request_id, result):
+        send({"jsonrpc": "2.0", "id": request_id, "result": result})
+
+    def error(request_id, code, message):
+        send({"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}})
+
+    for line in sys.stdin:
+        if not line.strip():
+            continue
+        request = json.loads(line)
+        request_id = request.get("id")
+        method = request.get("method")
+
+        if method == "initialize":
+            params = request.get("params", {})
+            success(request_id, {
+                "protocolVersion": params.get("protocolVersion", "2025-06-18"),
+                "capabilities": {
+                    "tools": {},
+                    "elicitation": {}
+                },
+                "serverInfo": {
+                    "name": "swiftasb-elicitation",
+                    "version": "0.1.0"
+                }
+            })
+        elif method == "notifications/initialized":
+            continue
+        elif method == "tools/list":
+            success(request_id, {
+                "tools": [{
+                    "name": "ask",
+                    "description": "Ask for deterministic SwiftASB MCP elicitation input.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": False
+                    }
+                }]
+            })
+        elif method == "tools/call":
+            elicitation_id = "swiftasb-elicitation-request"
+            send({
+                "jsonrpc": "2.0",
+                "id": elicitation_id,
+                "method": "elicitation/create",
+                "params": {
+                    "message": "Confirm deterministic SwiftASB MCP elicitation.",
+                    "requestedSchema": {
+                        "type": "object",
+                        "properties": {
+                            "confirmed": {
+                                "type": "boolean",
+                                "title": "Confirmed"
+                            }
+                        },
+                        "required": ["confirmed"]
+                    }
+                }
+            })
+            while True:
+                response_line = sys.stdin.readline()
+                if not response_line:
+                    sys.exit(0)
+                response = json.loads(response_line)
+                if response.get("id") == elicitation_id:
+                    break
+            success(request_id, {
+                "content": [{
+                    "type": "text",
+                    "text": "MCP elicitation completed."
+                }]
+            })
+        elif request_id is not None:
+            error(request_id, -32601, f"Unsupported method: {method}")
+    """
 }
 
 private enum LiveApprovalPathOutcome {
@@ -2398,6 +2890,46 @@ private struct MockResponsesEventStream: Encodable, Equatable {
         ])
     }
 
+    static func requestUserInput(callID: String) throws -> Self {
+        let arguments = try jsonString([
+            "questions": [
+                [
+                    "header": "Direction",
+                    "id": "direction",
+                    "question": "Which deterministic path should the live test choose?",
+                    "options": [
+                        [
+                            "label": "Continue (Recommended)",
+                            "description": "Complete the deterministic server-request probe.",
+                        ],
+                        [
+                            "label": "Stop",
+                            "description": "Stop before completing the deterministic probe.",
+                        ],
+                    ],
+                ],
+            ],
+        ])
+        return try .init(events: [
+            responseCreated(id: "resp-tool-input"),
+            functionCall(callID: callID, name: "request_user_input", arguments: arguments),
+            responseCompleted(id: "resp-tool-input"),
+        ])
+    }
+
+    static func mcpElicitationToolCall(callID: String) throws -> Self {
+        try .init(events: [
+            responseCreated(id: "resp-mcp-elicitation"),
+            functionCall(
+                callID: callID,
+                name: "ask",
+                namespace: "mcp__swiftasb_elicitation__",
+                arguments: "{}"
+            ),
+            responseCompleted(id: "resp-mcp-elicitation"),
+        ])
+    }
+
     static func assistantMessage(_ message: String) throws -> Self {
         try .init(events: [
             responseCreated(id: "resp-final"),
@@ -2460,16 +2992,22 @@ private struct MockResponsesEventStream: Encodable, Equatable {
     private static func functionCall(
         callID: String,
         name: String,
+        namespace: String? = nil,
         arguments: String
     ) -> [String: Any] {
-        [
+        var item: [String: Any] = [
+            "type": "function_call",
+            "call_id": callID,
+            "name": name,
+            "arguments": arguments,
+        ]
+        if let namespace {
+            item["namespace"] = namespace
+        }
+
+        return [
             "type": "response.output_item.done",
-            "item": [
-                "type": "function_call",
-                "call_id": callID,
-                "name": name,
-                "arguments": arguments,
-            ],
+            "item": item,
         ]
     }
 
@@ -2924,6 +3462,25 @@ private struct RawPermissionsApprovalResult: Equatable, Sendable {
     let sawWaitingOnApproval: Bool
 }
 
+private struct RawToolUserInputResult: Equatable, Sendable {
+    let completion: CodexWireTurnCompletedNotification
+    let threadID: String
+    let turnID: String
+    let questionIDs: [String]
+    let sawElicitationRequest: Bool
+    let sawServerRequestResolved: Bool
+}
+
+private struct RawMcpElicitationResult: Equatable, Sendable {
+    let completion: CodexWireTurnCompletedNotification
+    let threadID: String
+    let turnID: String
+    let serverName: String?
+    let sawMcpToolCall: Bool
+    let sawElicitationRequest: Bool
+    let sawServerRequestResolved: Bool
+}
+
 private func awaitRawCommandApprovalCompletion(
     eventIterator: inout AsyncStream<CodexRPCServerEvent>.Iterator,
     protocolLayer: CodexAppServerProtocol,
@@ -3047,6 +3604,131 @@ private func awaitRawPermissionsApprovalCompletion(
     throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
 }
 
+private func awaitRawToolUserInputCompletion(
+    eventIterator: inout AsyncStream<CodexRPCServerEvent>.Iterator,
+    protocolLayer: CodexAppServerProtocol,
+    transport: CodexAppServerTransport,
+    threadID: String,
+    turnID: String,
+    operation: String
+) async throws -> RawToolUserInputResult {
+    var questionIDs: [String] = []
+    var sawElicitationRequest = false
+    var sawServerRequestResolved = false
+    var observedEvents: [String] = []
+
+    while let serverEvent = await eventIterator.next() {
+        guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
+            continue
+        }
+        observedEvents.append(String(describing: decodedEvent))
+
+        switch decodedEvent {
+        case let .toolUserInputRequested(request)
+            where request.threadID == threadID && request.turnID == turnID:
+            sawElicitationRequest = true
+            questionIDs = request.questions.map(\.id)
+            let responsePayload = try protocolLayer.makeServerResponse(
+                id: request.requestID,
+                result: RawToolUserInputResponse(
+                    answers: [
+                        "direction": .init(answers: ["Continue (Recommended)"]),
+                    ]
+                )
+            )
+            try await transport.sendResponse(responsePayload, requestID: request.requestID)
+        case let .serverRequestResolved(notification)
+            where notification.threadID == threadID:
+            sawServerRequestResolved = true
+        case let .turnCompleted(completed)
+            where completed.threadID == threadID && completed.turn.id == turnID:
+            guard sawElicitationRequest else {
+                throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
+            }
+            return .init(
+                completion: completed,
+                threadID: threadID,
+                turnID: turnID,
+                questionIDs: questionIDs,
+                sawElicitationRequest: sawElicitationRequest,
+                sawServerRequestResolved: sawServerRequestResolved
+            )
+        default:
+            continue
+        }
+    }
+
+    throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
+}
+
+private func awaitRawMcpElicitationCompletion(
+    eventIterator: inout AsyncStream<CodexRPCServerEvent>.Iterator,
+    protocolLayer: CodexAppServerProtocol,
+    transport: CodexAppServerTransport,
+    threadID: String,
+    turnID: String,
+    operation: String
+) async throws -> RawMcpElicitationResult {
+    var serverName: String?
+    var sawMcpToolCall = false
+    var sawElicitationRequest = false
+    var sawServerRequestResolved = false
+    var observedEvents: [String] = []
+
+    while let serverEvent = await eventIterator.next() {
+        guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
+            continue
+        }
+        observedEvents.append(String(describing: decodedEvent))
+
+        switch decodedEvent {
+        case let .itemStarted(started)
+            where started.threadID == threadID
+                && started.turnID == turnID
+                && started.item.type == .mcpToolCall:
+            sawMcpToolCall = true
+            serverName = started.item.server
+        case let .itemCompleted(completed)
+            where completed.threadID == threadID
+                && completed.turnID == turnID
+                && completed.item.type == .mcpToolCall:
+            sawMcpToolCall = true
+            serverName = completed.item.server
+        case let .mcpServerElicitationRequested(request)
+            where request.threadID == threadID && (request.turnID == nil || request.turnID == turnID):
+            sawElicitationRequest = true
+            serverName = request.serverName
+            let responsePayload = try protocolLayer.makeServerResponse(
+                id: request.requestID,
+                result: RawMcpServerElicitationResponse(
+                    action: "accept",
+                    content: ["confirmed": true],
+                    meta: nil
+                )
+            )
+            try await transport.sendResponse(responsePayload, requestID: request.requestID)
+        case let .serverRequestResolved(notification)
+            where notification.threadID == threadID:
+            sawServerRequestResolved = true
+        case let .turnCompleted(completed)
+            where completed.threadID == threadID && completed.turn.id == turnID:
+            return .init(
+                completion: completed,
+                threadID: threadID,
+                turnID: turnID,
+                serverName: serverName,
+                sawMcpToolCall: sawMcpToolCall,
+                sawElicitationRequest: sawElicitationRequest,
+                sawServerRequestResolved: sawServerRequestResolved
+            )
+        default:
+            continue
+        }
+    }
+
+    throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
+}
+
 private struct RawCommandExecutionApprovalResponse: Encodable {
     let decision: String
 }
@@ -3067,6 +3749,26 @@ private struct RawPermissionProfile: Encodable {
 
     struct Network: Encodable {
         let enabled: Bool?
+    }
+}
+
+private struct RawToolUserInputResponse: Encodable {
+    let answers: [String: Answer]
+
+    struct Answer: Encodable {
+        let answers: [String]
+    }
+}
+
+private struct RawMcpServerElicitationResponse: Encodable {
+    let action: String
+    let content: [String: Bool]?
+    let meta: [String: String]?
+
+    enum CodingKeys: String, CodingKey {
+        case action
+        case content
+        case meta = "_meta"
     }
 }
 
