@@ -69,7 +69,7 @@
 | Thread-scoped recent-command observable | `Partially shipped` | `CodexThread.makeRecentCommands(limit:)` now vends a command-centric recent-commands observable that hydrates from persisted `commandExecution` items, keeps one resident entry per command item, enriches live entries from `item/commandExecution/outputDelta`, can load older command entries from the same turn before stepping farther back through older turns, and now supports selection-aware shell-versus-output slimming with automatic output rehydration for protected commands. Recent-command startup now inherits the same empty local-only degradation as recent-turns for the known live history-unavailable responses. Current output weighting accounts for output size and line structure, and shell summaries prefer concise command and output summaries over raw transport detail. The remaining open work is better output-cost calibration and sharper shell-summary heuristics. |
 | Non-UI local history-reading helpers | `Partially shipped` | `CodexThread` now exposes a lightweight `HistoryWindow` page shape for recent local history, older or newer local windows around a known boundary turn id, centered `windowAroundTurn(...)` reads, centered `windowAroundItem(...)` reads, direct `ClosedTurn` reads for one turn, and convenience array helpers over those same windows. This gives non-UI callers an intentional path into the local history store without binding a UI-oriented observable, while still deferring a broader public cursor model, transcript search surface, and richer history-query helpers. |
 | Public API curation | `Partially shipped` | The source-organization pass has split app-wide model, MCP, thread-management, history, and observable companion values into focused public files while preserving `CodexAppServer`, `CodexThread`, and `CodexTurnHandle` as the three real owners. The connected public-surface review keeps that ownership model for v1; remaining curation is limited to targeted symbol comments and any final name/default issues found during release prep. |
-| DocC documentation | `Partially shipped` | `Sources/SwiftASB/SwiftASB.docc/` now contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, generated-wire boundary notes, and copy-pasteable walkthroughs for startup, progress/approval handling, diagnostics/history, and SwiftUI observable companions. The catalog is validated through Xcode `docbuild`; remaining v1 work is a final stale-link/prose pass and any symbol comments that still read too terse. |
+| DocC documentation | `Shipped / ongoing` | `Sources/SwiftASB/SwiftASB.docc/` contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, generated-wire boundary notes, and copy-pasteable walkthroughs for startup, progress/approval handling, diagnostics/history, and SwiftUI observable companions. The catalog is validated through Xcode `docbuild`; future work is ordinary stale-link, prose, and symbol-comment refinement as the public API grows. |
 | Swift Package Index readiness | `Partially shipped` | `.spi.yml` declares `SwiftASB` as the documentation target so Swift Package Index can build the intended DocC catalog. The actual listing still needs confirmation after the package is publicly indexed and tagged for the release slice. |
 | Contributor documentation split | `Shipped` | `README.md` is now focused on Swift and SwiftUI package users, while `CONTRIBUTING.md` owns contributor setup, validation, DocC, live-test flags, generated-wire refresh, and PR expectations. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `complete()` handoff into a caller-owned sealed turn snapshot. |
@@ -154,10 +154,10 @@ That means the current priority order is:
 
 ## V1 Readiness Checklist
 
-This checklist tracks the remaining work to decide whether `SwiftASB` is ready
-for a `v1.0.0` tag. The goal is not to make every possible app-server feature
-public before v1. The goal is to make the supported lifecycle honest, durable,
-well documented, and intentionally shaped.
+This checklist records the work that made `SwiftASB` ready for the `v1.0.1`
+tag. The goal was not to make every possible app-server feature public before
+v1. The goal was to make the supported lifecycle honest, durable, well
+documented, and intentionally shaped.
 
 ### Release Boundary Decision
 
@@ -307,8 +307,8 @@ workflow forces a release-boundary change before the v1 tag.
 
 ### Documentation And Examples
 
-- [x] Update stale release references after the `v1.0.0` release.
-  Decision: README now names `v1.0.0` as the current released baseline and no
+- [x] Update stale release references after the `v1.0.1` release.
+  Decision: README now names `v1.0.1` as the current released baseline and no
   longer describes the package as early development.
 - [x] Finish DocC symbol comments for the supported lifecycle, not just the
   conceptual articles.
@@ -459,7 +459,7 @@ workflow forces a release-boundary change before the v1 tag.
 - [ ] Confirm Swift Package Index listing and DocC rendering after the latest
   public tag is indexed.
   Decision: post-tag follow-up. This cannot be completed until the public
-  `v1.0.0` tag is published and indexed.
+  `v1.0.1` tag is published and indexed.
 - [x] Run `swift test`, `git diff --check`, and
   `bash scripts/repo-maintenance/validate-all.sh` before the v1 release branch.
   Decision: `swift build`, `swift test`,
@@ -468,12 +468,13 @@ workflow forces a release-boundary change before the v1 tag.
 - [x] Run Xcode DocC validation before the v1 release branch.
   Decision: `xcodebuild docbuild -scheme SwiftASB -destination
   generic/platform=macOS -derivedDataPath tmp/xcode-docc/DerivedData` passed on
-  the `release/v1.0.0` branch on 2026-05-02.
+  the `release/v1.0.0` branch on 2026-05-02 and on the
+  `release/v1.0.1-prep` branch on 2026-05-02.
 - [x] Decide whether another targeted `v0.9.x` patch release is needed before
-  `v1.0.0`, or whether the remaining work should go straight into the v1
+  `v1.0.1`, or whether the remaining work should go straight into the v1
   release branch.
   Decision: no additional `v0.9.x` patch is needed. The remaining work should go
-  straight into the `v1.0.0` release branch.
+  straight into the `v1.0.1` release branch.
 - [x] Prepare v1 release notes with explicit sections for public surface,
   intentionally internal surfaces, compatibility window, migration notes,
   validation performed, and known post-v1 work.
@@ -525,7 +526,7 @@ workflow forces a release-boundary change before the v1 tag.
 #### Migration Notes
 
 - Existing `v0.9.x` consumers should update the SwiftPM dependency to
-  `from: "1.0.0"` once the tag is published.
+  `from: "1.0.1"` once the tag is published.
 - The v1 API surface has removed stale pre-v1 compatibility shims and phantom
   fields that no longer exist in the reviewed `v0.128.0` schema.
 - Same-thread overlapping turns are rejected client-side with
@@ -645,9 +646,8 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
 
 ### Test Coverage Gap Register
 
-Keep this register current while the package is below `1.0.0`; tests are part
-of the public contract because consumers are wrapping a fast-moving local
-runtime.
+Keep this register current after `1.0.0`; tests are part of the public contract
+because consumers are wrapping a fast-moving local runtime.
 
 - Approval/server-request completion now has deterministic SwiftASB-owned
   coverage and a focused live app-server completion probe. Fake-transport
@@ -1079,7 +1079,7 @@ In Progress
 
 ### Scope
 
-- [ ] Make the package understandable, verifiable, and releasable for early Swift consumers without requiring them to read generated wire code or maintainer chat history.
+- [ ] Keep the package understandable, verifiable, and releasable for Swift consumers without requiring them to read generated wire code or maintainer chat history.
 
 ### Tickets
 

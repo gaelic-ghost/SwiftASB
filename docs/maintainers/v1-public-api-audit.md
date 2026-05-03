@@ -2,7 +2,7 @@
 
 This document is the working checklist for the `SwiftASB` v1 public API
 curation pass. The goal is to freeze a compact, Swift-native surface for the
-supported app-server lifecycle before `v1.0.0`, not to expose every generated
+supported app-server lifecycle before `v1.0.1`, not to expose every generated
 wire family.
 
 ## Current Public Source Inventory
@@ -439,7 +439,7 @@ Use these decisions for every public symbol:
   Decision: covered by the startup, progress/approval, diagnostics/history, and
   SwiftUI observable companion walkthroughs in `Sources/SwiftASB/SwiftASB.docc/`.
 - [x] Update stale README release references before the next release.
-  Decision: README now names `v1.0.0` as the current released baseline.
+  Decision: README now names `v1.0.1` as the current released baseline.
 - [x] Confirm README, DocC, and this audit use the same v1 release boundary.
   Decision: README, DocC, and this audit now describe the same narrow v1
   promise: app-server lifecycle, app-wide capability reads, stored-thread
