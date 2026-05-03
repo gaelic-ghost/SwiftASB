@@ -705,6 +705,8 @@ releases:
 
 - [x] Consolidate the current release-gate probes behind
   `scripts/run-live-codex-release-gate.sh`.
+- [x] Add a clearer umbrella live integration-test runner at
+  `scripts/run-live-codex-integration-tests.sh`.
 - [ ] Keep startup, initialize, binary diagnostics, app-wide model/MCP snapshot,
   single-turn, and cross-thread coverage in the release-gate set when their
   runtime cost stays reasonable.
@@ -758,9 +760,12 @@ and optional workspace retention for debugging.
 
 Planned script entrypoints:
 
+- [x] `scripts/run-live-codex-integration-tests.sh`
 - [x] `scripts/run-live-codex-release-gate.sh`
 - [ ] `scripts/run-live-codex-behavior-matrix.sh`
-- [ ] `scripts/run-live-codex-server-requests.sh`
+- [ ] Add a focused mode or companion script for remaining answerable
+  server-request families once tool-user-input and MCP elicitation probes are
+  promoted into live coverage.
 
 The live script surface should support these environment knobs consistently:
 
@@ -775,11 +780,11 @@ The first post-v1 live-testing slice is the consolidated release-gate runner.
 It runs the currently proven high-signal probes in order: deterministic
 approval/server-request, multi-turn file mutation, and rollback. The permissions
 approval mock-Responses probe now covers the largest answerable server-request
-family gap. The next slice should either add the
-`scripts/run-live-codex-server-requests.sh` entrypoint around remaining promoted
-request families or broaden the release gate with startup, initialize,
-model/MCP, single-turn, and cross-thread probes if their runtime cost stays
-reasonable.
+family gap. The umbrella live integration-test runner now gives maintainers one
+entrypoint for release-gate, focused, and full opt-in live coverage. The next
+slice should either add focused modes around remaining promoted request
+families or broaden the release gate with startup, initialize, model/MCP,
+single-turn, and cross-thread probes if their runtime cost stays reasonable.
 
 ## Proposed Next Release Slice
 
