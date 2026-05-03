@@ -789,10 +789,11 @@ slice should either add focused modes around remaining promoted request
 families or broaden the release gate with startup, initialize, model/MCP,
 single-turn, and cross-thread probes if their runtime cost stays reasonable.
 
-## Proposed Next Release Slice
+## Previous V1 Release Slice
 
-Treat the remaining pre-v1 work as release-hardening for the first interactive
-lifecycle, not as a convenience-API expansion.
+This section records the release-hardening slice that produced the first
+interactive lifecycle release. Keep it as historical release-boundary context,
+not as the current maintainer priority.
 
 ### Shipped in the v0.9.x lifecycle slice
 
@@ -815,18 +816,17 @@ lifecycle, not as a convenience-API expansion.
   the supported package surface without reading maintainer notes, including
   walkthroughs for the primary v1 lifecycle jobs.
 
-### Remaining pre-v1 hardening
+### Remaining post-v1 follow-up
 
-- Complete the public API inventory and freeze decisions recorded in
+- [x] Complete the public API inventory and freeze decisions recorded in
   `docs/maintainers/v1-public-api-audit.md`.
-- Finish the remaining targeted source-level symbol documentation skim for the
-  supported lifecycle. The first walkthrough set has landed; keep it accurate
-  during the final release-readiness pass.
-- Keep default local tests deterministic, narrow or document the known
+- [x] Finish the targeted source-level symbol documentation skim for the
+  supported lifecycle.
+- [x] Keep default local tests deterministic, narrow or document the known
   subprocess timing flake, and run the opt-in live probes before the v1 tag.
-- Audit active compatibility shims and tie each removal trigger to the current
+- [x] Audit active compatibility shims and tie each removal trigger to the current
   reviewed Codex CLI support window.
-- Confirm Swift Package Index listing and DocC rendering after the latest public
+- [ ] Confirm Swift Package Index listing and DocC rendering after the latest public
   tag is indexed.
 
 ### Explicitly defer unless pre-v1 hardening forces it
