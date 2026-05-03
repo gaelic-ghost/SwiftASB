@@ -125,8 +125,9 @@ scripts/run-live-codex-integration-tests.sh
 ```
 
 The default mode runs the maintained release-gate live probe set. Pass `all` to
-run every opt-in `CodexAppServer` live integration test, or pass `approval`,
-`file-scenario`, or `rollback` to run one focused group.
+run every opt-in `CodexAppServer` live integration test, or pass `smoke`,
+`transport`, `capability`, `thread`, `turn`, `approval`, `file-scenario`,
+`rollback`, or `same-thread` to run one focused group.
 
 The release-gate wrapper remains available for patch-release prep:
 
@@ -134,10 +135,12 @@ The release-gate wrapper remains available for patch-release prep:
 scripts/run-live-codex-release-gate.sh
 ```
 
-That wrapper runs deterministic approval/server-request probes, the multi-turn
-create/edit/delete file scenario, and the disposable rollback scenario. Set
-`SWIFTASB_LIVE_CODEX_REPORT_DIR` to write JSON diagnostic reports outside
-`tmp/live-codex-reports/`.
+That wrapper runs smoke probes, deterministic approval/server-request probes,
+the multi-turn create/edit/delete file scenario, and the disposable rollback
+scenario. Set `SWIFTASB_LIVE_CODEX_REPORT_DIR` to write JSON diagnostic reports
+outside `tmp/live-codex-reports/`, `SWIFTASB_LIVE_CODEX_BIN` to test a specific
+Codex executable, and `SWIFTASB_LIVE_CODEX_KEEP_WORKSPACES=1` to preserve
+temporary workspaces for debugging.
 
 Run only the deterministic command and permissions approval coverage plus the
 exploratory approval probe:
@@ -220,4 +223,4 @@ When a decision is settled, record it in `ROADMAP.md`, DocC, or this guide so fu
 
 ## License and Contribution Terms
 
-SwiftASB is licensed under `FSL-1.1-ALv2`. Contributions are accepted under the same license terms unless maintainers state a different written agreement before the work lands.
+SwiftASB is licensed under the Apache License, Version 2.0. Contributions are accepted under the same license terms unless maintainers state a different written agreement before the work lands.

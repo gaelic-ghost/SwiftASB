@@ -6,6 +6,7 @@
 
 - [Overview](#overview)
 - [Quick Start](#quick-start)
+- [Requirements](#requirements)
 - [Usage](#usage)
 - [Development](#development)
 - [Repo Structure](#repo-structure)
@@ -16,7 +17,7 @@
 
 ### Status
 
-SwiftASB has a supported v1 public API for the core Codex app-server lifecycle. `v1.0.0` is the current released baseline.
+SwiftASB has a supported v1 public API for the core Codex app-server lifecycle. `v1.0.0` is the current released baseline, and current releases are Apache 2.0 licensed.
 
 ### What This Project Is
 
@@ -48,6 +49,14 @@ Then add the product to the target that talks to Codex:
 ```
 
 SwiftASB expects a local Codex CLI runtime. By default it discovers `codex` from `PATH`, common Homebrew locations, or the npm global prefix. Apps that need a fixed runtime can pass `CodexAppServer.Configuration.codexExecutableURL`.
+
+## Requirements
+
+- macOS 15 or newer.
+- Swift 6.3 or newer.
+- A local Codex CLI installation with app-server support.
+
+The current reviewed Codex CLI compatibility window is `0.128.x`. SwiftASB checks the resolved binary at startup and exposes the resolved path, version text, and compatibility assessment through `CodexAppServer.cliExecutableDiagnostics()`.
 
 ## Usage
 
@@ -180,6 +189,7 @@ The current public lifecycle contract is intentionally narrow and explicit:
 - `CodexAppServer` starts and stops the subprocess, initializes the session, starts threads and turns, lists stored threads, reads/resumes/forks threads, pages stored turns, lists models, and lists MCP server statuses.
 - `CodexThread` owns thread-scoped turn creation, thread events, thread-management actions, local-history reads, and thread-scoped observable companions.
 - `CodexTurnHandle` owns active-turn events and active-turn controls such as response handling, steering, interruption, minimap observation, and explicit completion snapshot handoff.
+- Approval and elicitation requests use hand-owned public models, including command approval, file-change approval, permissions approval, tool user input, and MCP server elicitation.
 - Diagnostics for warnings, guardian warnings, model reroutes, and model verification surface through hand-owned public events rather than generated wire payloads.
 - Different threads may host concurrent turns.
 - Overlapping turns on the same thread are rejected client-side with `CodexAppServerError.invalidState` because the live app-server does not yet expose a reliable independent lifecycle for them.
@@ -200,7 +210,13 @@ Contributor branch workflow, generated-wire maintenance, DocC updates, and relea
 
 ### Validation
 
-Contributor validation commands, live test flags, and the Xcode DocC build command live in [CONTRIBUTING.md](./CONTRIBUTING.md).
+Contributor validation commands, live test flags, and the Xcode DocC build command live in [CONTRIBUTING.md](./CONTRIBUTING.md). The main live runtime entrypoint is:
+
+```bash
+scripts/run-live-codex-integration-tests.sh
+```
+
+It defaults to the maintained release-gate set and also supports focused modes for smoke, transport, capability, thread, turn, approval, file-scenario, rollback, same-thread, and full opt-in live coverage.
 
 ## Repo Structure
 
@@ -237,4 +253,4 @@ Contributor validation commands, live test flags, and the Xcode DocC build comma
 
 ## License
 
-SwiftASB is licensed under `FSL-1.1-ALv2`. Current versions are available under the Functional Source License with no commercial competing-use right, and each version converts to Apache 2.0 on the second anniversary of the date that version was first made available. See [LICENSE](./LICENSE).
+SwiftASB is licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE).
