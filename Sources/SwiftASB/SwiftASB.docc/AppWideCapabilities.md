@@ -34,22 +34,16 @@ let snapshot = try await appServer.listHooks(
 )
 
 for entry in snapshot.entries {
-    let blockingMessages = entry.errors.map { error in
-        "\(error.path): \(error.message)"
-    }
-    let warningMessages = entry.warnings
-    let enabledHookNames = entry.hooks
-        .filter(\.enabled)
-        .map(\.key)
-
     renderHookDiagnostics(
         workspace: entry.currentDirectoryPath,
-        errors: blockingMessages,
-        warnings: warningMessages,
-        enabledHooks: enabledHookNames
+        diagnostics: entry.diagnostics,
+        enabledHooks: entry.enabledHooks,
+        disabledHooks: entry.disabledHooks
     )
 }
 ```
+
+Use ``CodexAppServer/HookListSnapshot/hasDiagnostics`` for badges or sidebar state, ``CodexAppServer/HookListSnapshot/entry(forCurrentDirectoryPath:)`` to pull one workspace from a multi-workspace snapshot, and ``CodexAppServer/HookListEntry/diagnostics`` when the UI wants one display list instead of separate warning and error arrays.
 
 ## Pagination
 
@@ -88,3 +82,4 @@ These types are public because a consumer can use them directly today. Other gen
 - ``CodexAppServer/HookListEntry``
 - ``CodexAppServer/HookMetadata``
 - ``CodexAppServer/HookError``
+- ``CodexAppServer/HookDiagnostic``

@@ -16,6 +16,16 @@ public extension CodexAppServer {
     /// Current configured hook diagnostics grouped by working directory.
     struct HookListSnapshot: Sendable, Equatable {
         public let entries: [HookListEntry]
+
+        /// Returns the diagnostics entry for a working directory path.
+        public func entry(forCurrentDirectoryPath path: String) -> HookListEntry? {
+            entries.first { $0.currentDirectoryPath == path }
+        }
+
+        /// True when any working directory reported a hook warning or error.
+        public var hasDiagnostics: Bool {
+            entries.contains { $0.hasDiagnostics }
+        }
     }
 
     /// Configured hook diagnostics for one working directory.
@@ -26,12 +36,61 @@ public extension CodexAppServer {
         public let errors: [HookError]
         public let hooks: [HookMetadata]
         public let warnings: [String]
+
+        /// Hook warnings and errors combined into one list for diagnostics UI.
+        public var diagnostics: [HookDiagnostic] {
+            let errorDiagnostics = errors.map { error in
+                HookDiagnostic(
+                    severity: .error,
+                    message: error.message,
+                    path: error.path
+                )
+            }
+            let warningDiagnostics = warnings.map { warning in
+                HookDiagnostic(
+                    severity: .warning,
+                    message: warning,
+                    path: nil
+                )
+            }
+            return errorDiagnostics + warningDiagnostics
+        }
+
+        /// True when this working directory reported at least one hook warning or error.
+        public var hasDiagnostics: Bool {
+            errors.isEmpty == false || warnings.isEmpty == false
+        }
+
+        /// Configured hooks that are enabled for this working directory.
+        public var enabledHooks: [HookMetadata] {
+            hooks.filter(\.enabled)
+        }
+
+        /// Configured hooks that are present but disabled for this working directory.
+        public var disabledHooks: [HookMetadata] {
+            hooks.filter { !$0.enabled }
+        }
     }
 
     /// Hook load or configuration error reported by the app-server.
     struct HookError: Sendable, Equatable {
         public let message: String
         public let path: String
+    }
+
+    /// Display-ready hook diagnostic derived from warnings and load errors.
+    struct HookDiagnostic: Sendable, Equatable, Identifiable {
+        /// Severity of a hook diagnostic.
+        public enum Severity: String, Sendable, Equatable {
+            case error
+            case warning
+        }
+
+        public var id: String { "\(severity.rawValue):\(path ?? ""):\(message)" }
+
+        public let severity: Severity
+        public let message: String
+        public let path: String?
     }
 
     /// Metadata for one configured hook.
