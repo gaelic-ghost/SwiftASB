@@ -37,7 +37,7 @@ Use ``diagnosticEvents()`` to observe passive runtime diagnostics that are not c
 
 ## App-Wide Capabilities
 
-Use ``listModels(_:)`` and ``listMcpServerStatuses(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog and MCP server surface.
+Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, MCP server surface, and configured hook diagnostics.
 
 ## Stored Threads
 
@@ -77,6 +77,10 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``ModelListRequest``
 - ``ModelListPage``
 - ``Model``
+- ``listHooks(_:)``
+- ``HookListRequest``
+- ``HookListSnapshot``
+- ``HookListEntry``
 - ``listMcpServerStatuses(_:)``
 - ``McpServerStatusListRequest``
 - ``McpServerStatusPage``

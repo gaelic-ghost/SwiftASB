@@ -300,6 +300,32 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reads configured hooks and diagnostics for one or more working directories.
+    ///
+    /// Omitting `request` sends an empty list request, leaving the app-server to
+    /// use its current session working directory.
+    public func listHooks(_ request: HookListRequest = .init()) async throws -> HookListSnapshot {
+        try requireInitialized(for: "hooks/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeHooksListRequest(
+                id: requestID,
+                params: .init(cwds: request.currentDirectoryPaths)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeHooksListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(entries: response.data.map(HookListEntry.init(protocolValue:)))
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "hooks/list")
+        }
+    }
+
     /// Reads the app-server's current MCP server status snapshots.
     ///
     /// Omitting `request` sends an empty status-list request, leaving

@@ -177,4 +177,47 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("lists app-wide hook diagnostics through the public client")
+    func listsAppWideHookDiagnostics() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let snapshot = try await client.listHooks(
+            .init(currentDirectoryPaths: ["/tmp/project", "/tmp/second-project"])
+        )
+
+        #expect(snapshot.entries.count == 1)
+        #expect(snapshot.entries[0].currentDirectoryPath == "/tmp/project")
+        #expect(snapshot.entries[0].warnings == ["Ignoring disabled user hook user-pre-tool-use."])
+        #expect(snapshot.entries[0].errors[0].message == "Hook script is not executable.")
+        #expect(snapshot.entries[0].errors[0].path == "/tmp/project/.codex/hooks/post-tool-use.sh")
+        #expect(snapshot.entries[0].hooks[0].key == "project-post-tool-use")
+        #expect(snapshot.entries[0].hooks[0].command == "swift test")
+        #expect(snapshot.entries[0].hooks[0].displayOrder == 2)
+        #expect(snapshot.entries[0].hooks[0].enabled)
+        #expect(snapshot.entries[0].hooks[0].eventName == .postToolUse)
+        #expect(snapshot.entries[0].hooks[0].handlerType == .command)
+        #expect(snapshot.entries[0].hooks[0].source == .project)
+        #expect(snapshot.entries[0].hooks[0].sourcePath == "/tmp/project/.codex/hooks/post-tool-use.sh")
+        #expect(snapshot.entries[0].hooks[0].timeoutSeconds == 30)
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "hooks/list"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["cwds"] as? [String] == ["/tmp/project", "/tmp/second-project"])
+
+        await client.stop()
+    }
+
 }

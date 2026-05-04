@@ -146,6 +146,43 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "nextCursor": "cursor-models-next",
                 ]
             )
+        case "hooks/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "cwd": "/tmp/project",
+                            "errors": [
+                                [
+                                    "message": "Hook script is not executable.",
+                                    "path": "/tmp/project/.codex/hooks/post-tool-use.sh",
+                                ],
+                            ],
+                            "hooks": [
+                                [
+                                    "command": "swift test",
+                                    "displayOrder": 2,
+                                    "enabled": true,
+                                    "eventName": "postToolUse",
+                                    "handlerType": "command",
+                                    "isManaged": false,
+                                    "key": "project-post-tool-use",
+                                    "matcher": "swift",
+                                    "pluginId": NSNull(),
+                                    "source": "project",
+                                    "sourcePath": "/tmp/project/.codex/hooks/post-tool-use.sh",
+                                    "statusMessage": "Ready.",
+                                    "timeoutSec": 30,
+                                ],
+                            ],
+                            "warnings": [
+                                "Ignoring disabled user hook user-pre-tool-use.",
+                            ],
+                        ],
+                    ],
+                ]
+            )
         case "mcpServerStatus/list":
             return responsePayload(
                 id: id,
