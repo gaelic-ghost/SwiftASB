@@ -117,6 +117,7 @@ belongs in the release boundary:
 | Thread metadata patching | `CodexThread.updateMetadata(...)` | `thread/metadata/update` is public with a hand-owned replace/clear/unchanged patch model so callers can express the upstream null-vs-omitted semantics without generated wire types. |
 | App-wide model listing | `CodexAppServer.listModels(...)` | `model/list` describes shared runtime capabilities rather than one conversation thread, so the public API belongs on the connection-owning app-server actor. |
 | App-wide MCP-server status listing | `CodexAppServer.listMcpServerStatuses(...)` | `mcpServerStatus/list` is a connection-wide server capability snapshot, so it is public on `CodexAppServer` rather than `CodexThread` or `CodexTurnHandle`. |
+| App-wide hook diagnostics listing | `CodexAppServer.listHooks(...)` | `hooks/list` reports configured hooks, warnings, and load errors for working directories, so it is a read-only diagnostics/capability snapshot on the connection-owning app-server actor. |
 
 ### Observable-only for now
 
@@ -250,9 +251,9 @@ notification families at all:
 - elicitation requests are public through typed server-request decoding
 - approval and elicitation responses are public through explicit methods on
   `CodexThread` and `CodexTurnHandle`
-- app-wide model and MCP-server status listing is public through
-  `CodexAppServer` because those snapshots describe the shared app-server
-  connection, not one thread or one turn
+- app-wide model, MCP-server status, and hook diagnostics listing is public
+  through `CodexAppServer` because those snapshots describe the shared
+  app-server connection, not one thread or one turn
 - turn interruption and steering are public control methods rather than event
   families
 - `thread/turns/list` is public through hand-owned history paging APIs even

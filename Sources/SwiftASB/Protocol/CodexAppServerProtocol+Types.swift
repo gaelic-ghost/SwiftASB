@@ -263,6 +263,86 @@ struct CodexProtocolThreadTurnsListResponse: Decodable, Equatable, Sendable {
     let nextCursor: String?
 }
 
+struct CodexProtocolHooksListParams: Encodable, Equatable, Sendable {
+    let cwds: [String]?
+}
+
+struct CodexProtocolHooksListResponse: Decodable, Equatable, Sendable {
+    let data: [Entry]
+
+    struct Entry: Decodable, Equatable, Sendable {
+        let cwd: String
+        let errors: [ErrorInfo]
+        let hooks: [HookMetadata]
+        let warnings: [String]
+    }
+
+    struct ErrorInfo: Decodable, Equatable, Sendable {
+        let message: String
+        let path: String
+    }
+
+    struct HookMetadata: Decodable, Equatable, Sendable {
+        let command: String?
+        let displayOrder: Int
+        let enabled: Bool
+        let eventName: EventName
+        let handlerType: HandlerType
+        let isManaged: Bool
+        let key: String
+        let matcher: String?
+        let pluginID: String?
+        let source: Source
+        let sourcePath: String
+        let statusMessage: String?
+        let timeoutSeconds: UInt64
+
+        enum CodingKeys: String, CodingKey {
+            case command
+            case displayOrder
+            case enabled
+            case eventName
+            case handlerType
+            case isManaged
+            case key
+            case matcher
+            case pluginID = "pluginId"
+            case source
+            case sourcePath
+            case statusMessage
+            case timeoutSeconds = "timeoutSec"
+        }
+    }
+
+    enum EventName: String, Decodable, Equatable, Sendable {
+        case permissionRequest
+        case postToolUse
+        case preToolUse
+        case sessionStart
+        case stop
+        case userPromptSubmit
+    }
+
+    enum HandlerType: String, Decodable, Equatable, Sendable {
+        case agent
+        case command
+        case prompt
+    }
+
+    enum Source: String, Decodable, Equatable, Sendable {
+        case cloudRequirements
+        case legacyManagedConfigFile
+        case legacyManagedConfigMdm
+        case mdm
+        case plugin
+        case project
+        case sessionFlags
+        case system
+        case unknown
+        case user
+    }
+}
+
 struct CodexProtocolTurnSteerParams: Encodable, Equatable, Sendable {
 	let expectedTurnID: String
 	let input: [CodexWireUserInput]

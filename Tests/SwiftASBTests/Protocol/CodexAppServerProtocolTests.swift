@@ -377,6 +377,22 @@ struct CodexAppServerProtocolTests {
         #expect(params["limit"] as? Int == 10)
     }
 
+    @Test("encodes hooks/list requests with the expected method and params payload")
+    func encodesHooksListRequest() throws {
+        let payload = try protocolLayer.makeHooksListRequest(
+            id: .string("hooks-list-1"),
+            params: .init(cwds: ["/tmp/project", "/tmp/second-project"])
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "hooks/list")
+        #expect(object["id"] as? String == "hooks-list-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["cwds"] as? [String] == ["/tmp/project", "/tmp/second-project"])
+    }
+
     @Test("encodes turn/start requests with the expected method and params payload")
     func encodesTurnStartRequest() throws {
         let payload = try protocolLayer.makeTurnStartRequest(

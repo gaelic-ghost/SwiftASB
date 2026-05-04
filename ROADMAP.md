@@ -44,12 +44,12 @@
 | Codex CLI schema review | `In progress` | The local `codex-schemas/v0.128.0/` dump exists for the currently installed `codex-cli 0.128.0`, and `scripts/dump-codex-schemas.sh` now makes future versioned experimental dumps repeatable by default. The v0.128 experimental generated batch needs classification before promotion: permission profiles are still present behind the experimental schema surface, while new active-permission-profile, permissions-selection, hooks/model-provider/remote-control/thread-goal schema families need public/observable/internal decisions. |
 | Stdio subprocess transport | `Shipped internally` | The transport launches `codex app-server --listen stdio://`, frames newline-delimited JSON, correlates request IDs, and captures stderr for diagnostics. |
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
-| Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/rollback`, `thread/name/set`, `thread/metadata/update`, `thread/turns/list`, `model/list`, `mcpServerStatus/list`, and `turn/start` are encoded through the protocol layer. |
-| Typed protocol response decoding | `Shipped internally` | `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/rollback`, `thread/name/set`, `thread/metadata/update`, `thread/turns/list`, `model/list`, `mcpServerStatus/list`, and `turn/start` responses are decoded and validated against request IDs. |
+| Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/rollback`, `thread/name/set`, `thread/metadata/update`, `thread/turns/list`, `model/list`, `mcpServerStatus/list`, `hooks/list`, and `turn/start` are encoded through the protocol layer. |
+| Typed protocol response decoding | `Shipped internally` | `initialize`, `thread/start`, `thread/list`, `thread/read`, `thread/resume`, `thread/fork`, `thread/compact/start`, `thread/rollback`, `thread/name/set`, `thread/metadata/update`, `thread/turns/list`, `model/list`, `mcpServerStatus/list`, `hooks/list`, and `turn/start` responses are decoded and validated against request IDs. |
 | Typed protocol notification decoding | `Partially shipped` | The protocol layer now maps a broader batch of thread, turn, item, reasoning, hook, and reroute notifications, plus the item lifecycle needed to drive the current observable tool, MCP, file-edit, hook, and compaction summaries. |
 | Public owning client actor | `Shipped` | `CodexAppServer` owns transport plus protocol and exposes startup, shutdown, initialize, thread start, and turn start. |
 | Public value-typed request and result models | `Shipped` | Public API uses hand-owned Swift value types rather than exposing `CodexWire...` directly. |
-| App-wide capability surfaces | `Partially shipped` | `CodexAppServer.listModels(...)` and `CodexAppServer.listMcpServerStatuses(...)` now wrap `model/list` and `mcpServerStatus/list` with hand-owned Swift models. These are connection-wide capability snapshots rather than thread-owned lifecycle actions. Broader app-wide settings and actions still need deliberate public models before promotion. |
+| App-wide capability surfaces | `Partially shipped` | `CodexAppServer.listModels(...)`, `CodexAppServer.listMcpServerStatuses(...)`, and `CodexAppServer.listHooks(...)` now wrap `model/list`, `mcpServerStatus/list`, and `hooks/list` with hand-owned Swift models. These are connection-wide capability and diagnostics snapshots rather than thread-owned lifecycle actions. Broader app-wide settings and actions still need deliberate public models before promotion. |
 | Initialize handshake | `Shipped` | `initialize(...)` automatically sends the follow-up `initialized` notification. |
 | Thread start flow | `Shipped` | `startThread(...)` returns `CodexThread`, which carries thread metadata plus a back-reference to the shared app-server owner. |
 | Stored thread list flow | `Shipped` | `listThreads(...)` wraps `thread/list`, returns typed stored-thread pages, and now reconciles local thread metadata plus explicit archived or unarchived list results back into the internal history store. |
@@ -121,7 +121,7 @@ The package can now:
   `windowAroundTurn(...)` and `windowAroundItem(...)`
 - set thread names, patch stored Git metadata, and roll back trailing turns
   through `CodexThread`
-- list app-wide model and MCP-server capability snapshots through
+- list app-wide model, MCP-server, and hook diagnostics snapshots through
   `CodexAppServer`
 - document the supported lifecycle in the README without sending consumers into
   the tests
@@ -146,7 +146,7 @@ That means the current priority order is:
    selection/visibility protection, slimming behavior, and rehydration model as
    stable enough; remaining work is calibration and richer previews, not proving
    the model exists.
-5. Keep v0.128 schema additions classified before public promotion: `excludeTurns` remains public on resume/fork request models because it directly supports the existing paged history model; `permissionProfile`, `activePermissionProfile`, and request-side `permissions` stay internal until SwiftASB owns a deliberate public permission-profile model; `hooks/list` is a near-term post-v1 diagnostics/capability target; `ModelProviderCapabilitiesRead*` is a clean app-wide capability candidate; thread goals, realtime, fuzzy file search sessions, remote-control status, marketplace/account-management families, and guardian denied-action approval remain post-v1 until their consumer workflows are clearer. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian warning families are public diagnostics.
+5. Keep v0.128 schema additions classified before public promotion: `excludeTurns` remains public on resume/fork request models because it directly supports the existing paged history model; `permissionProfile`, `activePermissionProfile`, and request-side `permissions` stay internal until SwiftASB owns a deliberate public permission-profile model; `hooks/list` is public as a read-only diagnostics/capability snapshot; `ModelProviderCapabilitiesRead*` is a clean app-wide capability candidate; thread goals, realtime, fuzzy file search sessions, remote-control status, marketplace/account-management families, and guardian denied-action approval remain post-v1 until their consumer workflows are clearer. The v0.124 classifications still stand: `autoReview` is public as an approval reviewer option, `model/list` and `mcpServerStatus/list` are public app-wide capability snapshots on `CodexAppServer`, `thread/name/set`, `thread/metadata/update`, and `thread/rollback` are public on `CodexThread`, hook `permissionRequest` is available for dashboard/minimap naming, and warning/model-verification/guardian warning families are public diagnostics.
 6. Do not add `RecentActivity` for v1. The separate `RecentTurns`, `RecentFiles`, and `RecentCommands` types are the clearer consumer surface, and a mixed feed would add more confusion than value right now.
 7. Flesh out archive-aware retention and eviction beyond the current list-driven archive-state drift correction.
 8. Add any sharper binary-discovery diagnostics we want alongside the current-reviewed compatibility window before a first broader release.
@@ -192,11 +192,11 @@ These are intentionally outside the v1 promise unless a concrete consumer
 workflow forces a release-boundary change before the v1 tag.
 
 - [ ] Guardian denied-action approval with a stable request and response model.
-- [ ] Hooks list surface near-term after v1. Treat `hooks/list` as one of the
-  first post-v1 schema promotions: expose per-cwd hook metadata, warnings, and
-  load errors through a deliberate diagnostics/capability API so Swift clients
-  can show what hooks are active before a turn runs. Keep hook enable/disable
-  mutation post-v1+ until the configuration-writing UX is clearer.
+- [x] Hooks list surface after v1. `CodexAppServer.listHooks(...)` exposes
+  per-cwd hook metadata, warnings, and load errors through a deliberate
+  diagnostics/capability API so Swift clients can show what hooks are active
+  before a turn runs. Hook enable/disable mutation remains post-v1+ until the
+  configuration-writing UX is clearer.
 - [ ] Marketplace upgrade surfaces.
 - [ ] Account-management variants, including provider-specific account families
   such as Amazon Bedrock.
@@ -391,8 +391,8 @@ workflow forces a release-boundary change before the v1 tag.
 - [x] Confirm the promoted generated-wire snapshot matches the Codex CLI schema
   version included in the v1 compatibility window.
 - [x] Classify the Codex CLI `v0.128.0` schema diff before promotion. Decision:
-  generated permission-profile shapes remain internal, `hooks/list` is a
-  near-term post-v1 diagnostics/capability target, model-provider capabilities
+  generated permission-profile shapes remain internal, `hooks/list` is public
+  as a read-only diagnostics/capability snapshot, model-provider capabilities
   are a clean public candidate, and thread goals, realtime, fuzzy file search,
   remote-control status, marketplace/account-management families, and guardian
   denied-action approval stay post-v1.
@@ -551,7 +551,6 @@ workflow forces a release-boundary change before the v1 tag.
 
 - Confirm Swift Package Index listing and DocC rendering after the public tag is
   indexed.
-- Promote `hooks/list` as a near-term diagnostics/capability surface.
 - Add broader live server-request coverage for permissions and MCP elicitation
   if those become stronger public runtime guarantees.
 - Continue tuning recent companion cache calibration, richer file previews,
@@ -766,8 +765,8 @@ runtime can be driven with a mock Responses provider.
   evidence, while app-connector MCP is the deterministic live elicitation
   coverage source.
 - [ ] Guardian denied-action approval after SwiftASB owns a stable public model.
-- [ ] Future promoted surfaces such as `hooks/list` and model-provider
-  capabilities when they become public or observable contracts.
+- [ ] Future promoted surfaces such as model-provider capabilities when they
+  become public or observable contracts.
 
 ### Harness And Script Shape
 
@@ -826,7 +825,8 @@ not as the current maintainer priority.
 - A `v0.128.0` experimental schema compatibility pass has refreshed the staging
   generator, updated the Codex CLI compatibility window, kept generated
   permission-profile shapes internal, removed the older permission-profile
-  compatibility shim, and recorded `hooks/list` as a near-term post-v1 target.
+  compatibility shim, and promoted `hooks/list` as a post-v1 public
+  diagnostics/capability surface.
 - API curation and DocC docs good enough that a Swift consumer can understand
   the supported package surface without reading maintainer notes, including
   walkthroughs for the primary v1 lifecycle jobs.

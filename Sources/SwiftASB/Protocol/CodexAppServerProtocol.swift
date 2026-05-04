@@ -17,6 +17,7 @@ struct CodexAppServerProtocol {
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
+        case hooksList = "hooks/list"
         case modelList = "model/list"
         case mcpServerStatusList = "mcpServerStatus/list"
     }
@@ -176,6 +177,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .modelList, params: params),
             method: .modelList
+        )
+    }
+
+    func makeHooksListRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolHooksListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .hooksList, params: params),
+            method: .hooksList
         )
     }
 
@@ -390,6 +401,18 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .modelList,
             resultType: CodexWireModelListResponse.self
+        )
+    }
+
+    func decodeHooksListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolHooksListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .hooksList,
+            resultType: CodexProtocolHooksListResponse.self
         )
     }
 

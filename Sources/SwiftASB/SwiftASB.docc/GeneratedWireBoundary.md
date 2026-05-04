@@ -25,6 +25,7 @@ Examples currently promoted through hand-owned public types include:
 
 - model catalog snapshots through ``CodexAppServer/listModels(_:)``
 - MCP server status snapshots through ``CodexAppServer/listMcpServerStatuses(_:)``
+- hook diagnostics snapshots through ``CodexAppServer/listHooks(_:)``
 - thread naming through ``CodexThread/setName(_:)``
 - thread metadata patches through ``CodexThread/updateMetadata(gitInfo:)``
 - thread rollback through ``CodexThread/rollbackLastTurns(_:)``
