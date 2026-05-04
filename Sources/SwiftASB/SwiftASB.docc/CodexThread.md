@@ -33,6 +33,20 @@ Use the non-UI history helpers when a caller needs completed turn snapshots with
 - ``readOlderTurnHistoryWindow(olderThan:limit:)`` and ``readNewerTurnHistoryWindow(newerThan:limit:)`` page from a known boundary.
 - ``windowAroundTurn(_:limit:)`` and ``windowAroundItem(_:limit:)`` return centered local windows for inspectors.
 
+## Workspace Files
+
+Use ``listWorkspaceFiles(_:)`` and ``readWorkspaceFile(_:)`` when a UI needs a read-only browser or preview for the workspace attached to this thread. These helpers resolve paths under ``currentDirectoryPath`` and read from the local filesystem directly; they do not ask Codex to run commands and they reject paths that resolve outside the workspace root.
+
+```swift
+let listing = try thread.listWorkspaceFiles(
+    .init(path: "Sources", includeHidden: false)
+)
+
+let readme = try thread.readWorkspaceFile(
+    .init(path: "README.md", maximumBytes: 128_000)
+)
+```
+
 ## Observable Companions
 
 Use ``makeDashboard()`` for thread-level current state, ``makeRecentTurns(limit:cachePolicy:)`` for a turn-centric view, ``makeRecentFiles(limit:cachePolicy:)`` for a file-change view, and ``makeRecentCommands(limit:cachePolicy:)`` for a command-output view.
@@ -89,6 +103,17 @@ Recent observable startup can begin as an empty local-only view when the live ap
 - ``readNewerTurnHistory(newerThan:limit:)``
 - ``windowAroundTurn(_:limit:)``
 - ``windowAroundItem(_:limit:)``
+
+### Workspace Files
+
+- ``listWorkspaceFiles(_:)``
+- ``readWorkspaceFile(_:)``
+- ``WorkspaceFileListRequest``
+- ``WorkspaceFileReadRequest``
+- ``WorkspaceFileList``
+- ``WorkspaceFileEntry``
+- ``WorkspaceFileContents``
+- ``WorkspaceFileError``
 
 ### Observable Companions
 

@@ -57,6 +57,7 @@
 | Stored thread resume flow | `Shipped` | `resumeThread(...)` wraps `thread/resume`, returns a normal `CodexThread`, restores thread defaults, clears stale archived state for the reopened thread, and hydrates any resumed persisted turns into the same local history store without resetting completeness to a fresh-thread state. Callers can set `excludeTurns` when they plan to page history separately through `thread/turns/list`. |
 | Stored thread fork flow | `Shipped` | `forkThread(...)` wraps `thread/fork`, returns a normal `CodexThread`, persists copied fork history into thread-scoped local turn rows, and records explicit fork lineage through the source thread id plus the last shared turn id. Callers can set `excludeTurns` when they want the fork metadata first and copied turn history through paged reads afterward. |
 | Thread management actions | `Partially shipped` | `CodexThread.setName(...)` wraps `thread/name/set`, `CodexThread.updateMetadata(...)` wraps `thread/metadata/update`, and `CodexThread.rollbackLastTurns(...)` wraps `thread/rollback`. Metadata patches use an explicit replace/clear/unchanged field model so callers can express upstream null-vs-omitted semantics. Rollback reconciles visible local history to the app-server response, records a rollback marker, and now has opt-in live coverage against a disposable non-ephemeral thread, but it does not preserve full removed turn payloads as forensic archive data yet. |
+| Thread-scoped workspace file inspection | `Shipped` | `CodexThread.listWorkspaceFiles(...)` and `CodexThread.readWorkspaceFile(...)` provide local read-only workspace directory listing and UTF-8 file preview under the thread's current directory. The surface is Foundation-backed rather than app-server RPC-backed, rejects traversal and symlink escapes outside the resolved workspace root, and leaves mutation plus command execution to later explicitly approved surfaces. |
 | Paged turn-history flow | `Shipped` | `listThreadTurns(...)` wraps `thread/turns/list`, returns typed paged turn values, and can now seed the local history cache even before that thread has been loaded locally. |
 | Typed async thread event stream | `Partially shipped` | `CodexThread.events` now streams `thread/started`, `thread/status/changed`, `thread/archived`, `thread/unarchived`, `thread/name/updated`, `thread/tokenUsage/updated`, and `thread/closed`, but broader thread lifecycle coverage is still pending. |
 | Turn start flow | `Shipped` | `startTurn(...)` returns `CodexTurnHandle`. |
@@ -132,9 +133,9 @@ That means the current priority order is:
 2. Finish targeted public API release prep before v1. The connected surface
    review keeps the current owner model: `CodexAppServer` owns subprocess and
    app-wide operations, `CodexThread` owns conversation-scoped actions, history,
-   and companions, and `CodexTurnHandle` owns active-turn control. Remaining
-   curation is limited to targeted symbol comments and any final name/default
-   issues found during release prep.
+   read-only workspace file inspection, and companions, and `CodexTurnHandle`
+   owns active-turn control. Remaining curation is limited to targeted symbol
+   comments and any final name/default issues found during release prep.
 3. Finish the DocC release-readiness pass before v1: keep the first
    `SwiftASB.docc` catalog current, keep the new startup/progress/approval/
    diagnostics/history/SwiftUI walkthroughs accurate, add any remaining symbol
