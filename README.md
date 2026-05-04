@@ -18,7 +18,7 @@
 
 ### Status
 
-SwiftASB has a supported v1 public API for the core Codex app-server lifecycle. `v1.0.1` is the current released baseline, and current releases are Apache 2.0 licensed.
+SwiftASB has a supported v1 public API for the core Codex app-server lifecycle. `v1.0.2` is the current released baseline, and current releases are Apache 2.0 licensed.
 
 ### What This Project Is
 
@@ -40,7 +40,7 @@ SwiftUI clients need a clean way to show what a Codex turn is doing right now: w
 Add SwiftASB to a SwiftPM package or Xcode package dependency:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.0.1")
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.0.2")
 ```
 
 Then add the product to the target that talks to Codex:
@@ -263,7 +263,7 @@ It defaults to the maintained release-gate set and also supports focused modes f
 
 ## Release Notes
 
-`ROADMAP.md` tracks milestone status and release-facing work. `v1.0.1` is the current released baseline, and the roadmap plus git history remain the source of truth for what has shipped versus what is intentionally open.
+`ROADMAP.md` tracks milestone status and release-facing work. `v1.0.2` is the current released baseline, and the roadmap plus git history remain the source of truth for what has shipped versus what is intentionally open.
 
 ## License
 
