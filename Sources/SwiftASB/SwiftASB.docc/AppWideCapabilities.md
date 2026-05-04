@@ -24,6 +24,33 @@ let hooks = try await appServer.listHooks(
 
 These requests are snapshots. If your UI needs refresh behavior, keep that refresh policy in the caller and ask the app-server for a new snapshot or page when needed.
 
+## Hook Diagnostics
+
+Hook diagnostics are useful before a GUI starts a turn. A settings or inspector view can call ``CodexAppServer/listHooks(_:)`` for the selected workspace, show warnings and load errors directly, and still let empty hook lists render as a healthy "no configured hooks" state.
+
+```swift
+let snapshot = try await appServer.listHooks(
+    .init(currentDirectoryPaths: [workspaceURL.path])
+)
+
+for entry in snapshot.entries {
+    let blockingMessages = entry.errors.map { error in
+        "\(error.path): \(error.message)"
+    }
+    let warningMessages = entry.warnings
+    let enabledHookNames = entry.hooks
+        .filter(\.enabled)
+        .map(\.key)
+
+    renderHookDiagnostics(
+        workspace: entry.currentDirectoryPath,
+        errors: blockingMessages,
+        warnings: warningMessages,
+        enabledHooks: enabledHookNames
+    )
+}
+```
+
 ## Pagination
 
 Model and MCP capability APIs accept an optional cursor and return an optional next cursor. Keep requesting pages until `nextCursor` is `nil`. Hook diagnostics are returned as one snapshot grouped by working directory.

@@ -533,6 +533,22 @@ struct CodexAppServerLiveIntegrationTests {
                 server.name.isEmpty == false
             })
 
+            let hooksCwd = harness.rootDirectoryURL.path
+            let hooks = try await withTimeout(
+                seconds: 15,
+                operation: "listing live Codex hook diagnostics"
+            ) {
+                try await client.listHooks(
+                    .init(currentDirectoryPaths: [hooksCwd])
+                )
+            }
+            #expect(hooks.entries.contains { $0.currentDirectoryPath == hooksCwd })
+            #expect(hooks.entries.allSatisfy { entry in
+                entry.currentDirectoryPath.isEmpty == false
+                    && entry.errors.allSatisfy { !$0.message.isEmpty && !$0.path.isEmpty }
+                    && entry.hooks.allSatisfy { !$0.key.isEmpty && !$0.sourcePath.isEmpty }
+            })
+
             await client.stop()
         } catch {
             await client.stop()
