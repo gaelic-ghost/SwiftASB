@@ -81,6 +81,9 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``HookListRequest``
 - ``HookListSnapshot``
 - ``HookListEntry``
+- ``HookDiagnostic``
+- ``HookError``
+- ``HookMetadata``
 - ``listMcpServerStatuses(_:)``
 - ``McpServerStatusListRequest``
 - ``McpServerStatusPage``
