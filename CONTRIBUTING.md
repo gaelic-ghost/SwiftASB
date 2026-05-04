@@ -144,7 +144,8 @@ The default mode runs the maintained release-gate live probe set. Pass `all` to
 run every opt-in `CodexAppServer` live integration test, or pass `smoke`,
 `transport`, `capability`, `thread`, `turn`, `approval`, `behavior-matrix`,
 `server-requests`, `file-scenario`, `rollback`, or `same-thread` to run one
-focused group.
+focused group. The `capability` mode covers live model, MCP, and hook
+diagnostics snapshots.
 
 The release-gate wrapper remains available for patch-release prep:
 

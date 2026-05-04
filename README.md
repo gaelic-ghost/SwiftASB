@@ -230,7 +230,7 @@ Contributor validation commands, live test flags, and the Xcode DocC build comma
 scripts/run-live-codex-integration-tests.sh
 ```
 
-It defaults to the maintained release-gate set and also supports focused modes for smoke, transport, capability, thread, turn, approval, file-scenario, rollback, same-thread, and full opt-in live coverage.
+It defaults to the maintained release-gate set and also supports focused modes for smoke, transport, capability, thread, turn, approval, file-scenario, rollback, same-thread, and full opt-in live coverage. The capability mode covers live model, MCP, and hook diagnostics snapshots.
 
 ## Repo Structure
 

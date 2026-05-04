@@ -12,7 +12,7 @@ Modes:
   release-gate    Run the maintained release-gate live probe set. This is the default.
   smoke           Run startup, transport, capability, thread, turn, and concurrency probes.
   transport       Run raw transport initialize/thread/turn probes.
-  capability      Run model and MCP capability snapshot probes.
+  capability      Run model, MCP, and hook diagnostics snapshot probes.
   thread          Run thread management and stored-history probes.
   turn            Run public single-turn and cross-thread probes.
   approval        Run command, permissions, and exploratory approval live probes.
