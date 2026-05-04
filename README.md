@@ -179,6 +179,8 @@ SwiftUI apps should not need to replay every raw event to show useful state. The
 - `CodexThread.makeRecentFiles(limit:cachePolicy:)` provides a file-change-centric view with selection-aware payload slimming and rehydration.
 - `CodexThread.makeRecentCommands(limit:cachePolicy:)` provides a command-centric view with output-aware slimming and rehydration.
 
+For read-only workspace browsing and preview UI, `CodexThread.listWorkspaceFiles(...)` and `CodexThread.readWorkspaceFile(...)` inspect files under the thread's `currentDirectoryPath` without asking Codex to run commands. Paths are resolved under the workspace root, absolute paths must still remain inside that root, and oversized or non-UTF-8 file reads are rejected with descriptive `WorkspaceFileError` values.
+
 For inspector-style UI that needs completed history without binding to an observable, `CodexThread.HistoryWindow` and the `readRecent...`, `readOlder...`, `readNewer...`, `windowAroundTurn(...)`, and `windowAroundItem(...)` helpers expose narrow local-history reads.
 
 Recent observable startup is intentionally UI-friendly around known live app-server history boundaries. If a thread is ephemeral, or if a non-ephemeral thread has not materialized stored turn history yet, `makeRecentTurns(...)`, `makeRecentFiles(...)`, and `makeRecentCommands(...)` start as empty local-only views instead of surfacing raw `thread/turns/list` protocol text. Direct calls to `CodexAppServer.listThreadTurns(...)` still report the underlying app-server failure so lower-level callers can handle remote paging errors explicitly.
@@ -188,7 +190,7 @@ Recent observable startup is intentionally UI-friendly around known live app-ser
 The current public lifecycle contract is intentionally narrow and explicit:
 
 - `CodexAppServer` starts and stops the subprocess, initializes the session, starts threads and turns, lists stored threads, reads/resumes/forks threads, pages stored turns, lists models, lists MCP server statuses, and lists configured hook diagnostics.
-- `CodexThread` owns thread-scoped turn creation, thread events, thread-management actions, local-history reads, and thread-scoped observable companions.
+- `CodexThread` owns thread-scoped turn creation, thread events, thread-management actions, read-only workspace file inspection, local-history reads, and thread-scoped observable companions.
 - `CodexTurnHandle` owns active-turn events and active-turn controls such as response handling, steering, interruption, minimap observation, and explicit completion snapshot handoff.
 - Approval and elicitation requests use hand-owned public models, including command approval, file-change approval, permissions approval, tool user input, and MCP server elicitation.
 - Diagnostics for warnings, guardian warnings, model reroutes, and model verification surface through hand-owned public events rather than generated wire payloads.

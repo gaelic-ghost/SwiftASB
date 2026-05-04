@@ -39,15 +39,17 @@ public extension CodexAppServer {
 
         /// Hook warnings and errors combined into one list for diagnostics UI.
         public var diagnostics: [HookDiagnostic] {
-            let errorDiagnostics = errors.map { error in
+            let errorDiagnostics = errors.enumerated().map { offset, error in
                 HookDiagnostic(
+                    id: "error:\(offset):\(error.path):\(error.message)",
                     severity: .error,
                     message: error.message,
                     path: error.path
                 )
             }
-            let warningDiagnostics = warnings.map { warning in
+            let warningDiagnostics = warnings.enumerated().map { offset, warning in
                 HookDiagnostic(
+                    id: "warning:\(offset):\(warning)",
                     severity: .warning,
                     message: warning,
                     path: nil
@@ -86,8 +88,7 @@ public extension CodexAppServer {
             case warning
         }
 
-        public var id: String { "\(severity.rawValue):\(path ?? ""):\(message)" }
-
+        public let id: String
         public let severity: Severity
         public let message: String
         public let path: String?
