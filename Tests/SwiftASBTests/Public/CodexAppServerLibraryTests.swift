@@ -63,7 +63,7 @@ extension CodexAppServerTests {
         let library = try await client.makeLibrary(
             configuration: .init(
                 pageSize: 20,
-                groupedBy: .currentDirectoryPath,
+                groupedBy: .cwd,
                 reconcilesOnCreation: false
             )
         )
@@ -152,6 +152,132 @@ extension CodexAppServerTests {
 
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @MainActor
+    @Test("library reloads local snapshots after app-wide thread events")
+    func libraryReloadsLocalSnapshotsAfterAppWideThreadEvents() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread()
+        let library = try await client.makeLibrary(
+            configuration: .init(
+                groupedBy: .cwd,
+                reconcilesOnCreation: false
+            )
+        )
+
+        #expect(library.unarchivedThreads.map(\.id) == [thread.id])
+        #expect(library.archivedThreads.isEmpty)
+
+        await transport.emitThreadArchived(threadID: thread.id)
+        await waitForObservableState {
+            library.archivedThreads.map(\.id) == [thread.id]
+        }
+        #expect(library.unarchivedThreads.isEmpty)
+
+        await transport.emitThreadUnarchived(threadID: thread.id)
+        await waitForObservableState {
+            library.unarchivedThreads.map(\.id) == [thread.id]
+        }
+        #expect(library.archivedThreads.isEmpty)
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @MainActor
+    @Test("library can sort by most recently completed turn")
+    func libraryCanSortByMostRecentlyCompletedTurn() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadStartIDQueue: ["thread-alpha", "thread-beta"],
+            turnStartIDQueue: ["turn-alpha", "turn-beta"]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let alpha = try await client.startThread()
+        let beta = try await client.startThread()
+        _ = try await alpha.startTextTurn("First prompt")
+        await transport.emitTurnCompleted(
+            threadID: alpha.id,
+            turnID: "turn-alpha",
+            completedAt: 1713350005
+        )
+        _ = try await beta.startTextTurn("Second prompt")
+        await transport.emitTurnCompleted(
+            threadID: beta.id,
+            turnID: "turn-beta",
+            completedAt: 1713350010
+        )
+        try await waitForCondition {
+            let snapshot = try await client.debugThreadHistorySnapshot(threadID: beta.id)
+            return snapshot?.turns.contains { $0.id == "turn-beta" && $0.completedAt == 1713350010 } == true
+        }
+
+        let library = try await client.makeLibrary(
+            configuration: .init(
+                sortedBy: .turnFinishedNewestFirst,
+                groupedBy: .none,
+                reconcilesOnCreation: false
+            )
+        )
+
+        #expect(library.unarchivedThreads.first?.id == beta.id)
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @Test("thread list query descriptors provide common list shapes")
+    func threadListQueryDescriptorsProvideCommonListShapes() {
+        let projectQuery = CodexAppServer.ThreadListQD
+            .cwd(
+                "/tmp/project-a",
+                archived: false,
+                limit: 25,
+                sortedBy: .nameAscending
+            )
+            .sorted(by: .createdNewestFirst)
+            .limited(to: 10)
+
+        #expect(projectQuery.archived == false)
+        #expect(projectQuery.currentDirectoryPath == "/tmp/project-a")
+        #expect(projectQuery.limit == 10)
+        #expect(projectQuery.sortedBy == .createdNewestFirst)
+
+        let archivedSearch = CodexAppServer.ThreadListQD.search("release", archived: true)
+        #expect(archivedSearch.archived == true)
+        #expect(archivedSearch.searchTerm == "release")
     }
 }
 

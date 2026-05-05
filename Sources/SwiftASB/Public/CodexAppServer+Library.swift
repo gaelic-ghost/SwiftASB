@@ -1,6 +1,13 @@
 import Foundation
 import Observation
 
+extension CodexAppServer {
+    internal enum LibraryEvent: Sendable, Equatable {
+        case threadChanged(threadID: String)
+        case turnCompleted(threadID: String)
+    }
+}
+
 public extension CodexAppServer {
     struct ThreadListQD: Sendable, Equatable {
         public var archived: Bool?
@@ -21,6 +28,75 @@ public extension CodexAppServer {
             self.limit = max(1, limit)
             self.searchTerm = searchTerm
             self.sortedBy = sortedBy
+        }
+
+        public static func all(
+            limit: Int = 50,
+            sortedBy: Library.SortedBy = .updatedNewestFirst
+        ) -> Self {
+            .init(limit: limit, sortedBy: sortedBy)
+        }
+
+        public static func unarchived(
+            limit: Int = 50,
+            sortedBy: Library.SortedBy = .updatedNewestFirst
+        ) -> Self {
+            .init(archived: false, limit: limit, sortedBy: sortedBy)
+        }
+
+        public static func archived(
+            limit: Int = 50,
+            sortedBy: Library.SortedBy = .updatedNewestFirst
+        ) -> Self {
+            .init(archived: true, limit: limit, sortedBy: sortedBy)
+        }
+
+        public static func cwd(
+            _ currentDirectoryPath: String,
+            archived: Bool? = nil,
+            limit: Int = 50,
+            sortedBy: Library.SortedBy = .updatedNewestFirst
+        ) -> Self {
+            .init(
+                archived: archived,
+                currentDirectoryPath: currentDirectoryPath,
+                limit: limit,
+                sortedBy: sortedBy
+            )
+        }
+
+        public static func search(
+            _ searchTerm: String,
+            archived: Bool? = nil,
+            limit: Int = 50,
+            sortedBy: Library.SortedBy = .updatedNewestFirst
+        ) -> Self {
+            .init(
+                archived: archived,
+                limit: limit,
+                searchTerm: searchTerm,
+                sortedBy: sortedBy
+            )
+        }
+
+        public func limited(to limit: Int) -> Self {
+            .init(
+                archived: archived,
+                currentDirectoryPath: currentDirectoryPath,
+                limit: limit,
+                searchTerm: searchTerm,
+                sortedBy: sortedBy
+            )
+        }
+
+        public func sorted(by sortedBy: Library.SortedBy) -> Self {
+            .init(
+                archived: archived,
+                currentDirectoryPath: currentDirectoryPath,
+                limit: limit,
+                searchTerm: searchTerm,
+                sortedBy: sortedBy
+            )
         }
 
         internal func threadListRequest(
@@ -56,7 +132,7 @@ public extension CodexAppServer {
                 pageSize: Int = 50,
                 maxPagesPerArchiveState: Int = 1,
                 sortedBy: SortedBy = .updatedNewestFirst,
-                groupedBy: GroupedBy = .currentDirectoryPath,
+                groupedBy: GroupedBy = .cwd,
                 query: CodexAppServer.ThreadListQD = .init(),
                 reconcilesOnCreation: Bool = true
             ) {
@@ -78,8 +154,7 @@ public extension CodexAppServer {
 
         public enum GroupedBy: String, Sendable, Equatable {
             case none
-            case currentDirectoryPath
-            case repositoryRoot
+            case cwd
         }
 
         public enum ReconciliationPhase: String, Sendable, Equatable {
@@ -94,6 +169,8 @@ public extension CodexAppServer {
             case updatedOldestFirst
             case createdNewestFirst
             case createdOldestFirst
+            case turnFinishedNewestFirst
+            case turnFinishedOldestFirst
             case nameAscending
             case nameDescending
 
@@ -106,7 +183,11 @@ public extension CodexAppServer {
                     (.createdAt, .desc)
                 case .createdOldestFirst:
                     (.createdAt, .asc)
-                case .updatedNewestFirst, .nameAscending, .nameDescending:
+                case .updatedNewestFirst,
+                     .turnFinishedNewestFirst,
+                     .turnFinishedOldestFirst,
+                     .nameAscending,
+                     .nameDescending:
                     (.updatedAt, .desc)
                 case .updatedOldestFirst:
                     (.updatedAt, .asc)
@@ -123,6 +204,7 @@ public extension CodexAppServer {
             public let forkedFromThreadID: String?
             public let isArchived: Bool
             public let isClosed: Bool
+            public let lastCompletedTurnAt: Int?
             public let modelProvider: String
             public let name: String?
             public let preview: String
@@ -172,7 +254,13 @@ public extension CodexAppServer {
         private let maxPagesPerArchiveState: Int
 
         @ObservationIgnored
+        private var pendingEventReload = false
+
+        @ObservationIgnored
         private var query: CodexAppServer.ThreadListQD
+
+        @ObservationIgnored
+        private var eventTask: Task<Void, Never>?
 
         @ObservationIgnored
         private var refreshTask: Task<Void, Never>?
@@ -197,42 +285,34 @@ public extension CodexAppServer {
             applyVisibleState()
 
             if configuration.reconcilesOnCreation {
-                refreshTask = Task { [weak self] in
-                    await self?.refresh()
-                }
+                refreshTask = Task { [weak self] in await self?.refreshAll() }
             }
+            startEventTask()
         }
 
         deinit {
+            eventTask?.cancel()
             refreshTask?.cancel()
         }
 
         public func refresh() async {
+            await refreshAll()
+        }
+
+        public func refreshAll() async {
             if isReconciling || isLoadingLocalSnapshot {
                 return
             }
 
             await reloadLocalSnapshot(phase: .loadingLocalSnapshot)
 
-            phase = .reconcilingUnarchived
             do {
-                try await appServer.reconcileLibraryThreads(
-                    query: query,
-                    archived: false,
-                    maxPages: maxPagesPerArchiveState
-                )
-                await reloadLocalSnapshot(phase: .reconcilingUnarchived)
+                try await reconcileArchiveScope(false)
 
                 try Task.checkCancellation()
                 await Task.yield()
 
-                phase = .reconcilingArchived
-                try await appServer.reconcileLibraryThreads(
-                    query: query,
-                    archived: true,
-                    maxPages: maxPagesPerArchiveState
-                )
-                await reloadLocalSnapshot(phase: .reconcilingArchived)
+                try await reconcileArchiveScope(true)
 
                 lastReconciledAt = Date()
                 latestErrorDescription = nil
@@ -242,7 +322,76 @@ public extension CodexAppServer {
                 latestErrorDescription = error.localizedDescription
             }
 
+            if pendingEventReload {
+                pendingEventReload = false
+                await reloadLocalSnapshot(phase: .loadingLocalSnapshot)
+            }
             phase = .idle
+        }
+
+        public func refreshUnarchived() async {
+            await refreshArchiveScope(false)
+        }
+
+        public func refreshArchived() async {
+            await refreshArchiveScope(true)
+        }
+
+        public func reload() async {
+            await reloadLocalSnapshot(phase: .loadingLocalSnapshot)
+            phase = .idle
+        }
+
+        private func refreshArchiveScope(_ archived: Bool) async {
+            if isReconciling || isLoadingLocalSnapshot {
+                return
+            }
+
+            await reloadLocalSnapshot(phase: .loadingLocalSnapshot)
+
+            do {
+                try await reconcileArchiveScope(archived)
+                lastReconciledAt = Date()
+                latestErrorDescription = nil
+            } catch is CancellationError {
+                return
+            } catch {
+                latestErrorDescription = error.localizedDescription
+            }
+
+            if pendingEventReload {
+                pendingEventReload = false
+                await reloadLocalSnapshot(phase: .loadingLocalSnapshot)
+            }
+            phase = .idle
+        }
+
+        private func reconcileArchiveScope(_ archived: Bool) async throws {
+            phase = archived ? .reconcilingArchived : .reconcilingUnarchived
+            try await appServer.reconcileLibraryThreads(
+                query: query,
+                archived: archived,
+                maxPages: maxPagesPerArchiveState
+            )
+            await reloadLocalSnapshot(phase: archived ? .reconcilingArchived : .reconcilingUnarchived)
+        }
+
+        private func startEventTask() {
+            eventTask = Task { [weak self] in
+                guard let self else { return }
+                let events = await appServer.libraryEvents()
+                for await _ in events {
+                    if Task.isCancelled {
+                        return
+                    }
+                    if isReconciling || isLoadingLocalSnapshot {
+                        pendingEventReload = true
+                        continue
+                    }
+                    await reloadLocalSnapshot(phase: .loadingLocalSnapshot)
+                    phase = .idle
+                }
+            }
         }
 
         private func reloadLocalSnapshot(phase: ReconciliationPhase) async {
@@ -279,6 +428,20 @@ public extension CodexAppServer {
                     newest(lhs.createdAt, rhs.createdAt, lhs.id, rhs.id)
                 case .createdOldestFirst:
                     oldest(lhs.createdAt, rhs.createdAt, lhs.id, rhs.id)
+                case .turnFinishedNewestFirst:
+                    newest(
+                        lhs.lastCompletedTurnAt ?? Int.min,
+                        rhs.lastCompletedTurnAt ?? Int.min,
+                        lhs.id,
+                        rhs.id
+                    )
+                case .turnFinishedOldestFirst:
+                    oldest(
+                        lhs.lastCompletedTurnAt ?? Int.max,
+                        rhs.lastCompletedTurnAt ?? Int.max,
+                        lhs.id,
+                        rhs.id
+                    )
                 case .nameAscending:
                     compareNames(lhs, rhs, ascending: true)
                 case .nameDescending:
@@ -299,7 +462,7 @@ public extension CodexAppServer {
                 switch groupedBy {
                 case .none:
                     ""
-                case .currentDirectoryPath, .repositoryRoot:
+                case .cwd:
                     thread.currentDirectoryPath
                 }
             }
@@ -386,6 +549,7 @@ extension CodexAppServer.Library.ThreadSnapshot {
             forkedFromThreadID: snapshot.forkedFromThreadID,
             isArchived: snapshot.isArchived,
             isClosed: snapshot.isClosed,
+            lastCompletedTurnAt: snapshot.lastCompletedTurnAt,
             modelProvider: snapshot.modelProvider,
             name: snapshot.name,
             preview: snapshot.preview,

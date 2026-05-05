@@ -153,6 +153,7 @@ actor ThreadHistoryStore {
         let forkedFromThreadID: String?
         let isArchived: Bool
         let isClosed: Bool
+        let lastCompletedTurnAt: Int?
         let modelProvider: String
         let name: String?
         let preview: String
@@ -1058,6 +1059,7 @@ actor ThreadHistoryStore {
             forkedFromThreadID: thread.forkedFromThreadID,
             isArchived: thread.isArchived,
             isClosed: thread.isClosed,
+            lastCompletedTurnAt: Self.lastCompletedTurnAt(for: thread),
             modelProvider: thread.modelProvider,
             name: thread.name,
             preview: thread.preview,
@@ -1065,6 +1067,17 @@ actor ThreadHistoryStore {
             statusType: thread.statusType,
             updatedAt: Int(thread.updatedAt)
         )
+    }
+
+    private static func lastCompletedTurnAt(for thread: HistoryThread) -> Int? {
+        guard let turns = thread.turns as? Set<HistoryTurn> else {
+            return nil
+        }
+
+        return turns
+            .filter { $0.status == CodexAppServer.TurnStatus.completed.rawValue }
+            .map { Int($0.completedAt) }
+            .max()
     }
 
     private static func applyThreadDefaults(

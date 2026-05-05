@@ -16,7 +16,9 @@ There are three public shapes:
 
 Use ``CodexAppServer/makeLibrary(configuration:)`` when a client needs stored-thread lists before choosing a thread. The library publishes unarchived threads, archived threads, and grouped unarchived threads. It reads local snapshots first so UI can show a sidebar quickly, then reconciles app-server `thread/list` pages in the background.
 
-`Library.SortedBy` and `Library.GroupedBy` are UI-facing policies. `CodexAppServer.ThreadListQD` is the package-owned query descriptor for repeatable thread-list intent.
+`Library.SortedBy` and `Library.GroupedBy` are UI-facing policies. `Library.GroupedBy.cwd` is the current project-style grouping surface while repository-root detection remains a later design decision. `CodexAppServer.ThreadListQD` is the package-owned query descriptor for repeatable thread-list intent.
+
+Use ``CodexAppServer/Library/refreshAll()``, ``CodexAppServer/Library/refreshUnarchived()``, and ``CodexAppServer/Library/refreshArchived()`` for explicit reconciliation actions. The library also reloads local value snapshots after app-wide thread and turn events, including archive, unarchive, name changes, status changes, and completed turns.
 
 ## Local History Windows
 

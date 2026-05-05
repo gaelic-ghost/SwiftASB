@@ -945,6 +945,7 @@ When a library is created:
 - read the local Core Data thread snapshot first
 - publish unarchived and archived arrays immediately when local data exists
 - group threads according to `Library.GroupedBy`
+- expose refresh actions for all, unarchived-only, and archived-only scopes
 - reconcile app-server data in the background
 - page unarchived threads before archived threads
 - ask app-server for most-recent threads first by using `updatedAt`
@@ -967,12 +968,30 @@ successful archive-scope reconciliation. This keeps the observable sourced from
 the same local value snapshots that future query descriptors will use, while
 still allowing app-server to correct stale local metadata.
 
+### Event-driven updates
+
+`Library` listens to an internal app-wide event stream from `CodexAppServer`.
+The stream is emitted after the app-server event handler has already recorded
+the matching Core Data change, so the observable can reload local value
+snapshots without re-paging app-server on every notification.
+
+The first event-driven refresh triggers are:
+
+- thread start, resume, fork, rollback, metadata, and name changes initiated
+  through SwiftASB public methods
+- app-server `thread/started`, `thread/status/changed`, `thread/archived`,
+  `thread/unarchived`, `thread/closed`, `thread/name/updated`, and
+  `thread/tokenUsage/updated` notifications
+- `turn/started` and `turn/completed` notifications, so UI sorting can react to
+  active work and most-recently-finished-turn ordering
+
+The app-wide stream is intentionally internal. Public consumers observe the
+library's value snapshots and phase/error fields rather than replaying app-wide
+transport events themselves.
+
 ### Follow-on work
 
-- Add an app-wide event stream if library state needs to update immediately
-  after unrelated `startThread`, `resumeThread`, archive, unarchive, rename, or
-  metadata calls.
 - Add project-root detection when SwiftASB has a deliberate repo-root model.
-  Until then, `GroupedBy.repositoryRoot` may fall back to current directory.
+  Until then, `GroupedBy.cwd` is the only project-style grouping case.
 - Expand `ThreadListQD` into the shared descriptor used by library snapshots,
   non-UI list reads, and later search-hit hydration.

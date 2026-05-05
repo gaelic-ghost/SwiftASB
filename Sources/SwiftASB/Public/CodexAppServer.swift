@@ -96,6 +96,7 @@ public actor CodexAppServer {
     private var threadStatuses: [String: ThreadStatus] = [:]
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
     private var diagnosticEventContinuations: [UUID: AsyncThrowingStream<CodexDiagnosticEvent, Error>.Continuation] = [:]
+    private var libraryEventContinuations: [UUID: AsyncStream<LibraryEvent>.Continuation] = [:]
     private var threadObservableActivityContinuations: [String: [UUID: AsyncStream<CodexThread.Dashboard.ActivityState>.Continuation]] = [:]
     private var threadCommandDeltaContinuations: [String: [UUID: AsyncStream<CommandExecutionOutputDeltaEvent>.Continuation]] = [:]
     private var threadFileDeltaContinuations: [String: [UUID: AsyncStream<FileChangeOutputDeltaEvent>.Continuation]] = [:]
@@ -186,6 +187,7 @@ public actor CodexAppServer {
         serverEventTask = nil
         finishAllThreadEventStreams(throwing: nil)
         finishAllDiagnosticEventStreams(throwing: nil)
+        finishAllLibraryEventStreams()
         finishAllThreadObservableActivityStreams()
         finishAllThreadCommandDeltaStreams()
         finishAllThreadFileDeltaStreams()
@@ -410,6 +412,7 @@ public actor CodexAppServer {
             let session = ThreadSession(wireValue: response)
             threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
             try await requireHistoryStore(for: "thread/start").recordThreadStarted(session: session)
+            publishLibraryEvent(.threadChanged(threadID: response.thread.id))
 
             return CodexThread(
                 appServer: self,
@@ -455,6 +458,7 @@ public actor CodexAppServer {
                 }
             )
             try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
+            publishLibraryEvent(.threadChanged(threadID: response.thread.id))
 
             return CodexThread(
                 appServer: self,
@@ -499,6 +503,7 @@ public actor CodexAppServer {
                 }
             )
             try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
+            publishLibraryEvent(.threadChanged(threadID: response.thread.id))
 
             return CodexThread(
                 appServer: self,
@@ -574,6 +579,7 @@ public actor CodexAppServer {
                     )
                 }
             )
+            publishLibraryEvent(.threadChanged(threadID: thread.id))
 
             return thread
         } catch {
@@ -605,6 +611,7 @@ public actor CodexAppServer {
                 threadID: request.threadID,
                 name: request.name
             )
+            publishLibraryEvent(.threadChanged(threadID: request.threadID))
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/name/set")
         }
@@ -632,6 +639,7 @@ public actor CodexAppServer {
             )
             let thread = ThreadInfo(wireValue: response.thread)
             try await requireHistoryStore(for: "thread/metadata/update").recordThreadMetadataUpdated(thread)
+            publishLibraryEvent(.threadChanged(threadID: thread.id))
 
             return thread
         } catch {
@@ -985,6 +993,20 @@ public actor CodexAppServer {
                         streamID: streamID,
                         threadID: threadID
                     )
+                }
+            }
+        }
+    }
+
+    internal func libraryEvents() -> AsyncStream<LibraryEvent> {
+        let streamID = UUID()
+
+        return AsyncStream { continuation in
+            libraryEventContinuations[streamID] = continuation
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeLibraryEventContinuation(streamID: streamID)
                 }
             }
         }
@@ -1844,6 +1866,7 @@ public actor CodexAppServer {
                 await self.finishAllDiagnosticEventStreams(
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
                 )
+                await self.finishAllLibraryEventStreams()
                 await self.finishAllTurnEventStreams(
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
                 )
@@ -1860,6 +1883,7 @@ public actor CodexAppServer {
             )
             publishThreadEvent(threadEvent, for: notification.thread.id, isTerminal: false)
             try? await historyStore?.recordThreadMetadataUpdated(.init(wireValue: notification.thread))
+            publishLibraryEvent(.threadChanged(threadID: notification.thread.id))
         case let .threadStatusChanged(notification):
             threadStatuses[notification.threadID] = .init(wireValue: notification.status)
             let threadEvent = CodexThreadEvent.statusChanged(
@@ -1873,14 +1897,17 @@ public actor CodexAppServer {
                 threadID: notification.threadID,
                 status: .init(wireValue: notification.status)
             )
+            publishLibraryEvent(.threadChanged(threadID: notification.threadID))
         case let .threadArchived(notification):
             let threadEvent = CodexThreadEvent.archived(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
             try? await historyStore?.recordThreadArchived(threadID: notification.threadID, isArchived: true)
+            publishLibraryEvent(.threadChanged(threadID: notification.threadID))
         case let .threadUnarchived(notification):
             let threadEvent = CodexThreadEvent.unarchived(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: false)
             try? await historyStore?.recordThreadArchived(threadID: notification.threadID, isArchived: false)
+            publishLibraryEvent(.threadChanged(threadID: notification.threadID))
         case let .threadClosed(notification):
             threadStatuses.removeValue(forKey: notification.threadID)
             clearTurnActivities(threadID: notification.threadID)
@@ -1891,6 +1918,7 @@ public actor CodexAppServer {
             let threadEvent = CodexThreadEvent.closed(.init(threadID: notification.threadID))
             publishThreadEvent(threadEvent, for: notification.threadID, isTerminal: true)
             try? await historyStore?.recordThreadClosed(threadID: notification.threadID)
+            publishLibraryEvent(.threadChanged(threadID: notification.threadID))
         case let .threadNameUpdated(notification):
             let threadEvent = CodexThreadEvent.nameUpdated(
                 .init(
@@ -1903,6 +1931,7 @@ public actor CodexAppServer {
                 threadID: notification.threadID,
                 name: notification.threadName
             )
+            publishLibraryEvent(.threadChanged(threadID: notification.threadID))
         case let .threadTokenUsageUpdated(notification):
             let lastUsage = CodexThreadTokenUsageUpdated.Usage(wireValue: notification.tokenUsage.last)
             let threadEvent = CodexThreadEvent.tokenUsageUpdated(
@@ -1921,6 +1950,7 @@ public actor CodexAppServer {
                 usage: lastUsage,
                 modelContextWindow: notification.tokenUsage.modelContextWindow
             )
+            publishLibraryEvent(.threadChanged(threadID: notification.threadID))
         case let .turnStarted(notification):
             markThreadTurnActive(threadID: notification.threadID, turnID: notification.turn.id)
             let turn = TurnInfo(wireValue: notification.turn)
@@ -1930,6 +1960,7 @@ public actor CodexAppServer {
             )
             publishTurnEvent(.started(started), for: notification.turn.id, isTerminal: false)
             try? await historyStore?.recordTurnStarted(threadID: notification.threadID, turn: turn)
+            publishLibraryEvent(.threadChanged(threadID: notification.threadID))
         case let .turnDiffUpdated(notification):
             let diffUpdate = CodexTurnDiffUpdate(
                 threadID: notification.threadID,
@@ -2111,6 +2142,7 @@ public actor CodexAppServer {
             )
             let turnEvent = CodexTurnEvent.completed(completion)
             publishTurnEvent(turnEvent, for: notification.turn.id, isTerminal: true)
+            publishLibraryEvent(.turnCompleted(threadID: notification.threadID))
         }
     }
 
@@ -2120,6 +2152,7 @@ public actor CodexAppServer {
         guard hasStarted, !isStopping else {
             finishAllThreadEventStreams(throwing: nil)
             finishAllDiagnosticEventStreams(throwing: nil)
+            finishAllLibraryEventStreams()
             finishAllThreadObservableActivityStreams()
             finishAllThreadCommandDeltaStreams()
             finishAllThreadFileDeltaStreams()
@@ -2139,6 +2172,7 @@ public actor CodexAppServer {
                 reason: "Codex app-server stopped delivering diagnostics before pending diagnostic streams finished."
             )
         )
+        finishAllLibraryEventStreams()
         finishAllThreadObservableActivityStreams()
         finishAllThreadCommandDeltaStreams()
         finishAllThreadFileDeltaStreams()
@@ -2291,6 +2325,10 @@ public actor CodexAppServer {
         diagnosticEventContinuations.removeValue(forKey: streamID)
     }
 
+    private func removeLibraryEventContinuation(streamID: UUID) {
+        libraryEventContinuations.removeValue(forKey: streamID)
+    }
+
     private func registerThreadEventContinuation(
         _ continuation: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation,
         streamID: UUID,
@@ -2394,6 +2432,16 @@ public actor CodexAppServer {
         }
 
         for continuation in diagnosticEventContinuations.values {
+            continuation.yield(event)
+        }
+    }
+
+    private func publishLibraryEvent(_ event: LibraryEvent) {
+        guard !libraryEventContinuations.isEmpty else {
+            return
+        }
+
+        for continuation in libraryEventContinuations.values {
             continuation.yield(event)
         }
     }
@@ -2502,6 +2550,15 @@ public actor CodexAppServer {
     private func finishAllThreadObservableActivityStreams() {
         let activeContinuations = threadObservableActivityContinuations.values.flatMap(\.values)
         threadObservableActivityContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            continuation.finish()
+        }
+    }
+
+    private func finishAllLibraryEventStreams() {
+        let activeContinuations = libraryEventContinuations.values
+        libraryEventContinuations.removeAll()
 
         for continuation in activeContinuations {
             continuation.finish()

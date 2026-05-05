@@ -42,6 +42,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var threadForkResult: [String: Any]?
     private var threadResumeResult: [String: Any]?
     private var threadStartIDQueue: [String]
+    private var turnStartIDQueue: [String]
     private var threadTurnsListErrorMessage: String?
     private var threadTurnsListResult: [String: Any]?
     private var threadTurnsListResultQueue: [[String: Any]]
@@ -58,6 +59,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         threadForkResult: [String: Any]? = nil,
         threadResumeResult: [String: Any]? = nil,
         threadStartIDQueue: [String] = [],
+        turnStartIDQueue: [String] = [],
         threadTurnsListErrorMessage: String? = nil,
         threadTurnsListResult: [String: Any]? = nil,
         threadTurnsListResultQueue: [[String: Any]] = []
@@ -69,6 +71,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         self.threadForkResult = threadForkResult
         self.threadResumeResult = threadResumeResult
         self.threadStartIDQueue = threadStartIDQueue
+        self.turnStartIDQueue = turnStartIDQueue
         self.threadTurnsListErrorMessage = threadTurnsListErrorMessage
         self.threadTurnsListResult = threadTurnsListResult
         self.threadTurnsListResultQueue = threadTurnsListResultQueue
@@ -590,6 +593,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 ]
             )
         case "turn/start":
+            let turnID = turnStartIDQueue.isEmpty ? "turn-123" : turnStartIDQueue.removeFirst()
             return responsePayload(
                 id: id,
                 result: [
@@ -597,7 +601,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                         "completedAt": NSNull(),
                         "durationMs": NSNull(),
                         "error": NSNull(),
-                        "id": "turn-123",
+                        "id": turnID,
                         "items": [],
                         "startedAt": 1713350002,
                         "status": "inProgress",
@@ -664,11 +668,15 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         recordedRequestPayloads[method]?.last
     }
 
-    func emitTurnCompleted(threadID: String, turnID: String) {
+    func emitTurnCompleted(
+        threadID: String,
+        turnID: String,
+        completedAt: Int = 1713350005
+    ) {
         let payload = payloadObject([
             "threadId": threadID,
             "turn": [
-                "completedAt": 1713350005,
+                "completedAt": completedAt,
                 "durationMs": 3000,
                 "error": NSNull(),
                 "id": turnID,
