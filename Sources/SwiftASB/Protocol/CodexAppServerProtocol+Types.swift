@@ -46,6 +46,14 @@ struct CodexProtocolThreadCompactStartResponse: Decodable, Equatable, Sendable {
 
 struct CodexProtocolThreadSetNameResponse: Decodable, Equatable, Sendable {}
 
+struct CodexProtocolModelProviderCapabilitiesReadParams: Encodable, Equatable, Sendable {}
+
+struct CodexProtocolModelProviderCapabilitiesReadResponse: Decodable, Equatable, Sendable {
+    let imageGeneration: Bool
+    let namespaceTools: Bool
+    let webSearch: Bool
+}
+
 struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
     let gitInfo: GitInfo?
     let threadID: String

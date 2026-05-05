@@ -26,6 +26,13 @@ public extension CodexAppServer {
         public let nextCursor: String?
     }
 
+    /// Feature gates reported by the current app-server model provider.
+    struct ModelCapabilities: Sendable, Equatable {
+        public let imageGeneration: Bool
+        public let namespaceTools: Bool
+        public let webSearch: Bool
+    }
+
     /// Model option reported by the app-server for picker and capability UI.
     struct Model: Sendable, Equatable, Identifiable {
         public let additionalSpeedTiers: [String]?
@@ -78,6 +85,16 @@ extension CodexAppServer.Model {
                 CodexAppServer.ReasoningEffortOption.init
             ),
             supportsPersonality: wireValue.supportsPersonality
+        )
+    }
+}
+
+extension CodexAppServer.ModelCapabilities {
+    init(wireValue: CodexProtocolModelProviderCapabilitiesReadResponse) {
+        self.init(
+            imageGeneration: wireValue.imageGeneration,
+            namespaceTools: wireValue.namespaceTools,
+            webSearch: wireValue.webSearch
         )
     }
 }

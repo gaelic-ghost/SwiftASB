@@ -355,6 +355,21 @@ struct CodexAppServerProtocolTests {
         #expect(params["limit"] as? Int == 10)
     }
 
+    @Test("encodes modelProvider/capabilities/read requests with empty params")
+    func encodesModelProviderCapabilitiesReadRequest() throws {
+        let payload = try protocolLayer.makeModelProviderCapabilitiesReadRequest(
+            id: .string("model-capabilities-1"),
+            params: .init()
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "modelProvider/capabilities/read")
+        #expect(object["id"] as? String == "model-capabilities-1")
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params.isEmpty)
+    }
+
     @Test("encodes mcpServerStatus/list requests with the expected method and params payload")
     func encodesMcpServerStatusListRequest() throws {
         let payload = try protocolLayer.makeMcpServerStatusListRequest(

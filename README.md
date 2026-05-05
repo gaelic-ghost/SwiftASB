@@ -189,7 +189,7 @@ Recent observable startup is intentionally UI-friendly around known live app-ser
 
 The current public lifecycle contract is intentionally narrow and explicit:
 
-- `CodexAppServer` starts and stops the subprocess, initializes the session, starts threads and turns, lists stored threads, reads/resumes/forks threads, pages stored turns, lists models, lists MCP server statuses, and lists configured hook diagnostics.
+- `CodexAppServer` starts and stops the subprocess, initializes the session, starts threads and turns, lists stored threads, reads/resumes/forks threads, pages stored turns, lists models, reads model feature gates, lists MCP server statuses, and lists configured hook diagnostics.
 - `CodexThread` owns thread-scoped turn creation, thread events, thread-management actions, read-only workspace file inspection, local-history reads, and thread-scoped observable companions.
 - `CodexTurnHandle` owns active-turn events and active-turn controls such as response handling, steering, interruption, minimap observation, and explicit completion snapshot handoff.
 - Approval and elicitation requests use hand-owned public models, including command approval, file-change approval, permissions approval, tool user input, and MCP server elicitation.

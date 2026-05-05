@@ -422,6 +422,8 @@ Use these decisions for every public symbol:
   Decision: the ledger now records 1,107 exported public/open symbols after the
   placeholder, request-payload constructor, diagnostic-constructor,
   marketplace-adjacent model-field narrowing, and v0.128 sandbox-field cleanup.
+  The post-v1 model-capabilities addition updates that same ledger to 1,112
+  exported public/open symbols while preserving the v1 ownership boundary.
 
 ### Documentation Requirements
 

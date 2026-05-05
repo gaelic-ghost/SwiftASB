@@ -1,17 +1,19 @@
 # App-Wide Capabilities
 
-Discover model, MCP-server, and hook diagnostics snapshots from the app-server owner.
+Discover model, MCP-server, hook diagnostics, and model-capability snapshots from the app-server owner.
 
 ## Overview
 
-Some app-server operations describe the connection rather than one conversation thread. SwiftASB exposes those operations on ``CodexAppServer`` so consumers can populate settings screens, model pickers, MCP inspectors, hook diagnostics, and other app-wide views without needing a thread handle.
+Some app-server operations describe the connection rather than one conversation thread. SwiftASB exposes those operations on ``CodexAppServer`` so consumers can populate settings screens, model pickers, feature gates, MCP inspectors, hook diagnostics, and other app-wide views without needing a thread handle.
 
-Use ``CodexAppServer/listModels(_:)`` to read the currently visible model catalog. Use ``CodexAppServer/listMcpServerStatuses(_:)`` to inspect configured MCP servers, their auth status, and their resource, resource-template, and tool metadata. Use ``CodexAppServer/listHooks(_:)`` to inspect configured hooks, warnings, and load errors for one or more working directories before a turn runs.
+Use ``CodexAppServer/listModels(_:)`` to read the currently visible model catalog. Use ``CodexAppServer/readModelCapabilities()`` to decide whether the current model provider supports web search, image generation, or namespace tools. Use ``CodexAppServer/listMcpServerStatuses(_:)`` to inspect configured MCP servers, their auth status, and their resource, resource-template, and tool metadata. Use ``CodexAppServer/listHooks(_:)`` to inspect configured hooks, warnings, and load errors for one or more working directories before a turn runs.
 
 ```swift
 let models = try await appServer.listModels(
     .init(limit: 50, includeHidden: false)
 )
+
+let modelCapabilities = try await appServer.readModelCapabilities()
 
 let statuses = try await appServer.listMcpServerStatuses(
     .init(detail: .toolsAndAuthOnly)
@@ -23,6 +25,18 @@ let hooks = try await appServer.listHooks(
 ```
 
 These requests are snapshots. If your UI needs refresh behavior, keep that refresh policy in the caller and ask the app-server for a new snapshot or page when needed.
+
+## Model Capabilities
+
+Model capabilities are feature gates for the current model provider. They are useful before showing controls that rely on provider-owned behavior.
+
+```swift
+let capabilities = try await appServer.readModelCapabilities()
+
+searchToggle.isEnabled = capabilities.webSearch
+imageButton.isEnabled = capabilities.imageGeneration
+namespaceToolsInspector.isHidden = !capabilities.namespaceTools
+```
 
 ## Hook Diagnostics
 
@@ -58,9 +72,11 @@ These types are public because a consumer can use them directly today. Other gen
 ### Models
 
 - ``CodexAppServer/listModels(_:)``
+- ``CodexAppServer/readModelCapabilities()``
 - ``CodexAppServer/ModelListRequest``
 - ``CodexAppServer/ModelListPage``
 - ``CodexAppServer/Model``
+- ``CodexAppServer/ModelCapabilities``
 - ``CodexAppServer/InputModality``
 - ``CodexAppServer/ReasoningEffortOption``
 

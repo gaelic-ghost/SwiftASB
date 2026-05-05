@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening. This is a maintainer ledger for the v1 public API freeze; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-04 for the post-v1 model-capabilities snapshot. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1107
-- Public/open types: 169
+- Public/open symbols: 1112
+- Public/open types: 170
 - Public/open initializers: 71
-- Public/open methods and type methods: 60
+- Public/open methods and type methods: 61
 - Public/open enum cases: 224
-- Public/open properties: 583
+- Public/open properties: 586
 
 ## Public Types
 
@@ -38,6 +38,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.McpTool` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.Model` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.ModelAvailabilityNux` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
+- `CodexAppServer.ModelCapabilities` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.ModelListPage` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.ModelListRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.NetworkAccess` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
@@ -235,6 +236,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.listModels(_:)` - `func listModels(_ request: CodexAppServer.ModelListRequest = .init()) async throws -> CodexAppServer.ModelListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listThreadTurns(_:)` - `func listThreadTurns(_ request: CodexAppServer.ThreadTurnsListRequest) async throws -> CodexAppServer.ThreadTurnsPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listThreads(_:)` - `func listThreads(_ request: CodexAppServer.ThreadListRequest = .init()) async throws -> CodexAppServer.ThreadListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.readModelCapabilities()` - `func readModelCapabilities() async throws -> CodexAppServer.ModelCapabilities` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.readThread(_:)` - `func readThread(_ request: CodexAppServer.ThreadReadRequest) async throws -> CodexAppServer.ThreadReadResult` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.resumeThread(_:)` - `func resumeThread(_ request: CodexAppServer.ThreadResumeRequest) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.rollbackThread(_:)` - `func rollbackThread(_ request: CodexAppServer.ThreadRollbackRequest) async throws -> CodexAppServer.ThreadInfo` - Sources/SwiftASB/Public/CodexAppServer.swift
@@ -603,7 +605,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 19 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 15 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 34 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 20 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 23 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 90 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift`: 12 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift`: 23 public properties
