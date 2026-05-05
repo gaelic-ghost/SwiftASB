@@ -6,7 +6,7 @@ Use dashboard, minimap, recent-file, and recent-command companions as current-st
 
 SwiftASB's observable companions are ready-made `@Observable` state objects for SwiftUI surfaces. They are current-state mirrors over live streams and local history; they are not replayable protocol logs.
 
-Use ``CodexThread/makeDashboard()`` for thread-level state, ``CodexTurnHandle/minimap`` for one active turn, and the recent companions for completed turn, file, and command views.
+Use ``CodexAppServer/makeLibrary(configuration:)`` for app-wide stored-thread lists, ``CodexThread/makeDashboard()`` for thread-level state, ``CodexTurnHandle/minimap`` for one active turn, and the recent companions for completed turn, file, and command views.
 
 ```swift
 import Observation
@@ -15,20 +15,24 @@ import SwiftASB
 @MainActor
 @Observable
 final class ThreadInspectorModel {
+    private let appServer: CodexAppServer
     private let thread: CodexThread
 
+    var library: CodexAppServer.Library?
     var dashboard: CodexThread.Dashboard?
     var recentFiles: CodexThread.RecentFiles?
     var recentCommands: CodexThread.RecentCommands?
     var currentMinimap: CodexTurnHandle.Minimap?
     var errorMessage: String?
 
-    init(thread: CodexThread) {
+    init(appServer: CodexAppServer, thread: CodexThread) {
+        self.appServer = appServer
         self.thread = thread
     }
 
     func start() async {
         do {
+            library = try await appServer.makeLibrary()
             dashboard = await thread.makeDashboard()
             recentFiles = try await thread.makeRecentFiles(
                 limit: 20,
@@ -75,6 +79,8 @@ Store the companion object itself in your view model. Do not copy its arrays int
 
 ### Thread-Level State
 
+- ``CodexAppServer/makeLibrary(configuration:)``
+- ``CodexAppServer/Library``
 - ``CodexThread/makeDashboard()``
 - ``CodexThread/Dashboard``
 

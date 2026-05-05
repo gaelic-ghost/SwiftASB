@@ -996,6 +996,56 @@ public actor CodexAppServer {
         try await requireHistoryStore(for: "thread history snapshot").snapshot(threadID: threadID)
     }
 
+    internal func libraryThreadSnapshots(
+        query: ThreadListQD
+    ) async throws -> [Library.ThreadSnapshot] {
+        let historyStore = try requireHistoryStore(for: "library thread snapshots")
+        return try await historyStore.threadListSnapshots()
+            .map(Library.ThreadSnapshot.init)
+            .filter { thread in
+                if let archived = query.archived, thread.isArchived != archived {
+                    return false
+                }
+                if let currentDirectoryPath = query.currentDirectoryPath,
+                   thread.currentDirectoryPath != currentDirectoryPath {
+                    return false
+                }
+                if let searchTerm = query.searchTerm?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !searchTerm.isEmpty {
+                    let haystack = [
+                        thread.name ?? "",
+                        thread.preview,
+                        thread.currentDirectoryPath,
+                    ].joined(separator: "\n")
+                    return haystack.localizedCaseInsensitiveContains(searchTerm)
+                }
+                return true
+            }
+    }
+
+    internal func reconcileLibraryThreads(
+        query: ThreadListQD,
+        archived: Bool,
+        maxPages: Int
+    ) async throws {
+        var cursor: String?
+        let pageCount = max(1, maxPages)
+        for _ in 0..<pageCount {
+            try Task.checkCancellation()
+            let page = try await listThreads(
+                query.threadListRequest(
+                    archived: archived,
+                    cursor: cursor
+                )
+            )
+            cursor = page.nextCursor
+            if cursor == nil {
+                break
+            }
+            await Task.yield()
+        }
+    }
+
     internal func recentClosedTurnWindow(
         threadID: String,
         limit: Int

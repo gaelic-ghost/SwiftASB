@@ -39,6 +39,8 @@ Use ``diagnosticEvents()`` to observe passive runtime diagnostics that are not c
 
 Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, MCP server surface, and configured hook diagnostics.
 
+Use ``makeLibrary(configuration:)`` when a GUI or CLI client needs an app-wide observable over stored threads. The library loads local Core Data-backed snapshots first, then reconciles unarchived app-server pages before archived pages. It publishes SwiftASB value snapshots, not Core Data objects.
+
 ## Stored Threads
 
 Use ``startThread(_:)`` for a new thread, ``resumeThread(_:)`` for an existing stored thread, ``forkThread(_:)`` for a copy of existing history, ``listThreads(_:)`` for thread pages, ``readThread(_:)`` for a stored snapshot, and ``listThreadTurns(_:)`` for paged turn history.
@@ -73,6 +75,9 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 
 ### App-Wide Capability Snapshots
 
+- ``makeLibrary(configuration:)``
+- ``Library``
+- ``ThreadListQD``
 - ``listModels(_:)``
 - ``ModelListRequest``
 - ``ModelListPage``

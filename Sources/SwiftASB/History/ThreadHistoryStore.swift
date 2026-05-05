@@ -144,6 +144,23 @@ actor ThreadHistoryStore {
         let items: [CodexTurnItem]
     }
 
+    struct ThreadListSnapshot: Sendable, Equatable {
+        let id: String
+        let cliVersion: String
+        let createdAt: Int
+        let currentDirectoryPath: String
+        let ephemeral: Bool
+        let forkedFromThreadID: String?
+        let isArchived: Bool
+        let isClosed: Bool
+        let modelProvider: String
+        let name: String?
+        let preview: String
+        let statusFlags: [String]
+        let statusType: String
+        let updatedAt: Int
+    }
+
     private struct HydrationMergeOutcome: Sendable {
         let preservedRicherLocalDetail: Bool
     }
@@ -603,6 +620,15 @@ actor ThreadHistoryStore {
         }
     }
 
+    func threadListSnapshots() throws -> [ThreadListSnapshot] {
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            let request = HistoryThread.fetchRequest()
+            let threads = try context.fetch(request)
+            return try threads.map(Self.makeThreadListSnapshot)
+        }
+    }
+
     func turnSnapshot(
         threadID: String,
         turnID: String
@@ -1017,6 +1043,27 @@ actor ThreadHistoryStore {
             startedAt: turn.startedAt == 0 ? nil : Int(turn.startedAt),
             status: turn.status,
             tokenUsage: tokenUsage
+        )
+    }
+
+    private static func makeThreadListSnapshot(
+        _ thread: HistoryThread
+    ) throws -> ThreadListSnapshot {
+        .init(
+            id: thread.id,
+            cliVersion: thread.cliVersion,
+            createdAt: Int(thread.createdAt),
+            currentDirectoryPath: thread.currentDirectoryPath,
+            ephemeral: thread.ephemeral,
+            forkedFromThreadID: thread.forkedFromThreadID,
+            isArchived: thread.isArchived,
+            isClosed: thread.isClosed,
+            modelProvider: thread.modelProvider,
+            name: thread.name,
+            preview: thread.preview,
+            statusFlags: try decode([String].self, from: thread.statusFlagsData) ?? [],
+            statusType: thread.statusType,
+            updatedAt: Int(thread.updatedAt)
         )
     }
 

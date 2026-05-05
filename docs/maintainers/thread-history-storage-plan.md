@@ -911,3 +911,68 @@ But keep its persistence policy narrow:
 - add Core Data persistent history tracking only if the real multi-context or
   reconciliation behavior proves that it is needed
 - adopt SearchKit later as the derived search layer on top of Core Data
+
+## App-Wide Library Hydration Plan
+
+This section records the first `CodexAppServer.Library` direction.
+
+The library is the app-wide observable companion for GUI and CLI consumers that
+need thread lists before they choose a thread. It should stay value-snapshot
+based and should not expose Core Data managed objects, SwiftData models, raw
+`FetchRequest`, or SwiftData `Query` values.
+
+### First public shape
+
+- `CodexAppServer.makeLibrary(configuration:)`
+- `CodexAppServer.Library`
+- `CodexAppServer.Library.SortedBy`
+- `CodexAppServer.Library.GroupedBy`
+- `CodexAppServer.ThreadListQD`
+
+`ThreadListQD` means "thread list query descriptor." It is the SwiftASB-owned
+description of caller intent: archive scope, current-directory filter, search
+term, page size, and sort preference. The package can compile that descriptor
+into local Core Data reads, app-server `thread/list` requests, or observable
+refresh behavior without making the persistence store part of the public API.
+
+### Startup behavior
+
+`makeLibrary()` should be opt-in. Do not make ordinary `CodexAppServer.start()`
+pay the cost of app-wide thread list hydration.
+
+When a library is created:
+
+- read the local Core Data thread snapshot first
+- publish unarchived and archived arrays immediately when local data exists
+- group threads according to `Library.GroupedBy`
+- reconcile app-server data in the background
+- page unarchived threads before archived threads
+- ask app-server for most-recent threads first by using `updatedAt`
+  descending sort when the selected sort can be represented by app-server
+- process small page batches and yield between archive scopes so live turn
+  handling has priority
+- avoid assuming app-server cannot run concurrent sessions; only throttle harder
+  if the runtime reports backpressure or the package observes meaningful local
+  performance cost
+
+### Reconciliation policy
+
+Each app-server `thread/list` page should continue to flow through
+`ThreadHistoryStore.reconcileThreadListPage(...)`. That keeps Core Data and the
+published library snapshots aligned through the same metadata path used by
+manual `listThreads(...)` calls.
+
+The library should refresh its public arrays from local Core Data after each
+successful archive-scope reconciliation. This keeps the observable sourced from
+the same local value snapshots that future query descriptors will use, while
+still allowing app-server to correct stale local metadata.
+
+### Follow-on work
+
+- Add an app-wide event stream if library state needs to update immediately
+  after unrelated `startThread`, `resumeThread`, archive, unarchive, rename, or
+  metadata calls.
+- Add project-root detection when SwiftASB has a deliberate repo-root model.
+  Until then, `GroupedBy.repositoryRoot` may fall back to current directory.
+- Expand `ThreadListQD` into the shared descriptor used by library snapshots,
+  non-UI list reads, and later search-hit hydration.

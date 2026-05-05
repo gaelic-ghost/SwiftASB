@@ -6,10 +6,17 @@ Read completed local history and observe current thread activity without replayi
 
 SwiftASB stores thread and turn history locally as it observes live turns and as it reads stored history from the app-server. Public callers can use that store through thread-scoped helpers and observable companions.
 
-There are two public shapes:
+There are three public shapes:
 
+- ``CodexAppServer/Library`` publishes app-wide stored-thread lists for launchers, sidebars, and project browsers.
 - `HistoryWindow` helpers return sealed completed-turn snapshots for non-UI callers and inspectors.
 - Observable companions stay attached to live streams and update UI-facing state over time.
+
+## App-Wide Library
+
+Use ``CodexAppServer/makeLibrary(configuration:)`` when a client needs stored-thread lists before choosing a thread. The library publishes unarchived threads, archived threads, and grouped unarchived threads. It reads local snapshots first so UI can show a sidebar quickly, then reconciles app-server `thread/list` pages in the background.
+
+`Library.SortedBy` and `Library.GroupedBy` are UI-facing policies. `CodexAppServer.ThreadListQD` is the package-owned query descriptor for repeatable thread-list intent.
 
 ## Local History Windows
 
@@ -74,6 +81,7 @@ These companions are not alternate event logs. `Dashboard` starts from the curre
 
 ### Observable Companions
 
+- ``CodexAppServer/Library``
 - ``CodexThread/Dashboard``
 - ``CodexThread/RecentTurns``
 - ``CodexThread/RecentFiles``

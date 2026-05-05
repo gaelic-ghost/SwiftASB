@@ -37,6 +37,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private(set) var recordedResponses: [RecordedResponse] = []
     private var recordedRequestPayloads: [String: [Data]] = [:]
     private var threadListResult: [String: Any]?
+    private var threadListResultQueue: [[String: Any]]
     private var threadReadResult: [String: Any]?
     private var threadForkResult: [String: Any]?
     private var threadResumeResult: [String: Any]?
@@ -52,6 +53,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     init(
         executableResolution: CodexCLIExecutableResolver.Resolution? = nil,
         threadListResult: [String: Any]? = nil,
+        threadListResultQueue: [[String: Any]] = [],
         threadReadResult: [String: Any]? = nil,
         threadForkResult: [String: Any]? = nil,
         threadResumeResult: [String: Any]? = nil,
@@ -62,6 +64,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     ) {
         self.resolvedExecutable = executableResolution
         self.threadListResult = threadListResult
+        self.threadListResultQueue = threadListResultQueue
         self.threadReadResult = threadReadResult
         self.threadForkResult = threadForkResult
         self.threadResumeResult = threadResumeResult
@@ -73,6 +76,14 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
     func setThreadListResult(_ result: [String: Any]?) {
         threadListResult = result
+    }
+
+    func setThreadListResultQueue(_ resultQueue: [[String: Any]]) {
+        threadListResultQueue = resultQueue
+    }
+
+    func requestPayloads(for method: String) -> [Data] {
+        recordedRequestPayloads[method] ?? []
     }
 
     func start() throws {
@@ -361,9 +372,11 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 ]
             )
         case "thread/list":
-            return responsePayload(
-                id: id,
-                result: threadListResult ?? [
+            let result: [String: Any]
+            if !threadListResultQueue.isEmpty {
+                result = threadListResultQueue.removeFirst()
+            } else {
+                result = threadListResult ?? [
                     "data": [
                         [
                             "cliVersion": "0.128.0",
@@ -382,6 +395,10 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     ],
                     "nextCursor": "cursor-next",
                 ]
+            }
+            return responsePayload(
+                id: id,
+                result: result
             )
         case "thread/read":
             return responsePayload(
