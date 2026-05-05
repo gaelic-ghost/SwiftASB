@@ -1,13 +1,12 @@
 # Contributing to SwiftASB
 
-Use this guide when changing the package itself. The README is for Swift and SwiftUI developers who want to consume SwiftASB; this file is for contributors maintaining the package, its generated wire boundary, its tests, and its release-facing docs.
+Use this guide when changing the package itself. The README is for package users and their agents; this file is for contributors maintaining SwiftASB source, tests, generated wire snapshots, DocC, release notes, and maintainer-facing workflow.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Contribution Workflow](#contribution-workflow)
 - [Local Setup](#local-setup)
-- [Agent Guidance](#agent-guidance)
 - [Development Expectations](#development-expectations)
 - [Pull Request Expectations](#pull-request-expectations)
 - [Communication](#communication)
@@ -17,84 +16,69 @@ Use this guide when changing the package itself. The README is for Swift and Swi
 
 ### Who This Guide Is For
 
-This guide is for contributors working on SwiftASB source, tests, generated wire snapshots, DocC, README, roadmap, or release-readiness material.
+This guide is for contributors changing SwiftASB code, tests, generated-wire review, documentation, validation scripts, or release-facing material.
 
 ### Before You Start
 
-Read `AGENTS.md`, `README.md`, and `ROADMAP.md` before making package changes. Treat `Package.swift` as the package structure source of truth, and treat `Sources/SwiftASB/Generated/CodexWire/Latest/` as generated internal scaffolding rather than public API.
+Read `AGENTS.md`, `README.md`, and `ROADMAP.md` before editing. `AGENTS.md` owns maintainer guidance for Codex and other agents. `README.md` owns the user-facing package story. `ROADMAP.md` owns current status, release boundaries, and deferred work.
 
-For SwiftPM behavior, the package relies on the documented Swift Package Manager model: the manifest describes package products, targets, dependencies, supported platforms, and Swift language mode. SwiftASB keeps that boundary explicit so source, tests, and docs stay aligned with the package graph.
+Treat `Package.swift` as the package structure source of truth. Treat `Sources/SwiftASB/Generated/CodexWire/Latest/` as internal generated scaffolding, not public API.
 
 ## Contribution Workflow
 
 ### Choosing Work
 
-Start from the current roadmap or an explicitly requested change. Keep work scoped to one coherent outcome, such as a public API promotion, a generated-wire refresh, a DocC improvement, a test slice, or a docs split.
+Start from a requested change, the roadmap, or a clearly scoped maintenance need. Keep the branch focused on one coherent outcome, such as a public API adjustment, a generated-wire refresh, a DocC pass, a test slice, or a docs split.
 
-Do not promote generated schema additions to public API just because they exist upstream. Classify new Codex app-server schema families as public now, observable-only for now, or internal-only before exposing them.
+Do not promote generated schema additions to public API just because they exist upstream. First classify each new app-server schema family as public now, observable-only for now, or internal-only.
 
 ### Making Changes
 
-Use a feature branch named with the `scope/slug` pattern. Prefer small, reviewable commits with scoped messages such as `docs: split contributing workflow` or `tests: cover rollback markers`.
+Use a feature branch named with the `scope/slug` pattern. Keep commits focused and use scoped subjects such as `docs: simplify readme` or `tests: cover rollback markers`.
 
-Keep package structure changes in `Package.swift`, and prefer SwiftPM commands for structural edits when a command exists. Keep temporary schema dumps under `codex-schemas/` and generated staging output under `tmp/` unless a maintainer explicitly decides otherwise.
+Prefer SwiftPM commands for package-structure edits when SwiftPM has a command for the job. For changes SwiftPM cannot express directly, edit `Package.swift` intentionally and keep the package graph explicit.
 
-When touching public API, update the matching tests, README usage notes, DocC pages, and roadmap status in the same branch. When touching generated wire code, use `scripts/generate-wire-types.sh` instead of hand-editing the promoted generated snapshot.
+When touching public API, update the matching tests, DocC, README usage notes when user-visible, and roadmap status in the same branch. When touching generated wire code, use `scripts/generate-wire-types.sh` instead of hand-editing the promoted generated snapshot.
 
-### Generated Schema Promotion Policy
+### Generated Wire Policy
 
-Generated `CodexWire...` models are internal scaffolding until a SwiftASB-owned surface gives them a consumer-facing job. When a generated schema family graduates into public API or observable companion behavior, the same PR must add at least one representative fixture test that decodes or encodes the promoted shape through the package-owned boundary.
+Generated `CodexWire...` models are internal until a SwiftASB-owned public or observable surface gives them a real consumer-facing job.
 
-That fixture should cover the exact request, response, notification, or server-request family being promoted; include the fields SwiftASB relies on; and include one harmless additive unknown field when the upstream payload is expected to remain forward-compatible. Keep the fixture close to the protocol or public-client tests that own the behavior, and update `ROADMAP.md` with the public/observable/internal classification decision.
+When a generated family becomes public or observable, add representative fixture coverage through the package-owned boundary. Include the fields SwiftASB relies on and one harmless additive unknown field when the upstream payload is expected to stay forward-compatible.
 
-### Asking For Review
-
-A change is ready for review when the relevant validation commands pass, docs reflect the actual shipped behavior, and the PR explains what changed and what was verified. If a live Codex runtime behavior is nondeterministic, say that plainly in the PR body instead of presenting a probe as a hard release gate.
+Keep dumped local schemas under `codex-schemas/` untracked unless a maintainer explicitly asks to commit them. Keep temporary derived schemas and quicktype staging output under `tmp/` untracked.
 
 ## Local Setup
 
 ### Runtime Config
 
-Use Swift 6.3 or newer on macOS 15 or newer. Install the local Codex CLI if you need to run the package against a real app-server or run opt-in live tests.
+Use Swift 6.3 or newer on macOS 15 or newer.
 
-SwiftASB discovers the Codex executable from `PATH`, common Homebrew locations, or the npm global prefix. Tests or apps that need a fixed binary can pass `CodexAppServer.Configuration.codexExecutableURL`.
+```bash
+swift package resolve
+```
+
+Install the local Codex CLI if you need real app-server coverage. SwiftASB discovers `codex` from `PATH`, common Homebrew locations, or the npm global prefix. Tests or apps that need a fixed binary can pass `CodexAppServer.Configuration.codexExecutableURL`.
 
 ### Runtime Behavior
 
 Default tests use fake transports and do not require a live Codex subprocess. Live tests are opt-in because they launch the local Codex CLI in temporary workspaces and depend on the installed runtime.
 
-The live approval-path probe is observational. The current Codex runtime does not reliably force an approval request for a chosen prompt, so that test can complete without observing an approval request and still be useful.
+Some live probes are observational because the local Codex runtime does not always force the same approval or history behavior from the same prompt. Deterministic approval coverage uses the real app-server with an isolated `CODEX_HOME` and a local mock Responses-compatible endpoint so the request, response, resolution, and turn-completion path can be asserted without calling the hosted OpenAI API.
 
-The deterministic app-server approval test uses a different shape. It still launches the installed `codex app-server`, but it seeds an isolated `CODEX_HOME` whose `model_provider` points at a local mock Responses-compatible endpoint. The mock endpoint emits an upstream-style shell-command tool call, so the real app-server reaches a command item plus `waitingOnApproval`, delivers `item/commandExecution/requestApproval`, accepts SwiftASB's JSON-RPC response, emits `serverRequest/resolved`, completes the command, and finishes the turn without calling the hosted OpenAI API. This path does not require an OpenAI API key and should be the preferred regression coverage for deterministic approval setup.
-
-The live file-scenario probe is also observational around approval shape, but deterministic around filesystem outcome. It creates an isolated temporary workspace, asks the real Codex CLI to create, edit, and delete files across multiple turns, accepts approval requests when the runtime raises them, and verifies the final files on disk.
-
-The live rollback probe uses a disposable non-ephemeral thread with harmless text-only turns. It verifies that `rollbackLastTurns(1)` succeeds against the real app-server and that SwiftASB records the local rollback marker for the removed trailing turn.
-
-## Agent Guidance
-
-SwiftASB-specific agent workflows live in the [`swiftasb-skills`](https://github.com/gaelic-ghost/socket/tree/main/plugins/swiftasb-skills) plugin in `socket`, not inside this Swift package. Keep that boundary intentional: this repository owns SwiftASB source, public API, generated-wire review, DocC, tests, and release notes; the plugin owns Codex-visible workflow guidance for agents helping users adopt or debug SwiftASB.
-
-Use the plugin when a change affects agent-facing guidance for:
-
-- explaining whether SwiftASB fits a Swift app or package
-- choosing an integration shape and the right public owner: `CodexAppServer`, `CodexThread`, or `CodexTurnHandle`
-- building SwiftUI state around dashboard, minimap, diagnostics, approval, and recent-history companions
-- diagnosing integration failures across dependency wiring, Codex CLI discovery, app-server startup, turn lifecycle, approvals, diagnostics, MCP status, history, and live-test isolation
-
-When SwiftASB public API or behavior changes, update this repo's README, DocC, tests, and roadmap first. Then update `socket`'s `swiftasb-skills` guidance in a separate Socket branch if the agent workflow would otherwise name stale symbols, describe unsupported behavior, or miss a new recommended integration path.
+The live file-scenario and rollback probes use disposable workspaces or non-ephemeral threads. They are useful release-confidence checks, but they should not be described as broader guarantees than they actually prove.
 
 ## Development Expectations
 
 ### Naming Conventions
 
-Keep public names explicit and Swift-shaped. Preserve upstream names when they describe stable wire or persistence meaning, and avoid rename-and-copy layers unless the meaning actually changes at a boundary.
+Keep public names explicit and Swift-shaped. Preserve upstream names when they carry stable wire or persistence meaning, and avoid duplicate rename layers unless the meaning changes at a real package boundary.
 
-Use `CodexAppServer` for connection-wide actions, `CodexThread` for thread-scoped actions, and `CodexTurnHandle` for active-turn actions. Keep app-wide capability snapshots on `CodexAppServer`, and keep UI-shaped live mirrors as observable companions rather than new control paths.
+Use `CodexAppServer` for app-server process and app-wide actions, `CodexThread` for conversation-scoped actions, and `CodexTurnHandle` for active-turn actions. Keep UI-shaped live mirrors as observable companions, not separate control paths.
 
 ### Accessibility Expectations
 
-SwiftASB does not ship UI, but its observable companions are intended for SwiftUI and macOS app surfaces. When a package change affects UI-facing semantics, make the state clear enough for downstream apps to label, announce, inspect, and reconcile without reading raw transport details.
+SwiftASB does not ship UI, but its observable companions are intended for SwiftUI and macOS app surfaces. When package behavior affects UI-facing state, make that state clear enough for downstream apps to label, announce, inspect, and reconcile without reading raw transport details.
 
 ### Verification
 
@@ -105,7 +89,7 @@ swift build
 swift test
 ```
 
-Run the repo-maintenance validation before release, CI wrapper, maintainer guidance, or tooling changes:
+Run repo-maintenance validation before release, CI wrapper, maintainer guidance, or tooling changes:
 
 ```bash
 bash scripts/repo-maintenance/validate-all.sh
@@ -117,138 +101,56 @@ Validate DocC through Xcode when documentation changes:
 xcodebuild docbuild -scheme SwiftASB -destination generic/platform=macOS -derivedDataPath tmp/xcode-docc/DerivedData
 ```
 
-Useful opt-in live checks:
-
-```bash
-env SWIFTASB_ENABLE_LIVE_CODEX_TRANSPORT_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_CAPABILITY_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_THREAD_MANAGEMENT_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_SINGLE_TURN_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_CROSS_THREAD_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_APPROVAL_PROBE_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_BEHAVIOR_MATRIX_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_SERVER_REQUEST_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_FILE_SCENARIO_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_ROLLBACK_TESTS=1 swift test
-env SWIFTASB_ENABLE_LIVE_CODEX_SAME_THREAD_TESTS=1 swift test
-```
-
-Use the live integration-test runner when the local Codex CLI is available and
-the change needs real-runtime confidence:
-
-```bash
-scripts/run-live-codex-integration-tests.sh
-```
-
-The default mode runs the maintained release-gate live probe set. Pass `all` to
-run every opt-in `CodexAppServer` live integration test, or pass `smoke`,
-`transport`, `capability`, `thread`, `turn`, `approval`, `behavior-matrix`,
-`server-requests`, `file-scenario`, `rollback`, or `same-thread` to run one
-focused group. The `capability` mode covers live model, MCP, and hook
-diagnostics snapshots.
-
-The release-gate wrapper remains available for patch-release prep:
-
-```bash
-scripts/run-live-codex-release-gate.sh
-```
-
-Run the observational behavior matrix:
-
-```bash
-scripts/run-live-codex-behavior-matrix.sh
-```
-
-That wrapper writes the live behavior report to
-`tmp/live-codex-reports/live-behavior-matrix.json`.
-
-Run the answerable server-request coverage probes:
-
-```bash
-scripts/run-live-codex-server-request-probes.sh
-```
-
-That wrapper runs the deterministic command approval, permissions approval,
-tool-user-input, regular MCP, and app-connector MCP elicitation fixture probes
-against the real app-server, then writes
-`tmp/live-codex-reports/live-server-request-family-coverage.json` with the
-current status of answerable server-request family coverage. The app-connector
-MCP fixture is the deterministic live elicitation path: it drives
-`mcpServer/elicitation/request` through the real app-server, answers it through
-SwiftASB, observes `serverRequest/resolved`, and waits for terminal turn
-completion. The regular stdio MCP fixture remains in the runner as
-model-to-MCP tool-path evidence, but app-connector MCP is the coverage source
-for live MCP elicitation.
-
-That wrapper runs smoke probes, deterministic approval/server-request probes,
-the multi-turn create/edit/delete file scenario, and the disposable rollback
-scenario. Set `SWIFTASB_LIVE_CODEX_REPORT_DIR` to write JSON diagnostic reports
-outside `tmp/live-codex-reports/`, `SWIFTASB_LIVE_CODEX_BIN` to test a specific
-Codex executable, and `SWIFTASB_LIVE_CODEX_KEEP_WORKSPACES=1` to preserve
-temporary workspaces for debugging.
-
-Run only the deterministic command and permissions approval coverage plus the
-exploratory approval probe:
-
-```bash
-scripts/run-live-codex-approval-probe.sh
-```
-
-Run only the multi-turn live file scenario:
-
-```bash
-scripts/run-live-codex-file-scenario.sh
-```
-
-That wrapper writes the live scenario diagnostic report to
-`tmp/live-codex-reports/live-file-mutation-scenario.json`.
-
-Run only the disposable live rollback scenario:
-
-```bash
-scripts/run-live-codex-rollback-scenario.sh
-```
-
-Use the generated-wire entrypoint when refreshing Codex schema-derived models:
-
-```bash
-scripts/generate-wire-types.sh
-```
-
-Dump the installed Codex CLI's app-server schemas when a new CLI version is
-available:
-
-```bash
-scripts/dump-codex-schemas.sh
-```
-
-The dump script reads `codex --version`, writes the current experimental
-schema bundle under `codex-schemas/vX.Y.Z/` when that version is missing, and
-leaves existing dumps untouched unless `--force` is passed. Experimental dumps
-are the SwiftASB maintainer default because generated-wire review needs fields
-that only appear when `codex app-server generate-json-schema --experimental`
-is used. Pass `--stable` only for explicit stable-surface comparisons; stable
-comparison dumps write to `codex-schemas/vX.Y.Z-stable/` so they cannot replace
-the experimental baseline. Set `CODEX_BIN` to test a specific Codex CLI
-executable and `CODEX_SCHEMA_ROOT` to write into a temporary parent directory.
-
 Check whitespace before staging:
 
 ```bash
 git diff --check
 ```
 
+### Live Codex Checks
+
+Use the live integration runner when the local Codex CLI is available and the change needs real-runtime confidence:
+
+```bash
+scripts/run-live-codex-integration-tests.sh
+```
+
+The default mode runs the maintained release-gate set. Focused modes include `smoke`, `transport`, `capability`, `thread`, `turn`, `approval`, `behavior-matrix`, `server-requests`, `file-scenario`, `rollback`, `same-thread`, and `all`.
+
+Other useful wrappers:
+
+```bash
+scripts/run-live-codex-release-gate.sh
+scripts/run-live-codex-approval-probe.sh
+scripts/run-live-codex-behavior-matrix.sh
+scripts/run-live-codex-server-request-probes.sh
+scripts/run-live-codex-file-scenario.sh
+scripts/run-live-codex-rollback-scenario.sh
+```
+
+Reports default to `tmp/live-codex-reports/`. Use `SWIFTASB_LIVE_CODEX_REPORT_DIR` for another report directory, `SWIFTASB_LIVE_CODEX_BIN` for a specific Codex executable, and `SWIFTASB_LIVE_CODEX_KEEP_WORKSPACES=1` to preserve temporary workspaces for debugging.
+
 ### Maintainer Scripts
 
-SwiftASB uses `scripts/repo-maintenance/` as the local-first maintainer surface. GitHub Actions stays a thin wrapper around these scripts, and branch protection should require the `validate` check context from `.github/workflows/validate-repo-maintenance.yml`.
+Refresh Codex schema-derived wire types through the maintainer entrypoint:
 
-Use the shared sync entrypoint for future managed repo-maintenance refreshes:
+```bash
+scripts/generate-wire-types.sh
+```
+
+Dump the installed Codex CLI app-server schemas when a new CLI version needs review:
+
+```bash
+scripts/dump-codex-schemas.sh
+```
+
+Run the shared repo-maintenance sync entrypoint for future managed refreshes:
 
 ```bash
 bash scripts/repo-maintenance/sync-shared.sh
 ```
 
-Use the release entrypoint from a feature branch or isolated worktree with a clean committed worktree:
+Start a standard release from a feature branch or isolated worktree with a clean committed worktree:
 
 ```bash
 bash scripts/repo-maintenance/release.sh --mode standard --version vX.Y.Z
@@ -256,15 +158,15 @@ bash scripts/repo-maintenance/release.sh --mode standard --version vX.Y.Z
 
 ## Pull Request Expectations
 
-PRs should identify the changed surface, explain any public API or docs boundary decision, and list the validation commands that ran. Use the `documentation` label for docs-only work and a more specific label when the code surface is the stronger signal.
+PRs should identify the changed surface, explain any public API or docs boundary decision, and list the validation commands that ran.
 
 Keep README product-facing. Keep contributor workflow, local validation, live test flags, schema generation, DocC build commands, and release-prep details in this file unless the README user needs them to consume the package.
 
 ## Communication
 
-Surface uncertainty early when a change starts widening public API, changing the ownership model, adding a dependency, or making live Codex runtime behavior sound more stable than it is.
+Surface uncertainty early when a change widens public API, changes ownership, adds a dependency, changes release boundaries, or makes live Codex runtime behavior sound more stable than it is.
 
-When a decision is settled, record it in `ROADMAP.md`, DocC, or this guide so future contributors do not need chat history to preserve it.
+Record settled decisions in `ROADMAP.md`, DocC, maintainer docs, or this guide so future contributors do not need chat history to preserve them.
 
 ## License and Contribution Terms
 

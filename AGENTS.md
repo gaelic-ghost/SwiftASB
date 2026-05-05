@@ -47,6 +47,13 @@ Repo-local guidance for maintaining SwiftASB, a Swift Package Manager library th
 - Treat `Package.resolved` and similar package-manager outputs as generated files; do not hand-edit them.
 - Keep package resources under the owning target tree, declare them intentionally, and load bundled resources through `Bundle.module`.
 
+### Agent Guidance Boundary
+
+- Keep the README product-facing and approachable for package users and their agents.
+- Keep contributor setup, validation, generated-wire refreshes, DocC checks, live test flags, release prep, and PR expectations in `CONTRIBUTING.md`.
+- Keep Codex-facing maintainer instructions in this file or a more specific nested `AGENTS.md`.
+- SwiftASB-specific adoption guidance for external agents lives in the `swiftasb-skills` plugin in `socket`, not in this package. Update that plugin separately when public API changes would make those skills stale.
+
 ### Communication and Escalation
 
 - For Swift, Apple-framework, Apple-platform, or Xcode-related tasks, read the relevant Apple or Swift documentation first before proposing or making changes.
