@@ -138,6 +138,39 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("reads app-wide model capabilities through the public client")
+    func readsAppWideModelCapabilities() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let capabilities = try await client.readModelCapabilities()
+
+        #expect(capabilities.imageGeneration == true)
+        #expect(capabilities.namespaceTools == false)
+        #expect(capabilities.webSearch == true)
+
+        let requestPayload = try #require(
+            await transport.recordedRequestPayload(for: "modelProvider/capabilities/read")
+        )
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        #expect(request["method"] as? String == "modelProvider/capabilities/read")
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params.isEmpty)
+
+        await client.stop()
+    }
+
     @Test("lists app-wide MCP server status through the public client")
     func listsAppWideMcpServerStatus() async throws {
         let transport = FakeCodexAppServerTransport()

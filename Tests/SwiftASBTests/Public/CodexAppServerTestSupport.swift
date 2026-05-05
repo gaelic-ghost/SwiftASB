@@ -146,6 +146,15 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "nextCursor": "cursor-models-next",
                 ]
             )
+        case "modelProvider/capabilities/read":
+            return responsePayload(
+                id: id,
+                result: [
+                    "imageGeneration": true,
+                    "namespaceTools": false,
+                    "webSearch": true,
+                ]
+            )
         case "hooks/list":
             return responsePayload(
                 id: id,

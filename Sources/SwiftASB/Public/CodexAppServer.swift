@@ -300,6 +300,33 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reads feature gates for the current model provider.
+    ///
+    /// Use this app-wide snapshot to decide whether UI affordances for web
+    /// search, image generation, or namespace tools should be available before
+    /// starting a turn.
+    public func readModelCapabilities() async throws -> ModelCapabilities {
+        try requireInitialized(for: "modelProvider/capabilities/read")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeModelProviderCapabilitiesReadRequest(
+                id: requestID,
+                params: .init()
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeModelProviderCapabilitiesReadResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "modelProvider/capabilities/read")
+        }
+    }
+
     /// Reads configured hooks and diagnostics for one or more working directories.
     ///
     /// Omitting `request` sends an empty list request, leaving the app-server to
