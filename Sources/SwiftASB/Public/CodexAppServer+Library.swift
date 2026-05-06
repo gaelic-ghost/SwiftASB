@@ -1,6 +1,16 @@
 import Foundation
 import Observation
 
+private func snapshotResult<Value: Sendable>(
+    _ operation: @Sendable () async throws -> Value
+) async -> Result<Value, Error> {
+    do {
+        return .success(try await operation())
+    } catch {
+        return .failure(error)
+    }
+}
+
 extension CodexAppServer {
     internal enum LibraryEvent: Sendable, Equatable {
         case threadChanged(threadID: String)
@@ -122,7 +132,10 @@ public extension CodexAppServer {
     final class Library {
         public struct Configuration: Sendable, Equatable {
             public var groupedBy: GroupedBy
+            public var hookListCurrentDirectoryPaths: [String]?
+            public var loadsAppSnapshotsOnCreation: Bool
             public var maxPagesPerArchiveState: Int
+            public var mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest
             public var pageSize: Int
             public var query: CodexAppServer.ThreadListQD
             public var reconcilesOnCreation: Bool
@@ -134,13 +147,19 @@ public extension CodexAppServer {
                 sortedBy: SortedBy = .updatedNewestFirst,
                 groupedBy: GroupedBy = .cwd,
                 query: CodexAppServer.ThreadListQD = .init(),
-                reconcilesOnCreation: Bool = true
+                reconcilesOnCreation: Bool = true,
+                loadsAppSnapshotsOnCreation: Bool = true,
+                hookListCurrentDirectoryPaths: [String]? = nil,
+                mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest = .init()
             ) {
                 let normalizedPageSize = max(1, pageSize)
                 self.pageSize = normalizedPageSize
                 self.maxPagesPerArchiveState = max(1, maxPagesPerArchiveState)
                 self.sortedBy = sortedBy
                 self.groupedBy = groupedBy
+                self.loadsAppSnapshotsOnCreation = loadsAppSnapshotsOnCreation
+                self.hookListCurrentDirectoryPaths = hookListCurrentDirectoryPaths
+                self.mcpServerStatusRequest = mcpServerStatusRequest
                 self.query = .init(
                     archived: query.archived,
                     currentDirectoryPath: query.currentDirectoryPath,
@@ -162,6 +181,11 @@ public extension CodexAppServer {
             case loadingLocalSnapshot
             case reconcilingUnarchived
             case reconcilingArchived
+        }
+
+        public enum SnapshotPhase: String, Sendable, Equatable {
+            case idle
+            case loading
         }
 
         public enum SortedBy: String, Sendable, Equatable {
@@ -222,8 +246,14 @@ public extension CodexAppServer {
 
         public private(set) var archivedThreads: [ThreadSnapshot]
         public private(set) var groups: [ThreadGroup]
+        public private(set) var hookListSnapshot: CodexAppServer.HookListSnapshot?
         public private(set) var lastReconciledAt: Date?
+        public private(set) var lastSnapshotsReadAt: Date?
+        public private(set) var latestSnapshotErrorDescription: String?
         public private(set) var latestErrorDescription: String?
+        public private(set) var mcpServers: [CodexAppServer.McpServerStatus]
+        public private(set) var mcpServerNextCursor: String?
+        public private(set) var modelCapabilities: CodexAppServer.ModelCapabilities?
         public private(set) var phase: ReconciliationPhase
         public var selectedThreadID: String? {
             didSet {
@@ -246,6 +276,8 @@ public extension CodexAppServer {
             }
         }
         public private(set) var unarchivedThreads: [ThreadSnapshot]
+        public private(set) var snapshotCurrentDirectoryPaths: [String]?
+        public private(set) var snapshotPhase: SnapshotPhase
 
         public var isLoadingLocalSnapshot: Bool {
             phase == .loadingLocalSnapshot
@@ -253,6 +285,10 @@ public extension CodexAppServer {
 
         public var isReconciling: Bool {
             phase == .reconcilingUnarchived || phase == .reconcilingArchived
+        }
+
+        public var isLoadingAppSnapshots: Bool {
+            snapshotPhase == .loading
         }
 
         public var selectedThread: ThreadSnapshot? {
@@ -268,6 +304,12 @@ public extension CodexAppServer {
 
         @ObservationIgnored
         private let maxPagesPerArchiveState: Int
+
+        @ObservationIgnored
+        private let configuredHookListCurrentDirectoryPaths: [String]?
+
+        @ObservationIgnored
+        private let mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest
 
         @ObservationIgnored
         private var pendingEventReload = false
@@ -287,6 +329,9 @@ public extension CodexAppServer {
         @ObservationIgnored
         private var refreshTask: Task<Void, Never>?
 
+        @ObservationIgnored
+        private var snapshotTask: Task<Void, Never>?
+
         internal init(
             appServer: CodexAppServer,
             configuration: Configuration,
@@ -295,14 +340,24 @@ public extension CodexAppServer {
             self.appServer = appServer
             self.allThreads = initialThreads
             self.archivedThreads = []
+            self.configuredHookListCurrentDirectoryPaths = configuration.hookListCurrentDirectoryPaths
             self.groups = []
             self.groupedBy = configuration.groupedBy
+            self.hookListSnapshot = nil
             self.lastReconciledAt = nil
+            self.lastSnapshotsReadAt = nil
+            self.latestSnapshotErrorDescription = nil
             self.latestErrorDescription = nil
             self.maxPagesPerArchiveState = configuration.maxPagesPerArchiveState
+            self.mcpServers = []
+            self.mcpServerNextCursor = nil
+            self.mcpServerStatusRequest = configuration.mcpServerStatusRequest
+            self.modelCapabilities = nil
             self.phase = .idle
             self.query = configuration.query
             self.selectedThreadID = nil
+            self.snapshotCurrentDirectoryPaths = nil
+            self.snapshotPhase = .idle
             self.sortedBy = configuration.sortedBy
             self.unarchivedThreads = []
             applyVisibleState()
@@ -310,12 +365,16 @@ public extension CodexAppServer {
             if configuration.reconcilesOnCreation {
                 refreshTask = Task { [weak self] in await self?.refreshAll() }
             }
+            if configuration.loadsAppSnapshotsOnCreation {
+                snapshotTask = Task { [weak self] in await self?.refreshAppSnapshots() }
+            }
             startEventTask()
         }
 
         deinit {
             eventTask?.cancel()
             refreshTask?.cancel()
+            snapshotTask?.cancel()
         }
 
         public func refresh() async {
@@ -363,6 +422,65 @@ public extension CodexAppServer {
         public func reload() async {
             await reloadLocalSnapshot(phase: .loadingLocalSnapshot)
             phase = .idle
+        }
+
+        public func refreshAppSnapshots() async {
+            if isLoadingAppSnapshots {
+                return
+            }
+
+            snapshotPhase = .loading
+            latestSnapshotErrorDescription = nil
+
+            let hookCurrentDirectoryPaths = resolvedHookListCurrentDirectoryPaths()
+            snapshotCurrentDirectoryPaths = hookCurrentDirectoryPaths
+
+            async let capabilitiesResult = snapshotResult {
+                try await appServer.readModelCapabilities()
+            }
+            async let mcpResult = snapshotResult {
+                try await appServer.listMcpServerStatuses(mcpServerStatusRequest)
+            }
+            async let hooksResult = snapshotResult {
+                try await appServer.listHooks(
+                    .init(currentDirectoryPaths: hookCurrentDirectoryPaths)
+                )
+            }
+
+            let results = await (
+                capabilities: capabilitiesResult,
+                mcp: mcpResult,
+                hooks: hooksResult
+            )
+
+            var errorDescriptions: [String] = []
+            switch results.capabilities {
+            case let .success(capabilities):
+                modelCapabilities = capabilities
+            case let .failure(error):
+                errorDescriptions.append(error.localizedDescription)
+            }
+
+            switch results.mcp {
+            case let .success(page):
+                mcpServers = page.servers
+                mcpServerNextCursor = page.nextCursor
+            case let .failure(error):
+                errorDescriptions.append(error.localizedDescription)
+            }
+
+            switch results.hooks {
+            case let .success(snapshot):
+                hookListSnapshot = snapshot
+            case let .failure(error):
+                errorDescriptions.append(error.localizedDescription)
+            }
+
+            lastSnapshotsReadAt = errorDescriptions.isEmpty ? Date() : lastSnapshotsReadAt
+            latestSnapshotErrorDescription = errorDescriptions.isEmpty
+                ? nil
+                : errorDescriptions.joined(separator: "\n")
+            snapshotPhase = .idle
         }
 
         public func selectThread(_ threadID: String?) {
@@ -464,6 +582,19 @@ public extension CodexAppServer {
             if !allThreads.contains(where: { $0.id == selectedThreadID }) {
                 self.selectedThreadID = nil
             }
+        }
+
+        private func resolvedHookListCurrentDirectoryPaths() -> [String]? {
+            if let configuredHookListCurrentDirectoryPaths {
+                return configuredHookListCurrentDirectoryPaths
+            }
+
+            let currentDirectoryPaths = allThreads
+                .map(\.currentDirectoryPath)
+                .filter { !$0.isEmpty }
+            let uniquePaths = Array(Set(currentDirectoryPaths))
+                .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+            return uniquePaths.isEmpty ? nil : uniquePaths
         }
 
         private static func sort(

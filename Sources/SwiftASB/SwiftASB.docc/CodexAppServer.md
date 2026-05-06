@@ -45,6 +45,8 @@ Use ``makeLibrary(configuration:)`` when a GUI or CLI client needs an app-wide o
 
 Library selection is caller-owned state. Use it for sidebar and launcher selection, including recently selected ordering, without writing window or scene preferences into Codex's stored thread metadata.
 
+Library app snapshots are read-only connection state. Use ``Library/refreshAppSnapshots()`` or creation-time loading to publish model capabilities, MCP server status, and hook diagnostics alongside the stored-thread lists.
+
 ## Stored Threads
 
 Use ``startThread(_:)`` for a new thread, ``resumeThread(_:)`` for an existing stored thread, ``forkThread(_:)`` for a copy of existing history, ``listThreads(_:)`` for thread pages, ``readThread(_:)`` for a stored snapshot, and ``listThreadTurns(_:)`` for paged turn history.

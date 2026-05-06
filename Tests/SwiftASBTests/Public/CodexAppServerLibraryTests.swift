@@ -335,6 +335,74 @@ extension CodexAppServerTests {
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
+    @MainActor
+    @Test("library refreshes app-wide snapshots for UI consumers")
+    func libraryRefreshesAppWideSnapshotsForUIConsumers() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        _ = try await client.listThreads(.init(archived: false))
+
+        let library = try await client.makeLibrary(
+            configuration: .init(
+                groupedBy: .none,
+                reconcilesOnCreation: false,
+                loadsAppSnapshotsOnCreation: false,
+                mcpServerStatusRequest: .init(limit: 5, detail: .toolsAndAuthOnly)
+            )
+        )
+
+        #expect(library.modelCapabilities == nil)
+        #expect(library.mcpServers.isEmpty)
+        #expect(library.hookListSnapshot == nil)
+        #expect(library.snapshotPhase == .idle)
+
+        await library.refreshAppSnapshots()
+
+        #expect(library.modelCapabilities?.webSearch == true)
+        #expect(library.modelCapabilities?.imageGeneration == true)
+        #expect(library.modelCapabilities?.namespaceTools == false)
+        #expect(library.mcpServers.map(\.name) == ["calendar"])
+        #expect(library.mcpServerNextCursor == nil)
+        #expect(library.hookListSnapshot?.entry(forCurrentDirectoryPath: "/tmp/project")?.hasDiagnostics == true)
+        #expect(library.snapshotCurrentDirectoryPaths == ["/tmp/project"])
+        #expect(library.lastSnapshotsReadAt != nil)
+        #expect(library.latestSnapshotErrorDescription == nil)
+        #expect(library.snapshotPhase == .idle)
+
+        let capabilitiesPayload = try #require(
+            await transport.recordedRequestPayload(for: "modelProvider/capabilities/read")
+        )
+        let capabilitiesRequest = try decodedJSONObject(from: capabilitiesPayload)
+        #expect(capabilitiesRequest["method"] as? String == "modelProvider/capabilities/read")
+
+        let mcpPayload = try #require(await transport.recordedRequestPayload(for: "mcpServerStatus/list"))
+        let mcpRequest = try decodedJSONObject(from: mcpPayload)
+        #expect(value(at: ["params", "limit"], in: mcpRequest) as? Int == 5)
+        #expect(value(at: ["params", "detail"], in: mcpRequest) as? String == "toolsAndAuthOnly")
+
+        let hooksPayload = try #require(await transport.recordedRequestPayload(for: "hooks/list"))
+        let hooksRequest = try decodedJSONObject(from: hooksPayload)
+        #expect(value(at: ["params", "cwds"], in: hooksRequest) as? [String] == ["/tmp/project"])
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
     @Test("thread list query descriptors provide common list shapes")
     func threadListQueryDescriptorsProvideCommonListShapes() {
         let projectQuery = CodexAppServer.ThreadListQD

@@ -947,6 +947,8 @@ When a library is created:
 - group threads according to `Library.GroupedBy`
 - keep selected-thread state local to the library
 - expose refresh actions for all, unarchived-only, and archived-only scopes
+- publish app-wide model, MCP, and hook diagnostics snapshots through a
+  separate snapshot refresh action
 - reconcile app-server data in the background
 - page unarchived threads before archived threads
 - ask app-server for most-recent threads first by using `updatedAt`
@@ -1003,6 +1005,25 @@ independent selection.
 
 Selection changes must not call app-server and must not write to the thread
 history store. They are UI state over the existing thread value snapshots.
+
+### App snapshot policy
+
+`Library` can publish app-wide read snapshots for UI that needs connection
+state next to stored threads:
+
+- model capabilities from `CodexAppServer.readModelCapabilities()`
+- MCP server status from `CodexAppServer.listMcpServerStatuses(...)`
+- hook diagnostics from `CodexAppServer.listHooks(...)`
+
+These snapshots are read-through app-server state. They do not go through Core
+Data, and they are not reconciled with thread history. The library owns a
+separate snapshot phase, timestamp, and error field so thread-list
+reconciliation and app-wide capability reads can fail or refresh independently.
+
+Hook diagnostics are cwd-sensitive. Unless a library configuration provides
+explicit hook current-directory paths, the library derives hook `cwds` from its
+stored thread snapshots. That keeps launcher and sidebar diagnostics aligned
+with the projects the library is already showing.
 
 ### CWD policy
 

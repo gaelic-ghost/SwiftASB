@@ -8,6 +8,8 @@ Some app-server operations describe the connection rather than one conversation 
 
 Use ``CodexAppServer/listModels(_:)`` to read the currently visible model catalog. Use ``CodexAppServer/readModelCapabilities()`` to decide whether the current model provider supports web search, image generation, or namespace tools. Use ``CodexAppServer/listMcpServerStatuses(_:)`` to inspect configured MCP servers, their auth status, and their resource, resource-template, and tool metadata. Use ``CodexAppServer/listHooks(_:)`` to inspect configured hooks, warnings, and load errors for one or more working directories before a turn runs.
 
+Use ``CodexAppServer/makeLibrary(configuration:)`` when these same model, MCP, and hook snapshots should live beside observable stored-thread lists. ``CodexAppServer/Library/refreshAppSnapshots()`` reads the current app-wide snapshots and publishes them as Library state; hook diagnostics use Library thread `cwd` values unless configuration passes explicit hook current-directory paths.
+
 ```swift
 let models = try await appServer.listModels(
     .init(limit: 50, includeHidden: false)

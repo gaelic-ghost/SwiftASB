@@ -24,6 +24,8 @@ Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/sel
 
 `cwd` is the stored thread directory that app-server returns on `ThreadInfo`. SwiftASB currently treats it as the thread's project directory because the schema exposes it as required thread metadata and `thread/metadata/update` only patches Git metadata, not stored `cwd`.
 
+The library can also publish app-wide read snapshots through ``CodexAppServer/Library/refreshAppSnapshots()``. Those snapshots reuse ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listMcpServerStatuses(_:)``, and ``CodexAppServer/listHooks(_:)`` so model feature gates, MCP surfaces, and hook diagnostics are observable next to the stored-thread lists without becoming Core Data state.
+
 ## Local History Windows
 
 Use ``CodexThread/readRecentTurnHistoryWindow(limit:)`` for the newest known completed turns. Use older and newer window helpers when the caller already has a boundary turn. Use centered helpers when an inspector needs context around one turn or one item.

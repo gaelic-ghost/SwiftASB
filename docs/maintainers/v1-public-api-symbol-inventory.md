@@ -4,12 +4,12 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 
 ## Summary
 
-- Public/open symbols: 1309
-- Public/open types: 195
-- Public/open initializers: 84
-- Public/open methods and type methods: 81
-- Public/open enum cases: 272
-- Public/open properties: 677
+- Public/open symbols: 1326
+- Public/open types: 196
+- Public/open initializers: 85
+- Public/open methods and type methods: 82
+- Public/open enum cases: 274
+- Public/open properties: 689
 
 ## Public Types
 
@@ -86,6 +86,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.Library.Configuration` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.GroupedBy` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.ReconciliationPhase` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.Library.SnapshotPhase` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.SortedBy` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.ThreadSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.ThreadGroup` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Library.swift
@@ -242,11 +243,12 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.TurnInput.text(_:)` - `static func text(_ text: String) -> CodexAppServer.TurnInput` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
 - `CodexAppServer.TurnStartRequest.init(threadID:input:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)` - `init(threadID: String, input: [CodexAppServer.TurnInput], approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil)` - Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift
 - `CodexAppServer.TurnStatus.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
-- `CodexAppServer.Library.Configuration.init(pageSize:maxPagesPerArchiveState:sortedBy:groupedBy:query:reconcilesOnCreation:)` - `init(pageSize: Int = 50, maxPagesPerArchiveState: Int = 1, sortedBy: CodexAppServer.Library.SortedBy = .updatedNewestFirst, groupedBy: CodexAppServer.Library.GroupedBy = .cwd, query: CodexAppServer.ThreadListQD = .init(), reconcilesOnCreation: Bool = true)` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.Library.Configuration.init(pageSize:maxPagesPerArchiveState:sortedBy:groupedBy:query:reconcilesOnCreation:loadsAppSnapshotsOnCreation:hookListCurrentDirectoryPaths:mcpServerStatusRequest:)` - `init(pageSize: Int = 50, maxPagesPerArchiveState: Int = 1, sortedBy: CodexAppServer.Library.SortedBy = .updatedNewestFirst, groupedBy: CodexAppServer.Library.GroupedBy = .cwd, query: CodexAppServer.ThreadListQD = .init(), reconcilesOnCreation: Bool = true, loadsAppSnapshotsOnCreation: Bool = true, hookListCurrentDirectoryPaths: [String]? = nil, mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest = .init())` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.refresh()` - `@MainActor func refresh() async` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.refreshAll()` - `@MainActor func refreshAll() async` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.refreshUnarchived()` - `@MainActor func refreshUnarchived() async` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.refreshArchived()` - `@MainActor func refreshArchived() async` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.Library.refreshAppSnapshots()` - `@MainActor func refreshAppSnapshots() async` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.reload()` - `@MainActor func reload() async` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.selectThread(_:)` - `@MainActor func selectThread(_ threadID: String?)` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.selectThread(_:)` - `@MainActor func selectThread(_ thread: CodexAppServer.Library.ThreadSnapshot)` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
@@ -432,6 +434,8 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.Library.ReconciliationPhase.loadingLocalSnapshot` - `case loadingLocalSnapshot` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.ReconciliationPhase.reconcilingUnarchived` - `case reconcilingUnarchived` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.ReconciliationPhase.reconcilingArchived` - `case reconcilingArchived` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.Library.SnapshotPhase.idle` - `case idle` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.Library.SnapshotPhase.loading` - `case loading` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.SortedBy.updatedNewestFirst` - `case updatedNewestFirst` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.SortedBy.updatedOldestFirst` - `case updatedOldestFirst` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.SortedBy.createdNewestFirst` - `case createdNewestFirst` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
@@ -646,7 +650,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 19 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 10 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Hooks.swift`: 32 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 40 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 52 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 34 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 23 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 90 public properties
