@@ -126,8 +126,44 @@ It now includes:
   - `ThreadMetadataUpdateResponse`
   - `ThreadTurnsListParams`
   - `ThreadTurnsListResponse`
+  - `ThreadLoadedListParams`
+  - `ThreadLoadedListResponse`
+  - `ThreadGoalGetParams`
+  - `ThreadGoalGetResponse`
+  - `ThreadGoalSetParams`
+  - `ThreadGoalSetResponse`
+  - `ThreadGoalClearParams`
+  - `ThreadGoalClearResponse`
+  - `ThreadGoalUpdatedNotification`
+  - `ThreadGoalClearedNotification`
   - `TurnStartParams`
   - `TurnStartResponse`
+- filesystem requests, responses, and watch notifications:
+  - `FsGetMetadataParams`
+  - `FsGetMetadataResponse`
+  - `FsReadDirectoryParams`
+  - `FsReadDirectoryResponse`
+  - `FsReadFileParams`
+  - `FsReadFileResponse`
+  - `FsWatchParams`
+  - `FsWatchResponse`
+  - `FsUnwatchParams`
+  - `FsUnwatchResponse`
+  - `FsChangedNotification`
+- config and extension inventory requests and responses:
+  - `ConfigReadParams`
+  - `ConfigReadResponse`
+  - `ConfigRequirementsReadResponse`
+  - `AppsListParams`
+  - `AppsListResponse`
+  - `SkillsListParams`
+  - `SkillsListResponse`
+  - `PluginListParams`
+  - `PluginListResponse`
+  - `PluginReadParams`
+  - `PluginReadResponse`
+  - `CollaborationModeListParams`
+  - `CollaborationModeListResponse`
 - app-wide capability requests and responses:
   - `ModelListParams`
   - `ModelListResponse`

@@ -87,6 +87,7 @@ extension CodexThread {
         public private(set) var isArchived: Bool
         public private(set) var isClosed: Bool
         public private(set) var isCompactingThreadContext: Bool
+        public private(set) var goal: Goal?
         public private(set) var latestDiagnostic: CodexDiagnosticEvent?
         public private(set) var latestTokenUsage: CodexThreadTokenUsageUpdated?
         public private(set) var mcpCallingStatus: ActivityStatus
@@ -116,6 +117,7 @@ extension CodexThread {
             self.isArchived = false
             self.isClosed = false
             self.latestDiagnostic = nil
+            self.goal = nil
             self.latestTokenUsage = nil
             self.name = initialInfo.name
             self.preview = initialInfo.preview
@@ -186,6 +188,10 @@ extension CodexThread {
                 name = update.threadName
             case let .tokenUsageUpdated(update):
                 latestTokenUsage = update
+            case let .goalUpdated(update):
+                goal = update.goal
+            case .goalCleared:
+                goal = nil
             }
         }
 

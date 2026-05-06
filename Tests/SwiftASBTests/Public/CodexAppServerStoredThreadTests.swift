@@ -195,6 +195,12 @@ extension CodexAppServerTests {
         let thread = try await client.resumeThread(
             .init(
                 threadID: "thread-123",
+                permissions: .init(
+                    id: ":workspace",
+                    modifications: [
+                        .init(additionalWritableRoot: "/tmp/project-fixtures/resume"),
+                    ]
+                ),
                 personality: .friendly
             )
         )
@@ -218,6 +224,16 @@ extension CodexAppServerTests {
         #expect(threadSnapshot.turns[0].items.count == 1)
         #expect(threadSnapshot.turns[0].items[0].text == "Resumed reply from thread/resume.")
         #expect(threadSnapshot.state.completeness == "serverParity")
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/resume"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        let permissions = try #require(params["permissions"] as? [String: Any])
+        #expect(permissions["id"] as? String == ":workspace")
+        #expect(permissions["type"] as? String == "profile")
+        let modifications = try #require(permissions["modifications"] as? [[String: Any]])
+        #expect(modifications.first?["path"] as? String == "/tmp/project-fixtures/resume")
+        #expect(modifications.first?["type"] as? String == "additionalWritableRoot")
 
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
@@ -295,6 +311,12 @@ extension CodexAppServerTests {
             .init(
                 threadID: "thread-123",
                 ephemeral: true,
+                permissions: .init(
+                    id: ":workspace",
+                    modifications: [
+                        .init(additionalWritableRoot: "/tmp/project-fixtures/fork"),
+                    ]
+                ),
                 personality: .pragmatic
             )
         )
@@ -315,6 +337,16 @@ extension CodexAppServerTests {
         #expect(threadSnapshot.turns[0].items[0].id == "item-agent-1")
         #expect(threadSnapshot.turns[0].items[0].text == "Forked reply from thread/fork.")
         #expect(threadSnapshot.state.completeness == "serverParity")
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/fork"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        let permissions = try #require(params["permissions"] as? [String: Any])
+        #expect(permissions["id"] as? String == ":workspace")
+        #expect(permissions["type"] as? String == "profile")
+        let modifications = try #require(permissions["modifications"] as? [[String: Any]])
+        #expect(modifications.first?["path"] as? String == "/tmp/project-fixtures/fork")
+        #expect(modifications.first?["type"] as? String == "additionalWritableRoot")
 
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)

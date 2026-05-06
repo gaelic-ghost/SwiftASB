@@ -123,8 +123,12 @@ extension CodexAppServerTests {
         }
 
         await waitForObservableState {
-            dashboard.latestDiagnostic?.turnID == turnHandle.turn.id
-                && minimap.latestDiagnostic?.turnID == turnHandle.turn.id
+            if case .modelVerification = dashboard.latestDiagnostic,
+               case .modelVerification = minimap.latestDiagnostic {
+                return dashboard.latestDiagnostic?.turnID == turnHandle.turn.id
+                    && minimap.latestDiagnostic?.turnID == turnHandle.turn.id
+            }
+            return false
         }
 
         switch dashboard.latestDiagnostic {

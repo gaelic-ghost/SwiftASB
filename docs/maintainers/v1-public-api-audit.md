@@ -2,7 +2,7 @@
 
 This document is the working checklist for the `SwiftASB` v1 public API
 curation pass. The goal is to freeze a compact, Swift-native surface for the
-supported app-server lifecycle before `v1.0.3`, not to expose every generated
+supported app-server lifecycle before `v1.1.0`, not to expose every generated
 wire family.
 
 ## Current Public Source Inventory
@@ -429,7 +429,7 @@ Use these decisions for every public symbol:
 
 - [x] Add symbol comments for every stable v1 public type and method that is not
   self-explanatory from its declaration.
-  Decision: complete for the `v1.0.3` release boundary. Default-bearing public
+  Decision: complete for the `v1.1.0` release boundary. Default-bearing public
   initializers and methods now document whether omission delegates to Codex,
   chooses a SwiftASB local-history/UI default, or applies an explicit safety
   default such as `.turn` or `.unchanged`. The source-level pass also covers the
@@ -438,13 +438,56 @@ Use these decisions for every public symbol:
   thread-management, approval, elicitation, diagnostics, compatibility, and
   app-server bootstrap surfaces. Future symbol-comment work is ordinary ongoing
   docs refinement as the public API grows, not unfinished pre-v1 release work.
+- [x] Record the first post-v1 query descriptor addition.
+  Decision: `CodexAppServer.ThreadListQD` is the public thread-list descriptor
+  for direct app-server reads and app-wide library loading. `CodexThread.HistoryWindowQD`
+  is the public local completed-turn window descriptor for recent, older, newer,
+  turn-centered, and item-centered reads. `CodexThread.RecentFilesQD` and
+  `CodexThread.RecentCommandsQD` describe recent-activity companion startup for
+  file and command views. These descriptors keep intent in SwiftASB-owned values
+  instead of exposing Core Data fetch requests, SwiftData queries, or generated
+  wire models.
+- [x] Record the repository grouping decision.
+  Decision: `CodexAppServer.Library.GroupedBy.repository` groups thread
+  snapshots by app-server Git origin URL when available, then falls back to cwd.
+  SwiftASB stores and exposes `ThreadSnapshot.currentGitOriginURL` as
+  app-server-owned metadata; it does not inspect local filesystem directories to
+  derive repository roots.
+- [x] Record the first post-v1 app-server filesystem promotion.
+  Decision: `CodexFS` is the public namespace for read-only filesystem facts
+  routed through the app-server. It currently owns metadata, directory listing,
+  file-byte reads, bounded file discovery, SwiftASB-owned fuzzy ranking over
+  app-server-returned entries, and filesystem watch notifications. Filesystem
+  mutation stays unpromoted until its user workflow and permission model are
+  clearer. The older `CodexThread` local workspace-file helpers were removed so
+  SwiftASB has one promoted filesystem namespace instead of parallel local and
+  app-server read paths.
+- [x] Record the config and extension-inventory namespace decision.
+  Decision: `CodexConfig` owns app-server-routed effective-config and
+  requirements reads. `CodexAppServer.CodexExtensions` owns app-server-routed
+  app, skill, plugin, and collaboration-mode inventory. Mutation-oriented
+  plugin, marketplace, skill-config, and config-write APIs remain unpromoted
+  until SwiftASB owns a clear user-review and permission model for them.
+- [x] Record the thread-goal promotion.
+  Decision: thread goals are thread-scoped public API on `CodexThread`, with
+  read, set, clear, and matching thread-event cases. The app-server goal model
+  is small and stable enough to map to hand-owned Swift values directly.
+- [x] Record the workspace permission-profile promotion.
+  Decision: `CodexWorkspace` is the public namespace for app-server-owned
+  workspace permission selections and runtime permission facts. Thread, resume,
+  fork, and turn start requests can select a named permissions profile with
+  bounded additional writable-root modifications. `CodexThread` and
+  `CodexAppServer.ThreadSession` expose active permission-profile provenance
+  and full runtime filesystem/network permission facts reported by the
+  app-server. SwiftASB still does not infer repository roots or permission
+  policy by walking local directories.
 - [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.
   Decision: covered by the startup, progress/approval, diagnostics/history, and
   SwiftUI observable companion walkthroughs in `Sources/SwiftASB/SwiftASB.docc/`.
 - [x] Update stale README release references before the next release.
-  Decision: README now names `v1.0.3` as the current released baseline.
+  Decision: README now names `v1.1.0` as the current released baseline.
 - [x] Confirm README, DocC, and this audit use the same v1 release boundary.
   Decision: README, DocC, and this audit now describe the same narrow v1
   promise: app-server lifecycle, app-wide capability reads, stored-thread

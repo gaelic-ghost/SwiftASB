@@ -99,6 +99,76 @@ extension CodexAppServerTests {
     }
 
     @MainActor
+    @Test("library can group thread snapshots by app-server Git origin")
+    func libraryGroupsThreadSnapshotsByRepositoryOrigin() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadListResult: [
+                "data": [
+                    storedThread(
+                        id: "thread-package-a",
+                        cwd: "/tmp/package-a",
+                        gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+                        name: "Package A",
+                        preview: "First repo thread",
+                        statusType: "notLoaded",
+                        updatedAt: 1713350030
+                    ),
+                    storedThread(
+                        id: "thread-package-b",
+                        cwd: "/tmp/package-b",
+                        gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+                        name: "Package B",
+                        preview: "Second repo thread",
+                        statusType: "notLoaded",
+                        updatedAt: 1713350020
+                    ),
+                    storedThread(
+                        id: "thread-standalone",
+                        cwd: "/tmp/standalone",
+                        name: "Standalone",
+                        preview: "No Git origin",
+                        statusType: "notLoaded",
+                        updatedAt: 1713350010
+                    ),
+                ],
+                "nextCursor": NSNull(),
+            ]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(transport: transport, historyStore: historyStore)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(clientInfo: .init(name: "SwiftASBTests", title: "SwiftASB Tests", version: "0.1.0"))
+        )
+
+        let library = try await client.makeLibrary(
+            configuration: .init(
+                pageSize: 10,
+                groupedBy: .repository,
+                reconcilesOnCreation: false,
+                loadsAppSnapshotsOnCreation: false
+            )
+        )
+
+        await library.refreshUnarchived()
+
+        #expect(library.groups.map(\.id) == [
+            "/tmp/standalone",
+            "https://github.com/gaelic-ghost/SwiftASB.git",
+        ])
+        let repositoryGroup = try #require(
+            library.groups.first { $0.id == "https://github.com/gaelic-ghost/SwiftASB.git" }
+        )
+        #expect(repositoryGroup.title == "SwiftASB (github.com)")
+        #expect(repositoryGroup.threads.map(\.id) == ["thread-package-a", "thread-package-b"])
+        #expect(repositoryGroup.threads.first?.currentGitOriginURL == "https://github.com/gaelic-ghost/SwiftASB.git")
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @MainActor
     @Test("library can sort local snapshots by name without changing persistence")
     func librarySortsLocalSnapshotsByName() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -415,16 +485,67 @@ extension CodexAppServerTests {
                 sortedBy: .nameAscending
             )
             .sorted(by: .createdNewestFirst)
+            .filteringModelProviders(["openai"])
             .limited(to: 10)
 
         #expect(projectQuery.archived == false)
         #expect(projectQuery.currentDirectoryPath == "/tmp/project-a")
         #expect(projectQuery.limit == 10)
+        #expect(projectQuery.modelProviders == ["openai"])
         #expect(projectQuery.sortedBy == .createdNewestFirst)
 
-        let archivedSearch = CodexAppServer.ThreadListQD.search("release", archived: true)
+        let archivedSearch = CodexAppServer.ThreadListQD
+            .search(" release ", archived: true)
+            .filteringCurrentDirectoryPath("/tmp/releases")
         #expect(archivedSearch.archived == true)
         #expect(archivedSearch.searchTerm == "release")
+        #expect(archivedSearch.currentDirectoryPath == "/tmp/releases")
+
+        let normalized = archivedSearch.limited(to: 0).searching("   ")
+        #expect(normalized.limit == 1)
+        #expect(normalized.searchTerm == nil)
+    }
+
+    @Test("thread list query descriptors compile into app-server requests")
+    func threadListQueryDescriptorsCompileIntoAppServerRequests() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        _ = try await client.listThreads(
+            .cwd(
+                "/tmp/project-a",
+                archived: false,
+                limit: 25,
+                sortedBy: .createdOldestFirst
+            )
+            .filteringModelProviders(["openai"])
+            .searching("planning"),
+            cursor: "cursor-1"
+        )
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/list"))
+        let request = try decodedJSONObject(from: requestPayload)
+        #expect(value(at: ["params", "archived"], in: request) as? Bool == false)
+        #expect(value(at: ["params", "cursor"], in: request) as? String == "cursor-1")
+        #expect(value(at: ["params", "cwd"], in: request) as? String == "/tmp/project-a")
+        #expect(value(at: ["params", "limit"], in: request) as? Int == 25)
+        #expect(value(at: ["params", "modelProviders"], in: request) as? [String] == ["openai"])
+        #expect(value(at: ["params", "searchTerm"], in: request) as? String == "planning")
+        #expect(value(at: ["params", "sortKey"], in: request) as? String == "created_at")
+        #expect(value(at: ["params", "sortDirection"], in: request) as? String == "asc")
+
+        await client.stop()
     }
 }
 
@@ -432,6 +553,7 @@ private func storedThread(
     id: String,
     cwd: String,
     gitBranch: String? = nil,
+    gitOriginURL: String? = nil,
     name: String,
     preview: String,
     statusType: String,
@@ -454,7 +576,13 @@ private func storedThread(
     if let gitBranch {
         thread["gitInfo"] = [
             "branch": gitBranch,
-            "originUrl": NSNull(),
+            "originUrl": gitOriginURL as Any? ?? NSNull(),
+            "sha": NSNull(),
+        ]
+    } else if let gitOriginURL {
+        thread["gitInfo"] = [
+            "branch": NSNull(),
+            "originUrl": gitOriginURL,
             "sha": NSNull(),
         ]
     }

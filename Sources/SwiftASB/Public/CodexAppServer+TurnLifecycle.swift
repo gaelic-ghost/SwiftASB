@@ -10,6 +10,7 @@ extension CodexAppServer {
         public var input: [TurnInput]
         public var model: String?
         public var outputSchema: JSONValue?
+        public var permissions: CodexWorkspace.PermissionSelection?
         public var personality: Personality?
         public var serviceTier: ServiceTier?
         public var summary: ReasoningSummary?
@@ -29,6 +30,7 @@ extension CodexAppServer {
             effort: ReasoningEffort? = nil,
             model: String? = nil,
             outputSchema: JSONValue? = nil,
+            permissions: CodexWorkspace.PermissionSelection? = nil,
             personality: Personality? = nil,
             serviceTier: ServiceTier? = nil,
             summary: ReasoningSummary? = nil
@@ -41,6 +43,7 @@ extension CodexAppServer {
             self.effort = effort
             self.model = model
             self.outputSchema = outputSchema
+            self.permissions = permissions
             self.personality = personality
             self.serviceTier = serviceTier
             self.summary = summary

@@ -352,6 +352,46 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "instructionSources": ["AGENTS.md"],
                     "model": "gpt-5.4",
                     "modelProvider": "openai",
+                    "activePermissionProfile": [
+                        "id": ":workspace",
+                        "extends": NSNull(),
+                        "modifications": [
+                            [
+                                "path": "/tmp/project-fixtures",
+                                "type": "additionalWritableRoot",
+                            ],
+                        ],
+                    ],
+                    "permissionProfile": [
+                        "type": "managed",
+                        "fileSystem": [
+                            "type": "restricted",
+                            "globScanMaxDepth": 4,
+                            "entries": [
+                                [
+                                    "access": "write",
+                                    "path": [
+                                        "type": "special",
+                                        "value": [
+                                            "kind": "project_roots",
+                                            "path": NSNull(),
+                                            "subpath": NSNull(),
+                                        ],
+                                    ],
+                                ],
+                                [
+                                    "access": "read",
+                                    "path": [
+                                        "type": "path",
+                                        "path": "/tmp/project",
+                                    ],
+                                ],
+                            ],
+                        ],
+                        "network": [
+                            "enabled": true,
+                        ],
+                    ],
                     "reasoningEffort": "medium",
                     "sandbox": [
                         "type": "workspaceWrite",
@@ -402,6 +442,427 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
             return responsePayload(
                 id: id,
                 result: result
+            )
+        case "thread/loaded/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": ["thread-123", "thread-456"],
+                    "nextCursor": "cursor-loaded-next",
+                ]
+            )
+        case "fs/getMetadata":
+            return responsePayload(
+                id: id,
+                result: [
+                    "createdAtMs": 1_713_350_000_000,
+                    "isDirectory": true,
+                    "isFile": false,
+                    "isSymlink": false,
+                    "modifiedAtMs": 1_713_350_005_000,
+                ]
+            )
+        case "fs/readDirectory":
+            let path = try requestParam("path", from: requestPayload) as? String
+            let entries: [[String: Any]] = switch path {
+            case "/tmp/project":
+                [
+                    [
+                        "fileName": "Sources",
+                        "isDirectory": true,
+                        "isFile": false,
+                    ],
+                    [
+                        "fileName": "Package.swift",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                    [
+                        "fileName": ".build",
+                        "isDirectory": true,
+                        "isFile": false,
+                    ],
+                ]
+            case "/tmp/project/Sources":
+                [
+                    [
+                        "fileName": "SwiftASB",
+                        "isDirectory": true,
+                        "isFile": false,
+                    ],
+                    [
+                        "fileName": "SwiftASBTests.swift",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                ]
+            case "/tmp/project/Sources/SwiftASB":
+                [
+                    [
+                        "fileName": "CodexFS.swift",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                    [
+                        "fileName": "CodexAppServer.swift",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                ]
+            case "/tmp/project/.build":
+                [
+                    [
+                        "fileName": "debug",
+                        "isDirectory": true,
+                        "isFile": false,
+                    ],
+                    [
+                        "fileName": "cache.log",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                ]
+            case "/tmp/project/.build/debug":
+                [
+                    [
+                        "fileName": "CodexFS.o",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                ]
+            default:
+                []
+            }
+            return responsePayload(
+                id: id,
+                result: [
+                    "entries": entries,
+                ]
+            )
+        case "fs/readFile":
+            return responsePayload(
+                id: id,
+                result: [
+                    "dataBase64": Data("hello from CodexFS".utf8).base64EncodedString(),
+                ]
+            )
+        case "fs/watch":
+            return responsePayload(
+                id: id,
+                result: [
+                    "path": "/tmp/project",
+                ]
+            )
+        case "fs/unwatch":
+            return responsePayload(
+                id: id,
+                result: [:]
+            )
+        case "config/read":
+            return responsePayload(
+                id: id,
+                result: [
+                    "config": [
+                        "model": "gpt-5.2",
+                        "sandbox_mode": "workspace-write",
+                    ],
+                    "layers": [
+                        [
+                            "config": [
+                                "model": "gpt-5.2",
+                            ],
+                            "name": [
+                                "type": "user",
+                                "file": "/Users/galew/.codex/config.toml",
+                            ],
+                            "version": "1",
+                        ],
+                        [
+                            "config": [
+                                "sandbox_mode": "workspace-write",
+                            ],
+                            "disabledReason": "Project config is disabled for this fixture.",
+                            "name": [
+                                "type": "project",
+                                "dotCodexFolder": "/tmp/project/.codex",
+                            ],
+                            "version": "2",
+                        ],
+                    ],
+                    "origins": [
+                        "model": [
+                            "name": [
+                                "type": "user",
+                                "file": "/Users/galew/.codex/config.toml",
+                            ],
+                            "version": "1",
+                        ],
+                        "sandbox_mode": [
+                            "name": [
+                                "type": "project",
+                                "dotCodexFolder": "/tmp/project/.codex",
+                            ],
+                            "version": "2",
+                        ],
+                    ],
+                ]
+            )
+        case "configRequirements/read":
+            return responsePayload(
+                id: id,
+                result: [
+                    "requirements": [
+                        "featureRequirements": [
+                            "network_access": true,
+                        ],
+                    ],
+                ]
+            )
+        case "app/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "branding": [
+                                "isDiscoverableApp": true,
+                                "developer": "OpenAI",
+                                "category": "developer-tools",
+                                "privacyPolicy": "https://example.com/privacy",
+                                "termsOfService": "https://example.com/terms",
+                                "website": "https://example.com/github",
+                            ],
+                            "appMetadata": [
+                                "categories": ["Developer Tools"],
+                                "developer": "OpenAI",
+                                "screenshots": [
+                                    [
+                                        "fileId": "screenshot-1",
+                                        "url": "https://example.com/screenshot.png",
+                                        "userPrompt": "Show repository issues.",
+                                    ],
+                                ],
+                                "version": "1.2.3",
+                                "versionId": "version-123",
+                                "versionNotes": "Fixture metadata.",
+                            ],
+                            "description": "GitHub app fixture",
+                            "distributionChannel": "curated",
+                            "id": "github",
+                            "installUrl": "https://example.com/install",
+                            "isAccessible": true,
+                            "isEnabled": true,
+                            "labels": ["kind": "connector"],
+                            "logoUrl": "https://example.com/logo-light.png",
+                            "logoUrlDark": "https://example.com/logo-dark.png",
+                            "name": "GitHub",
+                            "pluginDisplayNames": ["GitHub"],
+                        ],
+                    ],
+                    "nextCursor": "apps-next",
+                ]
+            )
+        case "skills/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "cwd": "/tmp/project",
+                            "errors": [
+                                [
+                                    "message": "Skipped duplicate skill.",
+                                    "path": "/tmp/skills/duplicate/SKILL.md",
+                                ],
+                            ],
+                            "skills": [
+                                [
+                                    "description": "Build Swift packages.",
+                                    "enabled": true,
+                                    "interface": [
+                                        "displayName": "Swift Package Workflow",
+                                        "shortDescription": "SwiftPM workflow from interface",
+                                    ],
+                                    "name": "swift-package-build-run-workflow",
+                                    "path": "/tmp/skills/swift-package-build-run-workflow/SKILL.md",
+                                    "scope": "user",
+                                    "shortDescription": "Legacy SwiftPM workflow",
+                                ],
+                            ],
+                        ],
+                    ],
+                ]
+            )
+        case "plugin/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "featuredPluginIds": ["github"],
+                    "marketplaceLoadErrors": [
+                        [
+                            "marketplacePath": "/tmp/bad-marketplace.json",
+                            "message": "Fixture marketplace failed to load.",
+                        ],
+                    ],
+                    "marketplaces": [
+                        [
+                            "interface": [
+                                "displayName": "Curated",
+                            ],
+                            "name": "openai-curated",
+                            "plugins": [
+                                [
+                                    "authPolicy": "ON_USE",
+                                    "enabled": true,
+                                    "id": "github",
+                                    "installed": true,
+                                    "installPolicy": "AVAILABLE",
+                                    "interface": [
+                                        "brandColor": "#111111",
+                                        "capabilities": ["issues", "pull-requests"],
+                                        "category": "developer-tools",
+                                        "defaultPrompt": ["Review my PR."],
+                                        "developerName": "OpenAI",
+                                        "displayName": "GitHub",
+                                        "longDescription": "GitHub plugin fixture.",
+                                        "screenshots": [],
+                                        "screenshotUrls": [],
+                                        "shortDescription": "GitHub workflows.",
+                                    ],
+                                    "name": "GitHub",
+                                    "source": [
+                                        "type": "remote",
+                                    ],
+                                ],
+                                [
+                                    "authPolicy": "ON_INSTALL",
+                                    "enabled": false,
+                                    "id": "local-plugin",
+                                    "installed": false,
+                                    "installPolicy": "NOT_AVAILABLE",
+                                    "name": "Local Plugin",
+                                    "source": [
+                                        "path": "/tmp/plugins/local-plugin",
+                                        "type": "local",
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ]
+            )
+        case "plugin/read":
+            return responsePayload(
+                id: id,
+                result: [
+                    "plugin": [
+                        "apps": [
+                            [
+                                "description": "GitHub app summary",
+                                "id": "github",
+                                "installUrl": "https://example.com/install",
+                                "name": "GitHub",
+                                "needsAuth": true,
+                            ],
+                        ],
+                        "description": "GitHub plugin detail fixture.",
+                        "marketplaceName": "openai-curated",
+                        "marketplacePath": "/tmp/marketplaces/openai-curated.json",
+                        "mcpServers": [],
+                        "skills": [
+                            [
+                                "description": "Review pull requests.",
+                                "enabled": true,
+                                "interface": [
+                                    "displayName": "PR Review",
+                                    "shortDescription": "Review PRs.",
+                                ],
+                                "name": "review-pr",
+                                "path": "/tmp/plugins/github/skills/review-pr/SKILL.md",
+                                "shortDescription": "Legacy review PRs.",
+                            ],
+                        ],
+                        "summary": [
+                            "authPolicy": "ON_USE",
+                            "enabled": true,
+                            "id": "github",
+                            "installed": true,
+                            "installPolicy": "AVAILABLE",
+                            "interface": [
+                                "brandColor": "#111111",
+                                "capabilities": ["issues", "pull-requests"],
+                                "category": "developer-tools",
+                                "defaultPrompt": ["Review my PR."],
+                                "developerName": "OpenAI",
+                                "displayName": "GitHub",
+                                "longDescription": "GitHub plugin fixture.",
+                                "screenshots": [],
+                                "screenshotUrls": [],
+                                "shortDescription": "GitHub workflows.",
+                            ],
+                            "name": "GitHub",
+                            "source": [
+                                "refName": "main",
+                                "sha": "abc123",
+                                "type": "git",
+                                "url": "https://github.com/openai/github-plugin",
+                            ],
+                        ],
+                    ],
+                ]
+            )
+        case "collaborationMode/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "mode": "plan",
+                            "model": "gpt-5.2",
+                            "name": "Plan",
+                            "reasoning_effort": "medium",
+                        ],
+                    ],
+                ]
+            )
+        case "thread/goal/get":
+            return responsePayload(
+                id: id,
+                result: [
+                    "goal": [
+                        "createdAt": 1_713_350_000,
+                        "objective": "Promote schemas",
+                        "status": "active",
+                        "threadId": "thread-123",
+                        "timeUsedSeconds": 12,
+                        "tokenBudget": 20_000,
+                        "tokensUsed": 400,
+                        "updatedAt": 1_713_350_010,
+                    ],
+                ]
+            )
+        case "thread/goal/set":
+            return responsePayload(
+                id: id,
+                result: [
+                    "goal": [
+                        "createdAt": 1_713_350_000,
+                        "objective": "Promote schemas",
+                        "status": "budgetLimited",
+                        "threadId": "thread-123",
+                        "timeUsedSeconds": 12,
+                        "tokenBudget": 30_000,
+                        "tokensUsed": 400,
+                        "updatedAt": 1_713_350_020,
+                    ],
+                ]
+            )
+        case "thread/goal/clear":
+            return responsePayload(
+                id: id,
+                result: [
+                    "cleared": true,
+                ]
             )
         case "thread/read":
             return responsePayload(
@@ -900,6 +1361,47 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
     }
 
+    func emitThreadGoalUpdated(threadID: String, turnID: String? = "turn-goal") {
+        let payload = payloadObject([
+            "goal": [
+                "createdAt": 1_713_350_000,
+                "objective": "Promote schemas",
+                "status": "complete",
+                "threadId": threadID,
+                "timeUsedSeconds": 20,
+                "tokensUsed": 500,
+                "updatedAt": 1_713_350_030,
+            ],
+            "threadId": threadID,
+            "turnId": turnID ?? NSNull(),
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/goal/updated", payload: payload)
+        )
+    }
+
+    func emitThreadGoalCleared(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/goal/cleared", payload: payload)
+        )
+    }
+
+    func emitFSChanged(watchID: String, changedPaths: [String]) {
+        let payload = payloadObject([
+            "watchId": watchID,
+            "changedPaths": changedPaths,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "fs/changed", payload: payload)
+        )
+    }
+
     func emitThreadClosed(threadID: String) {
         let payload = payloadObject([
             "threadId": threadID,
@@ -1231,6 +1733,14 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
             try JSONSerialization.jsonObject(with: payload) as? [String: Any]
         )
         return try #require(object["method"] as? String)
+    }
+
+    private func requestParam(_ name: String, from payload: Data) throws -> Any? {
+        let object = try #require(
+            try JSONSerialization.jsonObject(with: payload) as? [String: Any]
+        )
+        let params = try #require(object["params"] as? [String: Any])
+        return params[name]
     }
 
     private func responsePayload(id: CodexRPCRequestID, result: [String: Any]) -> Data {

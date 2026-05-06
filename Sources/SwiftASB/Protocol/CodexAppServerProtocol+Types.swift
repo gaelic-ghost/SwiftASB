@@ -15,6 +15,9 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case threadClosed(CodexWireThreadClosedNotification)
 	case threadNameUpdated(CodexWireThreadNameUpdatedNotification)
 	case threadTokenUsageUpdated(CodexWireThreadTokenUsageUpdatedNotification)
+	case threadGoalUpdated(CodexWireThreadGoalUpdatedNotification)
+	case threadGoalCleared(CodexWireThreadGoalClearedNotification)
+	case fsChanged(CodexWireFSChangedNotification)
 	case hookStarted(CodexWireHookStartedNotification)
 	case hookCompleted(CodexWireHookCompletedNotification)
 	case warning(CodexWireWarningNotification)
@@ -53,6 +56,8 @@ struct CodexProtocolModelProviderCapabilitiesReadResponse: Decodable, Equatable,
     let namespaceTools: Bool
     let webSearch: Bool
 }
+
+struct CodexProtocolCollaborationModeListParams: Encodable, Equatable, Sendable {}
 
 struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
     let gitInfo: GitInfo?
@@ -139,6 +144,7 @@ struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
     let excludeTurns: Bool?
     let model: String?
     let modelProvider: String?
+    let permissions: CodexWirePermissionProfileSelectionParams?
     let personality: CodexWirePersonality?
     let sandbox: CodexWireSandboxMode?
     let serviceName: String?
@@ -155,6 +161,7 @@ struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
         case excludeTurns
         case model
         case modelProvider
+        case permissions
         case personality
         case sandbox
         case serviceName
@@ -174,6 +181,7 @@ struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
     let excludeTurns: Bool?
     let model: String?
     let modelProvider: String?
+    let permissions: CodexWirePermissionProfileSelectionParams?
     let personality: CodexWirePersonality?
     let sandbox: CodexWireSandboxMode?
     let serviceName: String?
@@ -191,6 +199,7 @@ struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
         case excludeTurns
         case model
         case modelProvider
+        case permissions
         case personality
         case sandbox
         case serviceName

@@ -169,6 +169,59 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("promotes workspace permission facts and request selections")
+    func promotesWorkspacePermissionFactsAndSelections() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread(
+            .init(
+                permissions: .init(
+                    id: ":workspace",
+                    modifications: [
+                        .init(additionalWritableRoot: "/tmp/project-fixtures"),
+                    ]
+                )
+            )
+        )
+
+        #expect(thread.activePermissionProfile?.id == ":workspace")
+        #expect(thread.activePermissionProfile?.modifications.first?.path == "/tmp/project-fixtures")
+        #expect(thread.permissionProfile?.kind == .managed)
+        #expect(thread.permissionProfile?.network?.enabled == true)
+        #expect(thread.permissionProfile?.fileSystem?.kind == .restricted)
+        #expect(thread.permissionProfile?.fileSystem?.globScanMaxDepth == 4)
+        #expect(thread.workspace.currentDirectoryPath == "/tmp/project")
+        #expect(thread.workspace.gitInfo == thread.info.gitInfo)
+
+        let entries = try #require(thread.permissionProfile?.fileSystem?.entries)
+        #expect(entries.first?.access == .write)
+        #expect(entries.first?.path == .special(.init(kind: .projectRoots, path: nil, subpath: nil)))
+        #expect(entries.dropFirst().first?.path == .path("/tmp/project"))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/start"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        let permissions = try #require(params["permissions"] as? [String: Any])
+        #expect(permissions["id"] as? String == ":workspace")
+        #expect(permissions["type"] as? String == "profile")
+        let modifications = try #require(permissions["modifications"] as? [[String: Any]])
+        #expect(modifications.first?["path"] as? String == "/tmp/project-fixtures")
+        #expect(modifications.first?["type"] as? String == "additionalWritableRoot")
+
+        await client.stop()
+    }
+
     @Test("rolls back thread history and records the rollback marker")
     func rollsBackThreadHistoryAndRecordsMarker() async throws {
         let transport = FakeCodexAppServerTransport()

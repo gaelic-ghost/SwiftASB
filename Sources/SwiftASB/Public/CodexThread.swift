@@ -26,6 +26,162 @@ public struct CodexThread: Sendable {
         }
     }
 
+    /// Repeatable local-history window intent for a thread.
+    ///
+    /// `HistoryWindowQD` describes the window a caller wants without exposing
+    /// SwiftASB's Core Data-backed history store or app-server turn paging
+    /// details. It currently targets the local completed-turn windows that
+    /// SwiftASB can answer safely after history has been hydrated.
+    public struct HistoryWindowQD: Sendable, Equatable {
+        /// Anchor used to choose the local history window.
+        public enum Anchor: Sendable, Equatable {
+            case recent
+            case olderThanTurn(String)
+            case newerThanTurn(String)
+            case aroundTurn(String)
+            case aroundItem(String)
+        }
+
+        public var anchor: Anchor
+        public var limit: Int
+
+        /// Creates a local-history window descriptor.
+        ///
+        /// `limit` is normalized to at least `1` so the descriptor always asks
+        /// for a meaningful window.
+        public init(
+            anchor: Anchor = .recent,
+            limit: Int = 12
+        ) {
+            self.anchor = anchor
+            self.limit = max(1, limit)
+        }
+
+        /// The newest known completed turns.
+        public static func recent(limit: Int = 12) -> Self {
+            .init(anchor: .recent, limit: limit)
+        }
+
+        /// Completed turns older than the known boundary turn.
+        public static func olderThanTurn(
+            _ turnID: String,
+            limit: Int = 12
+        ) -> Self {
+            .init(anchor: .olderThanTurn(turnID), limit: limit)
+        }
+
+        /// Completed turns newer than the known boundary turn.
+        public static func newerThanTurn(
+            _ turnID: String,
+            limit: Int = 12
+        ) -> Self {
+            .init(anchor: .newerThanTurn(turnID), limit: limit)
+        }
+
+        /// A completed-turn window centered around the known turn.
+        public static func aroundTurn(
+            _ turnID: String,
+            limit: Int = 12
+        ) -> Self {
+            .init(anchor: .aroundTurn(turnID), limit: limit)
+        }
+
+        /// A completed-turn window centered around the turn containing the known item.
+        public static func aroundItem(
+            _ itemID: String,
+            limit: Int = 12
+        ) -> Self {
+            .init(anchor: .aroundItem(itemID), limit: limit)
+        }
+
+        /// Returns the same query with a normalized window limit.
+        public func limited(to limit: Int) -> Self {
+            .init(anchor: anchor, limit: limit)
+        }
+    }
+
+    /// Repeatable recent-file companion intent for a thread.
+    ///
+    /// `RecentFilesQD` describes the initial resident file-change window and
+    /// cache policy without exposing SwiftASB's local history storage or
+    /// observable companion construction details.
+    public struct RecentFilesQD: Sendable, Equatable {
+        public var cachePolicy: RecentFiles.CachePolicy?
+        public var limit: Int
+
+        /// Creates a recent-file descriptor.
+        ///
+        /// `limit` is normalized to at least `1`. Nil `cachePolicy` lets
+        /// SwiftASB derive the companion's automatic cache policy from the
+        /// normalized limit.
+        public init(
+            limit: Int = 12,
+            cachePolicy: RecentFiles.CachePolicy? = nil
+        ) {
+            self.cachePolicy = cachePolicy
+            self.limit = max(1, limit)
+        }
+
+        /// The newest known file-change items for this thread.
+        public static func recent(
+            limit: Int = 12,
+            cachePolicy: RecentFiles.CachePolicy? = nil
+        ) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+
+        /// Returns the same descriptor with a normalized resident limit.
+        public func limited(to limit: Int) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+
+        /// Returns the same descriptor with an explicit cache policy.
+        public func cached(by cachePolicy: RecentFiles.CachePolicy?) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+    }
+
+    /// Repeatable recent-command companion intent for a thread.
+    ///
+    /// `RecentCommandsQD` describes the initial resident command-output window
+    /// and cache policy without exposing SwiftASB's local history storage or
+    /// observable companion construction details.
+    public struct RecentCommandsQD: Sendable, Equatable {
+        public var cachePolicy: RecentCommands.CachePolicy?
+        public var limit: Int
+
+        /// Creates a recent-command descriptor.
+        ///
+        /// `limit` is normalized to at least `1`. Nil `cachePolicy` lets
+        /// SwiftASB derive the companion's automatic cache policy from the
+        /// normalized limit.
+        public init(
+            limit: Int = 12,
+            cachePolicy: RecentCommands.CachePolicy? = nil
+        ) {
+            self.cachePolicy = cachePolicy
+            self.limit = max(1, limit)
+        }
+
+        /// The newest known command-output items for this thread.
+        public static func recent(
+            limit: Int = 12,
+            cachePolicy: RecentCommands.CachePolicy? = nil
+        ) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+
+        /// Returns the same descriptor with a normalized resident limit.
+        public func limited(to limit: Int) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+
+        /// Returns the same descriptor with an explicit cache policy.
+        public func cached(by cachePolicy: RecentCommands.CachePolicy?) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+    }
+
     /// Request used to start a turn from this thread handle.
     public struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: CodexAppServer.ApprovalPolicy?
@@ -35,6 +191,7 @@ public struct CodexThread: Sendable {
         public var input: [CodexAppServer.TurnInput]
         public var model: String?
         public var outputSchema: CodexAppServer.JSONValue?
+        public var permissions: CodexWorkspace.PermissionSelection?
         public var personality: CodexAppServer.Personality?
         public var serviceTier: CodexAppServer.ServiceTier?
         public var summary: CodexAppServer.ReasoningSummary?
@@ -52,6 +209,7 @@ public struct CodexThread: Sendable {
             effort: CodexAppServer.ReasoningEffort? = nil,
             model: String? = nil,
             outputSchema: CodexAppServer.JSONValue? = nil,
+            permissions: CodexWorkspace.PermissionSelection? = nil,
             personality: CodexAppServer.Personality? = nil,
             serviceTier: CodexAppServer.ServiceTier? = nil,
             summary: CodexAppServer.ReasoningSummary? = nil
@@ -63,9 +221,51 @@ public struct CodexThread: Sendable {
             self.effort = effort
             self.model = model
             self.outputSchema = outputSchema
+            self.permissions = permissions
             self.personality = personality
             self.serviceTier = serviceTier
             self.summary = summary
+        }
+    }
+
+    /// Goal state stored by the app-server for this thread.
+    public struct Goal: Sendable, Equatable {
+        /// App-server goal status.
+        public enum Status: String, Sendable, Equatable {
+            case active
+            case budgetLimited
+            case complete
+            case paused
+        }
+
+        public let createdAt: Int
+        public let objective: String
+        public let status: Status
+        public let threadID: String
+        public let timeUsedSeconds: Int
+        public let tokenBudget: Int?
+        public let tokensUsed: Int
+        public let updatedAt: Int
+    }
+
+    /// Request used to create or update a thread goal.
+    public struct GoalSetRequest: Sendable, Equatable {
+        public var objective: String?
+        public var status: Goal.Status?
+        public var tokenBudget: Int?
+
+        /// Creates a goal update request.
+        ///
+        /// Nil fields are omitted so callers can update one part of the goal
+        /// without re-sending the complete state.
+        public init(
+            objective: String? = nil,
+            status: Goal.Status? = nil,
+            tokenBudget: Int? = nil
+        ) {
+            self.objective = objective
+            self.status = status
+            self.tokenBudget = tokenBudget
         }
     }
 
@@ -77,9 +277,12 @@ public struct CodexThread: Sendable {
     public let instructionSources: [String]
     public let model: String
     public let modelProvider: String
+    public let activePermissionProfile: CodexWorkspace.ActivePermissionProfile?
+    public let permissionProfile: CodexWorkspace.PermissionProfile?
     public let reasoningEffort: CodexAppServer.ReasoningEffort?
     public let sandboxPolicy: CodexAppServer.SandboxPolicy
     public let serviceTier: CodexAppServer.ServiceTier?
+    public let workspace: CodexWorkspace.SessionSnapshot
 
     /// Typed events for this thread.
     ///
@@ -106,9 +309,12 @@ public struct CodexThread: Sendable {
         self.instructionSources = session.instructionSources
         self.model = session.model
         self.modelProvider = session.modelProvider
+        self.activePermissionProfile = session.activePermissionProfile
+        self.permissionProfile = session.permissionProfile
         self.reasoningEffort = session.reasoningEffort
         self.sandboxPolicy = session.sandboxPolicy
         self.serviceTier = session.serviceTier
+        self.workspace = session.workspace
         self.events = events
     }
 
@@ -124,6 +330,7 @@ public struct CodexThread: Sendable {
                 effort: request.effort,
                 model: request.model,
                 outputSchema: request.outputSchema,
+                permissions: request.permissions,
                 personality: request.personality,
                 serviceTier: request.serviceTier,
                 summary: request.summary
@@ -142,6 +349,7 @@ public struct CodexThread: Sendable {
         effort: CodexAppServer.ReasoningEffort? = nil,
         model: String? = nil,
         outputSchema: CodexAppServer.JSONValue? = nil,
+        permissions: CodexWorkspace.PermissionSelection? = nil,
         personality: CodexAppServer.Personality? = nil,
         serviceTier: CodexAppServer.ServiceTier? = nil,
         summary: CodexAppServer.ReasoningSummary? = nil
@@ -155,6 +363,7 @@ public struct CodexThread: Sendable {
                 effort: effort,
                 model: model,
                 outputSchema: outputSchema,
+                permissions: permissions,
                 personality: personality,
                 serviceTier: serviceTier,
                 summary: summary
@@ -203,12 +412,14 @@ public struct CodexThread: Sendable {
         return CodexThread(
             appServer: appServer,
             session: .init(
+                activePermissionProfile: activePermissionProfile,
                 approvalPolicy: approvalPolicy,
                 approvalsReviewer: approvalsReviewer,
                 currentDirectoryPath: currentDirectoryPath,
                 instructionSources: instructionSources,
                 model: model,
                 modelProvider: modelProvider,
+                permissionProfile: permissionProfile,
                 reasoningEffort: reasoningEffort,
                 sandboxPolicy: sandboxPolicy,
                 serviceTier: serviceTier,
@@ -235,6 +446,21 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Reads the current app-server goal for this thread, when one is set.
+    public func readGoal() async throws -> Goal? {
+        try await appServer.readThreadGoal(threadID: id)
+    }
+
+    /// Creates or updates this thread's app-server goal.
+    public func setGoal(_ request: GoalSetRequest) async throws -> Goal {
+        try await appServer.setThreadGoal(threadID: id, request: request)
+    }
+
+    /// Clears this thread's app-server goal.
+    public func clearGoal() async throws -> Bool {
+        try await appServer.clearThreadGoal(threadID: id)
+    }
+
     /// Reads one completed turn from SwiftASB's local history store.
     ///
     /// Returns `nil` when the turn has not been persisted or hydrated locally.
@@ -250,6 +476,26 @@ public struct CodexThread: Sendable {
         limit: Int = 12
     ) async throws -> HistoryWindow {
         try await appServer.recentClosedTurnWindow(threadID: id, limit: limit)
+    }
+
+    /// Reads a local completed-turn history window from a SwiftASB descriptor.
+    ///
+    /// Use descriptor reads when UI state or inspection tools need to preserve
+    /// a repeatable window intent, then issue it again after local history has
+    /// been refreshed or a selection changes.
+    public func readHistoryWindow(_ query: HistoryWindowQD = .recent()) async throws -> HistoryWindow {
+        switch query.anchor {
+        case .recent:
+            try await readRecentTurnHistoryWindow(limit: query.limit)
+        case let .olderThanTurn(turnID):
+            try await readOlderTurnHistoryWindow(olderThan: turnID, limit: query.limit)
+        case let .newerThanTurn(turnID):
+            try await readNewerTurnHistoryWindow(newerThan: turnID, limit: query.limit)
+        case let .aroundTurn(turnID):
+            try await windowAroundTurn(turnID, limit: query.limit)
+        case let .aroundItem(itemID):
+            try await windowAroundItem(itemID, limit: query.limit)
+        }
     }
 
     /// Reads the most recent completed turns from local history.
@@ -390,6 +636,12 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Creates an observable recent-file companion from a repeatable descriptor.
+    @MainActor
+    public func makeRecentFiles(_ query: RecentFilesQD) async throws -> RecentFiles {
+        try await makeRecentFiles(limit: query.limit, cachePolicy: query.cachePolicy)
+    }
+
     /// Creates an observable recent-command companion for this thread.
     ///
     /// The default `limit` of 12 controls the initial resident page. Omitting
@@ -415,6 +667,12 @@ public struct CodexThread: Sendable {
             commandDeltaEvents: commandDeltaEvents,
             appServer: appServer
         )
+    }
+
+    /// Creates an observable recent-command companion from a repeatable descriptor.
+    @MainActor
+    public func makeRecentCommands(_ query: RecentCommandsQD) async throws -> RecentCommands {
+        try await makeRecentCommands(limit: query.limit, cachePolicy: query.cachePolicy)
     }
 
     /// Answers a thread-routed approval request.
@@ -463,6 +721,8 @@ public enum CodexThreadEvent: Sendable, Equatable {
     case closed(CodexThreadClosed)
     case nameUpdated(CodexThreadNameUpdated)
     case tokenUsageUpdated(CodexThreadTokenUsageUpdated)
+    case goalUpdated(CodexThreadGoalUpdated)
+    case goalCleared(CodexThreadGoalCleared)
 }
 
 public struct CodexThreadStarted: Sendable, Equatable {
@@ -564,5 +824,72 @@ public struct CodexThreadTokenUsageUpdated: Sendable, Equatable {
         self.last = last
         self.modelContextWindow = modelContextWindow
         self.total = total
+    }
+}
+
+public struct CodexThreadGoalUpdated: Sendable, Equatable {
+    public let threadID: String
+    public let turnID: String?
+    public let goal: CodexThread.Goal
+
+    internal init(
+        threadID: String,
+        turnID: String?,
+        goal: CodexThread.Goal
+    ) {
+        self.threadID = threadID
+        self.turnID = turnID
+        self.goal = goal
+    }
+}
+
+public struct CodexThreadGoalCleared: Sendable, Equatable {
+    public let threadID: String
+
+    internal init(threadID: String) {
+        self.threadID = threadID
+    }
+}
+
+extension CodexThread.Goal {
+    init(wireValue: CodexWireThreadGoal) {
+        self.init(
+            createdAt: wireValue.createdAt,
+            objective: wireValue.objective,
+            status: .init(wireValue: wireValue.status),
+            threadID: wireValue.threadID,
+            timeUsedSeconds: wireValue.timeUsedSeconds,
+            tokenBudget: wireValue.tokenBudget,
+            tokensUsed: wireValue.tokensUsed,
+            updatedAt: wireValue.updatedAt
+        )
+    }
+}
+
+extension CodexThread.Goal.Status {
+    init(wireValue: CodexWireThreadGoalStatus) {
+        switch wireValue {
+        case .active:
+            self = .active
+        case .budgetLimited:
+            self = .budgetLimited
+        case .complete:
+            self = .complete
+        case .paused:
+            self = .paused
+        }
+    }
+
+    var wireValue: CodexWireThreadGoalStatus {
+        switch self {
+        case .active:
+            .active
+        case .budgetLimited:
+            .budgetLimited
+        case .complete:
+            .complete
+        case .paused:
+            .paused
+        }
     }
 }

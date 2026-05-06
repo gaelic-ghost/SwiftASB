@@ -210,6 +210,9 @@ extension CodexAppServerTests {
         #expect(recentWindow.hasNewerTurns == false)
         #expect(recentWindow.hasOlderTurns)
 
+        let descriptorRecentWindow = try await thread.readHistoryWindow(.recent(limit: 2))
+        #expect(descriptorRecentWindow == recentWindow)
+
         let recentTurns = try await thread.readRecentTurnHistory(limit: 2)
         #expect(recentTurns.map(\.id) == ["turn-newest", "turn-newer"])
 
@@ -222,6 +225,11 @@ extension CodexAppServerTests {
         #expect(olderWindow.hasNewerTurns)
         #expect(olderWindow.hasOlderTurns == false)
 
+        let descriptorOlderWindow = try await thread.readHistoryWindow(
+            .olderThanTurn("turn-middle", limit: 2)
+        )
+        #expect(descriptorOlderWindow == olderWindow)
+
         let olderTurns = try await thread.readOlderTurnHistory(olderThan: "turn-middle", limit: 2)
         #expect(olderTurns.map(\.id) == ["turn-older"])
 
@@ -229,6 +237,11 @@ extension CodexAppServerTests {
         #expect(newerWindow.turns.map(\.id) == ["turn-newer"])
         #expect(newerWindow.hasOlderTurns)
         #expect(newerWindow.hasNewerTurns)
+
+        let descriptorNewerWindow = try await thread.readHistoryWindow(
+            .newerThanTurn("turn-middle", limit: 1)
+        )
+        #expect(descriptorNewerWindow == newerWindow)
 
         let newerTurns = try await thread.readNewerTurnHistory(newerThan: "turn-middle", limit: 1)
         #expect(newerTurns.map(\.id) == ["turn-newer"])
@@ -238,10 +251,24 @@ extension CodexAppServerTests {
         #expect(turnCenteredWindow.hasNewerTurns)
         #expect(turnCenteredWindow.hasOlderTurns == false)
 
+        let descriptorTurnCenteredWindow = try await thread.readHistoryWindow(
+            .aroundTurn("turn-middle", limit: 3)
+        )
+        #expect(descriptorTurnCenteredWindow == turnCenteredWindow)
+
         let itemCenteredWindow = try await thread.windowAroundItem("item-middle", limit: 2)
         #expect(itemCenteredWindow.turns.map(\.id) == ["turn-middle", "turn-older"])
         #expect(itemCenteredWindow.hasNewerTurns)
         #expect(itemCenteredWindow.hasOlderTurns == false)
+
+        let descriptorItemCenteredWindow = try await thread.readHistoryWindow(
+            .aroundItem("item-middle", limit: 2)
+        )
+        #expect(descriptorItemCenteredWindow == itemCenteredWindow)
+
+        let normalizedDescriptor = CodexThread.HistoryWindowQD.aroundTurn("turn-middle", limit: 0)
+        #expect(normalizedDescriptor.limit == 1)
+        #expect(normalizedDescriptor.limited(to: 4).limit == 4)
 
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)

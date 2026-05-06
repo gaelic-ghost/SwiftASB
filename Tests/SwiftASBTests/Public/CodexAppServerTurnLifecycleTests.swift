@@ -54,6 +54,12 @@ extension CodexAppServerTests {
             "Hello from SwiftASB",
             effort: .medium,
             model: "gpt-5.4",
+            permissions: .init(
+                id: ":workspace",
+                modifications: [
+                    .init(additionalWritableRoot: "/tmp/turn-fixtures"),
+                ]
+            ),
             summary: .concise
         )
 
@@ -210,6 +216,14 @@ extension CodexAppServerTests {
 
         let recordedMethods = await transport.recordedMethods
         #expect(recordedMethods == ["initialize", "initialized", "thread/start", "turn/start"])
+
+        let turnStartPayload = try #require(await transport.recordedRequestPayload(for: "turn/start"))
+        let turnStartRequest = try #require(try JSONSerialization.jsonObject(with: turnStartPayload) as? [String: Any])
+        let turnStartParams = try #require(turnStartRequest["params"] as? [String: Any])
+        let permissions = try #require(turnStartParams["permissions"] as? [String: Any])
+        #expect(permissions["id"] as? String == ":workspace")
+        let modifications = try #require(permissions["modifications"] as? [[String: Any]])
+        #expect(modifications.first?["path"] as? String == "/tmp/turn-fixtures")
 
         await client.stop()
     }
