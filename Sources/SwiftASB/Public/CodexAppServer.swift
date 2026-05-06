@@ -97,6 +97,7 @@ public actor CodexAppServer {
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
     private var diagnosticEventContinuations: [UUID: AsyncThrowingStream<CodexDiagnosticEvent, Error>.Continuation] = [:]
     private var libraryEventContinuations: [UUID: AsyncStream<LibraryEvent>.Continuation] = [:]
+    private var fsChangeContinuations: [String: [UUID: AsyncStream<CodexFS.ChangeEvent>.Continuation]] = [:]
     private var threadObservableActivityContinuations: [String: [UUID: AsyncStream<CodexThread.Dashboard.ActivityState>.Continuation]] = [:]
     private var threadCommandDeltaContinuations: [String: [UUID: AsyncStream<CommandExecutionOutputDeltaEvent>.Continuation]] = [:]
     private var threadFileDeltaContinuations: [String: [UUID: AsyncStream<FileChangeOutputDeltaEvent>.Continuation]] = [:]
@@ -188,6 +189,7 @@ public actor CodexAppServer {
         finishAllThreadEventStreams(throwing: nil)
         finishAllDiagnosticEventStreams(throwing: nil)
         finishAllLibraryEventStreams()
+        finishAllFSChangeStreams()
         finishAllThreadObservableActivityStreams()
         finishAllThreadCommandDeltaStreams()
         finishAllThreadFileDeltaStreams()
@@ -732,6 +734,80 @@ public actor CodexAppServer {
         }
     }
 
+    func readThreadGoal(threadID: String) async throws -> CodexThread.Goal? {
+        try requireInitialized(for: "thread/goal/get")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadGoalGetRequest(
+                id: requestID,
+                params: .init(threadID: threadID)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadGoalGetResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return response.goal.map(CodexThread.Goal.init(wireValue:))
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/goal/get")
+        }
+    }
+
+    func setThreadGoal(
+        threadID: String,
+        request: CodexThread.GoalSetRequest
+    ) async throws -> CodexThread.Goal {
+        try requireInitialized(for: "thread/goal/set")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadGoalSetRequest(
+                id: requestID,
+                params: .init(
+                    objective: request.objective,
+                    status: request.status?.wireValue,
+                    threadID: threadID,
+                    tokenBudget: request.tokenBudget
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadGoalSetResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response.goal)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/goal/set")
+        }
+    }
+
+    func clearThreadGoal(threadID: String) async throws -> Bool {
+        try requireInitialized(for: "thread/goal/clear")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadGoalClearRequest(
+                id: requestID,
+                params: .init(threadID: threadID)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadGoalClearResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return response.cleared
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/goal/clear")
+        }
+    }
+
     func readFSMetadata(_ request: CodexFS.MetadataRequest) async throws -> CodexFS.Metadata {
         try requireInitialized(for: "fs/getMetadata")
 
@@ -802,6 +878,232 @@ public actor CodexAppServer {
             return .init(data: data)
         } catch {
             throw CodexAppServerError.wrap(error, operation: "fs/readFile")
+        }
+    }
+
+    func watchFSChanges(_ request: CodexFS.WatchRequest) async throws -> CodexFS.Watch {
+        try requireInitialized(for: "fs/watch")
+
+        let requestID = CodexRPCRequestID.generated()
+        let watchID = request.watchID ?? UUID().uuidString
+
+        do {
+            let events = fsChangeStream(watchID: watchID)
+            let requestPayload = try protocolLayer.makeFSWatchRequest(
+                id: requestID,
+                params: .init(path: request.path, watchID: watchID)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeFSWatchResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(events: events, path: response.path, watchID: watchID)
+        } catch {
+            removeFSChangeContinuations(watchID: watchID)
+            throw CodexAppServerError.wrap(error, operation: "fs/watch")
+        }
+    }
+
+    func unwatchFSChanges(_ request: CodexFS.UnwatchRequest) async throws {
+        try requireInitialized(for: "fs/unwatch")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeFSUnwatchRequest(
+                id: requestID,
+                params: .init(watchID: request.watchID)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            _ = try protocolLayer.decodeFSUnwatchResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            removeFSChangeContinuations(watchID: request.watchID)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "fs/unwatch")
+        }
+    }
+
+    func readConfig(_ request: CodexConfig.ReadRequest) async throws -> CodexConfig.Snapshot {
+        try requireInitialized(for: "config/read")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeConfigReadRequest(
+                id: requestID,
+                params: .init(
+                    cwd: request.currentDirectoryPath,
+                    includeLayers: request.includeLayers
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeConfigReadResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return try .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "config/read")
+        }
+    }
+
+    func readConfigRequirements() async throws -> CodexConfig.RequirementsSnapshot {
+        try requireInitialized(for: "configRequirements/read")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeConfigRequirementsReadRequest(id: requestID)
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeConfigRequirementsReadResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return try .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "configRequirements/read")
+        }
+    }
+
+    func listExtensionApps(
+        _ request: CodexExtensions.AppListRequest
+    ) async throws -> CodexExtensions.AppListPage {
+        try requireInitialized(for: "app/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeAppListRequest(
+                id: requestID,
+                params: .init(
+                    cursor: request.cursor,
+                    forceRefetch: request.forceRefetch,
+                    limit: request.limit,
+                    threadID: request.threadID
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeAppListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "app/list")
+        }
+    }
+
+    func listExtensionSkills(
+        _ request: CodexExtensions.SkillListRequest
+    ) async throws -> CodexExtensions.SkillListSnapshot {
+        try requireInitialized(for: "skills/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeSkillsListRequest(
+                id: requestID,
+                params: .init(
+                    cwds: request.currentDirectoryPaths,
+                    forceReload: request.forceReload,
+                    perCwdExtraUserRoots: request.perCurrentDirectoryExtraUserRoots?.map {
+                        .init(
+                            cwd: $0.currentDirectoryPath,
+                            extraUserRoots: $0.extraUserRoots
+                        )
+                    }
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeSkillsListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "skills/list")
+        }
+    }
+
+    func listExtensionPlugins(
+        _ request: CodexExtensions.PluginListRequest
+    ) async throws -> CodexExtensions.PluginListSnapshot {
+        try requireInitialized(for: "plugin/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makePluginListRequest(
+                id: requestID,
+                params: .init(cwds: request.currentDirectoryPaths)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodePluginListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "plugin/list")
+        }
+    }
+
+    func readExtensionPlugin(
+        _ request: CodexExtensions.PluginReadRequest
+    ) async throws -> CodexExtensions.PluginDetail {
+        try requireInitialized(for: "plugin/read")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makePluginReadRequest(
+                id: requestID,
+                params: .init(
+                    marketplacePath: request.marketplacePath,
+                    pluginName: request.pluginName,
+                    remoteMarketplaceName: request.remoteMarketplaceName
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodePluginReadResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response.plugin)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "plugin/read")
+        }
+    }
+
+    func listExtensionCollaborationModes() async throws -> CodexExtensions.CollaborationModeList {
+        try requireInitialized(for: "collaborationMode/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeCollaborationModeListRequest(
+                id: requestID,
+                params: .init()
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeCollaborationModeListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "collaborationMode/list")
         }
     }
 
@@ -1116,6 +1418,22 @@ public actor CodexAppServer {
             continuation.onTermination = { _ in
                 Task {
                     await self.removeLibraryEventContinuation(streamID: streamID)
+                }
+            }
+        }
+    }
+
+    internal func fsChangeStream(watchID: String) -> AsyncStream<CodexFS.ChangeEvent> {
+        let streamID = UUID()
+
+        return AsyncStream { continuation in
+            var continuations = fsChangeContinuations[watchID] ?? [:]
+            continuations[streamID] = continuation
+            fsChangeContinuations[watchID] = continuations
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeFSChangeContinuation(streamID: streamID, watchID: watchID)
                 }
             }
         }
@@ -1981,6 +2299,7 @@ public actor CodexAppServer {
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
                 )
                 await self.finishAllLibraryEventStreams()
+                await self.finishAllFSChangeStreams()
                 await self.finishAllTurnEventStreams(
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
                 )
@@ -2065,6 +2384,33 @@ public actor CodexAppServer {
                 modelContextWindow: notification.tokenUsage.modelContextWindow
             )
             publishLibraryEvent(.threadChanged(threadID: notification.threadID))
+        case let .threadGoalUpdated(notification):
+            publishThreadEvent(
+                .goalUpdated(
+                    .init(
+                        threadID: notification.threadID,
+                        turnID: notification.turnID,
+                        goal: .init(wireValue: notification.goal)
+                    )
+                ),
+                for: notification.threadID,
+                isTerminal: false
+            )
+            publishLibraryEvent(.threadChanged(threadID: notification.threadID))
+        case let .threadGoalCleared(notification):
+            publishThreadEvent(
+                .goalCleared(.init(threadID: notification.threadID)),
+                for: notification.threadID,
+                isTerminal: false
+            )
+            publishLibraryEvent(.threadChanged(threadID: notification.threadID))
+        case let .fsChanged(notification):
+            publishFSChanged(
+                .init(
+                    watchID: notification.watchID,
+                    changedPaths: notification.changedPaths
+                )
+            )
         case let .turnStarted(notification):
             markThreadTurnActive(threadID: notification.threadID, turnID: notification.turn.id)
             let turn = TurnInfo(wireValue: notification.turn)
@@ -2267,6 +2613,7 @@ public actor CodexAppServer {
             finishAllThreadEventStreams(throwing: nil)
             finishAllDiagnosticEventStreams(throwing: nil)
             finishAllLibraryEventStreams()
+            finishAllFSChangeStreams()
             finishAllThreadObservableActivityStreams()
             finishAllThreadCommandDeltaStreams()
             finishAllThreadFileDeltaStreams()
@@ -2287,6 +2634,7 @@ public actor CodexAppServer {
             )
         )
         finishAllLibraryEventStreams()
+        finishAllFSChangeStreams()
         finishAllThreadObservableActivityStreams()
         finishAllThreadCommandDeltaStreams()
         finishAllThreadFileDeltaStreams()
@@ -2443,6 +2791,26 @@ public actor CodexAppServer {
         libraryEventContinuations.removeValue(forKey: streamID)
     }
 
+    private func removeFSChangeContinuation(streamID: UUID, watchID: String) {
+        guard var continuations = fsChangeContinuations[watchID] else { return }
+        continuations.removeValue(forKey: streamID)
+        if continuations.isEmpty {
+            fsChangeContinuations.removeValue(forKey: watchID)
+        } else {
+            fsChangeContinuations[watchID] = continuations
+        }
+    }
+
+    private func removeFSChangeContinuations(watchID: String) {
+        guard let continuations = fsChangeContinuations.removeValue(forKey: watchID)?.values else {
+            return
+        }
+
+        for continuation in continuations {
+            continuation.finish()
+        }
+    }
+
     private func registerThreadEventContinuation(
         _ continuation: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation,
         streamID: UUID,
@@ -2560,6 +2928,16 @@ public actor CodexAppServer {
         }
     }
 
+    private func publishFSChanged(_ event: CodexFS.ChangeEvent) {
+        guard let continuations = fsChangeContinuations[event.watchID], !continuations.isEmpty else {
+            return
+        }
+
+        for continuation in continuations.values {
+            continuation.yield(event)
+        }
+    }
+
     private func publishThreadObservableActivityState(threadID: String) {
         guard let continuations = threadObservableActivityContinuations[threadID], !continuations.isEmpty else {
             return
@@ -2673,6 +3051,15 @@ public actor CodexAppServer {
     private func finishAllLibraryEventStreams() {
         let activeContinuations = libraryEventContinuations.values
         libraryEventContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            continuation.finish()
+        }
+    }
+
+    private func finishAllFSChangeStreams() {
+        let activeContinuations = fsChangeContinuations.values.flatMap(\.values)
+        fsChangeContinuations.removeAll()
 
         for continuation in activeContinuations {
             continuation.finish()

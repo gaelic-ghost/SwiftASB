@@ -76,6 +76,43 @@ public struct CodexFS: Sendable {
         public let data: Data
     }
 
+    /// Request used to subscribe to app-server filesystem change notifications.
+    public struct WatchRequest: Sendable, Equatable {
+        public var path: String
+        public var watchID: String?
+
+        /// Creates a watch request for an absolute file or directory path.
+        ///
+        /// Nil `watchID` lets SwiftASB generate a connection-scoped identifier.
+        public init(path: String, watchID: String? = nil) {
+            self.path = path
+            self.watchID = watchID
+        }
+    }
+
+    /// Request used to stop a filesystem watch.
+    public struct UnwatchRequest: Sendable, Equatable {
+        public var watchID: String
+
+        /// Creates an unwatch request for an existing app-server watch id.
+        public init(watchID: String) {
+            self.watchID = watchID
+        }
+    }
+
+    /// Active filesystem watch returned by the app-server.
+    public struct Watch: Sendable {
+        public let events: AsyncStream<ChangeEvent>
+        public let path: String
+        public let watchID: String
+    }
+
+    /// Filesystem paths changed for one active watch.
+    public struct ChangeEvent: Sendable, Equatable {
+        public let watchID: String
+        public let changedPaths: [String]
+    }
+
     /// Reads app-server-owned filesystem metadata for an absolute path.
     public func readMetadata(_ request: MetadataRequest) async throws -> Metadata {
         try await appServer.readFSMetadata(request)
@@ -89,6 +126,16 @@ public struct CodexFS: Sendable {
     /// Reads file bytes through the app-server.
     public func readFile(_ request: FileReadRequest) async throws -> FileReadResult {
         try await appServer.readFSFile(request)
+    }
+
+    /// Starts filesystem watch notifications for an absolute path.
+    public func watch(_ request: WatchRequest) async throws -> Watch {
+        try await appServer.watchFSChanges(request)
+    }
+
+    /// Stops filesystem watch notifications for a prior watch.
+    public func unwatch(_ request: UnwatchRequest) async throws {
+        try await appServer.unwatchFSChanges(request)
     }
 }
 

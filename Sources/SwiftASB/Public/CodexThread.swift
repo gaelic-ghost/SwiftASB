@@ -143,6 +143,47 @@ public struct CodexThread: Sendable {
         }
     }
 
+    /// Goal state stored by the app-server for this thread.
+    public struct Goal: Sendable, Equatable {
+        /// App-server goal status.
+        public enum Status: String, Sendable, Equatable {
+            case active
+            case budgetLimited
+            case complete
+            case paused
+        }
+
+        public let createdAt: Int
+        public let objective: String
+        public let status: Status
+        public let threadID: String
+        public let timeUsedSeconds: Int
+        public let tokenBudget: Int?
+        public let tokensUsed: Int
+        public let updatedAt: Int
+    }
+
+    /// Request used to create or update a thread goal.
+    public struct GoalSetRequest: Sendable, Equatable {
+        public var objective: String?
+        public var status: Goal.Status?
+        public var tokenBudget: Int?
+
+        /// Creates a goal update request.
+        ///
+        /// Nil fields are omitted so callers can update one part of the goal
+        /// without re-sending the complete state.
+        public init(
+            objective: String? = nil,
+            status: Goal.Status? = nil,
+            tokenBudget: Int? = nil
+        ) {
+            self.objective = objective
+            self.status = status
+            self.tokenBudget = tokenBudget
+        }
+    }
+
     public let id: String
     public let info: CodexAppServer.ThreadInfo
     public let approvalPolicy: CodexAppServer.ApprovalPolicy
@@ -307,6 +348,21 @@ public struct CodexThread: Sendable {
         try await appServer.updateThreadMetadata(
             .init(threadID: id, gitInfo: gitInfo)
         )
+    }
+
+    /// Reads the current app-server goal for this thread, when one is set.
+    public func readGoal() async throws -> Goal? {
+        try await appServer.readThreadGoal(threadID: id)
+    }
+
+    /// Creates or updates this thread's app-server goal.
+    public func setGoal(_ request: GoalSetRequest) async throws -> Goal {
+        try await appServer.setThreadGoal(threadID: id, request: request)
+    }
+
+    /// Clears this thread's app-server goal.
+    public func clearGoal() async throws -> Bool {
+        try await appServer.clearThreadGoal(threadID: id)
     }
 
     /// Reads one completed turn from SwiftASB's local history store.
@@ -557,6 +613,8 @@ public enum CodexThreadEvent: Sendable, Equatable {
     case closed(CodexThreadClosed)
     case nameUpdated(CodexThreadNameUpdated)
     case tokenUsageUpdated(CodexThreadTokenUsageUpdated)
+    case goalUpdated(CodexThreadGoalUpdated)
+    case goalCleared(CodexThreadGoalCleared)
 }
 
 public struct CodexThreadStarted: Sendable, Equatable {
@@ -658,5 +716,72 @@ public struct CodexThreadTokenUsageUpdated: Sendable, Equatable {
         self.last = last
         self.modelContextWindow = modelContextWindow
         self.total = total
+    }
+}
+
+public struct CodexThreadGoalUpdated: Sendable, Equatable {
+    public let threadID: String
+    public let turnID: String?
+    public let goal: CodexThread.Goal
+
+    internal init(
+        threadID: String,
+        turnID: String?,
+        goal: CodexThread.Goal
+    ) {
+        self.threadID = threadID
+        self.turnID = turnID
+        self.goal = goal
+    }
+}
+
+public struct CodexThreadGoalCleared: Sendable, Equatable {
+    public let threadID: String
+
+    internal init(threadID: String) {
+        self.threadID = threadID
+    }
+}
+
+extension CodexThread.Goal {
+    init(wireValue: CodexWireThreadGoal) {
+        self.init(
+            createdAt: wireValue.createdAt,
+            objective: wireValue.objective,
+            status: .init(wireValue: wireValue.status),
+            threadID: wireValue.threadID,
+            timeUsedSeconds: wireValue.timeUsedSeconds,
+            tokenBudget: wireValue.tokenBudget,
+            tokensUsed: wireValue.tokensUsed,
+            updatedAt: wireValue.updatedAt
+        )
+    }
+}
+
+extension CodexThread.Goal.Status {
+    init(wireValue: CodexWireThreadGoalStatus) {
+        switch wireValue {
+        case .active:
+            self = .active
+        case .budgetLimited:
+            self = .budgetLimited
+        case .complete:
+            self = .complete
+        case .paused:
+            self = .paused
+        }
+    }
+
+    var wireValue: CodexWireThreadGoalStatus {
+        switch self {
+        case .active:
+            .active
+        case .budgetLimited:
+            .budgetLimited
+        case .complete:
+            .complete
+        case .paused:
+            .paused
+        }
     }
 }

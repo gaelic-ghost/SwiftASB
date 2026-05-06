@@ -9,9 +9,9 @@ Read filesystem facts through the Codex app-server.
 directory entries, or file bytes without reading local disk from the app
 process.
 
-The current surface is read-only. Mutation, watches, and fuzzy search are still
-separate schema families that need public API and permission decisions before
-promotion.
+The current surface supports read-only requests and app-server filesystem watch
+notifications. Mutation and fuzzy search remain separate schema families that
+need public API and permission decisions before promotion.
 
 ```swift
 let listing = try await appServer.fs.readDirectory(
@@ -26,6 +26,8 @@ let listing = try await appServer.fs.readDirectory(
 - ``readMetadata(_:)``
 - ``readDirectory(_:)``
 - ``readFile(_:)``
+- ``watch(_:)``
+- ``unwatch(_:)``
 
 ### Models
 
@@ -36,3 +38,7 @@ let listing = try await appServer.fs.readDirectory(
 - ``DirectoryEntry``
 - ``FileReadRequest``
 - ``FileReadResult``
+- ``WatchRequest``
+- ``UnwatchRequest``
+- ``Watch``
+- ``ChangeEvent``

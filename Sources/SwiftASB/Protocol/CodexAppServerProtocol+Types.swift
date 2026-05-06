@@ -15,6 +15,9 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case threadClosed(CodexWireThreadClosedNotification)
 	case threadNameUpdated(CodexWireThreadNameUpdatedNotification)
 	case threadTokenUsageUpdated(CodexWireThreadTokenUsageUpdatedNotification)
+	case threadGoalUpdated(CodexWireThreadGoalUpdatedNotification)
+	case threadGoalCleared(CodexWireThreadGoalClearedNotification)
+	case fsChanged(CodexWireFSChangedNotification)
 	case hookStarted(CodexWireHookStartedNotification)
 	case hookCompleted(CodexWireHookCompletedNotification)
 	case warning(CodexWireWarningNotification)
@@ -53,6 +56,8 @@ struct CodexProtocolModelProviderCapabilitiesReadResponse: Decodable, Equatable,
     let namespaceTools: Bool
     let webSearch: Bool
 }
+
+struct CodexProtocolCollaborationModeListParams: Encodable, Equatable, Sendable {}
 
 struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
     let gitInfo: GitInfo?

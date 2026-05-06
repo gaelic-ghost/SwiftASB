@@ -39,7 +39,11 @@ Use ``diagnosticEvents()`` to observe passive runtime diagnostics that are not c
 
 Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, MCP server surface, and configured hook diagnostics.
 
-Use ``fs`` when a client needs filesystem metadata, direct directory entries, or file bytes through the app-server. This keeps sandboxed apps dependent on Codex-owned permissions and path handling instead of requiring the Swift process to read local disk directly.
+Use ``fs`` when a client needs filesystem metadata, direct directory entries, file bytes, or file-change watches through the app-server. This keeps sandboxed apps dependent on Codex-owned permissions and path handling instead of requiring the Swift process to read local disk directly.
+
+Use ``config`` to read effective app-server configuration and requirements policy without opening local config files from the Swift process.
+
+Use ``extensions`` to read app, skill, plugin, and collaboration-mode inventory through the app-server instead of inspecting installed plugin or skill directories directly.
 
 Use ``makeLibrary(configuration:)`` when a GUI or CLI client needs an app-wide observable over stored threads. The library loads local Core Data-backed snapshots first, then reconciles unarchived app-server pages before archived pages. It publishes SwiftASB value snapshots, not Core Data objects.
 
@@ -88,6 +92,10 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``ThreadListQD``
 - ``fs``
 - ``CodexFS``
+- ``config``
+- ``CodexConfig``
+- ``extensions``
+- ``CodexExtensions``
 - ``listModels(_:)``
 - ``ModelListRequest``
 - ``ModelListPage``

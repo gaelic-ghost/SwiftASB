@@ -447,6 +447,207 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "dataBase64": Data("hello from CodexFS".utf8).base64EncodedString(),
                 ]
             )
+        case "fs/watch":
+            return responsePayload(
+                id: id,
+                result: [
+                    "path": "/tmp/project",
+                ]
+            )
+        case "fs/unwatch":
+            return responsePayload(
+                id: id,
+                result: [:]
+            )
+        case "config/read":
+            return responsePayload(
+                id: id,
+                result: [
+                    "config": [
+                        "model": "gpt-5.2",
+                        "sandbox_mode": "workspace-write",
+                    ],
+                    "layers": [
+                        [
+                            "config": [
+                                "model": "gpt-5.2",
+                            ],
+                            "name": [
+                                "type": "user",
+                                "file": "/Users/galew/.codex/config.toml",
+                            ],
+                            "version": "1",
+                        ],
+                    ],
+                    "origins": [
+                        "model": [
+                            "name": [
+                                "type": "user",
+                                "file": "/Users/galew/.codex/config.toml",
+                            ],
+                            "version": "1",
+                        ],
+                    ],
+                ]
+            )
+        case "configRequirements/read":
+            return responsePayload(
+                id: id,
+                result: [
+                    "requirements": [
+                        "featureRequirements": [
+                            "network_access": true,
+                        ],
+                    ],
+                ]
+            )
+        case "app/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "branding": [
+                                "isDiscoverableApp": true,
+                                "developer": "OpenAI",
+                            ],
+                            "id": "github",
+                            "isAccessible": true,
+                            "isEnabled": true,
+                            "name": "GitHub",
+                            "pluginDisplayNames": ["GitHub"],
+                        ],
+                    ],
+                    "nextCursor": "apps-next",
+                ]
+            )
+        case "skills/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "cwd": "/tmp/project",
+                            "errors": [],
+                            "skills": [
+                                [
+                                    "description": "Build Swift packages.",
+                                    "enabled": true,
+                                    "name": "swift-package-build-run-workflow",
+                                    "path": "/tmp/skills/swift-package-build-run-workflow/SKILL.md",
+                                    "scope": "user",
+                                    "shortDescription": "SwiftPM workflow",
+                                ],
+                            ],
+                        ],
+                    ],
+                ]
+            )
+        case "plugin/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "featuredPluginIds": ["github"],
+                    "marketplaceLoadErrors": [],
+                    "marketplaces": [
+                        [
+                            "interface": [
+                                "displayName": "Curated",
+                            ],
+                            "name": "openai-curated",
+                            "plugins": [
+                                [
+                                    "authPolicy": "ON_USE",
+                                    "enabled": true,
+                                    "id": "github",
+                                    "installed": true,
+                                    "installPolicy": "AVAILABLE",
+                                    "name": "GitHub",
+                                    "source": [
+                                        "type": "remote",
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ]
+            )
+        case "plugin/read":
+            return responsePayload(
+                id: id,
+                result: [
+                    "plugin": [
+                        "apps": [],
+                        "marketplaceName": "openai-curated",
+                        "mcpServers": [],
+                        "skills": [],
+                        "summary": [
+                            "authPolicy": "ON_USE",
+                            "enabled": true,
+                            "id": "github",
+                            "installed": true,
+                            "installPolicy": "AVAILABLE",
+                            "name": "GitHub",
+                            "source": [
+                                "type": "remote",
+                            ],
+                        ],
+                    ],
+                ]
+            )
+        case "collaborationMode/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": [
+                        [
+                            "mode": "plan",
+                            "model": "gpt-5.2",
+                            "name": "Plan",
+                            "reasoning_effort": "medium",
+                        ],
+                    ],
+                ]
+            )
+        case "thread/goal/get":
+            return responsePayload(
+                id: id,
+                result: [
+                    "goal": [
+                        "createdAt": 1_713_350_000,
+                        "objective": "Promote schemas",
+                        "status": "active",
+                        "threadId": "thread-123",
+                        "timeUsedSeconds": 12,
+                        "tokenBudget": 20_000,
+                        "tokensUsed": 400,
+                        "updatedAt": 1_713_350_010,
+                    ],
+                ]
+            )
+        case "thread/goal/set":
+            return responsePayload(
+                id: id,
+                result: [
+                    "goal": [
+                        "createdAt": 1_713_350_000,
+                        "objective": "Promote schemas",
+                        "status": "budgetLimited",
+                        "threadId": "thread-123",
+                        "timeUsedSeconds": 12,
+                        "tokenBudget": 30_000,
+                        "tokensUsed": 400,
+                        "updatedAt": 1_713_350_020,
+                    ],
+                ]
+            )
+        case "thread/goal/clear":
+            return responsePayload(
+                id: id,
+                result: [
+                    "cleared": true,
+                ]
+            )
         case "thread/read":
             return responsePayload(
                 id: id,
@@ -941,6 +1142,47 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
         serverEventContinuation?.yield(
             .notification(method: "thread/tokenUsage/updated", payload: payload)
+        )
+    }
+
+    func emitThreadGoalUpdated(threadID: String, turnID: String? = "turn-goal") {
+        let payload = payloadObject([
+            "goal": [
+                "createdAt": 1_713_350_000,
+                "objective": "Promote schemas",
+                "status": "complete",
+                "threadId": threadID,
+                "timeUsedSeconds": 20,
+                "tokensUsed": 500,
+                "updatedAt": 1_713_350_030,
+            ],
+            "threadId": threadID,
+            "turnId": turnID ?? NSNull(),
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/goal/updated", payload: payload)
+        )
+    }
+
+    func emitThreadGoalCleared(threadID: String) {
+        let payload = payloadObject([
+            "threadId": threadID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "thread/goal/cleared", payload: payload)
+        )
+    }
+
+    func emitFSChanged(watchID: String, changedPaths: [String]) {
+        let payload = payloadObject([
+            "watchId": watchID,
+            "changedPaths": changedPaths,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "fs/changed", payload: payload)
         )
     }
 

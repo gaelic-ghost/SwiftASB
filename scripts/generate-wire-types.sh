@@ -108,12 +108,38 @@ build_batch \
   ThreadTurnsListResponse \
   ThreadLoadedListParams \
   ThreadLoadedListResponse \
+  ThreadGoalGetParams \
+  ThreadGoalGetResponse \
+  ThreadGoalSetParams \
+  ThreadGoalSetResponse \
+  ThreadGoalClearParams \
+  ThreadGoalClearResponse \
+  ThreadGoalUpdatedNotification \
+  ThreadGoalClearedNotification \
   FsGetMetadataParams \
   FsGetMetadataResponse \
   FsReadDirectoryParams \
   FsReadDirectoryResponse \
   FsReadFileParams \
   FsReadFileResponse \
+  FsWatchParams \
+  FsWatchResponse \
+  FsUnwatchParams \
+  FsUnwatchResponse \
+  FsChangedNotification \
+  ConfigReadParams \
+  ConfigReadResponse \
+  ConfigRequirementsReadResponse \
+  AppsListParams \
+  AppsListResponse \
+  SkillsListParams \
+  SkillsListResponse \
+  PluginListParams \
+  PluginListResponse \
+  PluginReadParams \
+  PluginReadResponse \
+  CollaborationModeListParams \
+  CollaborationModeListResponse \
   ThreadStartedNotification \
   ThreadStatusChangedNotification \
   ThreadNameUpdatedNotification \

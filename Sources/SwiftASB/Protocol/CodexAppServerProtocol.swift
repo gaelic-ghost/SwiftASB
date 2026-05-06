@@ -15,16 +15,28 @@ struct CodexAppServerProtocol {
         case threadMetadataUpdate = "thread/metadata/update"
         case threadTurnsList = "thread/turns/list"
         case threadLoadedList = "thread/loaded/list"
+        case threadGoalGet = "thread/goal/get"
+        case threadGoalSet = "thread/goal/set"
+        case threadGoalClear = "thread/goal/clear"
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
         case fsGetMetadata = "fs/getMetadata"
         case fsReadDirectory = "fs/readDirectory"
         case fsReadFile = "fs/readFile"
+        case fsWatch = "fs/watch"
+        case fsUnwatch = "fs/unwatch"
+        case appList = "app/list"
+        case collaborationModeList = "collaborationMode/list"
+        case configRead = "config/read"
+        case configRequirementsRead = "configRequirements/read"
         case hooksList = "hooks/list"
         case modelList = "model/list"
         case modelProviderCapabilitiesRead = "modelProvider/capabilities/read"
         case mcpServerStatusList = "mcpServerStatus/list"
+        case pluginList = "plugin/list"
+        case pluginRead = "plugin/read"
+        case skillsList = "skills/list"
     }
 
     private let encoder: JSONEncoder
@@ -165,6 +177,36 @@ struct CodexAppServerProtocol {
         )
     }
 
+    func makeThreadGoalGetRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadGoalGetParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadGoalGet, params: params),
+            method: .threadGoalGet
+        )
+    }
+
+    func makeThreadGoalSetRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadGoalSetParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadGoalSet, params: params),
+            method: .threadGoalSet
+        )
+    }
+
+    func makeThreadGoalClearRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadGoalClearParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadGoalClear, params: params),
+            method: .threadGoalClear
+        )
+    }
+
     func makeFSGetMetadataRequest(
         id: CodexRPCRequestID,
         params: CodexWireFSGetMetadataParams
@@ -172,6 +214,93 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .fsGetMetadata, params: params),
             method: .fsGetMetadata
+        )
+    }
+
+    func makeFSWatchRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireFSWatchParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsWatch, params: params),
+            method: .fsWatch
+        )
+    }
+
+    func makeFSUnwatchRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireFSUnwatchParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsUnwatch, params: params),
+            method: .fsUnwatch
+        )
+    }
+
+    func makeConfigReadRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireConfigReadParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .configRead, params: params),
+            method: .configRead
+        )
+    }
+
+    func makeConfigRequirementsReadRequest(id: CodexRPCRequestID) throws -> Data {
+        try encodeRequestWithoutParams(
+            JSONRPCRequestEnvelopeWithoutParams(id: id, method: .configRequirementsRead),
+            method: .configRequirementsRead
+        )
+    }
+
+    func makeAppListRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireAppsListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .appList, params: params),
+            method: .appList
+        )
+    }
+
+    func makeSkillsListRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireSkillsListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .skillsList, params: params),
+            method: .skillsList
+        )
+    }
+
+    func makePluginListRequest(
+        id: CodexRPCRequestID,
+        params: CodexWirePluginListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .pluginList, params: params),
+            method: .pluginList
+        )
+    }
+
+    func makePluginReadRequest(
+        id: CodexRPCRequestID,
+        params: CodexWirePluginReadParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .pluginRead, params: params),
+            method: .pluginRead
+        )
+    }
+
+    func makeCollaborationModeListRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolCollaborationModeListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .collaborationModeList, params: params),
+            method: .collaborationModeList
         )
     }
 
@@ -435,6 +564,42 @@ struct CodexAppServerProtocol {
         )
     }
 
+    func decodeThreadGoalGetResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadGoalGetResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadGoalGet,
+            resultType: CodexWireThreadGoalGetResponse.self
+        )
+    }
+
+    func decodeThreadGoalSetResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadGoalSetResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadGoalSet,
+            resultType: CodexWireThreadGoalSetResponse.self
+        )
+    }
+
+    func decodeThreadGoalClearResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadGoalClearResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadGoalClear,
+            resultType: CodexWireThreadGoalClearResponse.self
+        )
+    }
+
     func decodeFSGetMetadataResponse(
         _ responsePayload: Data,
         expectedID: CodexRPCRequestID
@@ -444,6 +609,114 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .fsGetMetadata,
             resultType: CodexWireFSGetMetadataResponse.self
+        )
+    }
+
+    func decodeFSWatchResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireFSWatchResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsWatch,
+            resultType: CodexWireFSWatchResponse.self
+        )
+    }
+
+    func decodeFSUnwatchResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> [String: CodexWireJSONValue] {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsUnwatch,
+            resultType: [String: CodexWireJSONValue].self
+        )
+    }
+
+    func decodeConfigReadResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireConfigReadResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .configRead,
+            resultType: CodexWireConfigReadResponse.self
+        )
+    }
+
+    func decodeConfigRequirementsReadResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireConfigRequirementsReadResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .configRequirementsRead,
+            resultType: CodexWireConfigRequirementsReadResponse.self
+        )
+    }
+
+    func decodeAppListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireAppsListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .appList,
+            resultType: CodexWireAppsListResponse.self
+        )
+    }
+
+    func decodeSkillsListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireSkillsListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .skillsList,
+            resultType: CodexWireSkillsListResponse.self
+        )
+    }
+
+    func decodePluginListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWirePluginListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .pluginList,
+            resultType: CodexWirePluginListResponse.self
+        )
+    }
+
+    func decodePluginReadResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWirePluginReadResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .pluginRead,
+            resultType: CodexWirePluginReadResponse.self
+        )
+    }
+
+    func decodeCollaborationModeListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireCollaborationModeListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .collaborationModeList,
+            resultType: CodexWireCollaborationModeListResponse.self
         )
     }
 
@@ -654,6 +927,30 @@ struct CodexAppServerProtocol {
                         resultType: CodexWireThreadTokenUsageUpdatedNotification.self
                     )
                 )
+            case "thread/goal/updated":
+                return .threadGoalUpdated(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireThreadGoalUpdatedNotification.self
+                    )
+                )
+            case "thread/goal/cleared":
+                return .threadGoalCleared(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireThreadGoalClearedNotification.self
+                    )
+                )
+            case "fs/changed":
+                return .fsChanged(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireFSChangedNotification.self
+                    )
+                )
             case "hook/started":
                 return .hookStarted(
                     try decodeNotification(
@@ -834,6 +1131,20 @@ struct CodexAppServerProtocol {
         }
     }
 
+    private func encodeRequestWithoutParams(
+        _ request: JSONRPCRequestEnvelopeWithoutParams,
+        method: Method
+    ) throws -> Data {
+        do {
+            return try encoder.encode(request)
+        } catch {
+            throw CodexProtocolError.requestEncodingFailed(
+                method: method.rawValue,
+                reason: String(describing: error)
+            )
+        }
+    }
+
     private func encodeNotification(
         _ notification: JSONRPCNotificationEnvelope,
         method: Method
@@ -1001,6 +1312,11 @@ private struct JSONRPCRequestEnvelope<Params: Encodable>: Encodable {
     let id: CodexRPCRequestID
     let method: CodexAppServerProtocol.Method
     let params: Params
+}
+
+private struct JSONRPCRequestEnvelopeWithoutParams: Encodable {
+    let id: CodexRPCRequestID
+    let method: CodexAppServerProtocol.Method
 }
 
 private struct JSONRPCNotificationEnvelope: Encodable {

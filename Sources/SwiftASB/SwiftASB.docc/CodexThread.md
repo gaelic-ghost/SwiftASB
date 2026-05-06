@@ -25,6 +25,8 @@ Use ``setName(_:)`` for a human-readable title, ``updateMetadata(gitInfo:)`` for
 
 Rollback returns a refreshed thread handle. SwiftASB records a local rollback marker and trims visible local history to match the app-server response. It does not preserve the full removed-turn payload archive yet.
 
+Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` for the app-server goal attached to this thread.
+
 ## History Access
 
 Use the non-UI history helpers when a caller needs completed turn snapshots without binding to an observable:
@@ -76,6 +78,11 @@ Recent observable startup can begin as an empty local-only view when the live ap
 - ``rollbackLastTurns(_:)``
 - ``setName(_:)``
 - ``updateMetadata(gitInfo:)``
+- ``readGoal()``
+- ``setGoal(_:)``
+- ``clearGoal()``
+- ``Goal``
+- ``GoalSetRequest``
 
 ### Local History
 

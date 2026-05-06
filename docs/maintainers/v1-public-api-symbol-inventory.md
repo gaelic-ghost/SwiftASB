@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the first public query descriptor and app-server filesystem slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, and thread-goal slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1349
-- Public/open types: 202
-- Public/open initializers: 88
-- Public/open methods and type methods: 97
-- Public/open enum cases: 270
-- Public/open properties: 692
+- Public/open symbols: 1605
+- Public/open types: 248
+- Public/open initializers: 104
+- Public/open methods and type methods: 109
+- Public/open enum cases: 297
+- Public/open properties: 847
 
 ## Public Types
 
@@ -691,25 +691,37 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexTurnPlanUpdate.Step.Status.inProgress` - `case inProgress` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnPlanUpdate.Step.Status.pending` - `case pending` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 
+## Post-v1 Schema Namespace Additions
+
+The 2026-05-06 app-server schema promotion added several hand-owned public namespaces over newly promoted generated wire types. These are intentionally grouped by app-server responsibility instead of exposing the generated wire layer directly.
+
+- `CodexFS` now includes read-only filesystem watches: `WatchRequest`, `UnwatchRequest`, `Watch`, `ChangeEvent`, `watch(_:)`, and `unwatch(_:)`.
+- `CodexConfig` owns effective config reads: `ReadRequest`, `Snapshot`, `Layer`, `LayerMetadata`, `LayerSource`, `LayerSource.Kind`, `RequirementsSnapshot`, `read(_:)`, and `readRequirements()`.
+- `CodexAppServer.CodexExtensions` owns app-server extension inventory: `AppListRequest`, `AppListPage`, `AppInfo`, `SkillListRequest`, `SkillListSnapshot`, `PluginListRequest`, `PluginListSnapshot`, `PluginReadRequest`, `PluginDetail`, `CollaborationModeList`, `listApps(_:)`, `listSkills(_:)`, `listPlugins(_:)`, `readPlugin(_:)`, and `listCollaborationModes()`.
+- `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
+- `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
+
 ## Public Property Counts By Source File
 
 - `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 19 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+CodexExtensions.swift`: 113 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 10 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Hooks.swift`: 32 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 53 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 54 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+LoadedThreads.swift`: 4 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 34 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 23 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 90 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift`: 12 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift`: 23 public properties
+- `Sources/SwiftASB/Public/CodexConfig.swift`: 18 public properties
 - `Sources/SwiftASB/Public/CodexDiagnostics.swift`: 14 public properties
 - `Sources/SwiftASB/Public/CodexErrors.swift`: 1 public properties
-- `Sources/SwiftASB/Public/CodexFS.swift`: 18 public properties
+- `Sources/SwiftASB/Public/CodexFS.swift`: 22 public properties
 - `Sources/SwiftASB/Public/CodexInteractiveRequests.swift`: 74 public properties
-- `Sources/SwiftASB/Public/CodexThread+Dashboard.swift`: 28 public properties
+- `Sources/SwiftASB/Public/CodexThread+Dashboard.swift`: 29 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift`: 54 public properties
-- `Sources/SwiftASB/Public/CodexThread.swift`: 48 public properties
+- `Sources/SwiftASB/Public/CodexThread.swift`: 63 public properties
 - `Sources/SwiftASB/Public/CodexTurnHandle.swift`: 108 public properties

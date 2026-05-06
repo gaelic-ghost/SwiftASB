@@ -155,6 +155,22 @@ struct CodexAppServerProtocolTests {
         let fileRequest = try #require(try JSONSerialization.jsonObject(with: filePayload) as? [String: Any])
         #expect(fileRequest["method"] as? String == "fs/readFile")
         #expect((fileRequest["params"] as? [String: Any])?["path"] as? String == "/tmp/project/README.md")
+
+        let watchPayload = try protocolLayer.makeFSWatchRequest(
+            id: .string("watch-1"),
+            params: .init(path: "/tmp/project", watchID: "watch-123")
+        )
+        let watchRequest = try #require(try JSONSerialization.jsonObject(with: watchPayload) as? [String: Any])
+        #expect(watchRequest["method"] as? String == "fs/watch")
+        #expect((watchRequest["params"] as? [String: Any])?["watchId"] as? String == "watch-123")
+
+        let unwatchPayload = try protocolLayer.makeFSUnwatchRequest(
+            id: .string("unwatch-1"),
+            params: .init(watchID: "watch-123")
+        )
+        let unwatchRequest = try #require(try JSONSerialization.jsonObject(with: unwatchPayload) as? [String: Any])
+        #expect(unwatchRequest["method"] as? String == "fs/unwatch")
+        #expect((unwatchRequest["params"] as? [String: Any])?["watchId"] as? String == "watch-123")
     }
 
     @Test("encodes loaded-thread list requests")
@@ -169,6 +185,38 @@ struct CodexAppServerProtocolTests {
         let params = try #require(request["params"] as? [String: Any])
         #expect(params["cursor"] as? String == "cursor-loaded")
         #expect(params["limit"] as? Int == 3)
+    }
+
+    @Test("encodes thread goal requests")
+    func encodesThreadGoalRequests() throws {
+        let getPayload = try protocolLayer.makeThreadGoalGetRequest(
+            id: .string("goal-get-1"),
+            params: .init(threadID: "thread-123")
+        )
+        let getRequest = try #require(try JSONSerialization.jsonObject(with: getPayload) as? [String: Any])
+        #expect(getRequest["method"] as? String == "thread/goal/get")
+        #expect((getRequest["params"] as? [String: Any])?["threadId"] as? String == "thread-123")
+
+        let setPayload = try protocolLayer.makeThreadGoalSetRequest(
+            id: .string("goal-set-1"),
+            params: .init(
+                objective: "Ship schema promotion",
+                status: .active,
+                threadID: "thread-123",
+                tokenBudget: 20_000
+            )
+        )
+        let setRequest = try #require(try JSONSerialization.jsonObject(with: setPayload) as? [String: Any])
+        #expect(setRequest["method"] as? String == "thread/goal/set")
+        #expect((setRequest["params"] as? [String: Any])?["status"] as? String == "active")
+
+        let clearPayload = try protocolLayer.makeThreadGoalClearRequest(
+            id: .string("goal-clear-1"),
+            params: .init(threadID: "thread-123")
+        )
+        let clearRequest = try #require(try JSONSerialization.jsonObject(with: clearPayload) as? [String: Any])
+        #expect(clearRequest["method"] as? String == "thread/goal/clear")
+        #expect((clearRequest["params"] as? [String: Any])?["threadId"] as? String == "thread-123")
     }
 
     @Test("encodes thread/read requests with the expected method and params payload")
@@ -447,6 +495,61 @@ struct CodexAppServerProtocolTests {
 
         let params = try #require(object["params"] as? [String: Any])
         #expect(params["cwds"] as? [String] == ["/tmp/project", "/tmp/second-project"])
+    }
+
+    @Test("encodes config and extension inventory requests")
+    func encodesConfigAndExtensionInventoryRequests() throws {
+        let configPayload = try protocolLayer.makeConfigReadRequest(
+            id: .string("config-read-1"),
+            params: .init(cwd: "/tmp/project", includeLayers: true)
+        )
+        let configRequest = try #require(try JSONSerialization.jsonObject(with: configPayload) as? [String: Any])
+        #expect(configRequest["method"] as? String == "config/read")
+        #expect((configRequest["params"] as? [String: Any])?["cwd"] as? String == "/tmp/project")
+
+        let requirementsPayload = try protocolLayer.makeConfigRequirementsReadRequest(id: .string("requirements-read-1"))
+        let requirementsRequest = try #require(try JSONSerialization.jsonObject(with: requirementsPayload) as? [String: Any])
+        #expect(requirementsRequest["method"] as? String == "configRequirements/read")
+        #expect(requirementsRequest["params"] == nil)
+
+        let appPayload = try protocolLayer.makeAppListRequest(
+            id: .string("app-list-1"),
+            params: .init(cursor: "cursor", forceRefetch: true, limit: 2, threadID: "thread-123")
+        )
+        let appRequest = try #require(try JSONSerialization.jsonObject(with: appPayload) as? [String: Any])
+        #expect(appRequest["method"] as? String == "app/list")
+        #expect((appRequest["params"] as? [String: Any])?["threadId"] as? String == "thread-123")
+
+        let skillsPayload = try protocolLayer.makeSkillsListRequest(
+            id: .string("skills-list-1"),
+            params: .init(cwds: ["/tmp/project"], forceReload: true, perCwdExtraUserRoots: nil)
+        )
+        let skillsRequest = try #require(try JSONSerialization.jsonObject(with: skillsPayload) as? [String: Any])
+        #expect(skillsRequest["method"] as? String == "skills/list")
+        #expect((skillsRequest["params"] as? [String: Any])?["cwds"] as? [String] == ["/tmp/project"])
+
+        let pluginPayload = try protocolLayer.makePluginListRequest(
+            id: .string("plugin-list-1"),
+            params: .init(cwds: ["/tmp/project"])
+        )
+        let pluginRequest = try #require(try JSONSerialization.jsonObject(with: pluginPayload) as? [String: Any])
+        #expect(pluginRequest["method"] as? String == "plugin/list")
+
+        let pluginReadPayload = try protocolLayer.makePluginReadRequest(
+            id: .string("plugin-read-1"),
+            params: .init(marketplacePath: nil, pluginName: "GitHub", remoteMarketplaceName: "openai-curated")
+        )
+        let pluginReadRequest = try #require(try JSONSerialization.jsonObject(with: pluginReadPayload) as? [String: Any])
+        #expect(pluginReadRequest["method"] as? String == "plugin/read")
+        #expect((pluginReadRequest["params"] as? [String: Any])?["pluginName"] as? String == "GitHub")
+
+        let collaborationPayload = try protocolLayer.makeCollaborationModeListRequest(
+            id: .string("collaboration-list-1"),
+            params: .init()
+        )
+        let collaborationRequest = try #require(try JSONSerialization.jsonObject(with: collaborationPayload) as? [String: Any])
+        #expect(collaborationRequest["method"] as? String == "collaborationMode/list")
+        #expect(collaborationRequest["params"] as? [String: Any] != nil)
     }
 
     @Test("encodes turn/start requests with the expected method and params payload")
