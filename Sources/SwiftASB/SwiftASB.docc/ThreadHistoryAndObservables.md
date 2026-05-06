@@ -6,10 +6,25 @@ Read completed local history and observe current thread activity without replayi
 
 SwiftASB stores thread and turn history locally as it observes live turns and as it reads stored history from the app-server. Public callers can use that store through thread-scoped helpers and observable companions.
 
-There are two public shapes:
+There are three public shapes:
 
+- ``CodexAppServer/Library`` publishes app-wide stored-thread lists for launchers, sidebars, and project browsers.
 - `HistoryWindow` helpers return sealed completed-turn snapshots for non-UI callers and inspectors.
 - Observable companions stay attached to live streams and update UI-facing state over time.
+
+## App-Wide Library
+
+Use ``CodexAppServer/makeLibrary(configuration:)`` when a client needs stored-thread lists before choosing a thread. The library publishes unarchived threads, archived threads, and grouped unarchived threads. It reads local snapshots first so UI can show a sidebar quickly, then reconciles app-server `thread/list` pages in the background.
+
+`Library.SortedBy` and `Library.GroupedBy` are UI-facing policies. `Library.GroupedBy.cwd` is the current project-style grouping surface while repository-root detection remains a later design decision. `CodexAppServer.ThreadListQD` is the package-owned query descriptor for repeatable thread-list intent.
+
+Use ``CodexAppServer/Library/refreshAll()``, ``CodexAppServer/Library/refreshUnarchived()``, and ``CodexAppServer/Library/refreshArchived()`` for explicit reconciliation actions. The library also reloads local value snapshots after app-wide thread and turn events, including archive, unarchive, name changes, status changes, and completed turns.
+
+Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/selectThread(_:)-(String?)`` for caller-owned selection. Selection is library-local state, so apps can keep one library per window or scene without changing the app-server's stored thread metadata. ``CodexAppServer/Library/SortedBy/selectedNewestFirst`` promotes recently selected threads before falling back to newest updated threads.
+
+`cwd` is the session working directory that app-server stores on `ThreadInfo` and matches exactly through `thread/list` cwd filters. SwiftASB treats it as app-server-owned thread metadata; repository-root grouping remains a future derived surface rather than an alias for `cwd`.
+
+The library can also publish app-wide read snapshots through ``CodexAppServer/Library/refreshAppSnapshots()``. Those snapshots reuse ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listMcpServerStatuses(_:)``, and ``CodexAppServer/listHooks(_:)`` so model feature gates, MCP surfaces, and hook diagnostics are observable next to the stored-thread lists without becoming Core Data state.
 
 ## Local History Windows
 
@@ -74,6 +89,7 @@ These companions are not alternate event logs. `Dashboard` starts from the curre
 
 ### Observable Companions
 
+- ``CodexAppServer/Library``
 - ``CodexThread/Dashboard``
 - ``CodexThread/RecentTurns``
 - ``CodexThread/RecentFiles``

@@ -911,3 +911,131 @@ But keep its persistence policy narrow:
 - add Core Data persistent history tracking only if the real multi-context or
   reconciliation behavior proves that it is needed
 - adopt SearchKit later as the derived search layer on top of Core Data
+
+## App-Wide Library Hydration Plan
+
+This section records the first `CodexAppServer.Library` direction.
+
+The library is the app-wide observable companion for GUI and CLI consumers that
+need thread lists before they choose a thread. It should stay value-snapshot
+based and should not expose Core Data managed objects, SwiftData models, raw
+`FetchRequest`, or SwiftData `Query` values.
+
+### First public shape
+
+- `CodexAppServer.makeLibrary(configuration:)`
+- `CodexAppServer.Library`
+- `CodexAppServer.Library.SortedBy`
+- `CodexAppServer.Library.GroupedBy`
+- `CodexAppServer.ThreadListQD`
+
+`ThreadListQD` means "thread list query descriptor." It is the SwiftASB-owned
+description of caller intent: archive scope, current-directory filter, search
+term, page size, and sort preference. The package can compile that descriptor
+into local Core Data reads, app-server `thread/list` requests, or observable
+refresh behavior without making the persistence store part of the public API.
+
+### Startup behavior
+
+`makeLibrary()` should be opt-in. Do not make ordinary `CodexAppServer.start()`
+pay the cost of app-wide thread list hydration.
+
+When a library is created:
+
+- read the local Core Data thread snapshot first
+- publish unarchived and archived arrays immediately when local data exists
+- group threads according to `Library.GroupedBy`
+- keep selected-thread state local to the library
+- expose refresh actions for all, unarchived-only, and archived-only scopes
+- publish app-wide model, MCP, and hook diagnostics snapshots through a
+  separate snapshot refresh action
+- reconcile app-server data in the background
+- page unarchived threads before archived threads
+- ask app-server for most-recent threads first by using `updatedAt`
+  descending sort when the selected sort can be represented by app-server
+- process small page batches and yield between archive scopes so live turn
+  handling has priority
+- avoid assuming app-server cannot run concurrent sessions; only throttle harder
+  if the runtime reports backpressure or the package observes meaningful local
+  performance cost
+
+### Reconciliation policy
+
+Each app-server `thread/list` page should continue to flow through
+`ThreadHistoryStore.reconcileThreadListPage(...)`. That keeps Core Data and the
+published library snapshots aligned through the same metadata path used by
+manual `listThreads(...)` calls.
+
+The library should refresh its public arrays from local Core Data after each
+successful archive-scope reconciliation. This keeps the observable sourced from
+the same local value snapshots that future query descriptors will use, while
+still allowing app-server to correct stale local metadata.
+
+### Event-driven updates
+
+`Library` listens to an internal app-wide event stream from `CodexAppServer`.
+The stream is emitted after the app-server event handler has already recorded
+the matching Core Data change, so the observable can reload local value
+snapshots without re-paging app-server on every notification.
+
+The first event-driven refresh triggers are:
+
+- thread start, resume, fork, rollback, metadata, and name changes initiated
+  through SwiftASB public methods
+- app-server `thread/started`, `thread/status/changed`, `thread/archived`,
+  `thread/unarchived`, `thread/closed`, `thread/name/updated`, and
+  `thread/tokenUsage/updated` notifications
+- `turn/started` and `turn/completed` notifications, so UI sorting can react to
+  active work and most-recently-finished-turn ordering
+
+The app-wide stream is intentionally internal. Public consumers observe the
+library's value snapshots and phase/error fields rather than replaying app-wide
+transport events themselves.
+
+### Selection policy
+
+Selection belongs to `Library`, not Core Data and not app-server metadata.
+Consumers can bind a sidebar or launcher to `selectedThreadID`, call
+`selectThread(...)`, and sort by `selectedNewestFirst`.
+
+The selection clock is intentionally library-local. That matches ordinary app
+window or scene state: a single-window client can retain one library, while a
+multi-window client can keep separate library instances when windows need
+independent selection.
+
+Selection changes must not call app-server and must not write to the thread
+history store. They are UI state over the existing thread value snapshots.
+
+### App snapshot policy
+
+`Library` can publish app-wide read snapshots for UI that needs connection
+state next to stored threads:
+
+- model capabilities from `CodexAppServer.readModelCapabilities()`
+- MCP server status from `CodexAppServer.listMcpServerStatuses(...)`
+- hook diagnostics from `CodexAppServer.listHooks(...)`
+
+These snapshots are read-through app-server state. They do not go through Core
+Data, and they are not reconciled with thread history. The library owns a
+separate snapshot phase, timestamp, and error field so thread-list
+reconciliation and app-wide capability reads can fail or refresh independently.
+
+Hook diagnostics are cwd-sensitive. Unless a library configuration provides
+explicit hook current-directory paths, the library derives hook `cwds` from its
+stored thread snapshots. That keeps launcher and sidebar diagnostics aligned
+with the projects the library is already showing.
+
+### CWD policy
+
+SwiftASB treats `cwd` as the stored thread project directory for now. The
+current app-server wire shape exposes `cwd` as required `ThreadInfo` metadata,
+and `thread/metadata/update` only patches Git metadata. There is no stored
+thread `cwd` mutation endpoint in the generated v2 snapshot, so `GroupedBy.cwd`
+is the honest grouping surface until repository-root detection is designed.
+
+### Follow-on work
+
+- Add project-root detection when SwiftASB has a deliberate repo-root model.
+  Until then, `GroupedBy.cwd` is the only project-style grouping case.
+- Expand `ThreadListQD` into the shared descriptor used by library snapshots,
+  non-UI list reads, and later search-hit hydration.

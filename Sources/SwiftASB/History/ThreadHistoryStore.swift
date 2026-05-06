@@ -97,6 +97,7 @@ actor ThreadHistoryStore {
         let ephemeral: Bool
         let forkedFromThreadID: String?
         let forkedFromTurnID: String?
+        let gitBranch: String?
         let isArchived: Bool
         let isClosed: Bool
         let modelProvider: String
@@ -142,6 +143,25 @@ actor ThreadHistoryStore {
     struct HydratedTurn: Sendable {
         let turn: CodexAppServer.TurnInfo
         let items: [CodexTurnItem]
+    }
+
+    struct ThreadListSnapshot: Sendable, Equatable {
+        let id: String
+        let cliVersion: String
+        let createdAt: Int
+        let currentDirectoryPath: String
+        let ephemeral: Bool
+        let forkedFromThreadID: String?
+        let gitBranch: String?
+        let isArchived: Bool
+        let isClosed: Bool
+        let lastCompletedTurnAt: Int?
+        let modelProvider: String
+        let name: String?
+        let preview: String
+        let statusFlags: [String]
+        let statusType: String
+        let updatedAt: Int
     }
 
     private struct HydrationMergeOutcome: Sendable {
@@ -588,6 +608,7 @@ actor ThreadHistoryStore {
                 ephemeral: thread.ephemeral,
                 forkedFromThreadID: thread.forkedFromThreadID,
                 forkedFromTurnID: thread.forkedFromTurnID,
+                gitBranch: thread.gitBranch,
                 isArchived: thread.isArchived,
                 isClosed: thread.isClosed,
                 modelProvider: thread.modelProvider,
@@ -600,6 +621,15 @@ actor ThreadHistoryStore {
                 turns: turns,
                 updatedAt: Int(thread.updatedAt)
             )
+        }
+    }
+
+    func threadListSnapshots() throws -> [ThreadListSnapshot] {
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            let request = HistoryThread.fetchRequest()
+            let threads = try context.fetch(request)
+            return try threads.map(Self.makeThreadListSnapshot)
         }
     }
 
@@ -865,6 +895,7 @@ actor ThreadHistoryStore {
         thread.currentDirectoryPath = info.currentDirectoryPath
         thread.ephemeral = info.ephemeral
         thread.forkedFromThreadID = info.forkedFromThreadID
+        thread.gitBranch = info.gitInfo?.branch
         thread.modelProvider = info.modelProvider
         thread.name = info.name
         thread.preview = info.preview
@@ -1018,6 +1049,40 @@ actor ThreadHistoryStore {
             status: turn.status,
             tokenUsage: tokenUsage
         )
+    }
+
+    private static func makeThreadListSnapshot(
+        _ thread: HistoryThread
+    ) throws -> ThreadListSnapshot {
+        .init(
+            id: thread.id,
+            cliVersion: thread.cliVersion,
+            createdAt: Int(thread.createdAt),
+            currentDirectoryPath: thread.currentDirectoryPath,
+            ephemeral: thread.ephemeral,
+            forkedFromThreadID: thread.forkedFromThreadID,
+            gitBranch: thread.gitBranch,
+            isArchived: thread.isArchived,
+            isClosed: thread.isClosed,
+            lastCompletedTurnAt: Self.lastCompletedTurnAt(for: thread),
+            modelProvider: thread.modelProvider,
+            name: thread.name,
+            preview: thread.preview,
+            statusFlags: try decode([String].self, from: thread.statusFlagsData) ?? [],
+            statusType: thread.statusType,
+            updatedAt: Int(thread.updatedAt)
+        )
+    }
+
+    private static func lastCompletedTurnAt(for thread: HistoryThread) -> Int? {
+        guard let turns = thread.turns as? Set<HistoryTurn> else {
+            return nil
+        }
+
+        return turns
+            .filter { $0.status == CodexAppServer.TurnStatus.completed.rawValue }
+            .map { Int($0.completedAt) }
+            .max()
     }
 
     private static func applyThreadDefaults(
@@ -1384,6 +1449,7 @@ actor ThreadHistoryStore {
             attribute("ephemeral", .booleanAttributeType, isOptional: false),
             attribute("forkedFromThreadID", .stringAttributeType, isOptional: true),
             attribute("forkedFromTurnID", .stringAttributeType, isOptional: true),
+            attribute("gitBranch", .stringAttributeType, isOptional: true),
             attribute("modelProvider", .stringAttributeType, isOptional: false),
             attribute("name", .stringAttributeType, isOptional: true),
             attribute("preview", .stringAttributeType, isOptional: false),
@@ -1612,6 +1678,7 @@ final class HistoryThread: NSManagedObject {
     @NSManaged var ephemeral: Bool
     @NSManaged var forkedFromThreadID: String?
     @NSManaged var forkedFromTurnID: String?
+    @NSManaged var gitBranch: String?
     @NSManaged var id: String
     @NSManaged var isArchived: Bool
     @NSManaged var isClosed: Bool
