@@ -415,16 +415,67 @@ extension CodexAppServerTests {
                 sortedBy: .nameAscending
             )
             .sorted(by: .createdNewestFirst)
+            .filteringModelProviders(["openai"])
             .limited(to: 10)
 
         #expect(projectQuery.archived == false)
         #expect(projectQuery.currentDirectoryPath == "/tmp/project-a")
         #expect(projectQuery.limit == 10)
+        #expect(projectQuery.modelProviders == ["openai"])
         #expect(projectQuery.sortedBy == .createdNewestFirst)
 
-        let archivedSearch = CodexAppServer.ThreadListQD.search("release", archived: true)
+        let archivedSearch = CodexAppServer.ThreadListQD
+            .search(" release ", archived: true)
+            .filteringCurrentDirectoryPath("/tmp/releases")
         #expect(archivedSearch.archived == true)
         #expect(archivedSearch.searchTerm == "release")
+        #expect(archivedSearch.currentDirectoryPath == "/tmp/releases")
+
+        let normalized = archivedSearch.limited(to: 0).searching("   ")
+        #expect(normalized.limit == 1)
+        #expect(normalized.searchTerm == nil)
+    }
+
+    @Test("thread list query descriptors compile into app-server requests")
+    func threadListQueryDescriptorsCompileIntoAppServerRequests() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        _ = try await client.listThreads(
+            .cwd(
+                "/tmp/project-a",
+                archived: false,
+                limit: 25,
+                sortedBy: .createdOldestFirst
+            )
+            .filteringModelProviders(["openai"])
+            .searching("planning"),
+            cursor: "cursor-1"
+        )
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/list"))
+        let request = try decodedJSONObject(from: requestPayload)
+        #expect(value(at: ["params", "archived"], in: request) as? Bool == false)
+        #expect(value(at: ["params", "cursor"], in: request) as? String == "cursor-1")
+        #expect(value(at: ["params", "cwd"], in: request) as? String == "/tmp/project-a")
+        #expect(value(at: ["params", "limit"], in: request) as? Int == 25)
+        #expect(value(at: ["params", "modelProviders"], in: request) as? [String] == ["openai"])
+        #expect(value(at: ["params", "searchTerm"], in: request) as? String == "planning")
+        #expect(value(at: ["params", "sortKey"], in: request) as? String == "created_at")
+        #expect(value(at: ["params", "sortDirection"], in: request) as? String == "asc")
+
+        await client.stop()
     }
 }
 

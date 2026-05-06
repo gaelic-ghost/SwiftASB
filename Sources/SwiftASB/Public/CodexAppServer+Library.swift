@@ -19,27 +19,43 @@ extension CodexAppServer {
 }
 
 public extension CodexAppServer {
+    /// Repeatable thread-list query intent for app-wide libraries and stored-thread reads.
+    ///
+    /// `ThreadListQD` is a SwiftASB-owned descriptor. It lets callers describe
+    /// the list they want in package terms, then SwiftASB can apply the same
+    /// intent to local history snapshots, app-server `thread/list` pages, or
+    /// observable library loading without exposing Core Data fetch requests or
+    /// generated wire values.
     struct ThreadListQD: Sendable, Equatable {
         public var archived: Bool?
         public var currentDirectoryPath: String?
         public var limit: Int
+        public var modelProviders: [String]?
         public var searchTerm: String?
         public var sortedBy: Library.SortedBy
 
+        /// Creates a thread-list query descriptor.
+        ///
+        /// `limit` is normalized to at least `1`. Nil filters are left
+        /// unspecified so app-server reads can use Codex defaults and local
+        /// library reads can preserve all matching snapshots.
         public init(
             archived: Bool? = nil,
             currentDirectoryPath: String? = nil,
             limit: Int = 50,
+            modelProviders: [String]? = nil,
             searchTerm: String? = nil,
             sortedBy: Library.SortedBy = .updatedNewestFirst
         ) {
             self.archived = archived
             self.currentDirectoryPath = currentDirectoryPath
             self.limit = max(1, limit)
-            self.searchTerm = searchTerm
+            self.modelProviders = modelProviders
+            self.searchTerm = Self.normalizedSearchTerm(searchTerm)
             self.sortedBy = sortedBy
         }
 
+        /// All locally known or remotely listed threads that match the sort policy.
         public static func all(
             limit: Int = 50,
             sortedBy: Library.SortedBy = .updatedNewestFirst
@@ -47,6 +63,7 @@ public extension CodexAppServer {
             .init(limit: limit, sortedBy: sortedBy)
         }
 
+        /// Unarchived threads only.
         public static func unarchived(
             limit: Int = 50,
             sortedBy: Library.SortedBy = .updatedNewestFirst
@@ -54,6 +71,7 @@ public extension CodexAppServer {
             .init(archived: false, limit: limit, sortedBy: sortedBy)
         }
 
+        /// Archived threads only.
         public static func archived(
             limit: Int = 50,
             sortedBy: Library.SortedBy = .updatedNewestFirst
@@ -61,6 +79,9 @@ public extension CodexAppServer {
             .init(archived: true, limit: limit, sortedBy: sortedBy)
         }
 
+        /// Threads whose app-server current working directory exactly matches `currentDirectoryPath`.
+        ///
+        /// This is an app-server `cwd` match, not repository-root derivation.
         public static func cwd(
             _ currentDirectoryPath: String,
             archived: Bool? = nil,
@@ -71,10 +92,13 @@ public extension CodexAppServer {
                 archived: archived,
                 currentDirectoryPath: currentDirectoryPath,
                 limit: limit,
+                modelProviders: nil,
+                searchTerm: nil,
                 sortedBy: sortedBy
             )
         }
 
+        /// Threads matching a search term across the app-server/local list fields SwiftASB knows how to search.
         public static func search(
             _ searchTerm: String,
             archived: Bool? = nil,
@@ -89,23 +113,93 @@ public extension CodexAppServer {
             )
         }
 
+        /// Returns the same query with a normalized page or local result limit.
         public func limited(to limit: Int) -> Self {
             .init(
                 archived: archived,
                 currentDirectoryPath: currentDirectoryPath,
                 limit: limit,
+                modelProviders: modelProviders,
                 searchTerm: searchTerm,
                 sortedBy: sortedBy
             )
         }
 
+        /// Returns the same query with a different SwiftASB-visible sort policy.
         public func sorted(by sortedBy: Library.SortedBy) -> Self {
             .init(
                 archived: archived,
                 currentDirectoryPath: currentDirectoryPath,
                 limit: limit,
+                modelProviders: modelProviders,
                 searchTerm: searchTerm,
                 sortedBy: sortedBy
+            )
+        }
+
+        /// Returns the same query with an archive-state filter.
+        public func filteringArchived(_ archived: Bool?) -> Self {
+            .init(
+                archived: archived,
+                currentDirectoryPath: currentDirectoryPath,
+                limit: limit,
+                modelProviders: modelProviders,
+                searchTerm: searchTerm,
+                sortedBy: sortedBy
+            )
+        }
+
+        /// Returns the same query with an exact app-server current-working-directory filter.
+        public func filteringCurrentDirectoryPath(_ currentDirectoryPath: String?) -> Self {
+            .init(
+                archived: archived,
+                currentDirectoryPath: currentDirectoryPath,
+                limit: limit,
+                modelProviders: modelProviders,
+                searchTerm: searchTerm,
+                sortedBy: sortedBy
+            )
+        }
+
+        /// Returns the same query with app-server model-provider filtering.
+        public func filteringModelProviders(_ modelProviders: [String]?) -> Self {
+            .init(
+                archived: archived,
+                currentDirectoryPath: currentDirectoryPath,
+                limit: limit,
+                modelProviders: modelProviders,
+                searchTerm: searchTerm,
+                sortedBy: sortedBy
+            )
+        }
+
+        /// Returns the same query with a normalized search term.
+        public func searching(_ searchTerm: String?) -> Self {
+            .init(
+                archived: archived,
+                currentDirectoryPath: currentDirectoryPath,
+                limit: limit,
+                modelProviders: modelProviders,
+                searchTerm: searchTerm,
+                sortedBy: sortedBy
+            )
+        }
+
+        /// Builds a stored-thread request for a direct app-server read.
+        ///
+        /// Use this when a caller wants the remote `thread/list` page for the
+        /// same query intent. Observable libraries use the descriptor directly
+        /// so they can also apply it to local history snapshots.
+        public func threadListRequest(cursor: String? = nil) -> CodexAppServer.ThreadListRequest {
+            .init(
+                cursor: cursor,
+                limit: limit,
+                sortKey: sortedBy.appServerSort.key,
+                sortDirection: sortedBy.appServerSort.direction,
+                modelProviders: modelProviders,
+                archived: archived,
+                currentDirectoryPath: currentDirectoryPath,
+                searchTerm: searchTerm
             )
         }
 
@@ -118,10 +212,17 @@ public extension CodexAppServer {
                 limit: limit,
                 sortKey: sortedBy.appServerSort.key,
                 sortDirection: sortedBy.appServerSort.direction,
+                modelProviders: modelProviders,
                 archived: archiveFilter,
                 currentDirectoryPath: currentDirectoryPath,
                 searchTerm: searchTerm
             )
+        }
+
+        private static func normalizedSearchTerm(_ searchTerm: String?) -> String? {
+            guard let searchTerm else { return nil }
+            let trimmed = searchTerm.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
         }
     }
 }
@@ -164,6 +265,7 @@ public extension CodexAppServer {
                     archived: query.archived,
                     currentDirectoryPath: query.currentDirectoryPath,
                     limit: normalizedPageSize,
+                    modelProviders: query.modelProviders,
                     searchTerm: query.searchTerm,
                     sortedBy: sortedBy
                 )

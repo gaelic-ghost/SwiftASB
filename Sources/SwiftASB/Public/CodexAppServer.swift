@@ -696,6 +696,19 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reads a page of stored Codex threads from a SwiftASB query descriptor.
+    ///
+    /// This overload compiles `query` into the app-server `thread/list` request
+    /// shape. Use `CodexAppServer.Library` when the same descriptor should load
+    /// local history snapshots first and reconcile app-server pages in the
+    /// background.
+    public func listThreads(
+        _ query: ThreadListQD,
+        cursor: String? = nil
+    ) async throws -> ThreadListPage {
+        try await listThreads(query.threadListRequest(cursor: cursor))
+    }
+
     /// Reads a stored thread snapshot and optionally includes turns.
     ///
     /// Returned turns are hydrated into SwiftASB's local history store so later
@@ -1030,6 +1043,11 @@ public actor CodexAppServer {
                 }
                 if let currentDirectoryPath = query.currentDirectoryPath,
                    thread.currentDirectoryPath != currentDirectoryPath {
+                    return false
+                }
+                if let modelProviders = query.modelProviders,
+                   !modelProviders.isEmpty,
+                   !modelProviders.contains(thread.modelProvider) {
                     return false
                 }
                 if let searchTerm = query.searchTerm?.trimmingCharacters(in: .whitespacesAndNewlines),

@@ -16,7 +16,7 @@ There are three public shapes:
 
 Use ``CodexAppServer/makeLibrary(configuration:)`` when a client needs stored-thread lists before choosing a thread. The library publishes unarchived threads, archived threads, and grouped unarchived threads. It reads local snapshots first so UI can show a sidebar quickly, then reconciles app-server `thread/list` pages in the background.
 
-`Library.SortedBy` and `Library.GroupedBy` are UI-facing policies. `Library.GroupedBy.cwd` is the current project-style grouping surface while repository-root detection remains a later design decision. `CodexAppServer.ThreadListQD` is the package-owned query descriptor for repeatable thread-list intent.
+`Library.SortedBy` and `Library.GroupedBy` are UI-facing policies. `Library.GroupedBy.cwd` is the current project-style grouping surface while repository-root detection remains a later design decision. ``CodexAppServer/ThreadListQD`` is the package-owned query descriptor for repeatable thread-list intent. Use it when the same list intent should drive direct app-server reads through ``CodexAppServer/listThreads(_:cursor:)`` or app-wide observable loading through ``CodexAppServer/Library/Configuration/query``.
 
 Use ``CodexAppServer/Library/refreshAll()``, ``CodexAppServer/Library/refreshUnarchived()``, and ``CodexAppServer/Library/refreshArchived()`` for explicit reconciliation actions. The library also reloads local value snapshots after app-wide thread and turn events, including archive, unarchive, name changes, status changes, and completed turns.
 
@@ -28,13 +28,11 @@ The library can also publish app-wide read snapshots through ``CodexAppServer/Li
 
 ## Local History Windows
 
-Use ``CodexThread/readRecentTurnHistoryWindow(limit:)`` for the newest known completed turns. Use older and newer window helpers when the caller already has a boundary turn. Use centered helpers when an inspector needs context around one turn or one item.
+Use ``CodexThread/readRecentTurnHistoryWindow(limit:)`` for the newest known completed turns. Use older and newer window helpers when the caller already has a boundary turn. Use centered helpers when an inspector needs context around one turn or one item. ``CodexThread/HistoryWindowQD`` gives UI state and inspectors a repeatable descriptor for those same local-history windows.
 
 ```swift
-let window = try await thread.windowAroundTurn(
-    selectedTurnID,
-    before: 3,
-    after: 3
+let window = try await thread.readHistoryWindow(
+    .aroundTurn(selectedTurnID, limit: 7)
 )
 ```
 
@@ -80,7 +78,9 @@ These companions are not alternate event logs. `Dashboard` starts from the curre
 ### History Reads
 
 - ``CodexThread/HistoryWindow``
+- ``CodexThread/HistoryWindowQD``
 - ``CodexThread/readTurnHistory(turnID:)``
+- ``CodexThread/readHistoryWindow(_:)``
 - ``CodexThread/readRecentTurnHistoryWindow(limit:)``
 - ``CodexThread/readOlderTurnHistoryWindow(olderThan:limit:)``
 - ``CodexThread/readNewerTurnHistoryWindow(newerThan:limit:)``

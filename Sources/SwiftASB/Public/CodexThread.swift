@@ -26,6 +26,80 @@ public struct CodexThread: Sendable {
         }
     }
 
+    /// Repeatable local-history window intent for a thread.
+    ///
+    /// `HistoryWindowQD` describes the window a caller wants without exposing
+    /// SwiftASB's Core Data-backed history store or app-server turn paging
+    /// details. It currently targets the local completed-turn windows that
+    /// SwiftASB can answer safely after history has been hydrated.
+    public struct HistoryWindowQD: Sendable, Equatable {
+        /// Anchor used to choose the local history window.
+        public enum Anchor: Sendable, Equatable {
+            case recent
+            case olderThanTurn(String)
+            case newerThanTurn(String)
+            case aroundTurn(String)
+            case aroundItem(String)
+        }
+
+        public var anchor: Anchor
+        public var limit: Int
+
+        /// Creates a local-history window descriptor.
+        ///
+        /// `limit` is normalized to at least `1` so the descriptor always asks
+        /// for a meaningful window.
+        public init(
+            anchor: Anchor = .recent,
+            limit: Int = 12
+        ) {
+            self.anchor = anchor
+            self.limit = max(1, limit)
+        }
+
+        /// The newest known completed turns.
+        public static func recent(limit: Int = 12) -> Self {
+            .init(anchor: .recent, limit: limit)
+        }
+
+        /// Completed turns older than the known boundary turn.
+        public static func olderThanTurn(
+            _ turnID: String,
+            limit: Int = 12
+        ) -> Self {
+            .init(anchor: .olderThanTurn(turnID), limit: limit)
+        }
+
+        /// Completed turns newer than the known boundary turn.
+        public static func newerThanTurn(
+            _ turnID: String,
+            limit: Int = 12
+        ) -> Self {
+            .init(anchor: .newerThanTurn(turnID), limit: limit)
+        }
+
+        /// A completed-turn window centered around the known turn.
+        public static func aroundTurn(
+            _ turnID: String,
+            limit: Int = 12
+        ) -> Self {
+            .init(anchor: .aroundTurn(turnID), limit: limit)
+        }
+
+        /// A completed-turn window centered around the turn containing the known item.
+        public static func aroundItem(
+            _ itemID: String,
+            limit: Int = 12
+        ) -> Self {
+            .init(anchor: .aroundItem(itemID), limit: limit)
+        }
+
+        /// Returns the same query with a normalized window limit.
+        public func limited(to limit: Int) -> Self {
+            .init(anchor: anchor, limit: limit)
+        }
+    }
+
     /// Request used to start a turn from this thread handle.
     public struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: CodexAppServer.ApprovalPolicy?
@@ -250,6 +324,26 @@ public struct CodexThread: Sendable {
         limit: Int = 12
     ) async throws -> HistoryWindow {
         try await appServer.recentClosedTurnWindow(threadID: id, limit: limit)
+    }
+
+    /// Reads a local completed-turn history window from a SwiftASB descriptor.
+    ///
+    /// Use descriptor reads when UI state or inspection tools need to preserve
+    /// a repeatable window intent, then issue it again after local history has
+    /// been refreshed or a selection changes.
+    public func readHistoryWindow(_ query: HistoryWindowQD = .recent()) async throws -> HistoryWindow {
+        switch query.anchor {
+        case .recent:
+            try await readRecentTurnHistoryWindow(limit: query.limit)
+        case let .olderThanTurn(turnID):
+            try await readOlderTurnHistoryWindow(olderThan: turnID, limit: query.limit)
+        case let .newerThanTurn(turnID):
+            try await readNewerTurnHistoryWindow(newerThan: turnID, limit: query.limit)
+        case let .aroundTurn(turnID):
+            try await windowAroundTurn(turnID, limit: query.limit)
+        case let .aroundItem(itemID):
+            try await windowAroundItem(itemID, limit: query.limit)
+        }
     }
 
     /// Reads the most recent completed turns from local history.

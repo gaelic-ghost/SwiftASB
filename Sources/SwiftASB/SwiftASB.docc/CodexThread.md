@@ -94,7 +94,9 @@ Recent observable startup can begin as an empty local-only view when the live ap
 ### Local History
 
 - ``HistoryWindow``
+- ``HistoryWindowQD``
 - ``readTurnHistory(turnID:)``
+- ``readHistoryWindow(_:)``
 - ``readRecentTurnHistoryWindow(limit:)``
 - ``readRecentTurnHistory(limit:)``
 - ``readOlderTurnHistoryWindow(olderThan:limit:)``

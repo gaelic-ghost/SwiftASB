@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the first public query descriptor slice. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1326
-- Public/open types: 196
-- Public/open initializers: 85
-- Public/open methods and type methods: 82
-- Public/open enum cases: 274
-- Public/open properties: 689
+- Public/open symbols: 1350
+- Public/open types: 198
+- Public/open initializers: 86
+- Public/open methods and type methods: 95
+- Public/open enum cases: 279
+- Public/open properties: 692
 
 ## Public Types
 
@@ -139,6 +139,8 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThread.Dashboard.HookRun.Scope` (`enum`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
 - `CodexThread.Dashboard.HookRun.Status` (`enum`) - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
 - `CodexThread.HistoryWindow` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.Anchor` (`enum`) - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.RecentCommands` (`class`) - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
 - `CodexThread.RecentCommands.CachePolicy` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
 - `CodexThread.RecentCommands.CommandSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentCommands.swift
@@ -216,7 +218,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.ThreadActiveFlag.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ThreadCompactRequest.init(threadID:)` - `init(threadID: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadForkRequest.init(threadID:approvalPolicy:approvalsReviewer:baseInstructions:config:currentDirectoryPath:developerInstructions:ephemeral:excludeTurns:model:modelProvider:personality:sandboxMode:serviceName:serviceTier:)` - `init(threadID: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, baseInstructions: String? = nil, config: [String : CodexAppServer.JSONValue]? = nil, currentDirectoryPath: String? = nil, developerInstructions: String? = nil, ephemeral: Bool? = nil, excludeTurns: Bool? = nil, model: String? = nil, modelProvider: String? = nil, personality: CodexAppServer.Personality? = nil, sandboxMode: CodexAppServer.SandboxMode? = nil, serviceName: String? = nil, serviceTier: CodexAppServer.ServiceTier? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
-- `CodexAppServer.ThreadListQD.init(archived:currentDirectoryPath:limit:searchTerm:sortedBy:)` - `init(archived: Bool? = nil, currentDirectoryPath: String? = nil, limit: Int = 50, searchTerm: String? = nil, sortedBy: CodexAppServer.Library.SortedBy = .updatedNewestFirst)` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.ThreadListQD.init(archived:currentDirectoryPath:limit:modelProviders:searchTerm:sortedBy:)` - `init(archived: Bool? = nil, currentDirectoryPath: String? = nil, limit: Int = 50, modelProviders: [String]? = nil, searchTerm: String? = nil, sortedBy: CodexAppServer.Library.SortedBy = .updatedNewestFirst)` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.ThreadListQD.all(limit:sortedBy:)` - `static func all(limit: Int = 50, sortedBy: CodexAppServer.Library.SortedBy = .updatedNewestFirst) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.ThreadListQD.unarchived(limit:sortedBy:)` - `static func unarchived(limit: Int = 50, sortedBy: CodexAppServer.Library.SortedBy = .updatedNewestFirst) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.ThreadListQD.archived(limit:sortedBy:)` - `static func archived(limit: Int = 50, sortedBy: CodexAppServer.Library.SortedBy = .updatedNewestFirst) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
@@ -224,6 +226,18 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.ThreadListQD.search(_:archived:limit:sortedBy:)` - `static func search(_ searchTerm: String, archived: Bool? = nil, limit: Int = 50, sortedBy: CodexAppServer.Library.SortedBy = .updatedNewestFirst) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.ThreadListQD.limited(to:)` - `func limited(to limit: Int) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.ThreadListQD.sorted(by:)` - `func sorted(by sortedBy: CodexAppServer.Library.SortedBy) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.ThreadListQD.filteringArchived(_:)` - `func filteringArchived(_ archived: Bool?) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.ThreadListQD.filteringCurrentDirectoryPath(_:)` - `func filteringCurrentDirectoryPath(_ currentDirectoryPath: String?) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.ThreadListQD.filteringModelProviders(_:)` - `func filteringModelProviders(_ modelProviders: [String]?) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.ThreadListQD.searching(_:)` - `func searching(_ searchTerm: String?) -> CodexAppServer.ThreadListQD` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.ThreadListQD.threadListRequest(cursor:)` - `func threadListRequest(cursor: String? = nil) -> CodexAppServer.ThreadListRequest` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexThread.HistoryWindowQD.init(anchor:limit:)` - `init(anchor: CodexThread.HistoryWindowQD.Anchor = .recent, limit: Int = 12)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.recent(limit:)` - `static func recent(limit: Int = 12) -> CodexThread.HistoryWindowQD` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.olderThanTurn(_:limit:)` - `static func olderThanTurn(_ turnID: String, limit: Int = 12) -> CodexThread.HistoryWindowQD` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.newerThanTurn(_:limit:)` - `static func newerThanTurn(_ turnID: String, limit: Int = 12) -> CodexThread.HistoryWindowQD` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.aroundTurn(_:limit:)` - `static func aroundTurn(_ turnID: String, limit: Int = 12) -> CodexThread.HistoryWindowQD` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.aroundItem(_:limit:)` - `static func aroundItem(_ itemID: String, limit: Int = 12) -> CodexThread.HistoryWindowQD` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.limited(to:)` - `func limited(to limit: Int) -> CodexThread.HistoryWindowQD` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexAppServer.ThreadListRequest.init(cursor:limit:sortKey:sortDirection:modelProviders:sourceKinds:archived:currentDirectoryPath:searchTerm:)` - `init(cursor: String? = nil, limit: Int? = nil, sortKey: CodexAppServer.ThreadListSortKey? = nil, sortDirection: CodexAppServer.ThreadListSortDirection? = nil, modelProviders: [String]? = nil, sourceKinds: [CodexAppServer.ThreadListSourceKind]? = nil, archived: Bool? = nil, currentDirectoryPath: String? = nil, searchTerm: String? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListSortDirection.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListSortKey.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
@@ -263,6 +277,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.listModels(_:)` - `func listModels(_ request: CodexAppServer.ModelListRequest = .init()) async throws -> CodexAppServer.ModelListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listThreadTurns(_:)` - `func listThreadTurns(_ request: CodexAppServer.ThreadTurnsListRequest) async throws -> CodexAppServer.ThreadTurnsPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listThreads(_:)` - `func listThreads(_ request: CodexAppServer.ThreadListRequest = .init()) async throws -> CodexAppServer.ThreadListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
+- `CodexAppServer.listThreads(_:cursor:)` - `func listThreads(_ query: CodexAppServer.ThreadListQD, cursor: String? = nil) async throws -> CodexAppServer.ThreadListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.makeLibrary(configuration:)` - `@MainActor func makeLibrary(configuration: CodexAppServer.Library.Configuration = .init()) async throws -> CodexAppServer.Library` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.readModelCapabilities()` - `func readModelCapabilities() async throws -> CodexAppServer.ModelCapabilities` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.readThread(_:)` - `func readThread(_ request: CodexAppServer.ThreadReadRequest) async throws -> CodexAppServer.ThreadReadResult` - Sources/SwiftASB/Public/CodexAppServer.swift
@@ -322,6 +337,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThread.readNewerTurnHistoryWindow(newerThan:limit:)` - `func readNewerTurnHistoryWindow(newerThan turnID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.readOlderTurnHistory(olderThan:limit:)` - `func readOlderTurnHistory(olderThan turnID: String, limit: Int = 12) async throws -> [CodexTurnHandle.ClosedTurn]` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.readOlderTurnHistoryWindow(olderThan:limit:)` - `func readOlderTurnHistoryWindow(olderThan turnID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.readHistoryWindow(_:)` - `func readHistoryWindow(_ query: CodexThread.HistoryWindowQD = .recent()) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.readRecentTurnHistory(limit:)` - `func readRecentTurnHistory(limit: Int = 12) async throws -> [CodexTurnHandle.ClosedTurn]` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.readRecentTurnHistoryWindow(limit:)` - `func readRecentTurnHistoryWindow(limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.readTurnHistory(turnID:)` - `func readTurnHistory(turnID: String) async throws -> CodexTurnHandle.ClosedTurn?` - Sources/SwiftASB/Public/CodexThread.swift
@@ -591,6 +607,11 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThread.RecentTurns.ScrollActivityPhase.idle` - `case idle` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
 - `CodexThread.RecentTurns.ScrollActivityPhase.interacting` - `case interacting` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
 - `CodexThread.RecentTurns.ScrollActivityPhase.tracking` - `case tracking` - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.HistoryWindowQD.Anchor.recent` - `case recent` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.Anchor.olderThanTurn(_:)` - `case olderThanTurn(String)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.Anchor.newerThanTurn(_:)` - `case newerThanTurn(String)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.Anchor.aroundTurn(_:)` - `case aroundTurn(String)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.HistoryWindowQD.Anchor.aroundItem(_:)` - `case aroundItem(String)` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadEvent.approvalRequested(_:)` - `case approvalRequested(CodexApprovalRequest)` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadEvent.archived(_:)` - `case archived(CodexThreadArchived)` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadEvent.closed(_:)` - `case closed(CodexThreadClosed)` - Sources/SwiftASB/Public/CodexThread.swift
@@ -650,7 +671,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 19 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 10 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Hooks.swift`: 32 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 52 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 53 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 34 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 23 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 90 public properties
@@ -664,5 +685,5 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift`: 54 public properties
 - `Sources/SwiftASB/Public/CodexThread+WorkspaceFiles.swift`: 19 public properties
-- `Sources/SwiftASB/Public/CodexThread.swift`: 46 public properties
+- `Sources/SwiftASB/Public/CodexThread.swift`: 48 public properties
 - `Sources/SwiftASB/Public/CodexTurnHandle.swift`: 108 public properties

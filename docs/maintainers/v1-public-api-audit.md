@@ -438,6 +438,13 @@ Use these decisions for every public symbol:
   thread-management, approval, elicitation, diagnostics, compatibility, and
   app-server bootstrap surfaces. Future symbol-comment work is ordinary ongoing
   docs refinement as the public API grows, not unfinished pre-v1 release work.
+- [x] Record the first post-v1 query descriptor addition.
+  Decision: `CodexAppServer.ThreadListQD` is the public thread-list descriptor
+  for direct app-server reads and app-wide library loading. `CodexThread.HistoryWindowQD`
+  is the public local completed-turn window descriptor for recent, older, newer,
+  turn-centered, and item-centered reads. Both keep descriptor intent in
+  SwiftASB-owned values instead of exposing Core Data fetch requests, SwiftData
+  queries, or generated wire models.
 - [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.
