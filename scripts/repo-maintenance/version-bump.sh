@@ -34,11 +34,14 @@ API_AUDIT_PATH="$REPO_ROOT/docs/maintainers/v1-public-api-audit.md"
 }
 
 current_version=$(
-  sed -n 's/.*from: "\([0-9][0-9.]*[-A-Za-z0-9.]*\)".*/\1/p' "$README_PATH" | head -n 1
+  {
+    sed -n 's/.*from: "\([0-9][0-9.]*[-A-Za-z0-9.]*\)".*/\1/p' "$README_PATH"
+    sed -n 's/.*`v\([0-9][0-9.]*[-A-Za-z0-9.]*\)`.*/\1/p' "$README_PATH"
+  } | head -n 1
 )
 
 [ -n "$current_version" ] || {
-  printf 'ERROR: SwiftASB version bump could not find the README SwiftPM package version line.\n' >&2
+  printf 'ERROR: SwiftASB version bump could not find a README release version reference.\n' >&2
   exit 1
 }
 
