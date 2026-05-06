@@ -3,6 +3,22 @@ import Testing
 @testable import SwiftASB
 
 extension CodexAppServerTests {
+    @Test("recent-file descriptors normalize companion intent")
+    func recentFileDescriptorsNormalizeCompanionIntent() {
+        let cachePolicy = CodexThread.RecentFiles.CachePolicy(
+            maxResidentFiles: 4,
+            minimumResidentFiles: 2,
+            maximumResidentPayloadCost: 10
+        )
+        let descriptor = CodexThread.RecentFilesQD
+            .recent(limit: 0)
+            .cached(by: cachePolicy)
+            .limited(to: 3)
+
+        #expect(descriptor.limit == 3)
+        #expect(descriptor.cachePolicy == cachePolicy)
+    }
+
     @Test("builds a recent-files observable from the local history store")
     func buildsRecentFilesObservable() async throws {
         let transport = FakeCodexAppServerTransport()

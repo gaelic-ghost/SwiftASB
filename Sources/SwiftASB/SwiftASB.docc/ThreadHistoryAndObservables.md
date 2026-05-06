@@ -16,13 +16,13 @@ There are three public shapes:
 
 Use ``CodexAppServer/makeLibrary(configuration:)`` when a client needs stored-thread lists before choosing a thread. The library publishes unarchived threads, archived threads, and grouped unarchived threads. It reads local snapshots first so UI can show a sidebar quickly, then reconciles app-server `thread/list` pages in the background.
 
-`Library.SortedBy` and `Library.GroupedBy` are UI-facing policies. `Library.GroupedBy.cwd` is the current project-style grouping surface while repository-root detection remains a later design decision. ``CodexAppServer/ThreadListQD`` is the package-owned query descriptor for repeatable thread-list intent. Use it when the same list intent should drive direct app-server reads through ``CodexAppServer/listThreads(_:cursor:)`` or app-wide observable loading through ``CodexAppServer/Library/Configuration/query``.
+`Library.SortedBy` and `Library.GroupedBy` are UI-facing policies. `Library.GroupedBy.cwd` groups by the exact app-server working directory. `Library.GroupedBy.repository` groups by app-server Git origin URL when Codex reports one, then falls back to cwd for threads without Git origin metadata. ``CodexAppServer/ThreadListQD`` is the package-owned query descriptor for repeatable thread-list intent. Use it when the same list intent should drive direct app-server reads through ``CodexAppServer/listThreads(_:cursor:)`` or app-wide observable loading through ``CodexAppServer/Library/Configuration/query``.
 
 Use ``CodexAppServer/Library/refreshAll()``, ``CodexAppServer/Library/refreshUnarchived()``, and ``CodexAppServer/Library/refreshArchived()`` for explicit reconciliation actions. The library also reloads local value snapshots after app-wide thread and turn events, including archive, unarchive, name changes, status changes, and completed turns.
 
 Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/selectThread(_:)-(String?)`` for caller-owned selection. Selection is library-local state, so apps can keep one library per window or scene without changing the app-server's stored thread metadata. ``CodexAppServer/Library/SortedBy/selectedNewestFirst`` promotes recently selected threads before falling back to newest updated threads.
 
-`cwd` is the session working directory that app-server stores on `ThreadInfo` and matches exactly through `thread/list` cwd filters. SwiftASB treats it as app-server-owned thread metadata; repository-root grouping remains a future derived surface rather than an alias for `cwd`.
+`cwd` is the session working directory that app-server stores on `ThreadInfo` and matches exactly through `thread/list` cwd filters. Repository grouping is a derived display policy over app-server-owned Git metadata; SwiftASB does not inspect the filesystem to discover repository roots.
 
 The library can also publish app-wide read snapshots through ``CodexAppServer/Library/refreshAppSnapshots()``. Those snapshots reuse ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listMcpServerStatuses(_:)``, and ``CodexAppServer/listHooks(_:)`` so model feature gates, MCP surfaces, and hook diagnostics are observable next to the stored-thread lists without becoming Core Data state.
 
@@ -56,7 +56,7 @@ Use the named cache-policy presets first:
 
 ## Recent Files And Commands
 
-``CodexThread/RecentFiles`` and ``CodexThread/RecentCommands`` are dedicated companions because file changes and command output have different display, selection, and cache behavior.
+``CodexThread/RecentFiles`` and ``CodexThread/RecentCommands`` are dedicated companions because file changes and command output have different display, selection, and cache behavior. Use ``CodexThread/RecentFilesQD`` and ``CodexThread/RecentCommandsQD`` when UI state needs to preserve the initial resident window and cache policy as repeatable intent.
 
 `RecentFiles` keeps file-change entries enriched from file-change output deltas. `RecentCommands` keeps command entries enriched from command-output deltas. Both can keep lightweight shell summaries resident while rehydrating selected payloads when the caller needs detail.
 
@@ -79,6 +79,8 @@ These companions are not alternate event logs. `Dashboard` starts from the curre
 
 - ``CodexThread/HistoryWindow``
 - ``CodexThread/HistoryWindowQD``
+- ``CodexThread/RecentFilesQD``
+- ``CodexThread/RecentCommandsQD``
 - ``CodexThread/readTurnHistory(turnID:)``
 - ``CodexThread/readHistoryWindow(_:)``
 - ``CodexThread/readRecentTurnHistoryWindow(limit:)``

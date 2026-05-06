@@ -276,6 +276,7 @@ public extension CodexAppServer {
         public enum GroupedBy: String, Sendable, Equatable {
             case none
             case cwd
+            case repository
         }
 
         public enum ReconciliationPhase: String, Sendable, Equatable {
@@ -331,6 +332,7 @@ public extension CodexAppServer {
             public let ephemeral: Bool
             public let forkedFromThreadID: String?
             public let currentGitBranch: String?
+            public let currentGitOriginURL: String?
             public let isArchived: Bool
             public let isClosed: Bool
             public let lastCompletedTurnAt: Int?
@@ -757,6 +759,8 @@ public extension CodexAppServer {
                     ""
                 case .cwd:
                     thread.currentDirectoryPath
+                case .repository:
+                    thread.currentGitOriginURL ?? thread.currentDirectoryPath
                 }
             }
 
@@ -764,13 +768,37 @@ public extension CodexAppServer {
                 .map { key, threads in
                     ThreadGroup(
                         id: key,
-                        title: key.isEmpty ? "Unknown Project" : key,
+                        title: title(forGroupID: key, groupedBy: groupedBy),
                         threads: threads
                     )
                 }
                 .sorted { lhs, rhs in
                     lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
                 }
+        }
+
+        private static func title(
+            forGroupID id: String,
+            groupedBy: GroupedBy
+        ) -> String {
+            guard !id.isEmpty else {
+                return "Unknown Project"
+            }
+
+            guard groupedBy == .repository else {
+                return id
+            }
+
+            guard let url = URL(string: id),
+                  let host = url.host,
+                  let lastPathComponent = url.pathComponents.last else {
+                return id
+            }
+
+            let repoName = lastPathComponent.hasSuffix(".git")
+                ? String(lastPathComponent.dropLast(4))
+                : lastPathComponent
+            return repoName.isEmpty ? host : "\(repoName) (\(host))"
         }
 
         private static func newest(
@@ -864,6 +892,7 @@ extension CodexAppServer.Library.ThreadSnapshot {
             ephemeral: snapshot.ephemeral,
             forkedFromThreadID: snapshot.forkedFromThreadID,
             currentGitBranch: snapshot.gitBranch,
+            currentGitOriginURL: snapshot.gitOriginURL,
             isArchived: snapshot.isArchived,
             isClosed: snapshot.isClosed,
             lastCompletedTurnAt: snapshot.lastCompletedTurnAt,

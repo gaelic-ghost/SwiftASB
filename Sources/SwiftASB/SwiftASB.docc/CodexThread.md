@@ -37,7 +37,7 @@ Use the non-UI history helpers when a caller needs completed turn snapshots with
 
 ## Observable Companions
 
-Use ``makeDashboard()`` for thread-level current state, ``makeRecentTurns(limit:cachePolicy:)`` for a turn-centric view, ``makeRecentFiles(limit:cachePolicy:)`` for a file-change view, and ``makeRecentCommands(limit:cachePolicy:)`` for a command-output view.
+Use ``makeDashboard()`` for thread-level current state, ``makeRecentTurns(limit:cachePolicy:)`` for a turn-centric view, ``makeRecentFiles(limit:cachePolicy:)`` or ``makeRecentFiles(_:)`` for a file-change view, and ``makeRecentCommands(limit:cachePolicy:)`` or ``makeRecentCommands(_:)`` for a command-output view.
 
 These companions are separate on purpose. `RecentTurns`, `RecentFiles`, and `RecentCommands` preserve domain-specific behavior that a mixed activity feed would flatten too early.
 
@@ -88,6 +88,8 @@ Recent observable startup can begin as an empty local-only view when the live ap
 
 - ``HistoryWindow``
 - ``HistoryWindowQD``
+- ``RecentFilesQD``
+- ``RecentCommandsQD``
 - ``readTurnHistory(turnID:)``
 - ``readHistoryWindow(_:)``
 - ``readRecentTurnHistoryWindow(limit:)``
@@ -106,8 +108,10 @@ Recent observable startup can begin as an empty local-only view when the live ap
 - ``makeRecentTurns(limit:cachePolicy:)``
 - ``RecentTurns``
 - ``makeRecentFiles(limit:cachePolicy:)``
+- ``makeRecentFiles(_:)``
 - ``RecentFiles``
 - ``makeRecentCommands(limit:cachePolicy:)``
+- ``makeRecentCommands(_:)``
 - ``RecentCommands``
 
 ### Interactive Requests

@@ -442,9 +442,17 @@ Use these decisions for every public symbol:
   Decision: `CodexAppServer.ThreadListQD` is the public thread-list descriptor
   for direct app-server reads and app-wide library loading. `CodexThread.HistoryWindowQD`
   is the public local completed-turn window descriptor for recent, older, newer,
-  turn-centered, and item-centered reads. Both keep descriptor intent in
-  SwiftASB-owned values instead of exposing Core Data fetch requests, SwiftData
-  queries, or generated wire models.
+  turn-centered, and item-centered reads. `CodexThread.RecentFilesQD` and
+  `CodexThread.RecentCommandsQD` describe recent-activity companion startup for
+  file and command views. These descriptors keep intent in SwiftASB-owned values
+  instead of exposing Core Data fetch requests, SwiftData queries, or generated
+  wire models.
+- [x] Record the repository grouping decision.
+  Decision: `CodexAppServer.Library.GroupedBy.repository` groups thread
+  snapshots by app-server Git origin URL when available, then falls back to cwd.
+  SwiftASB stores and exposes `ThreadSnapshot.currentGitOriginURL` as
+  app-server-owned metadata; it does not inspect local filesystem directories to
+  derive repository roots.
 - [x] Record the first post-v1 app-server filesystem promotion.
   Decision: `CodexFS` is the public namespace for read-only filesystem facts
   routed through the app-server. It currently owns metadata, directory listing,

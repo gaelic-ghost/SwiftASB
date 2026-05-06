@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, and thread-goal slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, and repository-grouping slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1605
-- Public/open types: 248
-- Public/open initializers: 104
-- Public/open methods and type methods: 109
-- Public/open enum cases: 297
-- Public/open properties: 847
+- Public/open symbols: 1623
+- Public/open types: 250
+- Public/open initializers: 106
+- Public/open methods and type methods: 117
+- Public/open enum cases: 298
+- Public/open properties: 852
 
 ## Public Types
 
@@ -700,6 +700,8 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexAppServer.CodexExtensions` owns app-server extension inventory: `AppListRequest`, `AppListPage`, `AppInfo`, `SkillListRequest`, `SkillListSnapshot`, `PluginListRequest`, `PluginListSnapshot`, `PluginReadRequest`, `PluginDetail`, `CollaborationModeList`, `listApps(_:)`, `listSkills(_:)`, `listPlugins(_:)`, `readPlugin(_:)`, and `listCollaborationModes()`.
 - `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
+- `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
+- `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by app-server Git origin metadata with cwd fallback, and `ThreadSnapshot.currentGitOriginURL` exposes the persisted origin value used for that grouping.
 
 ## Public Property Counts By Source File
 
@@ -707,7 +709,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexAppServer+CodexExtensions.swift`: 113 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 10 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Hooks.swift`: 32 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 54 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 55 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+LoadedThreads.swift`: 4 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 34 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 23 public properties
@@ -723,5 +725,5 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift`: 54 public properties
-- `Sources/SwiftASB/Public/CodexThread.swift`: 63 public properties
+- `Sources/SwiftASB/Public/CodexThread.swift`: 67 public properties
 - `Sources/SwiftASB/Public/CodexTurnHandle.swift`: 108 public properties

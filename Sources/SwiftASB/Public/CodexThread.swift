@@ -100,6 +100,88 @@ public struct CodexThread: Sendable {
         }
     }
 
+    /// Repeatable recent-file companion intent for a thread.
+    ///
+    /// `RecentFilesQD` describes the initial resident file-change window and
+    /// cache policy without exposing SwiftASB's local history storage or
+    /// observable companion construction details.
+    public struct RecentFilesQD: Sendable, Equatable {
+        public var cachePolicy: RecentFiles.CachePolicy?
+        public var limit: Int
+
+        /// Creates a recent-file descriptor.
+        ///
+        /// `limit` is normalized to at least `1`. Nil `cachePolicy` lets
+        /// SwiftASB derive the companion's automatic cache policy from the
+        /// normalized limit.
+        public init(
+            limit: Int = 12,
+            cachePolicy: RecentFiles.CachePolicy? = nil
+        ) {
+            self.cachePolicy = cachePolicy
+            self.limit = max(1, limit)
+        }
+
+        /// The newest known file-change items for this thread.
+        public static func recent(
+            limit: Int = 12,
+            cachePolicy: RecentFiles.CachePolicy? = nil
+        ) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+
+        /// Returns the same descriptor with a normalized resident limit.
+        public func limited(to limit: Int) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+
+        /// Returns the same descriptor with an explicit cache policy.
+        public func cached(by cachePolicy: RecentFiles.CachePolicy?) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+    }
+
+    /// Repeatable recent-command companion intent for a thread.
+    ///
+    /// `RecentCommandsQD` describes the initial resident command-output window
+    /// and cache policy without exposing SwiftASB's local history storage or
+    /// observable companion construction details.
+    public struct RecentCommandsQD: Sendable, Equatable {
+        public var cachePolicy: RecentCommands.CachePolicy?
+        public var limit: Int
+
+        /// Creates a recent-command descriptor.
+        ///
+        /// `limit` is normalized to at least `1`. Nil `cachePolicy` lets
+        /// SwiftASB derive the companion's automatic cache policy from the
+        /// normalized limit.
+        public init(
+            limit: Int = 12,
+            cachePolicy: RecentCommands.CachePolicy? = nil
+        ) {
+            self.cachePolicy = cachePolicy
+            self.limit = max(1, limit)
+        }
+
+        /// The newest known command-output items for this thread.
+        public static func recent(
+            limit: Int = 12,
+            cachePolicy: RecentCommands.CachePolicy? = nil
+        ) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+
+        /// Returns the same descriptor with a normalized resident limit.
+        public func limited(to limit: Int) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+
+        /// Returns the same descriptor with an explicit cache policy.
+        public func cached(by cachePolicy: RecentCommands.CachePolicy?) -> Self {
+            .init(limit: limit, cachePolicy: cachePolicy)
+        }
+    }
+
     /// Request used to start a turn from this thread handle.
     public struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: CodexAppServer.ApprovalPolicy?
@@ -540,6 +622,12 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Creates an observable recent-file companion from a repeatable descriptor.
+    @MainActor
+    public func makeRecentFiles(_ query: RecentFilesQD) async throws -> RecentFiles {
+        try await makeRecentFiles(limit: query.limit, cachePolicy: query.cachePolicy)
+    }
+
     /// Creates an observable recent-command companion for this thread.
     ///
     /// The default `limit` of 12 controls the initial resident page. Omitting
@@ -565,6 +653,12 @@ public struct CodexThread: Sendable {
             commandDeltaEvents: commandDeltaEvents,
             appServer: appServer
         )
+    }
+
+    /// Creates an observable recent-command companion from a repeatable descriptor.
+    @MainActor
+    public func makeRecentCommands(_ query: RecentCommandsQD) async throws -> RecentCommands {
+        try await makeRecentCommands(limit: query.limit, cachePolicy: query.cachePolicy)
     }
 
     /// Answers a thread-routed approval request.

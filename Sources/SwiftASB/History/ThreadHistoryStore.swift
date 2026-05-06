@@ -98,6 +98,7 @@ actor ThreadHistoryStore {
         let forkedFromThreadID: String?
         let forkedFromTurnID: String?
         let gitBranch: String?
+        let gitOriginURL: String?
         let isArchived: Bool
         let isClosed: Bool
         let modelProvider: String
@@ -153,6 +154,7 @@ actor ThreadHistoryStore {
         let ephemeral: Bool
         let forkedFromThreadID: String?
         let gitBranch: String?
+        let gitOriginURL: String?
         let isArchived: Bool
         let isClosed: Bool
         let lastCompletedTurnAt: Int?
@@ -609,6 +611,7 @@ actor ThreadHistoryStore {
                 forkedFromThreadID: thread.forkedFromThreadID,
                 forkedFromTurnID: thread.forkedFromTurnID,
                 gitBranch: thread.gitBranch,
+                gitOriginURL: thread.gitOriginURL,
                 isArchived: thread.isArchived,
                 isClosed: thread.isClosed,
                 modelProvider: thread.modelProvider,
@@ -896,6 +899,7 @@ actor ThreadHistoryStore {
         thread.ephemeral = info.ephemeral
         thread.forkedFromThreadID = info.forkedFromThreadID
         thread.gitBranch = info.gitInfo?.branch
+        thread.gitOriginURL = info.gitInfo?.originURL
         thread.modelProvider = info.modelProvider
         thread.name = info.name
         thread.preview = info.preview
@@ -1062,6 +1066,7 @@ actor ThreadHistoryStore {
             ephemeral: thread.ephemeral,
             forkedFromThreadID: thread.forkedFromThreadID,
             gitBranch: thread.gitBranch,
+            gitOriginURL: thread.gitOriginURL,
             isArchived: thread.isArchived,
             isClosed: thread.isClosed,
             lastCompletedTurnAt: Self.lastCompletedTurnAt(for: thread),
@@ -1450,6 +1455,7 @@ actor ThreadHistoryStore {
             attribute("forkedFromThreadID", .stringAttributeType, isOptional: true),
             attribute("forkedFromTurnID", .stringAttributeType, isOptional: true),
             attribute("gitBranch", .stringAttributeType, isOptional: true),
+            attribute("gitOriginURL", .stringAttributeType, isOptional: true),
             attribute("modelProvider", .stringAttributeType, isOptional: false),
             attribute("name", .stringAttributeType, isOptional: true),
             attribute("preview", .stringAttributeType, isOptional: false),
@@ -1679,6 +1685,7 @@ final class HistoryThread: NSManagedObject {
     @NSManaged var forkedFromThreadID: String?
     @NSManaged var forkedFromTurnID: String?
     @NSManaged var gitBranch: String?
+    @NSManaged var gitOriginURL: String?
     @NSManaged var id: String
     @NSManaged var isArchived: Bool
     @NSManaged var isClosed: Bool

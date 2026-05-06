@@ -3,6 +3,22 @@ import Testing
 @testable import SwiftASB
 
 extension CodexAppServerTests {
+    @Test("recent-command descriptors normalize companion intent")
+    func recentCommandDescriptorsNormalizeCompanionIntent() {
+        let cachePolicy = CodexThread.RecentCommands.CachePolicy(
+            maxResidentCommands: 4,
+            minimumResidentCommands: 2,
+            maximumResidentOutputCost: 10
+        )
+        let descriptor = CodexThread.RecentCommandsQD
+            .recent(limit: 0)
+            .cached(by: cachePolicy)
+            .limited(to: 3)
+
+        #expect(descriptor.limit == 3)
+        #expect(descriptor.cachePolicy == cachePolicy)
+    }
+
     @Test("builds a recent-commands observable from the local history store")
     func buildsRecentCommandsObservable() async throws {
         let transport = FakeCodexAppServerTransport()
