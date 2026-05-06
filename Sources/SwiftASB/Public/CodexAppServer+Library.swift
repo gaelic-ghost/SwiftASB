@@ -228,6 +228,7 @@ public extension CodexAppServer {
             public let currentDirectoryPath: String
             public let ephemeral: Bool
             public let forkedFromThreadID: String?
+            public let currentGitBranch: String?
             public let isArchived: Bool
             public let isClosed: Bool
             public let lastCompletedTurnAt: Int?
@@ -760,6 +761,7 @@ extension CodexAppServer.Library.ThreadSnapshot {
             currentDirectoryPath: snapshot.currentDirectoryPath,
             ephemeral: snapshot.ephemeral,
             forkedFromThreadID: snapshot.forkedFromThreadID,
+            currentGitBranch: snapshot.gitBranch,
             isArchived: snapshot.isArchived,
             isClosed: snapshot.isClosed,
             lastCompletedTurnAt: snapshot.lastCompletedTurnAt,

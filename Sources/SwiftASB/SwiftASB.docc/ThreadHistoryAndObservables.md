@@ -22,7 +22,7 @@ Use ``CodexAppServer/Library/refreshAll()``, ``CodexAppServer/Library/refreshUna
 
 Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/selectThread(_:)-(String?)`` for caller-owned selection. Selection is library-local state, so apps can keep one library per window or scene without changing the app-server's stored thread metadata. ``CodexAppServer/Library/SortedBy/selectedNewestFirst`` promotes recently selected threads before falling back to newest updated threads.
 
-`cwd` is the stored thread directory that app-server returns on `ThreadInfo`. SwiftASB currently treats it as the thread's project directory because the schema exposes it as required thread metadata and `thread/metadata/update` only patches Git metadata, not stored `cwd`.
+`cwd` is the session working directory that app-server stores on `ThreadInfo` and matches exactly through `thread/list` cwd filters. SwiftASB treats it as app-server-owned thread metadata; repository-root grouping remains a future derived surface rather than an alias for `cwd`.
 
 The library can also publish app-wide read snapshots through ``CodexAppServer/Library/refreshAppSnapshots()``. Those snapshots reuse ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listMcpServerStatuses(_:)``, and ``CodexAppServer/listHooks(_:)`` so model feature gates, MCP surfaces, and hook diagnostics are observable next to the stored-thread lists without becoming Core Data state.
 

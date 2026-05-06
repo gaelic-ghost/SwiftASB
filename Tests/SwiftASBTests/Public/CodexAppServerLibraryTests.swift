@@ -13,6 +13,7 @@ extension CodexAppServerTests {
                         storedThread(
                             id: "thread-new",
                             cwd: "/tmp/project-a",
+                            gitBranch: "feature/library",
                             name: "Newest active",
                             preview: "Fresh unarchived thread",
                             statusType: "notLoaded",
@@ -74,6 +75,7 @@ extension CodexAppServerTests {
         await library.refresh()
 
         #expect(library.unarchivedThreads.map(\.id) == ["thread-new", "thread-123"])
+        #expect(library.unarchivedThreads.first?.currentGitBranch == "feature/library")
         #expect(library.archivedThreads.map(\.id) == ["thread-archived"])
         #expect(library.groups.map(\.id) == ["/tmp/project", "/tmp/project-a"])
         #expect(library.groups.first(where: { $0.id == "/tmp/project-a" })?.threads.map(\.id) == ["thread-new"])
@@ -429,12 +431,13 @@ extension CodexAppServerTests {
 private func storedThread(
     id: String,
     cwd: String,
+    gitBranch: String? = nil,
     name: String,
     preview: String,
     statusType: String,
     updatedAt: Int
 ) -> [String: Any] {
-    [
+    var thread: [String: Any] = [
         "cliVersion": "0.128.0",
         "createdAt": 1713350000,
         "cwd": cwd,
@@ -448,6 +451,14 @@ private func storedThread(
         "turns": [],
         "updatedAt": updatedAt,
     ]
+    if let gitBranch {
+        thread["gitInfo"] = [
+            "branch": gitBranch,
+            "originUrl": NSNull(),
+            "sha": NSNull(),
+        ]
+    }
+    return thread
 }
 
 private func decodedJSONObject(from data: Data) throws -> [String: Any] {
