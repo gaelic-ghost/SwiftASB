@@ -258,6 +258,83 @@ extension CodexAppServerTests {
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
+    @MainActor
+    @Test("library selection is local state and can drive sorting")
+    func librarySelectionIsLocalStateAndCanDriveSorting() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadListResult: [
+                "data": [
+                    storedThread(
+                        id: "thread-alpha",
+                        cwd: "/tmp/project-a",
+                        name: "Alpha",
+                        preview: "Alpha preview",
+                        statusType: "notLoaded",
+                        updatedAt: 1713350001
+                    ),
+                    storedThread(
+                        id: "thread-beta",
+                        cwd: "/tmp/project-b",
+                        name: "Beta",
+                        preview: "Beta preview",
+                        statusType: "notLoaded",
+                        updatedAt: 1713350002
+                    ),
+                ],
+                "nextCursor": NSNull(),
+            ]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        _ = try await client.listThreads()
+
+        let library = try await client.makeLibrary(
+            configuration: .init(
+                sortedBy: .selectedNewestFirst,
+                groupedBy: .none,
+                reconcilesOnCreation: false
+            )
+        )
+
+        #expect(library.unarchivedThreads.map(\.id) == ["thread-beta", "thread-alpha"])
+        #expect(library.selectedThreadID == nil)
+        #expect(library.selectedThread == nil)
+
+        library.selectThread("thread-alpha")
+        #expect(library.selectedThreadID == "thread-alpha")
+        #expect(library.selectedThread?.id == "thread-alpha")
+        #expect(library.unarchivedThreads.map(\.id) == ["thread-alpha", "thread-beta"])
+
+        library.selectThread("thread-beta")
+        #expect(library.selectedThreadID == "thread-beta")
+        #expect(library.unarchivedThreads.map(\.id) == ["thread-beta", "thread-alpha"])
+
+        library.clearSelection()
+        #expect(library.selectedThreadID == nil)
+        #expect(library.selectedThread == nil)
+        #expect(library.unarchivedThreads.map(\.id) == ["thread-beta", "thread-alpha"])
+
+        let requestPayloads = await transport.requestPayloads(for: "thread/list")
+        #expect(requestPayloads.count == 1)
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
     @Test("thread list query descriptors provide common list shapes")
     func threadListQueryDescriptorsProvideCommonListShapes() {
         let projectQuery = CodexAppServer.ThreadListQD

@@ -20,6 +20,10 @@ Use ``CodexAppServer/makeLibrary(configuration:)`` when a client needs stored-th
 
 Use ``CodexAppServer/Library/refreshAll()``, ``CodexAppServer/Library/refreshUnarchived()``, and ``CodexAppServer/Library/refreshArchived()`` for explicit reconciliation actions. The library also reloads local value snapshots after app-wide thread and turn events, including archive, unarchive, name changes, status changes, and completed turns.
 
+Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/selectThread(_:)-(String?)`` for caller-owned selection. Selection is library-local state, so apps can keep one library per window or scene without changing the app-server's stored thread metadata. ``CodexAppServer/Library/SortedBy/selectedNewestFirst`` promotes recently selected threads before falling back to newest updated threads.
+
+`cwd` is the stored thread directory that app-server returns on `ThreadInfo`. SwiftASB currently treats it as the thread's project directory because the schema exposes it as required thread metadata and `thread/metadata/update` only patches Git metadata, not stored `cwd`.
+
 ## Local History Windows
 
 Use ``CodexThread/readRecentTurnHistoryWindow(limit:)`` for the newest known completed turns. Use older and newer window helpers when the caller already has a boundary turn. Use centered helpers when an inspector needs context around one turn or one item.

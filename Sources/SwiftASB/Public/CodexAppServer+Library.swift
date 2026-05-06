@@ -169,6 +169,7 @@ public extension CodexAppServer {
             case updatedOldestFirst
             case createdNewestFirst
             case createdOldestFirst
+            case selectedNewestFirst
             case turnFinishedNewestFirst
             case turnFinishedOldestFirst
             case nameAscending
@@ -184,6 +185,7 @@ public extension CodexAppServer {
                 case .createdOldestFirst:
                     (.createdAt, .asc)
                 case .updatedNewestFirst,
+                     .selectedNewestFirst,
                      .turnFinishedNewestFirst,
                      .turnFinishedOldestFirst,
                      .nameAscending,
@@ -223,6 +225,15 @@ public extension CodexAppServer {
         public private(set) var lastReconciledAt: Date?
         public private(set) var latestErrorDescription: String?
         public private(set) var phase: ReconciliationPhase
+        public var selectedThreadID: String? {
+            didSet {
+                guard selectedThreadID != oldValue else { return }
+                if let selectedThreadID {
+                    recordSelection(threadID: selectedThreadID)
+                }
+                applyVisibleState()
+            }
+        }
         public var groupedBy: GroupedBy {
             didSet {
                 applyVisibleState()
@@ -244,6 +255,11 @@ public extension CodexAppServer {
             phase == .reconcilingUnarchived || phase == .reconcilingArchived
         }
 
+        public var selectedThread: ThreadSnapshot? {
+            guard let selectedThreadID else { return nil }
+            return allThreads.first { $0.id == selectedThreadID }
+        }
+
         @ObservationIgnored
         private let appServer: CodexAppServer
 
@@ -255,6 +271,12 @@ public extension CodexAppServer {
 
         @ObservationIgnored
         private var pendingEventReload = false
+
+        @ObservationIgnored
+        private var selectionOrderByThreadID: [String: Int] = [:]
+
+        @ObservationIgnored
+        private var selectionSequence = 0
 
         @ObservationIgnored
         private var query: CodexAppServer.ThreadListQD
@@ -280,6 +302,7 @@ public extension CodexAppServer {
             self.maxPagesPerArchiveState = configuration.maxPagesPerArchiveState
             self.phase = .idle
             self.query = configuration.query
+            self.selectedThreadID = nil
             self.sortedBy = configuration.sortedBy
             self.unarchivedThreads = []
             applyVisibleState()
@@ -342,6 +365,18 @@ public extension CodexAppServer {
             phase = .idle
         }
 
+        public func selectThread(_ threadID: String?) {
+            selectedThreadID = threadID
+        }
+
+        public func selectThread(_ thread: ThreadSnapshot) {
+            selectThread(thread.id)
+        }
+
+        public func clearSelection() {
+            selectThread(nil)
+        }
+
         private func refreshArchiveScope(_ archived: Bool) async {
             if isReconciling || isLoadingLocalSnapshot {
                 return
@@ -398,6 +433,7 @@ public extension CodexAppServer {
             self.phase = phase
             do {
                 allThreads = try await appServer.libraryThreadSnapshots(query: query)
+                clearSelectionIfThreadDisappeared()
                 applyVisibleState()
             } catch {
                 latestErrorDescription = error.localizedDescription
@@ -405,7 +441,11 @@ public extension CodexAppServer {
         }
 
         private func applyVisibleState() {
-            let sortedThreads = Self.sort(allThreads, by: sortedBy)
+            let sortedThreads = Self.sort(
+                allThreads,
+                by: sortedBy,
+                selectionOrderByThreadID: selectionOrderByThreadID
+            )
             unarchivedThreads = sortedThreads.filter { !$0.isArchived }
             archivedThreads = sortedThreads.filter(\.isArchived)
             groups = Self.groups(
@@ -414,9 +454,22 @@ public extension CodexAppServer {
             )
         }
 
+        private func recordSelection(threadID: String) {
+            selectionSequence += 1
+            selectionOrderByThreadID[threadID] = selectionSequence
+        }
+
+        private func clearSelectionIfThreadDisappeared() {
+            guard let selectedThreadID else { return }
+            if !allThreads.contains(where: { $0.id == selectedThreadID }) {
+                self.selectedThreadID = nil
+            }
+        }
+
         private static func sort(
             _ threads: [ThreadSnapshot],
-            by sortedBy: SortedBy
+            by sortedBy: SortedBy,
+            selectionOrderByThreadID: [String: Int]
         ) -> [ThreadSnapshot] {
             threads.sorted { lhs, rhs in
                 switch sortedBy {
@@ -428,6 +481,12 @@ public extension CodexAppServer {
                     newest(lhs.createdAt, rhs.createdAt, lhs.id, rhs.id)
                 case .createdOldestFirst:
                     oldest(lhs.createdAt, rhs.createdAt, lhs.id, rhs.id)
+                case .selectedNewestFirst:
+                    compareSelection(
+                        lhs,
+                        rhs,
+                        selectionOrderByThreadID: selectionOrderByThreadID
+                    )
                 case .turnFinishedNewestFirst:
                     newest(
                         lhs.lastCompletedTurnAt ?? Int.min,
@@ -520,6 +579,29 @@ public extension CodexAppServer {
             return ascending
                 ? comparison == .orderedAscending
                 : comparison == .orderedDescending
+        }
+
+        private static func compareSelection(
+            _ lhs: ThreadSnapshot,
+            _ rhs: ThreadSnapshot,
+            selectionOrderByThreadID: [String: Int]
+        ) -> Bool {
+            let lhsOrder = selectionOrderByThreadID[lhs.id]
+            let rhsOrder = selectionOrderByThreadID[rhs.id]
+
+            switch (lhsOrder, rhsOrder) {
+            case let (lhsOrder?, rhsOrder?):
+                if lhsOrder == rhsOrder {
+                    return newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
+                }
+                return lhsOrder > rhsOrder
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            case (nil, nil):
+                return newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
+            }
         }
     }
 }

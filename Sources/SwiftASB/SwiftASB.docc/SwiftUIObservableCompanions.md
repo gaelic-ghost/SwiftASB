@@ -39,6 +39,7 @@ final class ThreadInspectorModel {
                     query: .unarchived(limit: 30)
                 )
             )
+            library?.sortedBy = .selectedNewestFirst
             dashboard = await thread.makeDashboard()
             recentFiles = try await thread.makeRecentFiles(
                 limit: 20,
@@ -55,6 +56,10 @@ final class ThreadInspectorModel {
 
     func refreshArchive() async {
         await library?.refreshArchived()
+    }
+
+    func selectThread(_ threadID: String?) {
+        library?.selectThread(threadID)
     }
 
     func run(_ prompt: String) async {
@@ -78,6 +83,8 @@ final class ThreadInspectorModel {
 ## Selection And Cache Behavior
 
 `CodexAppServer.Library` is the app-wide companion for launchers, sidebars, and project browsers. It publishes value snapshots for unarchived threads, archived threads, and cwd groups; it also reloads from local persistence after app-wide thread and turn events such as archive, unarchive, name changes, status changes, and completed turns.
+
+Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/selectThread(_:)-(String?)`` for library-local selection. The selection timestamp stays inside the library and can drive ``CodexAppServer/Library/SortedBy/selectedNewestFirst`` without writing UI preference state into Codex's stored thread metadata.
 
 Recent companions keep caller-owned UI inputs mutable. For example, views can update selected file or command identifiers and visible item identifiers. SwiftASB uses that information to protect visible or selected payloads while slimming older low-value entries when the resident cache exceeds its budget.
 

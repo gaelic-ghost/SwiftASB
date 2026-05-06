@@ -945,6 +945,7 @@ When a library is created:
 - read the local Core Data thread snapshot first
 - publish unarchived and archived arrays immediately when local data exists
 - group threads according to `Library.GroupedBy`
+- keep selected-thread state local to the library
 - expose refresh actions for all, unarchived-only, and archived-only scopes
 - reconcile app-server data in the background
 - page unarchived threads before archived threads
@@ -988,6 +989,28 @@ The first event-driven refresh triggers are:
 The app-wide stream is intentionally internal. Public consumers observe the
 library's value snapshots and phase/error fields rather than replaying app-wide
 transport events themselves.
+
+### Selection policy
+
+Selection belongs to `Library`, not Core Data and not app-server metadata.
+Consumers can bind a sidebar or launcher to `selectedThreadID`, call
+`selectThread(...)`, and sort by `selectedNewestFirst`.
+
+The selection clock is intentionally library-local. That matches ordinary app
+window or scene state: a single-window client can retain one library, while a
+multi-window client can keep separate library instances when windows need
+independent selection.
+
+Selection changes must not call app-server and must not write to the thread
+history store. They are UI state over the existing thread value snapshots.
+
+### CWD policy
+
+SwiftASB treats `cwd` as the stored thread project directory for now. The
+current app-server wire shape exposes `cwd` as required `ThreadInfo` metadata,
+and `thread/metadata/update` only patches Git metadata. There is no stored
+thread `cwd` mutation endpoint in the generated v2 snapshot, so `GroupedBy.cwd`
+is the honest grouping surface until repository-root detection is designed.
 
 ### Follow-on work
 
