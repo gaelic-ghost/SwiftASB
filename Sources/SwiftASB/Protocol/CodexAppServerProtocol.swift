@@ -14,9 +14,13 @@ struct CodexAppServerProtocol {
         case threadStart = "thread/start"
         case threadMetadataUpdate = "thread/metadata/update"
         case threadTurnsList = "thread/turns/list"
+        case threadLoadedList = "thread/loaded/list"
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
+        case fsGetMetadata = "fs/getMetadata"
+        case fsReadDirectory = "fs/readDirectory"
+        case fsReadFile = "fs/readFile"
         case hooksList = "hooks/list"
         case modelList = "model/list"
         case modelProviderCapabilitiesRead = "modelProvider/capabilities/read"
@@ -148,6 +152,46 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadTurnsList, params: params),
             method: .threadTurnsList
+        )
+    }
+
+    func makeThreadLoadedListRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadLoadedListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadLoadedList, params: params),
+            method: .threadLoadedList
+        )
+    }
+
+    func makeFSGetMetadataRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireFSGetMetadataParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsGetMetadata, params: params),
+            method: .fsGetMetadata
+        )
+    }
+
+    func makeFSReadDirectoryRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireFSReadDirectoryParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsReadDirectory, params: params),
+            method: .fsReadDirectory
+        )
+    }
+
+    func makeFSReadFileRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireFSReadFileParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsReadFile, params: params),
+            method: .fsReadFile
         )
     }
 
@@ -376,6 +420,54 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadTurnsList,
             resultType: CodexProtocolThreadTurnsListResponse.self
+        )
+    }
+
+    func decodeThreadLoadedListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadLoadedListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadLoadedList,
+            resultType: CodexWireThreadLoadedListResponse.self
+        )
+    }
+
+    func decodeFSGetMetadataResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireFSGetMetadataResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsGetMetadata,
+            resultType: CodexWireFSGetMetadataResponse.self
+        )
+    }
+
+    func decodeFSReadDirectoryResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireFSReadDirectoryResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsReadDirectory,
+            resultType: CodexWireFSReadDirectoryResponse.self
+        )
+    }
+
+    func decodeFSReadFileResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireFSReadFileResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsReadFile,
+            resultType: CodexWireFSReadFileResponse.self
         )
     }
 

@@ -709,6 +709,102 @@ public actor CodexAppServer {
         try await listThreads(query.threadListRequest(cursor: cursor))
     }
 
+    /// Lists thread ids currently loaded in the app-server runtime.
+    public func listLoadedThreads(_ request: LoadedThreadListRequest = .init()) async throws -> LoadedThreadListPage {
+        try requireInitialized(for: "thread/loaded/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadLoadedListRequest(
+                id: requestID,
+                params: .init(cursor: request.cursor, limit: request.limit)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadLoadedListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(nextCursor: response.nextCursor, threadIDs: response.data)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/loaded/list")
+        }
+    }
+
+    func readFSMetadata(_ request: CodexFS.MetadataRequest) async throws -> CodexFS.Metadata {
+        try requireInitialized(for: "fs/getMetadata")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeFSGetMetadataRequest(
+                id: requestID,
+                params: .init(path: request.path)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeFSGetMetadataResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "fs/getMetadata")
+        }
+    }
+
+    func readFSDirectory(_ request: CodexFS.DirectoryReadRequest) async throws -> CodexFS.DirectoryReadResult {
+        try requireInitialized(for: "fs/readDirectory")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeFSReadDirectoryRequest(
+                id: requestID,
+                params: .init(path: request.path)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeFSReadDirectoryResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "fs/readDirectory")
+        }
+    }
+
+    func readFSFile(_ request: CodexFS.FileReadRequest) async throws -> CodexFS.FileReadResult {
+        try requireInitialized(for: "fs/readFile")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeFSReadFileRequest(
+                id: requestID,
+                params: .init(path: request.path)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeFSReadFileResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            guard let data = Data(base64Encoded: response.dataBase64) else {
+                throw CodexAppServerError.protocolFailure(
+                    operation: "fs/readFile",
+                    reason: "The app-server returned file contents that were not valid base64."
+                )
+            }
+
+            return .init(data: data)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "fs/readFile")
+        }
+    }
+
     /// Reads a stored thread snapshot and optionally includes turns.
     ///
     /// Returned turns are hydrated into SwiftASB's local history store so later

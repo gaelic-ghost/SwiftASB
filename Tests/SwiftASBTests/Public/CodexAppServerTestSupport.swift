@@ -403,6 +403,50 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 id: id,
                 result: result
             )
+        case "thread/loaded/list":
+            return responsePayload(
+                id: id,
+                result: [
+                    "data": ["thread-123", "thread-456"],
+                    "nextCursor": "cursor-loaded-next",
+                ]
+            )
+        case "fs/getMetadata":
+            return responsePayload(
+                id: id,
+                result: [
+                    "createdAtMs": 1_713_350_000_000,
+                    "isDirectory": true,
+                    "isFile": false,
+                    "isSymlink": false,
+                    "modifiedAtMs": 1_713_350_005_000,
+                ]
+            )
+        case "fs/readDirectory":
+            return responsePayload(
+                id: id,
+                result: [
+                    "entries": [
+                        [
+                            "fileName": "Sources",
+                            "isDirectory": true,
+                            "isFile": false,
+                        ],
+                        [
+                            "fileName": "Package.swift",
+                            "isDirectory": false,
+                            "isFile": true,
+                        ],
+                    ],
+                ]
+            )
+        case "fs/readFile":
+            return responsePayload(
+                id: id,
+                result: [
+                    "dataBase64": Data("hello from CodexFS".utf8).base64EncodedString(),
+                ]
+            )
         case "thread/read":
             return responsePayload(
                 id: id,

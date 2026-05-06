@@ -106,6 +106,14 @@ build_batch \
   ThreadCompactStartResponse \
   ThreadTurnsListParams \
   ThreadTurnsListResponse \
+  ThreadLoadedListParams \
+  ThreadLoadedListResponse \
+  FsGetMetadataParams \
+  FsGetMetadataResponse \
+  FsReadDirectoryParams \
+  FsReadDirectoryResponse \
+  FsReadFileParams \
+  FsReadFileResponse \
   ThreadStartedNotification \
   ThreadStatusChangedNotification \
   ThreadNameUpdatedNotification \

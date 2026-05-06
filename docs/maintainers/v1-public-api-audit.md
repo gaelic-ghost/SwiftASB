@@ -445,6 +445,11 @@ Use these decisions for every public symbol:
   turn-centered, and item-centered reads. Both keep descriptor intent in
   SwiftASB-owned values instead of exposing Core Data fetch requests, SwiftData
   queries, or generated wire models.
+- [x] Record the first post-v1 app-server filesystem promotion.
+  Decision: `CodexFS` is the public namespace for read-only filesystem facts
+  routed through the app-server. It currently owns metadata, directory listing,
+  and file-byte reads. Filesystem mutation, watches, and fuzzy file search stay
+  unpromoted until their user workflow and permission model are clearer.
 - [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.

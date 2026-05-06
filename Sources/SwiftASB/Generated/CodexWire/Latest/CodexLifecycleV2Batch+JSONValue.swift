@@ -23,6 +23,12 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let externalAgentConfigImportCompletedNotification: [String: CodexWireJSONValue]?
     let fileChangeOutputDeltaNotification: CodexWireFileChangeOutputDeltaNotification?
     let fileChangePatchUpdatedNotification: CodexWireFileChangePatchUpdatedNotification?
+    let fsGetMetadataParams: CodexWireFSGetMetadataParams?
+    let fsGetMetadataResponse: CodexWireFSGetMetadataResponse?
+    let fsReadDirectoryParams: CodexWireFSReadDirectoryParams?
+    let fsReadDirectoryResponse: CodexWireFSReadDirectoryResponse?
+    let fsReadFileParams: CodexWireFSReadFileParams?
+    let fsReadFileResponse: CodexWireFSReadFileResponse?
     let guardianWarningNotification: CodexWireGuardianWarningNotification?
     let hookCompletedNotification: CodexWireHookCompletedNotification?
     let hookStartedNotification: CodexWireHookStartedNotification?
@@ -50,6 +56,8 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let threadClosedNotification: CodexWireThreadClosedNotification?
     let threadCompactStartParams: CodexWireThreadCompactStartParams?
     let threadCompactStartResponse: [String: CodexWireJSONValue]?
+    let threadLoadedListParams: CodexWireThreadLoadedListParams?
+    let threadLoadedListResponse: CodexWireThreadLoadedListResponse?
     let threadMetadataUpdateParams: CodexWireThreadMetadataUpdateParams?
     let threadMetadataUpdateResponse: CodexWireThreadMetadataUpdateResponse?
     let threadNameUpdatedNotification: CodexWireThreadNameUpdatedNotification?
@@ -74,10 +82,10 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let warningNotification: CodexWireWarningNotification?
 
     enum CodingKeys: String, CodingKey {
-        case agentMessageDeltaNotification, commandExecOutputDeltaNotification, commandExecutionOutputDeltaNotification, contextCompactedNotification, errorNotification, externalAgentConfigImportCompletedNotification, fileChangeOutputDeltaNotification, fileChangePatchUpdatedNotification, guardianWarningNotification, hookCompletedNotification, hookStartedNotification, initializeParams, itemCompletedNotification, itemGuardianApprovalReviewCompletedNotification, itemGuardianApprovalReviewStartedNotification, itemStartedNotification
+        case agentMessageDeltaNotification, commandExecOutputDeltaNotification, commandExecutionOutputDeltaNotification, contextCompactedNotification, errorNotification, externalAgentConfigImportCompletedNotification, fileChangeOutputDeltaNotification, fileChangePatchUpdatedNotification, fsGetMetadataParams, fsGetMetadataResponse, fsReadDirectoryParams, fsReadDirectoryResponse, fsReadFileParams, fsReadFileResponse, guardianWarningNotification, hookCompletedNotification, hookStartedNotification, initializeParams, itemCompletedNotification, itemGuardianApprovalReviewCompletedNotification, itemGuardianApprovalReviewStartedNotification, itemStartedNotification
         case listMCPServerStatusParams = "listMcpServerStatusParams"
         case listMCPServerStatusResponse = "listMcpServerStatusResponse"
-        case mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, serverRequestResolvedNotification, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification
+        case mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, serverRequestResolvedNotification, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification
     }
 }
 
@@ -410,6 +418,115 @@ enum CodexWirePatchChangeKindType: String, Codable, Equatable, Sendable {
     case add = "add"
     case delete = "delete"
     case update = "update"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Request metadata for an absolute path.
+// MARK: - CodexWireFSGetMetadataParams
+struct CodexWireFSGetMetadataParams: Codable, Equatable, Sendable {
+    /// Absolute path to inspect.
+    let path: String
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Metadata returned by `fs/getMetadata`.
+// MARK: - CodexWireFSGetMetadataResponse
+struct CodexWireFSGetMetadataResponse: Codable, Equatable, Sendable {
+    /// File creation time in Unix milliseconds when available, otherwise `0`.
+    let createdAtMS: Int
+    /// Whether the path resolves to a directory.
+    let isDirectory: Bool
+    /// Whether the path resolves to a regular file.
+    let isFile: Bool
+    /// Whether the path itself is a symbolic link.
+    let isSymlink: Bool
+    /// File modification time in Unix milliseconds when available, otherwise `0`.
+    let modifiedAtMS: Int
+
+    enum CodingKeys: String, CodingKey {
+        case createdAtMS = "createdAtMs"
+        case isDirectory, isFile, isSymlink
+        case modifiedAtMS = "modifiedAtMs"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// List direct child names for a directory.
+// MARK: - CodexWireFSReadDirectoryParams
+struct CodexWireFSReadDirectoryParams: Codable, Equatable, Sendable {
+    /// Absolute directory path to read.
+    let path: String
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Directory entries returned by `fs/readDirectory`.
+// MARK: - CodexWireFSReadDirectoryResponse
+struct CodexWireFSReadDirectoryResponse: Codable, Equatable, Sendable {
+    /// Direct child entries in the requested directory.
+    let entries: [CodexWireFSReadDirectoryEntry]
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// A directory entry returned by `fs/readDirectory`.
+// MARK: - CodexWireFSReadDirectoryEntry
+struct CodexWireFSReadDirectoryEntry: Codable, Equatable, Sendable {
+    /// Direct child entry name only, not an absolute or relative path.
+    let fileName: String
+    /// Whether this entry resolves to a directory.
+    let isDirectory: Bool
+    /// Whether this entry resolves to a regular file.
+    let isFile: Bool
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Read a file from the host filesystem.
+// MARK: - CodexWireFSReadFileParams
+struct CodexWireFSReadFileParams: Codable, Equatable, Sendable {
+    /// Absolute path to read.
+    let path: String
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Base64-encoded file contents returned by `fs/readFile`.
+// MARK: - CodexWireFSReadFileResponse
+struct CodexWireFSReadFileResponse: Codable, Equatable, Sendable {
+    /// File contents encoded as base64.
+    let dataBase64: String
 }
 
 //
@@ -2013,6 +2130,35 @@ struct CodexWireThreadCompactStartParams: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case threadID = "threadId"
     }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadLoadedListParams
+struct CodexWireThreadLoadedListParams: Codable, Equatable, Sendable {
+    /// Opaque pagination cursor returned by a previous call.
+    let cursor: String?
+    /// Optional page size; defaults to no limit.
+    let limit: Int?
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadLoadedListResponse
+struct CodexWireThreadLoadedListResponse: Codable, Equatable, Sendable {
+    /// Thread ids for sessions currently loaded in memory.
+    let data: [String]
+    /// Opaque cursor to pass to the next call to continue after the last item. if None, there
+    /// are no more items to return.
+    let nextCursor: String?
 }
 
 //

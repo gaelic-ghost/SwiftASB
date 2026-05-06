@@ -130,6 +130,47 @@ struct CodexAppServerProtocolTests {
         #expect(params["sourceKinds"] as? [String] == ["cli", "vscode"])
     }
 
+    @Test("encodes read-only fs requests with app-server method names")
+    func encodesReadOnlyFSRequests() throws {
+        let metadataPayload = try protocolLayer.makeFSGetMetadataRequest(
+            id: .string("metadata-1"),
+            params: .init(path: "/tmp/project")
+        )
+        let metadataRequest = try #require(try JSONSerialization.jsonObject(with: metadataPayload) as? [String: Any])
+        #expect(metadataRequest["method"] as? String == "fs/getMetadata")
+        #expect((metadataRequest["params"] as? [String: Any])?["path"] as? String == "/tmp/project")
+
+        let directoryPayload = try protocolLayer.makeFSReadDirectoryRequest(
+            id: .string("directory-1"),
+            params: .init(path: "/tmp/project/Sources")
+        )
+        let directoryRequest = try #require(try JSONSerialization.jsonObject(with: directoryPayload) as? [String: Any])
+        #expect(directoryRequest["method"] as? String == "fs/readDirectory")
+        #expect((directoryRequest["params"] as? [String: Any])?["path"] as? String == "/tmp/project/Sources")
+
+        let filePayload = try protocolLayer.makeFSReadFileRequest(
+            id: .string("file-1"),
+            params: .init(path: "/tmp/project/README.md")
+        )
+        let fileRequest = try #require(try JSONSerialization.jsonObject(with: filePayload) as? [String: Any])
+        #expect(fileRequest["method"] as? String == "fs/readFile")
+        #expect((fileRequest["params"] as? [String: Any])?["path"] as? String == "/tmp/project/README.md")
+    }
+
+    @Test("encodes loaded-thread list requests")
+    func encodesLoadedThreadListRequest() throws {
+        let payload = try protocolLayer.makeThreadLoadedListRequest(
+            id: .string("loaded-1"),
+            params: .init(cursor: "cursor-loaded", limit: 3)
+        )
+
+        let request = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(request["method"] as? String == "thread/loaded/list")
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["cursor"] as? String == "cursor-loaded")
+        #expect(params["limit"] as? Int == 3)
+    }
+
     @Test("encodes thread/read requests with the expected method and params payload")
     func encodesThreadReadRequest() throws {
         let payload = try protocolLayer.makeThreadReadRequest(

@@ -10,6 +10,7 @@ It owns the subprocess transport, the JSON-RPC protocol boundary, typed request 
 The public surface has three main handles:
 
 - ``CodexAppServer`` owns the app-server process, initialization, app-wide capability snapshots, and stored-thread operations.
+- ``CodexFS`` owns app-server-routed filesystem reads for sandboxed clients.
 - ``CodexThread`` owns a single conversation thread, including new turns, thread-management actions, thread event streams, local history windows, and thread-scoped observable companions.
 - ``CodexTurnHandle`` owns one active turn, including turn events, steering, interruption, server-request responses, and an observable current-state minimap.
 
@@ -32,6 +33,7 @@ Generated Codex wire types remain internal scaffolding. Public callers should us
 ### Primary Handles
 
 - ``CodexAppServer``
+- ``CodexFS``
 - ``CodexThread``
 - ``CodexTurnHandle``
 

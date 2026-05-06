@@ -47,6 +47,8 @@ Use SwiftASB when an app needs to show what Codex is doing right now, keep recen
 
 For app-wide sidebars and launchers, `CodexAppServer.makeLibrary()` provides observable stored-thread lists, cwd grouping, refresh actions, library-local selection state, and app-wide model, MCP, and hook diagnostics snapshots.
 
+Use `CodexAppServer.fs` when a sandboxed client needs filesystem metadata, directory listings, or file bytes through the Codex app-server instead of reading local disk directly.
+
 Use `CodexAppServer.ThreadListQD` and `CodexThread.HistoryWindowQD` when a client needs to preserve repeatable list or history-window intent without depending on Core Data, SwiftData, or raw app-server paging details.
 
 The generated Codex wire models are internal to this package. App code should use SwiftASB's public Swift types instead.

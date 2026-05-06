@@ -126,8 +126,17 @@ It now includes:
   - `ThreadMetadataUpdateResponse`
   - `ThreadTurnsListParams`
   - `ThreadTurnsListResponse`
+  - `ThreadLoadedListParams`
+  - `ThreadLoadedListResponse`
   - `TurnStartParams`
   - `TurnStartResponse`
+- read-only filesystem requests and responses:
+  - `FsGetMetadataParams`
+  - `FsGetMetadataResponse`
+  - `FsReadDirectoryParams`
+  - `FsReadDirectoryResponse`
+  - `FsReadFileParams`
+  - `FsReadFileResponse`
 - app-wide capability requests and responses:
   - `ModelListParams`
   - `ModelListResponse`
