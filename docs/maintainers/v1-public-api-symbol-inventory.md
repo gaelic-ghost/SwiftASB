@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, and workspace permission-profile slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1705
-- Public/open types: 267
-- Public/open initializers: 113
-- Public/open methods and type methods: 117
-- Public/open enum cases: 318
-- Public/open properties: 890
+- Public/open symbols: 1735
+- Public/open types: 271
+- Public/open initializers: 115
+- Public/open methods and type methods: 124
+- Public/open enum cases: 321
+- Public/open properties: 904
 
 ## Public Types
 
@@ -112,6 +112,10 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexFS.DirectoryEntry.Kind` (`enum`) - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.DirectoryReadRequest` (`struct`) - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.DirectoryReadResult` (`struct`) - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryHit` (`struct`) - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryHit.Kind` (`enum`) - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryQD` (`struct`) - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryResult` (`struct`) - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.FileReadRequest` (`struct`) - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.FileReadResult` (`struct`) - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.Metadata` (`struct`) - Sources/SwiftASB/Public/CodexFS.swift
@@ -263,10 +267,19 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexFS.MetadataRequest.init(path:)` - `init(path: String)` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.DirectoryEntry.Kind.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.DirectoryReadRequest.init(path:)` - `init(path: String)` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryHit.Kind.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryQD.init(rootPath:searchTerm:limit:maximumDepth:includedKinds:includesHiddenEntries:)` - `init(rootPath: String, searchTerm: String? = nil, limit: Int = 50, maximumDepth: Int = 6, includedKinds: Set<CodexFS.FileDiscoveryHit.Kind> = [.file], includesHiddenEntries: Bool = false)` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryQD.files(under:matching:limit:maximumDepth:)` - `static func files(under rootPath: String, matching searchTerm: String? = nil, limit: Int = 50, maximumDepth: Int = 6) -> CodexFS.FileDiscoveryQD` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryQD.entries(under:matching:limit:maximumDepth:)` - `static func entries(under rootPath: String, matching searchTerm: String? = nil, limit: Int = 50, maximumDepth: Int = 6) -> CodexFS.FileDiscoveryQD` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryQD.limited(to:)` - `func limited(to limit: Int) -> CodexFS.FileDiscoveryQD` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryQD.limitedDepth(to:)` - `func limitedDepth(to maximumDepth: Int) -> CodexFS.FileDiscoveryQD` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryQD.searching(_:)` - `func searching(_ searchTerm: String?) -> CodexFS.FileDiscoveryQD` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryQD.includingHiddenEntries(_:)` - `func includingHiddenEntries(_ includesHiddenEntries: Bool = true) -> CodexFS.FileDiscoveryQD` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.FileReadRequest.init(path:)` - `init(path: String)` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.readMetadata(_:)` - `func readMetadata(_ request: CodexFS.MetadataRequest) async throws -> CodexFS.Metadata` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.readDirectory(_:)` - `func readDirectory(_ request: CodexFS.DirectoryReadRequest) async throws -> CodexFS.DirectoryReadResult` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.readFile(_:)` - `func readFile(_ request: CodexFS.FileReadRequest) async throws -> CodexFS.FileReadResult` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.discoverFiles(_:)` - `func discoverFiles(_ query: CodexFS.FileDiscoveryQD) async throws -> CodexFS.FileDiscoveryResult` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexThread.HistoryWindowQD.init(anchor:limit:)` - `init(anchor: CodexThread.HistoryWindowQD.Anchor = .recent, limit: Int = 12)` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.HistoryWindowQD.recent(limit:)` - `static func recent(limit: Int = 12) -> CodexThread.HistoryWindowQD` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.HistoryWindowQD.olderThanTurn(_:limit:)` - `static func olderThanTurn(_ turnID: String, limit: Int = 12) -> CodexThread.HistoryWindowQD` - Sources/SwiftASB/Public/CodexThread.swift
@@ -596,6 +609,9 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexFS.DirectoryEntry.Kind.directory` - `case directory` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.DirectoryEntry.Kind.file` - `case file` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexFS.DirectoryEntry.Kind.other` - `case other` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryHit.Kind.directory` - `case directory` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryHit.Kind.file` - `case file` - Sources/SwiftASB/Public/CodexFS.swift
+- `CodexFS.FileDiscoveryHit.Kind.other` - `case other` - Sources/SwiftASB/Public/CodexFS.swift
 - `CodexInteractiveRequestKind.commandExecutionApproval` - `case commandExecutionApproval` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
 - `CodexInteractiveRequestKind.fileChangeApproval` - `case fileChangeApproval` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
 - `CodexInteractiveRequestKind.mcpServerElicitation` - `case mcpServerElicitation` - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
@@ -713,6 +729,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 The 2026-05-06 app-server schema promotion added several hand-owned public namespaces over newly promoted generated wire types. These are intentionally grouped by app-server responsibility instead of exposing the generated wire layer directly.
 
 - `CodexFS` now includes read-only filesystem watches: `WatchRequest`, `UnwatchRequest`, `Watch`, `ChangeEvent`, `watch(_:)`, and `unwatch(_:)`.
+- `CodexFS` now includes bounded file discovery and SwiftASB-owned fuzzy ranking over app-server-returned directory entries: `FileDiscoveryQD`, `FileDiscoveryResult`, `FileDiscoveryHit`, `FileDiscoveryHit.Kind`, and `discoverFiles(_:)`.
 - `CodexConfig` owns effective config reads: `ReadRequest`, `Snapshot`, `Layer`, `LayerMetadata`, `LayerSource`, `LayerSource.Kind`, `RequirementsSnapshot`, `read(_:)`, and `readRequirements()`.
 - `CodexAppServer.CodexExtensions` owns app-server extension inventory: `AppListRequest`, `AppListPage`, `AppInfo`, `SkillListRequest`, `SkillListSnapshot`, `PluginListRequest`, `PluginListSnapshot`, `PluginReadRequest`, `PluginDetail`, `CollaborationModeList`, `listApps(_:)`, `listSkills(_:)`, `listPlugins(_:)`, `readPlugin(_:)`, and `listCollaborationModes()`.
 - `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
@@ -739,7 +756,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexConfig.swift`: 18 public properties
 - `Sources/SwiftASB/Public/CodexDiagnostics.swift`: 14 public properties
 - `Sources/SwiftASB/Public/CodexErrors.swift`: 1 public properties
-- `Sources/SwiftASB/Public/CodexFS.swift`: 22 public properties
+- `Sources/SwiftASB/Public/CodexFS.swift`: 36 public properties
 - `Sources/SwiftASB/Public/CodexInteractiveRequests.swift`: 74 public properties
 - `Sources/SwiftASB/Public/CodexThread+Dashboard.swift`: 29 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift`: 25 public properties

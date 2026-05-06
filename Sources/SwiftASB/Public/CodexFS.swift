@@ -113,6 +113,151 @@ public struct CodexFS: Sendable {
         public let changedPaths: [String]
     }
 
+    /// Repeatable file-discovery intent for app-server-owned directory reads.
+    ///
+    /// `FileDiscoveryQD` lets sandboxed clients describe a bounded file-picker
+    /// or fuzzy file search without reading local disk directly. SwiftASB walks
+    /// directories through `fs/readDirectory`, then applies local filtering and
+    /// ranking to entries returned by the app-server.
+    public struct FileDiscoveryQD: Sendable, Equatable {
+        public var includedKinds: Set<FileDiscoveryHit.Kind>
+        public var includesHiddenEntries: Bool
+        public var limit: Int
+        public var maximumDepth: Int
+        public var rootPath: String
+        public var searchTerm: String?
+
+        /// Creates a file-discovery query descriptor.
+        ///
+        /// Numeric inputs are normalized to useful lower bounds. `maximumDepth`
+        /// counts child-directory hops below `rootPath`, so `0` means only the
+        /// root directory's direct entries.
+        public init(
+            rootPath: String,
+            searchTerm: String? = nil,
+            limit: Int = 50,
+            maximumDepth: Int = 6,
+            includedKinds: Set<FileDiscoveryHit.Kind> = [.file],
+            includesHiddenEntries: Bool = false
+        ) {
+            self.rootPath = rootPath
+            self.searchTerm = Self.normalizedSearchTerm(searchTerm)
+            self.limit = max(1, limit)
+            self.maximumDepth = max(0, maximumDepth)
+            self.includedKinds = includedKinds.isEmpty ? [.file] : includedKinds
+            self.includesHiddenEntries = includesHiddenEntries
+        }
+
+        /// File entries below `rootPath`, optionally ranked by fuzzy search term.
+        public static func files(
+            under rootPath: String,
+            matching searchTerm: String? = nil,
+            limit: Int = 50,
+            maximumDepth: Int = 6
+        ) -> Self {
+            .init(
+                rootPath: rootPath,
+                searchTerm: searchTerm,
+                limit: limit,
+                maximumDepth: maximumDepth,
+                includedKinds: [.file]
+            )
+        }
+
+        /// File and directory entries below `rootPath`, optionally ranked by fuzzy search term.
+        public static func entries(
+            under rootPath: String,
+            matching searchTerm: String? = nil,
+            limit: Int = 50,
+            maximumDepth: Int = 6
+        ) -> Self {
+            .init(
+                rootPath: rootPath,
+                searchTerm: searchTerm,
+                limit: limit,
+                maximumDepth: maximumDepth,
+                includedKinds: [.directory, .file, .other]
+            )
+        }
+
+        /// Returns the same query with a normalized result limit.
+        public func limited(to limit: Int) -> Self {
+            .init(
+                rootPath: rootPath,
+                searchTerm: searchTerm,
+                limit: limit,
+                maximumDepth: maximumDepth,
+                includedKinds: includedKinds,
+                includesHiddenEntries: includesHiddenEntries
+            )
+        }
+
+        /// Returns the same query with a normalized maximum traversal depth.
+        public func limitedDepth(to maximumDepth: Int) -> Self {
+            .init(
+                rootPath: rootPath,
+                searchTerm: searchTerm,
+                limit: limit,
+                maximumDepth: maximumDepth,
+                includedKinds: includedKinds,
+                includesHiddenEntries: includesHiddenEntries
+            )
+        }
+
+        /// Returns the same query with a normalized fuzzy search term.
+        public func searching(_ searchTerm: String?) -> Self {
+            .init(
+                rootPath: rootPath,
+                searchTerm: searchTerm,
+                limit: limit,
+                maximumDepth: maximumDepth,
+                includedKinds: includedKinds,
+                includesHiddenEntries: includesHiddenEntries
+            )
+        }
+
+        /// Returns the same query with hidden entries included or excluded.
+        public func includingHiddenEntries(_ includesHiddenEntries: Bool = true) -> Self {
+            .init(
+                rootPath: rootPath,
+                searchTerm: searchTerm,
+                limit: limit,
+                maximumDepth: maximumDepth,
+                includedKinds: includedKinds,
+                includesHiddenEntries: includesHiddenEntries
+            )
+        }
+
+        private static func normalizedSearchTerm(_ searchTerm: String?) -> String? {
+            let normalized = searchTerm?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return normalized?.isEmpty == false ? normalized : nil
+        }
+    }
+
+    /// Results returned by a file-discovery query.
+    public struct FileDiscoveryResult: Sendable, Equatable {
+        public let hits: [FileDiscoveryHit]
+    }
+
+    /// One file-discovery hit returned from an app-server directory walk.
+    public struct FileDiscoveryHit: Sendable, Equatable, Identifiable {
+        /// Filesystem kind reported by the app-server.
+        public enum Kind: String, Sendable, Equatable, Hashable {
+            case directory
+            case file
+            case other
+        }
+
+        public var id: String { path }
+
+        public let depth: Int
+        public let fileName: String
+        public let kind: Kind
+        public let path: String
+        public let relativePath: String
+        public let score: Int?
+    }
+
     /// Reads app-server-owned filesystem metadata for an absolute path.
     public func readMetadata(_ request: MetadataRequest) async throws -> Metadata {
         try await appServer.readFSMetadata(request)
@@ -136,6 +281,40 @@ public struct CodexFS: Sendable {
     /// Stops filesystem watch notifications for a prior watch.
     public func unwatch(_ request: UnwatchRequest) async throws {
         try await appServer.unwatchFSChanges(request)
+    }
+
+    /// Discovers files or directories through app-server directory reads.
+    ///
+    /// The filesystem traversal is bounded by `maximumDepth` and `limit`.
+    /// Fuzzy matching is applied only to app-server-returned entry names and
+    /// relative paths; SwiftASB does not inspect local disk directly.
+    public func discoverFiles(_ query: FileDiscoveryQD) async throws -> FileDiscoveryResult {
+        var hits: [FileDiscoveryHit] = []
+        try await collectDiscoveryHits(
+            query: query,
+            directoryPath: query.rootPath,
+            relativeDirectoryPath: "",
+            depth: 0,
+            hits: &hits
+        )
+
+        let sortedHits = hits.sorted { lhs, rhs in
+            switch (lhs.score, rhs.score) {
+            case let (left?, right?) where left != right:
+                return left > right
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            default:
+                if lhs.depth != rhs.depth {
+                    return lhs.depth < rhs.depth
+                }
+                return lhs.relativePath.localizedStandardCompare(rhs.relativePath) == .orderedAscending
+            }
+        }
+
+        return .init(hits: Array(sortedHits.prefix(query.limit)))
     }
 }
 
@@ -180,6 +359,113 @@ extension CodexFS.DirectoryEntry.Kind {
         } else if isFile {
             self = .file
         } else {
+            self = .other
+        }
+    }
+}
+
+private extension CodexFS {
+    func collectDiscoveryHits(
+        query: FileDiscoveryQD,
+        directoryPath: String,
+        relativeDirectoryPath: String,
+        depth: Int,
+        hits: inout [FileDiscoveryHit]
+    ) async throws {
+        guard depth <= query.maximumDepth else { return }
+
+        let directory = try await readDirectory(.init(path: directoryPath))
+
+        for entry in directory.entries {
+            guard query.includesHiddenEntries || !entry.fileName.hasPrefix(".") else {
+                continue
+            }
+
+            let childPath = appendingPathComponent(entry.fileName, to: directoryPath)
+            let relativePath = appendingPathComponent(entry.fileName, to: relativeDirectoryPath)
+            let kind = CodexFS.FileDiscoveryHit.Kind(entry.kind)
+            let score = query.searchTerm.flatMap {
+                fuzzyScore(query: $0, candidate: relativePath)
+            }
+
+            if query.includedKinds.contains(kind),
+               query.searchTerm == nil || score != nil
+            {
+                hits.append(
+                    .init(
+                        depth: depth,
+                        fileName: entry.fileName,
+                        kind: kind,
+                        path: childPath,
+                        relativePath: relativePath,
+                        score: score
+                    )
+                )
+            }
+
+            if entry.kind == .directory,
+               depth < query.maximumDepth
+            {
+                try await collectDiscoveryHits(
+                    query: query,
+                    directoryPath: childPath,
+                    relativeDirectoryPath: relativePath,
+                    depth: depth + 1,
+                    hits: &hits
+                )
+            }
+        }
+    }
+
+    func appendingPathComponent(_ component: String, to path: String) -> String {
+        guard !path.isEmpty else { return component }
+        return path.hasSuffix("/") ? path + component : path + "/" + component
+    }
+
+    func fuzzyScore(query: String, candidate: String) -> Int? {
+        let queryCharacters = Array(query.lowercased())
+        guard !queryCharacters.isEmpty else { return nil }
+
+        let candidateCharacters = Array(candidate.lowercased())
+        var queryIndex = 0
+        var score = 0
+        var previousMatchIndex: Int?
+
+        for (candidateIndex, candidateCharacter) in candidateCharacters.enumerated() {
+            guard candidateCharacter == queryCharacters[queryIndex] else { continue }
+
+            score += 10
+            if candidateIndex == 0 || isPathBoundary(candidateCharacters[candidateIndex - 1]) {
+                score += 8
+            }
+            if let previousMatchIndex {
+                score += max(0, 6 - (candidateIndex - previousMatchIndex - 1))
+            }
+
+            previousMatchIndex = candidateIndex
+            queryIndex += 1
+
+            if queryIndex == queryCharacters.count {
+                return score - candidateCharacters.count
+            }
+        }
+
+        return nil
+    }
+
+    func isPathBoundary(_ character: Character) -> Bool {
+        character == "/" || character == "-" || character == "_" || character == "." || character == " "
+    }
+}
+
+private extension CodexFS.FileDiscoveryHit.Kind {
+    init(_ entryKind: CodexFS.DirectoryEntry.Kind) {
+        switch entryKind {
+        case .directory:
+            self = .directory
+        case .file:
+            self = .file
+        case .other:
             self = .other
         }
     }

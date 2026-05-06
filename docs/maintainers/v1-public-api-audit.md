@@ -456,11 +456,12 @@ Use these decisions for every public symbol:
 - [x] Record the first post-v1 app-server filesystem promotion.
   Decision: `CodexFS` is the public namespace for read-only filesystem facts
   routed through the app-server. It currently owns metadata, directory listing,
-  file-byte reads, and filesystem watch notifications. Filesystem mutation and
-  fuzzy file search stay unpromoted until their user workflow and permission
-  model are clearer. The older `CodexThread` local workspace-file helpers were
-  removed so SwiftASB has one promoted filesystem namespace instead of parallel
-  local and app-server read paths.
+  file-byte reads, bounded file discovery, SwiftASB-owned fuzzy ranking over
+  app-server-returned entries, and filesystem watch notifications. Filesystem
+  mutation stays unpromoted until its user workflow and permission model are
+  clearer. The older `CodexThread` local workspace-file helpers were removed so
+  SwiftASB has one promoted filesystem namespace instead of parallel local and
+  app-server read paths.
 - [x] Record the config and extension-inventory namespace decision.
   Decision: `CodexConfig` owns app-server-routed effective-config and
   requirements reads. `CodexAppServer.CodexExtensions` owns app-server-routed

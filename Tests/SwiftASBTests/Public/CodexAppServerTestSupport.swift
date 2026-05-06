@@ -463,21 +463,67 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 ]
             )
         case "fs/readDirectory":
+            let path = try requestParam("path", from: requestPayload) as? String
+            let entries: [[String: Any]] = switch path {
+            case "/tmp/project":
+                [
+                    [
+                        "fileName": "Sources",
+                        "isDirectory": true,
+                        "isFile": false,
+                    ],
+                    [
+                        "fileName": "Package.swift",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                    [
+                        "fileName": ".build",
+                        "isDirectory": true,
+                        "isFile": false,
+                    ],
+                ]
+            case "/tmp/project/Sources":
+                [
+                    [
+                        "fileName": "SwiftASB",
+                        "isDirectory": true,
+                        "isFile": false,
+                    ],
+                    [
+                        "fileName": "SwiftASBTests.swift",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                ]
+            case "/tmp/project/Sources/SwiftASB":
+                [
+                    [
+                        "fileName": "CodexFS.swift",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                    [
+                        "fileName": "CodexAppServer.swift",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                ]
+            case "/tmp/project/.build":
+                [
+                    [
+                        "fileName": "debug",
+                        "isDirectory": true,
+                        "isFile": false,
+                    ],
+                ]
+            default:
+                []
+            }
             return responsePayload(
                 id: id,
                 result: [
-                    "entries": [
-                        [
-                            "fileName": "Sources",
-                            "isDirectory": true,
-                            "isFile": false,
-                        ],
-                        [
-                            "fileName": "Package.swift",
-                            "isDirectory": false,
-                            "isFile": true,
-                        ],
-                    ],
+                    "entries": entries,
                 ]
             )
         case "fs/readFile":
@@ -1557,6 +1603,14 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
             try JSONSerialization.jsonObject(with: payload) as? [String: Any]
         )
         return try #require(object["method"] as? String)
+    }
+
+    private func requestParam(_ name: String, from payload: Data) throws -> Any? {
+        let object = try #require(
+            try JSONSerialization.jsonObject(with: payload) as? [String: Any]
+        )
+        let params = try #require(object["params"] as? [String: Any])
+        return params[name]
     }
 
     private func responsePayload(id: CodexRPCRequestID, result: [String: Any]) -> Data {

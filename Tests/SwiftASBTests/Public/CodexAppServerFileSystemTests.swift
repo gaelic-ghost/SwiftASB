@@ -27,8 +27,8 @@ extension CodexAppServerTests {
         #expect(metadata.isSymbolicLink == false)
 
         let directory = try await client.fs.readDirectory(.init(path: "/tmp/project"))
-        #expect(directory.entries.map(\.fileName) == ["Sources", "Package.swift"])
-        #expect(directory.entries.map(\.kind) == [.directory, .file])
+        #expect(directory.entries.map(\.fileName) == ["Sources", "Package.swift", ".build"])
+        #expect(directory.entries.map(\.kind) == [.directory, .file, .directory])
 
         let file = try await client.fs.readFile(.init(path: "/tmp/project/README.md"))
         #expect(String(data: file.data, encoding: .utf8) == "hello from CodexFS")
@@ -41,6 +41,50 @@ extension CodexAppServerTests {
 
         let fileRequest = try #require(await transport.recordedRequestPayload(for: "fs/readFile"))
         #expect(value(at: ["params", "path"], in: try decodedJSONObject(from: fileRequest)) as? String == "/tmp/project/README.md")
+
+        await client.stop()
+    }
+
+    @Test("CodexFS discovers files through app-server directory reads")
+    func codexFSDiscoversFilesThroughAppServerDirectoryReads() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let descriptor = CodexFS.FileDiscoveryQD
+            .files(under: "/tmp/project", matching: "cxfs", limit: 0, maximumDepth: 3)
+            .limited(to: 2)
+
+        #expect(descriptor.limit == 2)
+        #expect(descriptor.searchTerm == "cxfs")
+        #expect(descriptor.includedKinds == [.file])
+
+        let result = try await client.fs.discoverFiles(descriptor)
+
+        #expect(result.hits.map(\.relativePath) == ["Sources/SwiftASB/CodexFS.swift"])
+        #expect(result.hits.first?.path == "/tmp/project/Sources/SwiftASB/CodexFS.swift")
+        #expect(result.hits.first?.kind == .file)
+        #expect(result.hits.first?.depth == 2)
+        #expect(result.hits.first?.score != nil)
+
+        let directoryRequests = await transport.requestPayloads(for: "fs/readDirectory")
+        let directoryPaths = try directoryRequests.map {
+            value(at: ["params", "path"], in: try decodedJSONObject(from: $0)) as? String
+        }
+        #expect(directoryPaths.contains("/tmp/project"))
+        #expect(directoryPaths.contains("/tmp/project/Sources"))
+        #expect(directoryPaths.contains("/tmp/project/Sources/SwiftASB"))
+        #expect(directoryPaths.contains("/tmp/project/.build") == false)
 
         await client.stop()
     }
