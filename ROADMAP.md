@@ -103,11 +103,11 @@ lifecycle, SPI visibility, basic history hydration, first-pass reconciliation,
 or command-approval completion. Those slices now exist and shipped in the
 `v1.0.3` baseline.
 
-The next meaningful work is to start the first post-v1 query and app-library
-slice: make repeatable list, grouping, selection, and history-window requests
-expressible through SwiftASB-owned public values instead of making consumers
-learn Core Data fetch descriptors, SwiftData queries, or app-server paging
-rules directly.
+The next meaningful work is to widen the reviewed app-server schema and protocol
+coverage before adding more public query descriptors. Descriptors should compile
+against Codex-owned workspace, Git, file, and thread facts wherever possible,
+rather than making SwiftASB or a sandboxed client infer repository identity by
+walking the local filesystem.
 
 The package can now:
 
@@ -133,20 +133,30 @@ The package can now:
 
 That means the current priority order is:
 
-1. Finish the next query descriptor increment beyond `ThreadListQD` and
+1. Review the currently bundled app-server schema families that are not yet
+   promoted through SwiftASB's hand-shaped protocol/public surfaces, with
+   special attention to workspace, filesystem, Git/repository, and app-server
+   action families that let sandboxed clients ask Codex for facts instead of
+   reading disk directly.
+2. Promote the app-server-owned facts needed for durable repository grouping:
+   normalized working directory, Git worktree root if upstream exposes it,
+   branch, SHA, origin URL, sandbox/permission provenance, and any workspace
+   listing/search/status actions that upstream already owns.
+3. Finish the next query descriptor increment beyond `ThreadListQD` and
    `HistoryWindowQD`: repository-root grouping, recent-file and recent-command
-   window descriptors, and any selection-centered reads that become necessary
-   once a real UI uses the first descriptor surface.
-2. Finish the next `CodexAppServer.Library` slice around derived repository-root
-   grouping and richer Git observables, using those descriptor values where they
-   make list and selection behavior more explicit.
-3. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` after v1 as
+   window descriptors, and any selection-centered reads that become necessary,
+   but only after the schema/protocol pass confirms which facts are app-server
+   owned and which are cwd-only fallbacks.
+4. Finish the next `CodexAppServer.Library` slice around derived repository-root
+   grouping and richer Git observables, using those promoted app-server facts
+   and descriptor values where they make list and selection behavior explicit.
+5. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` after v1 as
    real UI usage teaches better calibration. The v1 review keeps the separate
    turn/file/command companions, current cache-policy names and defaults,
    selection/visibility protection, slimming behavior, and rehydration model as
    stable enough; remaining work is calibration and richer previews, not proving
    the model exists.
-4. Keep future Codex CLI schema additions classified before public promotion:
+6. Keep future Codex CLI schema additions classified before public promotion:
    `excludeTurns` remains public on resume/fork request models because it
    directly supports the existing paged history model; permission-profile
    families stay internal until SwiftASB owns a deliberate public permission
@@ -215,6 +225,10 @@ workflow earns them in a later feature release.
   `RecentFiles`.
 - [ ] Mixed `RecentActivity` timeline. Keep `RecentTurns`, `RecentFiles`, and
   `RecentCommands` separate for v1.
+- [ ] Review and promote more app-server schema families before widening query
+  descriptors, prioritizing workspace, filesystem, Git/repository, and
+  app-server action surfaces that let sandboxed clients ask Codex for facts
+  instead of reading local disk directly.
 - [ ] Finish the `CodexAppServer` app-wide observable companion with derived
   repository-root grouping, richer Git observables, and any broader app-wide
   settings/actions that earn public models.
@@ -1198,3 +1212,4 @@ Completed
 - 2026-04-25: Added Xcode `docbuild` DocC validation, Swift Package Index metadata, and warning-clean DocC links.
 - 2026-04-25: Split README package-user guidance from contributor workflow in `CONTRIBUTING.md`.
 - 2026-05-06: Marked the `v1.0.3` SPI listing confirmed, closed the completed v1 milestone status drift, and moved the active maintainer priority to post-v1 query descriptors plus app-library grouping.
+- 2026-05-06: Reprioritized the next post-v1 slice around broader app-server schema and protocol promotion before additional query descriptors, so sandboxed clients can rely on Codex-owned workspace and Git facts instead of SwiftASB filesystem inference.
