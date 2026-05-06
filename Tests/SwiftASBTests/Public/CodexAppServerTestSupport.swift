@@ -516,6 +516,19 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                         "isDirectory": true,
                         "isFile": false,
                     ],
+                    [
+                        "fileName": "cache.log",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
+                ]
+            case "/tmp/project/.build/debug":
+                [
+                    [
+                        "fileName": "CodexFS.o",
+                        "isDirectory": false,
+                        "isFile": true,
+                    ],
                 ]
             default:
                 []
@@ -564,6 +577,17 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                             ],
                             "version": "1",
                         ],
+                        [
+                            "config": [
+                                "sandbox_mode": "workspace-write",
+                            ],
+                            "disabledReason": "Project config is disabled for this fixture.",
+                            "name": [
+                                "type": "project",
+                                "dotCodexFolder": "/tmp/project/.codex",
+                            ],
+                            "version": "2",
+                        ],
                     ],
                     "origins": [
                         "model": [
@@ -572,6 +596,13 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                                 "file": "/Users/galew/.codex/config.toml",
                             ],
                             "version": "1",
+                        ],
+                        "sandbox_mode": [
+                            "name": [
+                                "type": "project",
+                                "dotCodexFolder": "/tmp/project/.codex",
+                            ],
+                            "version": "2",
                         ],
                     ],
                 ]
@@ -596,10 +627,34 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                             "branding": [
                                 "isDiscoverableApp": true,
                                 "developer": "OpenAI",
+                                "category": "developer-tools",
+                                "privacyPolicy": "https://example.com/privacy",
+                                "termsOfService": "https://example.com/terms",
+                                "website": "https://example.com/github",
                             ],
+                            "appMetadata": [
+                                "categories": ["Developer Tools"],
+                                "developer": "OpenAI",
+                                "screenshots": [
+                                    [
+                                        "fileId": "screenshot-1",
+                                        "url": "https://example.com/screenshot.png",
+                                        "userPrompt": "Show repository issues.",
+                                    ],
+                                ],
+                                "version": "1.2.3",
+                                "versionId": "version-123",
+                                "versionNotes": "Fixture metadata.",
+                            ],
+                            "description": "GitHub app fixture",
+                            "distributionChannel": "curated",
                             "id": "github",
+                            "installUrl": "https://example.com/install",
                             "isAccessible": true,
                             "isEnabled": true,
+                            "labels": ["kind": "connector"],
+                            "logoUrl": "https://example.com/logo-light.png",
+                            "logoUrlDark": "https://example.com/logo-dark.png",
                             "name": "GitHub",
                             "pluginDisplayNames": ["GitHub"],
                         ],
@@ -614,15 +669,24 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "data": [
                         [
                             "cwd": "/tmp/project",
-                            "errors": [],
+                            "errors": [
+                                [
+                                    "message": "Skipped duplicate skill.",
+                                    "path": "/tmp/skills/duplicate/SKILL.md",
+                                ],
+                            ],
                             "skills": [
                                 [
                                     "description": "Build Swift packages.",
                                     "enabled": true,
+                                    "interface": [
+                                        "displayName": "Swift Package Workflow",
+                                        "shortDescription": "SwiftPM workflow from interface",
+                                    ],
                                     "name": "swift-package-build-run-workflow",
                                     "path": "/tmp/skills/swift-package-build-run-workflow/SKILL.md",
                                     "scope": "user",
-                                    "shortDescription": "SwiftPM workflow",
+                                    "shortDescription": "Legacy SwiftPM workflow",
                                 ],
                             ],
                         ],
@@ -634,7 +698,12 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 id: id,
                 result: [
                     "featuredPluginIds": ["github"],
-                    "marketplaceLoadErrors": [],
+                    "marketplaceLoadErrors": [
+                        [
+                            "marketplacePath": "/tmp/bad-marketplace.json",
+                            "message": "Fixture marketplace failed to load.",
+                        ],
+                    ],
                     "marketplaces": [
                         [
                             "interface": [
@@ -648,9 +717,33 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                                     "id": "github",
                                     "installed": true,
                                     "installPolicy": "AVAILABLE",
+                                    "interface": [
+                                        "brandColor": "#111111",
+                                        "capabilities": ["issues", "pull-requests"],
+                                        "category": "developer-tools",
+                                        "defaultPrompt": ["Review my PR."],
+                                        "developerName": "OpenAI",
+                                        "displayName": "GitHub",
+                                        "longDescription": "GitHub plugin fixture.",
+                                        "screenshots": [],
+                                        "screenshotUrls": [],
+                                        "shortDescription": "GitHub workflows.",
+                                    ],
                                     "name": "GitHub",
                                     "source": [
                                         "type": "remote",
+                                    ],
+                                ],
+                                [
+                                    "authPolicy": "ON_INSTALL",
+                                    "enabled": false,
+                                    "id": "local-plugin",
+                                    "installed": false,
+                                    "installPolicy": "NOT_AVAILABLE",
+                                    "name": "Local Plugin",
+                                    "source": [
+                                        "path": "/tmp/plugins/local-plugin",
+                                        "type": "local",
                                     ],
                                 ],
                             ],
@@ -663,19 +756,56 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 id: id,
                 result: [
                     "plugin": [
-                        "apps": [],
+                        "apps": [
+                            [
+                                "description": "GitHub app summary",
+                                "id": "github",
+                                "installUrl": "https://example.com/install",
+                                "name": "GitHub",
+                                "needsAuth": true,
+                            ],
+                        ],
+                        "description": "GitHub plugin detail fixture.",
                         "marketplaceName": "openai-curated",
+                        "marketplacePath": "/tmp/marketplaces/openai-curated.json",
                         "mcpServers": [],
-                        "skills": [],
+                        "skills": [
+                            [
+                                "description": "Review pull requests.",
+                                "enabled": true,
+                                "interface": [
+                                    "displayName": "PR Review",
+                                    "shortDescription": "Review PRs.",
+                                ],
+                                "name": "review-pr",
+                                "path": "/tmp/plugins/github/skills/review-pr/SKILL.md",
+                                "shortDescription": "Legacy review PRs.",
+                            ],
+                        ],
                         "summary": [
                             "authPolicy": "ON_USE",
                             "enabled": true,
                             "id": "github",
                             "installed": true,
                             "installPolicy": "AVAILABLE",
+                            "interface": [
+                                "brandColor": "#111111",
+                                "capabilities": ["issues", "pull-requests"],
+                                "category": "developer-tools",
+                                "defaultPrompt": ["Review my PR."],
+                                "developerName": "OpenAI",
+                                "displayName": "GitHub",
+                                "longDescription": "GitHub plugin fixture.",
+                                "screenshots": [],
+                                "screenshotUrls": [],
+                                "shortDescription": "GitHub workflows.",
+                            ],
                             "name": "GitHub",
                             "source": [
-                                "type": "remote",
+                                "refName": "main",
+                                "sha": "abc123",
+                                "type": "git",
+                                "url": "https://github.com/openai/github-plugin",
                             ],
                         ],
                     ],

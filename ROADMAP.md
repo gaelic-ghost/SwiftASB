@@ -674,6 +674,11 @@ shape `SwiftASB` rather than stay as one-off test knowledge.
   remaining intentional gap is not local unit coverage; it is live breadth for
   future server-request families such as permissions and MCP elicitation when
   SwiftASB chooses to promote those as stronger public runtime guarantees.
+- Test coverage audit, 2026-05-06: deterministic promoted-schema coverage now
+  exercises `CodexFS.FileDiscoveryQD` depth, hidden-entry, no-match, and fuzzy
+  ranking behavior over app-server `fs/readDirectory` fixtures; richer
+  `CodexConfig` and `CodexAppServer.CodexExtensions` optional fields; and
+  `thread/resume` plus `thread/fork` workspace-permission selection encoding.
 
 ### Test Coverage Gap Register
 
@@ -725,6 +730,12 @@ because consumers are wrapping a fast-moving local runtime.
   behavior must include at least one representative fixture in the same PR,
   including one additive unknown field when the upstream shape is expected to
   remain forward-compatible.
+- Promoted app-server surface coverage now includes deterministic request-shape
+  assertions for `skills/list`, `plugin/list`, `plugin/read`,
+  `thread/resume`, and `thread/fork`, plus representative optional-field
+  decoding for app, skill, plugin, config layer, config origin, and
+  file-discovery descriptors. Keep extending these deterministic fixtures before
+  moving broader live runtime breadth into the release-gate matrix.
 
 ## Live Testing Expansion Plan
 
@@ -1221,3 +1232,4 @@ Completed
 - 2026-05-06: Added recent-file and recent-command descriptors, and taught app-wide library grouping to use app-server Git origin metadata with cwd fallback.
 - 2026-05-06: Promoted workspace permission-profile selections and runtime permission facts through `CodexWorkspace`, and exposed active permission profiles on thread sessions and handles.
 - 2026-05-06: Promoted bounded file discovery and fuzzy file lookup through `CodexFS.FileDiscoveryQD` and `CodexFS.discoverFiles(_:)`, keeping traversal on app-server `fs/readDirectory` while SwiftASB owns local ranking over returned entries.
+- 2026-05-06: Expanded deterministic coverage for promoted file discovery, config, extension inventory, and workspace-permission request descriptors.

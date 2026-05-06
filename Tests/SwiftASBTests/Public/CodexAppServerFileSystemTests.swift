@@ -89,6 +89,61 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("CodexFS file discovery descriptors cover depth, hidden, and no-match cases")
+    func codexFSFileDiscoveryDescriptorsCoverBoundaryCases() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let rootFiles = try await client.fs.discoverFiles(
+            .files(under: "/tmp/project", limit: 0, maximumDepth: -1)
+        )
+        #expect(rootFiles.hits.map(\.relativePath) == ["Package.swift"])
+        #expect(rootFiles.hits.first?.depth == 0)
+
+        let visibleEntries = try await client.fs.discoverFiles(
+            .entries(under: "/tmp/project", limit: 10, maximumDepth: 1)
+        )
+        #expect(visibleEntries.hits.map(\.relativePath) == [
+            "Package.swift",
+            "Sources",
+            "Sources/SwiftASB",
+            "Sources/SwiftASBTests.swift",
+        ])
+        #expect(visibleEntries.hits.map(\.kind) == [.file, .directory, .directory, .file])
+
+        let hiddenEntries = try await client.fs.discoverFiles(
+            CodexFS.FileDiscoveryQD
+                .entries(under: "/tmp/project", matching: "cfs", limit: 10, maximumDepth: 3)
+                .includingHiddenEntries()
+        )
+        #expect(hiddenEntries.hits.map(\.relativePath) == [
+            ".build/debug/CodexFS.o",
+            "Sources/SwiftASB",
+            "Sources/SwiftASBTests.swift",
+            "Sources/SwiftASB/CodexFS.swift",
+            "Sources/SwiftASB/CodexAppServer.swift",
+        ])
+        #expect(hiddenEntries.hits.map(\.kind) == [.file, .directory, .file, .file, .file])
+
+        let noMatches = try await client.fs.discoverFiles(
+            .files(under: "/tmp/project", matching: "definitely-not-here", limit: 10, maximumDepth: 3)
+        )
+        #expect(noMatches.hits.isEmpty)
+
+        await client.stop()
+    }
+
     @Test("lists app-server loaded thread ids")
     func listsAppServerLoadedThreadIDs() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -177,12 +232,20 @@ extension CodexAppServerTests {
 
         let snapshot = try await client.config.read(.init(currentDirectoryPath: "/tmp/project", includeLayers: true))
         #expect(snapshot.config == .object(["model": .string("gpt-5.2"), "sandbox_mode": .string("workspace-write")]))
-        #expect(snapshot.layers?.count == 1)
+        #expect(snapshot.layers?.count == 2)
         #expect(snapshot.layers?.first?.name.kind == .user)
+        #expect(snapshot.layers?[1].name.kind == .project)
+        #expect(snapshot.layers?[1].name.dotCodexFolder == "/tmp/project/.codex")
+        #expect(snapshot.layers?[1].disabledReason == "Project config is disabled for this fixture.")
         #expect(snapshot.origins["model"]?.name.file == "/Users/galew/.codex/config.toml")
+        #expect(snapshot.origins["sandbox_mode"]?.name.kind == .project)
 
         let requirements = try await client.config.readRequirements()
-        #expect(requirements.requirements != nil)
+        #expect(requirements.requirements == .object([
+            "featureRequirements": .object([
+                "network_access": .bool(true),
+            ]),
+        ]))
 
         let configRequest = try #require(await transport.recordedRequestPayload(for: "config/read"))
         let configRequestJSON = try decodedJSONObject(from: configRequest)
@@ -215,19 +278,51 @@ extension CodexAppServerTests {
         let apps = try await client.extensions.listApps(.init(cursor: "apps-cursor", limit: 1, forceRefetch: true, threadID: "thread-123"))
         #expect(apps.apps.map(\.name) == ["GitHub"])
         #expect(apps.apps.first?.branding?.isDiscoverableApp == true)
+        #expect(apps.apps.first?.branding?.category == "developer-tools")
+        #expect(apps.apps.first?.categories == ["Developer Tools"])
+        #expect(apps.apps.first?.description == "GitHub app fixture")
+        #expect(apps.apps.first?.installURL == "https://example.com/install")
+        #expect(apps.apps.first?.labels == ["kind": "connector"])
+        #expect(apps.apps.first?.screenshots?.first?.fileID == "screenshot-1")
+        #expect(apps.apps.first?.versionID == "version-123")
         #expect(apps.nextCursor == "apps-next")
 
-        let skills = try await client.extensions.listSkills(.init(currentDirectoryPaths: ["/tmp/project"], forceReload: true))
+        let skills = try await client.extensions.listSkills(
+            .init(
+                currentDirectoryPaths: ["/tmp/project"],
+                forceReload: true,
+                perCurrentDirectoryExtraUserRoots: [
+                    .init(currentDirectoryPath: "/tmp/project", extraUserRoots: ["/tmp/extra-skills"]),
+                ]
+            )
+        )
+        #expect(skills.entries.first?.errors.first?.message == "Skipped duplicate skill.")
         #expect(skills.entries.first?.skills.first?.scope == .user)
         #expect(skills.entries.first?.skills.first?.name == "swift-package-build-run-workflow")
+        #expect(skills.entries.first?.skills.first?.displayName == "Swift Package Workflow")
+        #expect(skills.entries.first?.skills.first?.shortDescription == "SwiftPM workflow from interface")
 
         let plugins = try await client.extensions.listPlugins(.init(currentDirectoryPaths: ["/tmp/project"]))
         #expect(plugins.featuredPluginIDs == ["github"])
+        #expect(plugins.marketplaceLoadErrors.first?.marketplacePath == "/tmp/bad-marketplace.json")
+        #expect(plugins.marketplaces.first?.displayName == "Curated")
         #expect(plugins.marketplaces.first?.plugins.first?.sourceKind == .remote)
+        #expect(plugins.marketplaces.first?.plugins.first?.interface?.capabilities == ["issues", "pull-requests"])
+        #expect(plugins.marketplaces.first?.plugins.first?.interface?.defaultPrompt == ["Review my PR."])
+        #expect(plugins.marketplaces.first?.plugins.last?.sourceKind == .local)
+        #expect(plugins.marketplaces.first?.plugins.last?.sourcePath == "/tmp/plugins/local-plugin")
 
         let plugin = try await client.extensions.readPlugin(.init(pluginName: "GitHub", remoteMarketplaceName: "openai-curated"))
         #expect(plugin.marketplaceName == "openai-curated")
+        #expect(plugin.marketplacePath == "/tmp/marketplaces/openai-curated.json")
+        #expect(plugin.description == "GitHub plugin detail fixture.")
+        #expect(plugin.apps.first?.needsAuth == true)
+        #expect(plugin.skills.first?.displayName == "PR Review")
         #expect(plugin.summary.name == "GitHub")
+        #expect(plugin.summary.sourceKind == .git)
+        #expect(plugin.summary.sourceRefName == "main")
+        #expect(plugin.summary.sourceSHA == "abc123")
+        #expect(plugin.summary.sourceURL == "https://github.com/openai/github-plugin")
 
         let modes = try await client.extensions.listCollaborationModes()
         #expect(modes.modes.first?.kind == .plan)
@@ -237,6 +332,23 @@ extension CodexAppServerTests {
         let appRequestJSON = try decodedJSONObject(from: appRequest)
         #expect(value(at: ["params", "cursor"], in: appRequestJSON) as? String == "apps-cursor")
         #expect(value(at: ["params", "threadId"], in: appRequestJSON) as? String == "thread-123")
+
+        let skillsRequest = try #require(await transport.recordedRequestPayload(for: "skills/list"))
+        let skillsRequestJSON = try decodedJSONObject(from: skillsRequest)
+        #expect(value(at: ["params", "cwds"], in: skillsRequestJSON) as? [String] == ["/tmp/project"])
+        #expect(value(at: ["params", "forceReload"], in: skillsRequestJSON) as? Bool == true)
+        let extraRoots = try #require(value(at: ["params", "perCwdExtraUserRoots"], in: skillsRequestJSON) as? [[String: Any]])
+        #expect(extraRoots.first?["cwd"] as? String == "/tmp/project")
+        #expect(extraRoots.first?["extraUserRoots"] as? [String] == ["/tmp/extra-skills"])
+
+        let pluginsRequest = try #require(await transport.recordedRequestPayload(for: "plugin/list"))
+        let pluginsRequestJSON = try decodedJSONObject(from: pluginsRequest)
+        #expect(value(at: ["params", "cwds"], in: pluginsRequestJSON) as? [String] == ["/tmp/project"])
+
+        let pluginReadRequest = try #require(await transport.recordedRequestPayload(for: "plugin/read"))
+        let pluginReadJSON = try decodedJSONObject(from: pluginReadRequest)
+        #expect(value(at: ["params", "pluginName"], in: pluginReadJSON) as? String == "GitHub")
+        #expect(value(at: ["params", "remoteMarketplaceName"], in: pluginReadJSON) as? String == "openai-curated")
 
         let collaborationRequest = try #require(await transport.recordedRequestPayload(for: "collaborationMode/list"))
         #expect(value(at: ["params"], in: try decodedJSONObject(from: collaborationRequest)) as? [String: Any] != nil)
