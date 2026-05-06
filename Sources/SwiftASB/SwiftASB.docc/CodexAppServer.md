@@ -41,6 +41,8 @@ Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, and ``listHooks(_:)`` for
 
 Use ``fs`` when a client needs filesystem metadata, direct directory entries, file bytes, or file-change watches through the app-server. This keeps sandboxed apps dependent on Codex-owned permissions and path handling instead of requiring the Swift process to read local disk directly.
 
+Use ``CodexWorkspace`` values when starting or resuming a thread with a named permissions profile, or when a UI needs to display the active permissions profile and exact filesystem/network permission facts Codex reported for the session.
+
 Use ``config`` to read effective app-server configuration and requirements policy without opening local config files from the Swift process.
 
 Use ``extensions`` to read app, skill, plugin, and collaboration-mode inventory through the app-server instead of inspecting installed plugin or skill directories directly.
@@ -149,6 +151,7 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``ThreadTurnsListRequest``
 - ``ThreadTurnsPage``
 - ``GitInfo``
+- ``CodexWorkspace``
 
 ### Turn Models
 

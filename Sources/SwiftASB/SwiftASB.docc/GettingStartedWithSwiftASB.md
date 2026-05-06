@@ -82,5 +82,5 @@ Call ``CodexAppServer/start()`` before every other protocol operation. Then call
 
 - ``CodexAppServer/startThread(_:)``
 - ``CodexThread``
-- ``CodexThread/startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)``
+- ``CodexThread/startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
 - ``CodexTurnHandle``

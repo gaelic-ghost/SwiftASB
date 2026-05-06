@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, and repository-grouping slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, and workspace permission-profile slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1623
-- Public/open types: 250
-- Public/open initializers: 106
+- Public/open symbols: 1705
+- Public/open types: 267
+- Public/open initializers: 113
 - Public/open methods and type methods: 117
-- Public/open enum cases: 298
-- Public/open properties: 852
+- Public/open enum cases: 318
+- Public/open properties: 890
 
 ## Public Types
 
@@ -205,6 +205,23 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexTurnReasoningSummaryTextDelta` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnReasoningTextDelta` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnStarted` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexWorkspace` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.ActivePermissionModification` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.ActivePermissionModification.Kind` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.ActivePermissionProfile` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.FileSystemAccessMode` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.FileSystemPath` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.FileSystemPermissions` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.FileSystemPermissions.Kind` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.FileSystemSandboxEntry` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.FileSystemSpecialPath` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.FileSystemSpecialPath.Kind` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.NetworkPermissions` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.PermissionProfile` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.PermissionProfile.Kind` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.PermissionSelection` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.PermissionSelectionModification` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.SessionSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 
 ## Public Initializers And Methods
 
@@ -365,7 +382,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThread.respond(to:with:)` - `func respond(to request: CodexElicitationRequest, with response: CodexElicitationResponse) async throws` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.rollbackLastTurns(_:)` - `func rollbackLastTurns(_ count: Int) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.setName(_:)` - `func setName(_ name: String) async throws` - Sources/SwiftASB/Public/CodexThread.swift
-- `CodexThread.startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)` - `func startTextTurn(_ text: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)` - `func startTextTurn(_ text: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, permissions: CodexWorkspace.PermissionSelection? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.startTurn(_:)` - `func startTurn(_ request: CodexThread.TurnStartRequest) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.updateMetadata(gitInfo:)` - `func updateMetadata(gitInfo: CodexAppServer.ThreadMetadataGitInfoUpdate) async throws -> CodexAppServer.ThreadInfo` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.windowAroundItem(_:limit:)` - `func windowAroundItem(_ itemID: String, limit: Int = 12) async throws -> CodexThread.HistoryWindow` - Sources/SwiftASB/Public/CodexThread.swift
@@ -702,6 +719,9 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
 - `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by app-server Git origin metadata with cwd fallback, and `ThreadSnapshot.currentGitOriginURL` exposes the persisted origin value used for that grouping.
+- `CodexWorkspace` owns app-server-owned permission selections and runtime workspace permission facts: `PermissionSelection`, `PermissionSelectionModification`, `ActivePermissionProfile`, `ActivePermissionModification`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, and `SessionSnapshot`.
+- `CodexAppServer.ThreadStartRequest`, `ThreadResumeRequest`, `ThreadForkRequest`, `TurnStartRequest`, `CodexThread.TurnStartRequest`, and `CodexThread.startTextTurn(...)` now accept optional `CodexWorkspace.PermissionSelection` values.
+- `CodexAppServer.ThreadSession` and `CodexThread` now expose active permission-profile provenance, runtime permission facts, and a `CodexWorkspace.SessionSnapshot`.
 
 ## Public Property Counts By Source File
 
@@ -713,9 +733,9 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexAppServer+LoadedThreads.swift`: 4 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 34 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 23 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 90 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 96 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift`: 12 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift`: 23 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift`: 24 public properties
 - `Sources/SwiftASB/Public/CodexConfig.swift`: 18 public properties
 - `Sources/SwiftASB/Public/CodexDiagnostics.swift`: 14 public properties
 - `Sources/SwiftASB/Public/CodexErrors.swift`: 1 public properties
@@ -725,5 +745,6 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift`: 54 public properties
-- `Sources/SwiftASB/Public/CodexThread.swift`: 67 public properties
+- `Sources/SwiftASB/Public/CodexThread.swift`: 71 public properties
 - `Sources/SwiftASB/Public/CodexTurnHandle.swift`: 108 public properties
+- `Sources/SwiftASB/Public/CodexWorkspace.swift`: 27 public properties

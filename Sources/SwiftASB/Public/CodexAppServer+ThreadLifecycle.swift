@@ -12,6 +12,7 @@ extension CodexAppServer {
         public var ephemeral: Bool?
         public var model: String?
         public var modelProvider: String?
+        public var permissions: CodexWorkspace.PermissionSelection?
         public var personality: Personality?
         public var sandboxMode: SandboxMode?
         public var serviceName: String?
@@ -34,6 +35,7 @@ extension CodexAppServer {
             ephemeral: Bool? = nil,
             model: String? = nil,
             modelProvider: String? = nil,
+            permissions: CodexWorkspace.PermissionSelection? = nil,
             personality: Personality? = nil,
             sandboxMode: SandboxMode? = nil,
             serviceName: String? = nil,
@@ -49,6 +51,7 @@ extension CodexAppServer {
             self.ephemeral = ephemeral
             self.model = model
             self.modelProvider = modelProvider
+            self.permissions = permissions
             self.personality = personality
             self.sandboxMode = sandboxMode
             self.serviceName = serviceName
@@ -68,6 +71,7 @@ extension CodexAppServer {
         public var excludeTurns: Bool?
         public var model: String?
         public var modelProvider: String?
+        public var permissions: CodexWorkspace.PermissionSelection?
         public var personality: Personality?
         public var sandboxMode: SandboxMode?
         public var serviceName: String?
@@ -91,6 +95,7 @@ extension CodexAppServer {
             excludeTurns: Bool? = nil,
             model: String? = nil,
             modelProvider: String? = nil,
+            permissions: CodexWorkspace.PermissionSelection? = nil,
             personality: Personality? = nil,
             sandboxMode: SandboxMode? = nil,
             serviceName: String? = nil,
@@ -106,6 +111,7 @@ extension CodexAppServer {
             self.excludeTurns = excludeTurns
             self.model = model
             self.modelProvider = modelProvider
+            self.permissions = permissions
             self.personality = personality
             self.sandboxMode = sandboxMode
             self.serviceName = serviceName
@@ -125,6 +131,7 @@ extension CodexAppServer {
         public var excludeTurns: Bool?
         public var model: String?
         public var modelProvider: String?
+        public var permissions: CodexWorkspace.PermissionSelection?
         public var personality: Personality?
         public var sandboxMode: SandboxMode?
         public var serviceName: String?
@@ -149,6 +156,7 @@ extension CodexAppServer {
             excludeTurns: Bool? = nil,
             model: String? = nil,
             modelProvider: String? = nil,
+            permissions: CodexWorkspace.PermissionSelection? = nil,
             personality: Personality? = nil,
             sandboxMode: SandboxMode? = nil,
             serviceName: String? = nil,
@@ -165,6 +173,7 @@ extension CodexAppServer {
             self.excludeTurns = excludeTurns
             self.model = model
             self.modelProvider = modelProvider
+            self.permissions = permissions
             self.personality = personality
             self.sandboxMode = sandboxMode
             self.serviceName = serviceName
@@ -174,16 +183,23 @@ extension CodexAppServer {
 
     /// App-server response and runtime defaults for a started, resumed, or forked thread.
     public struct ThreadSession: Sendable, Equatable {
+        public let activePermissionProfile: CodexWorkspace.ActivePermissionProfile?
         public let approvalPolicy: ApprovalPolicy
         public let approvalsReviewer: ApprovalsReviewer
         public let currentDirectoryPath: String
         public let instructionSources: [String]
         public let model: String
         public let modelProvider: String
+        public let permissionProfile: CodexWorkspace.PermissionProfile?
         public let reasoningEffort: ReasoningEffort?
         public let sandboxPolicy: SandboxPolicy
         public let serviceTier: ServiceTier?
         public let thread: ThreadInfo
+
+        /// Workspace, Git, sandbox, and permission facts for this session.
+        public var workspace: CodexWorkspace.SessionSnapshot {
+            .init(session: self)
+        }
     }
 
     /// Metadata for a stored or active Codex thread.

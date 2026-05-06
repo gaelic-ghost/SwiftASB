@@ -352,6 +352,46 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "instructionSources": ["AGENTS.md"],
                     "model": "gpt-5.4",
                     "modelProvider": "openai",
+                    "activePermissionProfile": [
+                        "id": ":workspace",
+                        "extends": NSNull(),
+                        "modifications": [
+                            [
+                                "path": "/tmp/project-fixtures",
+                                "type": "additionalWritableRoot",
+                            ],
+                        ],
+                    ],
+                    "permissionProfile": [
+                        "type": "managed",
+                        "fileSystem": [
+                            "type": "restricted",
+                            "globScanMaxDepth": 4,
+                            "entries": [
+                                [
+                                    "access": "write",
+                                    "path": [
+                                        "type": "special",
+                                        "value": [
+                                            "kind": "project_roots",
+                                            "path": NSNull(),
+                                            "subpath": NSNull(),
+                                        ],
+                                    ],
+                                ],
+                                [
+                                    "access": "read",
+                                    "path": [
+                                        "type": "path",
+                                        "path": "/tmp/project",
+                                    ],
+                                ],
+                            ],
+                        ],
+                        "network": [
+                            "enabled": true,
+                        ],
+                    ],
                     "reasoningEffort": "medium",
                     "sandbox": [
                         "type": "workspaceWrite",

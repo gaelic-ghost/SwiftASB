@@ -191,6 +191,7 @@ public struct CodexThread: Sendable {
         public var input: [CodexAppServer.TurnInput]
         public var model: String?
         public var outputSchema: CodexAppServer.JSONValue?
+        public var permissions: CodexWorkspace.PermissionSelection?
         public var personality: CodexAppServer.Personality?
         public var serviceTier: CodexAppServer.ServiceTier?
         public var summary: CodexAppServer.ReasoningSummary?
@@ -208,6 +209,7 @@ public struct CodexThread: Sendable {
             effort: CodexAppServer.ReasoningEffort? = nil,
             model: String? = nil,
             outputSchema: CodexAppServer.JSONValue? = nil,
+            permissions: CodexWorkspace.PermissionSelection? = nil,
             personality: CodexAppServer.Personality? = nil,
             serviceTier: CodexAppServer.ServiceTier? = nil,
             summary: CodexAppServer.ReasoningSummary? = nil
@@ -219,6 +221,7 @@ public struct CodexThread: Sendable {
             self.effort = effort
             self.model = model
             self.outputSchema = outputSchema
+            self.permissions = permissions
             self.personality = personality
             self.serviceTier = serviceTier
             self.summary = summary
@@ -274,9 +277,12 @@ public struct CodexThread: Sendable {
     public let instructionSources: [String]
     public let model: String
     public let modelProvider: String
+    public let activePermissionProfile: CodexWorkspace.ActivePermissionProfile?
+    public let permissionProfile: CodexWorkspace.PermissionProfile?
     public let reasoningEffort: CodexAppServer.ReasoningEffort?
     public let sandboxPolicy: CodexAppServer.SandboxPolicy
     public let serviceTier: CodexAppServer.ServiceTier?
+    public let workspace: CodexWorkspace.SessionSnapshot
 
     /// Typed events for this thread.
     ///
@@ -303,9 +309,12 @@ public struct CodexThread: Sendable {
         self.instructionSources = session.instructionSources
         self.model = session.model
         self.modelProvider = session.modelProvider
+        self.activePermissionProfile = session.activePermissionProfile
+        self.permissionProfile = session.permissionProfile
         self.reasoningEffort = session.reasoningEffort
         self.sandboxPolicy = session.sandboxPolicy
         self.serviceTier = session.serviceTier
+        self.workspace = session.workspace
         self.events = events
     }
 
@@ -321,6 +330,7 @@ public struct CodexThread: Sendable {
                 effort: request.effort,
                 model: request.model,
                 outputSchema: request.outputSchema,
+                permissions: request.permissions,
                 personality: request.personality,
                 serviceTier: request.serviceTier,
                 summary: request.summary
@@ -339,6 +349,7 @@ public struct CodexThread: Sendable {
         effort: CodexAppServer.ReasoningEffort? = nil,
         model: String? = nil,
         outputSchema: CodexAppServer.JSONValue? = nil,
+        permissions: CodexWorkspace.PermissionSelection? = nil,
         personality: CodexAppServer.Personality? = nil,
         serviceTier: CodexAppServer.ServiceTier? = nil,
         summary: CodexAppServer.ReasoningSummary? = nil
@@ -352,6 +363,7 @@ public struct CodexThread: Sendable {
                 effort: effort,
                 model: model,
                 outputSchema: outputSchema,
+                permissions: permissions,
                 personality: personality,
                 serviceTier: serviceTier,
                 summary: summary
@@ -400,12 +412,14 @@ public struct CodexThread: Sendable {
         return CodexThread(
             appServer: appServer,
             session: .init(
+                activePermissionProfile: activePermissionProfile,
                 approvalPolicy: approvalPolicy,
                 approvalsReviewer: approvalsReviewer,
                 currentDirectoryPath: currentDirectoryPath,
                 instructionSources: instructionSources,
                 model: model,
                 modelProvider: modelProvider,
+                permissionProfile: permissionProfile,
                 reasoningEffort: reasoningEffort,
                 sandboxPolicy: sandboxPolicy,
                 serviceTier: serviceTier,

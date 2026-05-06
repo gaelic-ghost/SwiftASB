@@ -68,7 +68,13 @@ struct CodexAppServerProtocolTests {
                 mockExperimentalField: nil,
                 model: "gpt-5.4",
                 modelProvider: "openai",
-                permissions: nil,
+                permissions: .init(
+                    id: ":workspace",
+                    modifications: [
+                        .init(path: "/tmp/project-fixtures", type: .additionalWritableRoot),
+                    ],
+                    type: .profile
+                ),
                 persistExtendedHistory: nil,
                 personality: .friendly,
                 sandbox: .workspaceWrite,
@@ -94,6 +100,13 @@ struct CodexAppServerProtocolTests {
 
         let config = try #require(params["config"] as? [String: Any])
         #expect(config["temperature"] as? Double == 0.25)
+
+        let permissions = try #require(params["permissions"] as? [String: Any])
+        #expect(permissions["id"] as? String == ":workspace")
+        #expect(permissions["type"] as? String == "profile")
+        let modifications = try #require(permissions["modifications"] as? [[String: Any]])
+        #expect(modifications.first?["type"] as? String == "additionalWritableRoot")
+        #expect(modifications.first?["path"] as? String == "/tmp/project-fixtures")
     }
 
     @Test("encodes thread/list requests with the expected method and params payload")
@@ -253,6 +266,7 @@ struct CodexAppServerProtocolTests {
                 excludeTurns: true,
                 model: "gpt-5.4",
                 modelProvider: "openai",
+                permissions: nil,
                 personality: .friendly,
                 sandbox: .workspaceWrite,
                 serviceName: "codex",
@@ -294,6 +308,7 @@ struct CodexAppServerProtocolTests {
                 excludeTurns: true,
                 model: "gpt-5.4",
                 modelProvider: "openai",
+                permissions: nil,
                 personality: .pragmatic,
                 sandbox: .workspaceWrite,
                 serviceName: "codex",

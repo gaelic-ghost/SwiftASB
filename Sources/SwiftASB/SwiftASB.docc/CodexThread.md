@@ -61,15 +61,18 @@ Recent observable startup can begin as an empty local-only view when the live ap
 - ``instructionSources``
 - ``model``
 - ``modelProvider``
+- ``activePermissionProfile``
+- ``permissionProfile``
 - ``reasoningEffort``
 - ``sandboxPolicy``
 - ``serviceTier``
+- ``workspace``
 - ``events``
 
 ### Turns
 
 - ``startTurn(_:)``
-- ``startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:personality:serviceTier:summary:)``
+- ``startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
 - ``TurnStartRequest``
 
 ### Thread Actions

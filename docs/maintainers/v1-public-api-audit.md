@@ -471,6 +471,15 @@ Use these decisions for every public symbol:
   Decision: thread goals are thread-scoped public API on `CodexThread`, with
   read, set, clear, and matching thread-event cases. The app-server goal model
   is small and stable enough to map to hand-owned Swift values directly.
+- [x] Record the workspace permission-profile promotion.
+  Decision: `CodexWorkspace` is the public namespace for app-server-owned
+  workspace permission selections and runtime permission facts. Thread, resume,
+  fork, and turn start requests can select a named permissions profile with
+  bounded additional writable-root modifications. `CodexThread` and
+  `CodexAppServer.ThreadSession` expose active permission-profile provenance
+  and full runtime filesystem/network permission facts reported by the
+  app-server. SwiftASB still does not infer repository roots or permission
+  policy by walking local directories.
 - [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.
