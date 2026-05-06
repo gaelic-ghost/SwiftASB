@@ -449,7 +449,10 @@ Use these decisions for every public symbol:
   Decision: `CodexFS` is the public namespace for read-only filesystem facts
   routed through the app-server. It currently owns metadata, directory listing,
   and file-byte reads. Filesystem mutation, watches, and fuzzy file search stay
-  unpromoted until their user workflow and permission model are clearer.
+  unpromoted until their user workflow and permission model are clearer. The
+  older `CodexThread` local workspace-file helpers were removed so SwiftASB has
+  one promoted filesystem namespace instead of parallel local and app-server
+  read paths.
 - [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.

@@ -4,12 +4,12 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 
 ## Summary
 
-- Public/open symbols: 1392
-- Public/open types: 209
-- Public/open initializers: 91
-- Public/open methods and type methods: 99
-- Public/open enum cases: 282
-- Public/open properties: 711
+- Public/open symbols: 1349
+- Public/open types: 202
+- Public/open initializers: 88
+- Public/open methods and type methods: 97
+- Public/open enum cases: 270
+- Public/open properties: 692
 
 ## Public Types
 
@@ -711,6 +711,5 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift`: 54 public properties
-- `Sources/SwiftASB/Public/CodexThread+WorkspaceFiles.swift`: 19 public properties
 - `Sources/SwiftASB/Public/CodexThread.swift`: 48 public properties
 - `Sources/SwiftASB/Public/CodexTurnHandle.swift`: 108 public properties
