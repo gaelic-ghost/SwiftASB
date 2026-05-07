@@ -238,6 +238,10 @@ workflow earns them in a later feature release.
   settings/actions that earn public models.
 - [ ] SwiftASB-owned query descriptors for thread lists, project grouping,
   history windows, selection-centered reads, and later search-hit hydration.
+- [ ] Richer file-discovery hit metadata for UI highlighting and ranking
+  explanations, without exposing generated wire shapes.
+- [ ] Later upstream fuzzy file-search promotion after the app-server schema has
+  a clear search, cursor, and result-stability contract.
 - [ ] Broader public history cursor semantics.
 - [ ] Transcript search.
 - [ ] Richer non-UI history query helpers beyond the current local windows.
@@ -1217,6 +1221,12 @@ Completed
 - [ ] Add marketplace upgrade and account-management surfaces after SwiftASB has a concrete app-wide management workflow.
 - [ ] Add external-agent config import surfaces after external-agent configuration becomes a public app-server management workflow.
 - [ ] Add structured patch rendering for `RecentFiles`.
+- [ ] Add richer `CodexFS.FileDiscoveryHit` search metadata soon, including
+  match kind, matched ranges, or ranking reason once UI highlighting needs an
+  explicit public model.
+- [ ] Promote an upstream app-server fuzzy file-search endpoint later if Codex
+  owns indexing, ignore rules, pagination, and result stability clearly enough
+  for SwiftASB to wrap it as a separate public API.
 - [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
 - [x] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
 - [x] Add a local-only startup mode for recent history observables when live upstream paging is unavailable because the thread is ephemeral or not yet materialized.

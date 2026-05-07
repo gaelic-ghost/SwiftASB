@@ -423,10 +423,41 @@ private extension CodexFS {
     }
 
     func fuzzyScore(query: String, candidate: String) -> Int? {
-        let queryCharacters = Array(query.lowercased())
+        let normalizedQuery = query.lowercased()
+        let queryCharacters = Array(normalizedQuery)
         guard !queryCharacters.isEmpty else { return nil }
 
-        let candidateCharacters = Array(candidate.lowercased())
+        let normalizedCandidate = candidate.lowercased()
+        let baseName = URL(fileURLWithPath: candidate).lastPathComponent.lowercased()
+
+        guard let pathScore = subsequenceScore(queryCharacters: queryCharacters, candidate: normalizedCandidate) else {
+            return nil
+        }
+
+        var score = pathScore
+        if let baseNameScore = subsequenceScore(queryCharacters: queryCharacters, candidate: baseName) {
+            score = max(score, baseNameScore + 35)
+        }
+
+        if baseName == normalizedQuery {
+            score += 120
+        } else if baseName.hasPrefix(normalizedQuery) {
+            score += 80
+        } else if baseName.contains(normalizedQuery) {
+            score += 60
+        } else if normalizedCandidate.contains(normalizedQuery) {
+            score += 25
+        }
+
+        if acronymMatches(query: normalizedQuery, candidate: baseName) {
+            score += 35
+        }
+
+        return score - generatedPathPenalty(candidate: normalizedCandidate)
+    }
+
+    func subsequenceScore(queryCharacters: [Character], candidate: String) -> Int? {
+        let candidateCharacters = Array(candidate)
         var queryIndex = 0
         var score = 0
         var previousMatchIndex: Int?
@@ -451,6 +482,31 @@ private extension CodexFS {
         }
 
         return nil
+    }
+
+    func acronymMatches(query: String, candidate: String) -> Bool {
+        let words = candidate.split { character in
+            isPathBoundary(character)
+        }
+        let initials = words.compactMap(\.first)
+        guard !initials.isEmpty else { return false }
+        return String(initials).lowercased().hasPrefix(query)
+    }
+
+    func generatedPathPenalty(candidate: String) -> Int {
+        let components = candidate.split(separator: "/").map(String.init)
+        var penalty = 0
+        for component in components {
+            switch component {
+            case ".build", "build", "deriveddata", ".swiftpm":
+                penalty += 80
+            case "debug", "release", "checkouts", "artifacts":
+                penalty += 25
+            default:
+                continue
+            }
+        }
+        return penalty
     }
 
     func isPathBoundary(_ character: Character) -> Bool {

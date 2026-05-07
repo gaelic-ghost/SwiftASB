@@ -128,11 +128,11 @@ extension CodexAppServerTests {
                 .includingHiddenEntries()
         )
         #expect(hiddenEntries.hits.map(\.relativePath) == [
-            ".build/debug/CodexFS.o",
+            "Sources/SwiftASB/CodexFS.swift",
             "Sources/SwiftASB",
             "Sources/SwiftASBTests.swift",
-            "Sources/SwiftASB/CodexFS.swift",
             "Sources/SwiftASB/CodexAppServer.swift",
+            ".build/debug/CodexFS.o",
         ])
         #expect(hiddenEntries.hits.map(\.kind) == [.file, .directory, .file, .file, .file])
 
