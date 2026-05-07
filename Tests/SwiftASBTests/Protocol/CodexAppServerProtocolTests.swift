@@ -392,6 +392,30 @@ struct CodexAppServerProtocolTests {
         #expect(params["numTurns"] as? Int == 2)
     }
 
+    @Test("encodes thread archive-state requests with the expected method and params payload")
+    func encodesThreadArchiveStateRequests() throws {
+        let archivePayload = try protocolLayer.makeThreadArchiveRequest(
+            id: .string("thread-archive-1"),
+            params: .init(threadID: "thread-123")
+        )
+        let unarchivePayload = try protocolLayer.makeThreadUnarchiveRequest(
+            id: .string("thread-unarchive-1"),
+            params: .init(threadID: "thread-123")
+        )
+
+        let archive = try #require(try JSONSerialization.jsonObject(with: archivePayload) as? [String: Any])
+        #expect(archive["method"] as? String == "thread/archive")
+        #expect(archive["id"] as? String == "thread-archive-1")
+        let archiveParams = try #require(archive["params"] as? [String: Any])
+        #expect(archiveParams["threadId"] as? String == "thread-123")
+
+        let unarchive = try #require(try JSONSerialization.jsonObject(with: unarchivePayload) as? [String: Any])
+        #expect(unarchive["method"] as? String == "thread/unarchive")
+        #expect(unarchive["id"] as? String == "thread-unarchive-1")
+        let unarchiveParams = try #require(unarchive["params"] as? [String: Any])
+        #expect(unarchiveParams["threadId"] as? String == "thread-123")
+    }
+
     @Test("encodes thread/name/set requests with the expected method and params payload")
     func encodesThreadSetNameRequest() throws {
         let payload = try protocolLayer.makeThreadSetNameRequest(
@@ -494,6 +518,28 @@ struct CodexAppServerProtocolTests {
         #expect(params["cursor"] as? String == "cursor-start")
         #expect(params["detail"] as? String == "toolsAndAuthOnly")
         #expect(params["limit"] as? Int == 10)
+    }
+
+    @Test("encodes mcpServer/resource/read requests with the expected method and params payload")
+    func encodesMcpResourceReadRequest() throws {
+        let payload = try protocolLayer.makeMcpResourceReadRequest(
+            id: .string("mcp-resource-1"),
+            params: .init(
+                server: "calendar",
+                threadID: "thread-123",
+                uri: "calendar://events/today"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "mcpServer/resource/read")
+        #expect(object["id"] as? String == "mcp-resource-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["server"] as? String == "calendar")
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["uri"] as? String == "calendar://events/today")
     }
 
     @Test("encodes hooks/list requests with the expected method and params payload")
@@ -1025,6 +1071,86 @@ struct CodexAppServerProtocolTests {
         }
     }
 
+    @Test("decodes app-wide schema notifications into typed protocol events")
+    func decodesAppWideSchemaNotifications() throws {
+        let configWarningEvent = try #require(
+            try decodeEvent(
+                method: "config/warning",
+                payload: Data(
+                    #"{"details":"Unknown key.","path":"/tmp/config.toml","range":{"start":{"line":2,"column":1},"end":{"line":2,"column":8}},"summary":"Config key is ignored."}"#.utf8
+                )
+            )
+        )
+        switch configWarningEvent {
+        case let .configWarning(notification):
+            #expect(notification.summary == "Config key is ignored.")
+            #expect(notification.range?.start.line == 2)
+        default:
+            Issue.record("Expected config/warning to decode into .configWarning.")
+        }
+
+        let mcpStatusEvent = try #require(
+            try decodeEvent(
+                method: "mcpServer/status/updated",
+                payload: Data(#"{"error":null,"name":"calendar","status":"ready"}"#.utf8)
+            )
+        )
+        switch mcpStatusEvent {
+        case let .mcpServerStatusUpdated(notification):
+            #expect(notification.name == "calendar")
+            #expect(notification.status == .ready)
+        default:
+            Issue.record("Expected mcpServer/status/updated to decode into .mcpServerStatusUpdated.")
+        }
+
+        let remoteStatusEvent = try #require(
+            try decodeEvent(
+                method: "remoteControl/status/changed",
+                payload: Data(#"{"environmentId":"env-123","status":"connected"}"#.utf8)
+            )
+        )
+        switch remoteStatusEvent {
+        case let .remoteControlStatusChanged(notification):
+            #expect(notification.environmentID == "env-123")
+            #expect(notification.status == .connected)
+        default:
+            Issue.record("Expected remoteControl/status/changed to decode into .remoteControlStatusChanged.")
+        }
+
+        let deprecationEvent = try #require(
+            try decodeEvent(
+                method: "deprecation/notice",
+                payload: Data(#"{"details":"Use the new notification.","summary":"Old notification is deprecated."}"#.utf8)
+            )
+        )
+        switch deprecationEvent {
+        case let .deprecationNotice(notification):
+            #expect(notification.summary == "Old notification is deprecated.")
+        default:
+            Issue.record("Expected deprecation/notice to decode into .deprecationNotice.")
+        }
+
+        let skillsEvent = try #require(
+            try decodeEvent(method: "skills/changed", payload: Data(#"{}"#.utf8))
+        )
+        switch skillsEvent {
+        case let .skillsChanged(payload):
+            #expect(payload.isEmpty)
+        default:
+            Issue.record("Expected skills/changed to decode into .skillsChanged.")
+        }
+
+        let appListEvent = try #require(
+            try decodeEvent(method: "app/list/updated", payload: Data(#"{"data":[]}"#.utf8))
+        )
+        switch appListEvent {
+        case let .appListUpdated(notification):
+            #expect(notification.data.isEmpty)
+        default:
+            Issue.record("Expected app/list/updated to decode into .appListUpdated.")
+        }
+    }
+
     @Test("decodes turn progress notifications into typed protocol events")
     func decodesTurnProgressNotifications() throws {
         let turnStartedPayload = Data(
@@ -1176,6 +1302,25 @@ struct CodexAppServerProtocolTests {
             #expect(notification.turnID == "turn-123")
         default:
             Issue.record("Expected item/fileChange/outputDelta to decode into .fileChangeOutputDelta.")
+        }
+
+        let fileChangePatchPayload = Data(
+            #"""
+            {"changes":[{"diff":"@@ -1 +1 @@\n-Hello\n+Hello, world\n","kind":{"type":"update"},"path":"Sources/SwiftASB/File.swift"}],"itemId":"item-file-1","threadId":"thread-123","turnId":"turn-123"}
+            """#.utf8
+        )
+
+        let fileChangePatchEvent = try #require(
+            try decodeEvent(method: "item/fileChange/patchUpdated", payload: fileChangePatchPayload)
+        )
+
+        switch fileChangePatchEvent {
+        case let .fileChangePatchUpdated(notification):
+            #expect(notification.changes[0].path == "Sources/SwiftASB/File.swift")
+            #expect(notification.changes[0].kind.type == .update)
+            #expect(notification.itemID == "item-file-1")
+        default:
+            Issue.record("Expected item/fileChange/patchUpdated to decode into .fileChangePatchUpdated.")
         }
 
         let commandDeltaPayload = Data(

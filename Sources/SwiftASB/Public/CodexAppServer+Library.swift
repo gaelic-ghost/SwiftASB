@@ -13,6 +13,7 @@ private func snapshotResult<Value: Sendable>(
 
 extension CodexAppServer {
     internal enum LibraryEvent: Sendable, Equatable {
+        case appSnapshotsChanged
         case threadChanged(threadID: String)
         case turnCompleted(threadID: String)
     }
@@ -638,9 +639,13 @@ public extension CodexAppServer {
             eventTask = Task { [weak self] in
                 guard let self else { return }
                 let events = await appServer.libraryEvents()
-                for await _ in events {
+                for await event in events {
                     if Task.isCancelled {
                         return
+                    }
+                    if event == .appSnapshotsChanged {
+                        await refreshAppSnapshots()
+                        continue
                     }
                     if isReconciling || isLoadingLocalSnapshot {
                         pendingEventReload = true

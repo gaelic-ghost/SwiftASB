@@ -16,6 +16,7 @@ import Foundation
 // MARK: - CodexWireCodexLifecycleV2Batch
 struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let agentMessageDeltaNotification: CodexWireAgentMessageDeltaNotification?
+    let appListUpdatedNotification: CodexWireAppListUpdatedNotification?
     let appsListParams: CodexWireAppsListParams?
     let appsListResponse: CodexWireAppsListResponse?
     let collaborationModeListParams: [String: CodexWireJSONValue]?
@@ -25,7 +26,9 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let configReadParams: CodexWireConfigReadParams?
     let configReadResponse: CodexWireConfigReadResponse?
     let configRequirementsReadResponse: CodexWireConfigRequirementsReadResponse?
+    let configWarningNotification: CodexWireConfigWarningNotification?
     let contextCompactedNotification: CodexWireContextCompactedNotification?
+    let deprecationNoticeNotification: CodexWireDeprecationNoticeNotification?
     let errorNotification: CodexWireErrorNotification?
     let externalAgentConfigImportCompletedNotification: [String: CodexWireJSONValue]?
     let fileChangeOutputDeltaNotification: CodexWireFileChangeOutputDeltaNotification?
@@ -51,6 +54,9 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let itemStartedNotification: CodexWireItemStartedNotification?
     let listMCPServerStatusParams: CodexWireListMCPServerStatusParams?
     let listMCPServerStatusResponse: CodexWireListMCPServerStatusResponse?
+    let mcpResourceReadParams: CodexWireMCPResourceReadParams?
+    let mcpResourceReadResponse: CodexWireMCPResourceReadResponse?
+    let mcpServerStatusUpdatedNotification: CodexWireMCPServerStatusUpdatedNotification?
     let mcpToolCallProgressNotification: CodexWireMCPToolCallProgressNotification?
     let modelListParams: CodexWireModelListParams?
     let modelListResponse: CodexWireModelListResponse?
@@ -65,12 +71,16 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let reasoningSummaryPartAddedNotification: CodexWireReasoningSummaryPartAddedNotification?
     let reasoningSummaryTextDeltaNotification: CodexWireReasoningSummaryTextDeltaNotification?
     let reasoningTextDeltaNotification: CodexWireReasoningTextDeltaNotification?
+    let remoteControlStatusChangedNotification: CodexWireRemoteControlStatusChangedNotification?
     let serverRequestResolvedNotification: CodexWireServerRequestResolvedNotification?
+    let skillsChangedNotification: [String: CodexWireJSONValue]?
     let skillsListParams: CodexWireSkillsListParams?
     let skillsListResponse: CodexWireSkillsListResponse?
     let threadApproveGuardianDeniedActionParams: CodexWireThreadApproveGuardianDeniedActionParams?
     let threadApproveGuardianDeniedActionResponse: [String: CodexWireJSONValue]?
     let threadArchivedNotification: CodexWireThreadArchivedNotification?
+    let threadArchiveParams: CodexWireThreadArchiveParams?
+    let threadArchiveResponse: [String: CodexWireJSONValue]?
     let threadClosedNotification: CodexWireThreadClosedNotification?
     let threadCompactStartParams: CodexWireThreadCompactStartParams?
     let threadCompactStartResponse: [String: CodexWireJSONValue]?
@@ -99,6 +109,8 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let threadTurnsListParams: CodexWireThreadTurnsListParams?
     let threadTurnsListResponse: CodexWireThreadTurnsListResponse?
     let threadUnarchivedNotification: CodexWireThreadUnarchivedNotification?
+    let threadUnarchiveParams: CodexWireThreadUnarchiveParams?
+    let threadUnarchiveResponse: CodexWireThreadUnarchiveResponse?
     let turnCompletedNotification: CodexWireTurnCompletedNotification?
     let turnDiffUpdatedNotification: CodexWireTurnDiffUpdatedNotification?
     let turnPlanUpdatedNotification: CodexWireTurnPlanUpdatedNotification?
@@ -108,10 +120,10 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let warningNotification: CodexWireWarningNotification?
 
     enum CodingKeys: String, CodingKey {
-        case agentMessageDeltaNotification, appsListParams, appsListResponse, collaborationModeListParams, collaborationModeListResponse, commandExecOutputDeltaNotification, commandExecutionOutputDeltaNotification, configReadParams, configReadResponse, configRequirementsReadResponse, contextCompactedNotification, errorNotification, externalAgentConfigImportCompletedNotification, fileChangeOutputDeltaNotification, fileChangePatchUpdatedNotification, fsChangedNotification, fsGetMetadataParams, fsGetMetadataResponse, fsReadDirectoryParams, fsReadDirectoryResponse, fsReadFileParams, fsReadFileResponse, fsUnwatchParams, fsUnwatchResponse, fsWatchParams, fsWatchResponse, guardianWarningNotification, hookCompletedNotification, hookStartedNotification, initializeParams, itemCompletedNotification, itemGuardianApprovalReviewCompletedNotification, itemGuardianApprovalReviewStartedNotification, itemStartedNotification
+        case agentMessageDeltaNotification, appListUpdatedNotification, appsListParams, appsListResponse, collaborationModeListParams, collaborationModeListResponse, commandExecOutputDeltaNotification, commandExecutionOutputDeltaNotification, configReadParams, configReadResponse, configRequirementsReadResponse, configWarningNotification, contextCompactedNotification, deprecationNoticeNotification, errorNotification, externalAgentConfigImportCompletedNotification, fileChangeOutputDeltaNotification, fileChangePatchUpdatedNotification, fsChangedNotification, fsGetMetadataParams, fsGetMetadataResponse, fsReadDirectoryParams, fsReadDirectoryResponse, fsReadFileParams, fsReadFileResponse, fsUnwatchParams, fsUnwatchResponse, fsWatchParams, fsWatchResponse, guardianWarningNotification, hookCompletedNotification, hookStartedNotification, initializeParams, itemCompletedNotification, itemGuardianApprovalReviewCompletedNotification, itemGuardianApprovalReviewStartedNotification, itemStartedNotification
         case listMCPServerStatusParams = "listMcpServerStatusParams"
         case listMCPServerStatusResponse = "listMcpServerStatusResponse"
-        case mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, serverRequestResolvedNotification, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification
+        case mcpResourceReadParams, mcpResourceReadResponse, mcpServerStatusUpdatedNotification, mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, remoteControlStatusChangedNotification, serverRequestResolvedNotification, skillsChangedNotification, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadArchiveParams, threadArchiveResponse, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, threadUnarchiveParams, threadUnarchiveResponse, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification
     }
 }
 
@@ -139,37 +151,10 @@ struct CodexWireAgentMessageDeltaNotification: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
-/// EXPERIMENTAL - list available apps/connectors.
-// MARK: - CodexWireAppsListParams
-struct CodexWireAppsListParams: Codable, Equatable, Sendable {
-    /// Opaque pagination cursor returned by a previous call.
-    let cursor: String?
-    /// When true, bypass app caches and fetch the latest data from sources.
-    let forceRefetch: Bool?
-    /// Optional page size; defaults to a reasonable server-side value.
-    let limit: Int?
-    /// Optional thread id used to evaluate app feature gating from that thread's config.
-    let threadID: String?
-
-    enum CodingKeys: String, CodingKey {
-        case cursor, forceRefetch, limit
-        case threadID = "threadId"
-    }
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-/// EXPERIMENTAL - app list response.
-// MARK: - CodexWireAppsListResponse
-struct CodexWireAppsListResponse: Codable, Equatable, Sendable {
+/// EXPERIMENTAL - notification emitted when the app list changes.
+// MARK: - CodexWireAppListUpdatedNotification
+struct CodexWireAppListUpdatedNotification: Codable, Equatable, Sendable {
     let data: [CodexWireAppInfo]
-    /// Opaque cursor to pass to the next call to continue after the last item. If None, there
-    /// are no more items to return.
-    let nextCursor: String?
 }
 
 //
@@ -271,6 +256,45 @@ struct CodexWireAppBranding: Codable, Equatable, Sendable {
     let category, developer: String?
     let isDiscoverableApp: Bool
     let privacyPolicy, termsOfService, website: String?
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// EXPERIMENTAL - list available apps/connectors.
+// MARK: - CodexWireAppsListParams
+struct CodexWireAppsListParams: Codable, Equatable, Sendable {
+    /// Opaque pagination cursor returned by a previous call.
+    let cursor: String?
+    /// When true, bypass app caches and fetch the latest data from sources.
+    let forceRefetch: Bool?
+    /// Optional page size; defaults to a reasonable server-side value.
+    let limit: Int?
+    /// Optional thread id used to evaluate app feature gating from that thread's config.
+    let threadID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case cursor, forceRefetch, limit
+        case threadID = "threadId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// EXPERIMENTAL - app list response.
+// MARK: - CodexWireAppsListResponse
+struct CodexWireAppsListResponse: Codable, Equatable, Sendable {
+    let data: [CodexWireAppInfo]
+    /// Opaque cursor to pass to the next call to continue after the last item. If None, there
+    /// are no more items to return.
+    let nextCursor: String?
 }
 
 //
@@ -974,6 +998,49 @@ enum CodexWireNetworkUnixSocketPermission: String, Codable, Equatable, Sendable 
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
+// MARK: - CodexWireConfigWarningNotification
+struct CodexWireConfigWarningNotification: Codable, Equatable, Sendable {
+    /// Optional extra guidance or error details.
+    let details: String?
+    /// Optional path to the config file that triggered the warning.
+    let path: String?
+    /// Optional range for the error location inside the config file.
+    let range: CodexWireTextRange?
+    /// Concise summary of the warning.
+    let summary: String
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireTextRange
+struct CodexWireTextRange: Codable, Equatable, Sendable {
+    let end, start: CodexWireTextPosition
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireTextPosition
+struct CodexWireTextPosition: Codable, Equatable, Sendable {
+    /// 1-based column number (in Unicode scalar values).
+    let column: Int
+    /// 1-based line number.
+    let line: Int
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
 /// Deprecated: Use `ContextCompaction` item type instead.
 // MARK: - CodexWireContextCompactedNotification
 struct CodexWireContextCompactedNotification: Codable, Equatable, Sendable {
@@ -983,6 +1050,20 @@ struct CodexWireContextCompactedNotification: Codable, Equatable, Sendable {
         case threadID = "threadId"
         case turnID = "turnId"
     }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireDeprecationNoticeNotification
+struct CodexWireDeprecationNoticeNotification: Codable, Equatable, Sendable {
+    /// Optional extra guidance, such as migration steps or rationale.
+    let details: String?
+    /// Concise summary of what is deprecated.
+    let summary: String
 }
 
 //
@@ -2432,6 +2513,78 @@ struct CodexWireTool: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
+// MARK: - CodexWireMCPResourceReadParams
+struct CodexWireMCPResourceReadParams: Codable, Equatable, Sendable {
+    let server: String
+    let threadID: String?
+    let uri: String
+
+    enum CodingKeys: String, CodingKey {
+        case server
+        case threadID = "threadId"
+        case uri
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireMCPResourceReadResponse
+struct CodexWireMCPResourceReadResponse: Codable, Equatable, Sendable {
+    let contents: [CodexWireResourceContent]
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Contents returned when reading a resource from an MCP server.
+// MARK: - CodexWireResourceContent
+struct CodexWireResourceContent: Codable, Equatable, Sendable {
+    let meta: CodexWireJSONValue?
+    let mimeType: String?
+    let text: String?
+    /// The URI of this resource.
+    let uri: String
+    let blob: String?
+
+    enum CodingKeys: String, CodingKey {
+        case meta = "_meta"
+        case mimeType, text, uri, blob
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireMCPServerStatusUpdatedNotification
+struct CodexWireMCPServerStatusUpdatedNotification: Codable, Equatable, Sendable {
+    let error: String?
+    let name: String
+    let status: CodexWireMCPServerStartupState
+}
+
+enum CodexWireMCPServerStartupState: String, Codable, Equatable, Sendable {
+    case cancelled = "cancelled"
+    case failed = "failed"
+    case ready = "ready"
+    case starting = "starting"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
 // MARK: - CodexWireMCPToolCallProgressNotification
 struct CodexWireMCPToolCallProgressNotification: Codable, Equatable, Sendable {
     let itemID, message, threadID, turnID: String
@@ -3138,6 +3291,31 @@ struct CodexWireReasoningTextDeltaNotification: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
+/// Current remote-control connection status and environment id exposed to clients.
+// MARK: - CodexWireRemoteControlStatusChangedNotification
+struct CodexWireRemoteControlStatusChangedNotification: Codable, Equatable, Sendable {
+    let environmentID: String?
+    let status: CodexWireRemoteControlConnectionStatus
+
+    enum CodingKeys: String, CodingKey {
+        case environmentID = "environmentId"
+        case status
+    }
+}
+
+enum CodexWireRemoteControlConnectionStatus: String, Codable, Equatable, Sendable {
+    case connected = "connected"
+    case connecting = "connecting"
+    case disabled = "disabled"
+    case errored = "errored"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
 // MARK: - CodexWireServerRequestResolvedNotification
 struct CodexWireServerRequestResolvedNotification: Codable, Equatable, Sendable {
     let requestID: CodexWireRequestID
@@ -3304,6 +3482,21 @@ struct CodexWireThreadApproveGuardianDeniedActionParams: Codable, Equatable, Sen
 
     enum CodingKeys: String, CodingKey {
         case event
+        case threadID = "threadId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadArchiveParams
+struct CodexWireThreadArchiveParams: Codable, Equatable, Sendable {
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
         case threadID = "threadId"
     }
 }
@@ -4314,6 +4507,32 @@ struct CodexWireThreadTurnsListResponse: Codable, Equatable, Sendable {
     /// Opaque cursor to pass to the next call to continue after the last turn. if None, there
     /// are no more turns to return.
     let nextCursor: String?
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadUnarchiveParams
+struct CodexWireThreadUnarchiveParams: Codable, Equatable, Sendable {
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case threadID = "threadId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadUnarchiveResponse
+struct CodexWireThreadUnarchiveResponse: Codable, Equatable, Sendable {
+    let thread: CodexWireThread
 }
 
 //

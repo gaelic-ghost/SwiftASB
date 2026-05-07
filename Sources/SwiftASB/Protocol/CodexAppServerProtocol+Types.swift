@@ -8,6 +8,12 @@
 import Foundation
 
 enum CodexAppServerProtocolEvent: Equatable, Sendable {
+	case appListUpdated(CodexWireAppListUpdatedNotification)
+	case skillsChanged([String: CodexWireJSONValue])
+	case mcpServerStatusUpdated(CodexWireMCPServerStatusUpdatedNotification)
+	case configWarning(CodexWireConfigWarningNotification)
+	case deprecationNotice(CodexWireDeprecationNoticeNotification)
+	case remoteControlStatusChanged(CodexWireRemoteControlStatusChangedNotification)
 	case threadStarted(CodexWireThreadStartedNotification)
 	case threadStatusChanged(CodexWireThreadStatusChangedNotification)
 	case threadArchived(CodexWireThreadArchivedNotification)
@@ -32,6 +38,7 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case itemCompleted(CodexWireItemCompletedNotification)
 	case commandExecutionOutputDelta(CodexWireCommandExecutionOutputDeltaNotification)
 	case fileChangeOutputDelta(CodexWireFileChangeOutputDeltaNotification)
+	case fileChangePatchUpdated(CodexWireFileChangePatchUpdatedNotification)
 	case agentMessageDelta(CodexWireAgentMessageDeltaNotification)
 	case planDelta(CodexWirePlanDeltaNotification)
 	case reasoningSummaryPartAdded(CodexWireReasoningSummaryPartAddedNotification)
@@ -46,6 +53,8 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 }
 
 struct CodexProtocolThreadCompactStartResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolThreadArchiveResponse: Decodable, Equatable, Sendable {}
 
 struct CodexProtocolThreadSetNameResponse: Decodable, Equatable, Sendable {}
 

@@ -210,6 +210,42 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("reads MCP resources through the public client")
+    func readsMcpResource() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let result = try await client.readMcpResource(
+            .init(server: "calendar", uri: "calendar://events/today", threadID: "thread-123")
+        )
+
+        #expect(result.contents.count == 1)
+        #expect(result.contents[0].uri == "calendar://events/today")
+        #expect(result.contents[0].mimeType == "application/json")
+        #expect(result.contents[0].text == #"{"events":[]}"#)
+        #expect(result.contents[0].metadata == .object(["source": .string("fixture")]))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "mcpServer/resource/read"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["server"] as? String == "calendar")
+        #expect(params["uri"] as? String == "calendar://events/today")
+        #expect(params["threadId"] as? String == "thread-123")
+
+        await client.stop()
+    }
+
     @Test("lists app-wide hook diagnostics through the public client")
     func listsAppWideHookDiagnostics() async throws {
         let transport = FakeCodexAppServerTransport()

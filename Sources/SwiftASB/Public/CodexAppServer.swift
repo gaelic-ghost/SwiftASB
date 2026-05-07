@@ -69,6 +69,8 @@ public actor CodexAppServer {
     internal struct FileChangeOutputDeltaEvent: Sendable, Equatable {
         let delta: String
         let itemID: String
+        let path: String?
+        let replacesPayload: Bool
         let threadID: String
         let turnID: String
     }
@@ -392,6 +394,33 @@ public actor CodexAppServer {
         }
     }
 
+    /// Reads one resource from a configured MCP server.
+    public func readMcpResource(_ request: McpResourceReadRequest) async throws -> McpResourceReadResult {
+        try requireInitialized(for: "mcpServer/resource/read")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeMcpResourceReadRequest(
+                id: requestID,
+                params: .init(
+                    server: request.server,
+                    threadID: request.threadID,
+                    uri: request.uri
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeMcpResourceReadResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(wireValue: response)
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "mcpServer/resource/read")
+        }
+    }
+
     /// Starts a new Codex thread.
     ///
     /// Omitting `request` sends an empty thread-start request, letting Codex
@@ -616,6 +645,71 @@ public actor CodexAppServer {
             publishLibraryEvent(.threadChanged(threadID: request.threadID))
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/name/set")
+        }
+    }
+
+    /// Archives a stored thread.
+    ///
+    /// Most consumers should call `CodexThread.archive()` from an existing
+    /// thread handle. This lower-level app-server method is useful when the
+    /// caller owns only a thread identifier.
+    public func archiveThread(_ request: ThreadArchiveRequest) async throws {
+        try requireInitialized(for: "thread/archive")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let payload = try protocolLayer.makeThreadArchiveRequest(
+                id: requestID,
+                params: .init(threadID: request.threadID)
+            )
+            let response = try await transport.send(payload, id: requestID)
+            _ = try protocolLayer.decodeThreadArchiveResponse(
+                response,
+                expectedID: requestID
+            )
+            try await requireHistoryStore(for: "thread/archive").recordThreadArchived(
+                threadID: request.threadID,
+                isArchived: true
+            )
+            publishLibraryEvent(.threadChanged(threadID: request.threadID))
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/archive")
+        }
+    }
+
+    /// Unarchives a stored thread and returns refreshed thread metadata.
+    ///
+    /// Most consumers should call `CodexThread.unarchive()` from an existing
+    /// thread handle. This lower-level app-server method is useful when the
+    /// caller owns only a thread identifier.
+    @discardableResult
+    public func unarchiveThread(_ request: ThreadArchiveRequest) async throws -> ThreadInfo {
+        try requireInitialized(for: "thread/unarchive")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let payload = try protocolLayer.makeThreadUnarchiveRequest(
+                id: requestID,
+                params: .init(threadID: request.threadID)
+            )
+            let responsePayload = try await transport.send(payload, id: requestID)
+            let response = try protocolLayer.decodeThreadUnarchiveResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            let thread = ThreadInfo(wireValue: response.thread)
+            try await requireHistoryStore(for: "thread/unarchive").recordThreadMetadataUpdated(thread)
+            try await requireHistoryStore(for: "thread/unarchive").recordThreadArchived(
+                threadID: thread.id,
+                isArchived: false
+            )
+            publishLibraryEvent(.threadChanged(threadID: thread.id))
+
+            return thread
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/unarchive")
         }
     }
 
@@ -2309,6 +2403,17 @@ public actor CodexAppServer {
 
     private func handleProtocolEvent(_ event: CodexAppServerProtocolEvent) async {
         switch event {
+        case .appListUpdated, .skillsChanged:
+            publishLibraryEvent(.appSnapshotsChanged)
+        case let .mcpServerStatusUpdated(notification):
+            handleDiagnosticEvent(.init(wireValue: notification))
+            publishLibraryEvent(.appSnapshotsChanged)
+        case let .configWarning(notification):
+            handleDiagnosticEvent(.init(wireValue: notification))
+        case let .deprecationNotice(notification):
+            handleDiagnosticEvent(.init(wireValue: notification))
+        case let .remoteControlStatusChanged(notification):
+            handleDiagnosticEvent(.init(wireValue: notification))
         case let .threadStarted(notification):
             threadStatuses[notification.thread.id] = .init(wireValue: notification.thread.status)
             let threadEvent = CodexThreadEvent.started(
@@ -2497,6 +2602,8 @@ public actor CodexAppServer {
             let deltaEvent = FileChangeOutputDeltaEvent(
                 delta: notification.delta,
                 itemID: notification.itemID,
+                path: nil,
+                replacesPayload: false,
                 threadID: notification.threadID,
                 turnID: notification.turnID
             )
@@ -2506,6 +2613,17 @@ public actor CodexAppServer {
                 itemID: notification.itemID,
                 delta: notification.delta
             )
+        case let .fileChangePatchUpdated(notification):
+            let patchText = notification.changes.map(\.diff).joined(separator: "\n")
+            let deltaEvent = FileChangeOutputDeltaEvent(
+                delta: patchText,
+                itemID: notification.itemID,
+                path: notification.changes.first?.path,
+                replacesPayload: true,
+                threadID: notification.threadID,
+                turnID: notification.turnID
+            )
+            publishThreadFileDelta(deltaEvent, for: notification.threadID)
         case let .planDelta(notification):
             let planDelta = CodexTurnPlanDelta(
                 threadID: notification.threadID,

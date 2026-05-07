@@ -33,11 +33,11 @@ Call ``start()`` before sending protocol requests. Call ``initialize(_:)`` once 
 
 Use ``cliExecutableDiagnostics()`` when a UI or command-line tool needs to explain which `codex` executable was found and whether its version is inside the documented compatibility window.
 
-Use ``diagnosticEvents()`` to observe passive runtime diagnostics that are not control requests. These events let clients show or log warnings, guardian warnings, model reroutes, and model verification results without exposing generated wire payloads.
+Use ``diagnosticEvents()`` to observe passive runtime diagnostics that are not control requests. These events let clients show or log warnings, guardian warnings, config warnings, deprecation notices, MCP-server status changes, remote-control status changes, model reroutes, and model verification results without exposing generated wire payloads.
 
 ## App-Wide Capabilities
 
-Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, MCP server surface, and configured hook diagnostics.
+Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, ``readMcpResource(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, MCP server surface, MCP resource contents, and configured hook diagnostics.
 
 Use ``fs`` when a client needs filesystem metadata, direct directory entries, file bytes, or file-change watches through the app-server. This keeps sandboxed apps dependent on Codex-owned permissions and path handling instead of requiring the Swift process to read local disk directly.
 
@@ -53,7 +53,7 @@ Use ``makeLibrary(configuration:)`` when a GUI or CLI client needs an app-wide o
 
 Library selection is caller-owned state. Use it for sidebar and launcher selection, including recently selected ordering, without writing window or scene preferences into Codex's stored thread metadata.
 
-Library app snapshots are read-only connection state. Use ``Library/refreshAppSnapshots()`` or creation-time loading to publish model capabilities, MCP server status, and hook diagnostics alongside the stored-thread lists.
+Library app snapshots are read-only connection state. Use ``Library/refreshAppSnapshots()`` or creation-time loading to publish model capabilities, MCP server status, and hook diagnostics alongside the stored-thread lists. App-list, skill-change, and MCP-server-status notifications also trigger that refresh path.
 
 ## Stored Threads
 

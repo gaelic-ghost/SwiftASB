@@ -24,7 +24,7 @@ Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/sel
 
 `cwd` is the session working directory that app-server stores on `ThreadInfo` and matches exactly through `thread/list` cwd filters. Repository grouping is a derived display policy over app-server-owned Git metadata; SwiftASB does not inspect the filesystem to discover repository roots.
 
-The library can also publish app-wide read snapshots through ``CodexAppServer/Library/refreshAppSnapshots()``. Those snapshots reuse ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listMcpServerStatuses(_:)``, and ``CodexAppServer/listHooks(_:)`` so model feature gates, MCP surfaces, and hook diagnostics are observable next to the stored-thread lists without becoming Core Data state.
+The library can also publish app-wide read snapshots through ``CodexAppServer/Library/refreshAppSnapshots()``. Those snapshots reuse ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listMcpServerStatuses(_:)``, and ``CodexAppServer/listHooks(_:)`` so model feature gates, MCP surfaces, and hook diagnostics are observable next to the stored-thread lists without becoming Core Data state. App-list, skill-change, and MCP-server-status notifications trigger this app-snapshot refresh path.
 
 ## Local History Windows
 
@@ -58,7 +58,7 @@ Use the named cache-policy presets first:
 
 ``CodexThread/RecentFiles`` and ``CodexThread/RecentCommands`` are dedicated companions because file changes and command output have different display, selection, and cache behavior. Use ``CodexThread/RecentFilesQD`` and ``CodexThread/RecentCommandsQD`` when UI state needs to preserve the initial resident window and cache policy as repeatable intent.
 
-`RecentFiles` keeps file-change entries enriched from file-change output deltas. `RecentCommands` keeps command entries enriched from command-output deltas. Both can keep lightweight shell summaries resident while rehydrating selected payloads when the caller needs detail.
+`RecentFiles` keeps file-change entries enriched from file-change output deltas and patch-updated previews. `RecentCommands` keeps command entries enriched from command-output deltas. Both can keep lightweight shell summaries resident while rehydrating selected payloads when the caller needs detail.
 
 ## Dashboard And Minimap
 

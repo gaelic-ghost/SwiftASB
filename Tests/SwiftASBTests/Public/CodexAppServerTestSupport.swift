@@ -269,6 +269,43 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "nextCursor": NSNull(),
                 ]
             )
+        case "mcpServer/resource/read":
+            return responsePayload(
+                id: id,
+                result: [
+                    "contents": [
+                        [
+                            "_meta": ["source": "fixture"],
+                            "blob": NSNull(),
+                            "mimeType": "application/json",
+                            "text": #"{"events":[]}"#,
+                            "uri": "calendar://events/today",
+                        ],
+                    ],
+                ]
+            )
+        case "thread/archive":
+            return responsePayload(id: id, result: [:])
+        case "thread/unarchive":
+            return responsePayload(
+                id: id,
+                result: [
+                    "thread": [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-123",
+                        "modelProvider": "openai",
+                        "name": "Hydrated Thread",
+                        "preview": "Hydrated thread preview",
+                        "source": "cli",
+                        "status": ["type": "notLoaded"],
+                        "turns": [],
+                        "updatedAt": 1713350005,
+                    ],
+                ]
+            )
         case "thread/name/set":
             return responsePayload(id: id, result: [:])
         case "thread/metadata/update":

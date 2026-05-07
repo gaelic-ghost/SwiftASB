@@ -113,10 +113,12 @@ belongs in the release boundary:
 | Elicitation request families | `CodexTurnEvent.elicitationRequested`, `CodexThreadEvent.elicitationRequested` | These are also protocol-level server requests and part of the supported public lifecycle. |
 | Approval reviewer options | `CodexAppServer.ApprovalsReviewer.autoReview` | v0.124 adds `auto_review`; this is a small public enum widening because callers already choose approval-review behavior through hand-owned request models. |
 | Thread rollback | `CodexThread.rollbackLastTurns(...)` | `thread/rollback` is public as a thread-scoped action. The local history store records a rollback marker, then trims visible local turns to match the app-server response. Full removed-turn payload preservation is deferred until a deliberate forensic archive model exists. |
+| Thread archive-state actions | `CodexThread.archive()`, `CodexThread.unarchive()` | `thread/archive` and `thread/unarchive` are public because stored-thread sidebars need explicit archive-state control in the same model as archive notifications and list reconciliation. |
 | Thread name setting | `CodexThread.setName(...)` | `thread/name/set` is a straightforward thread-scoped action. The method records the local name update after the app-server accepts the request and still allows server-sent `thread/name/updated` notifications to flow normally. |
 | Thread metadata patching | `CodexThread.updateMetadata(...)` | `thread/metadata/update` is public with a hand-owned replace/clear/unchanged patch model so callers can express the upstream null-vs-omitted semantics without generated wire types. |
 | App-wide model listing | `CodexAppServer.listModels(...)` | `model/list` describes shared runtime capabilities rather than one conversation thread, so the public API belongs on the connection-owning app-server actor. |
 | App-wide MCP-server status listing | `CodexAppServer.listMcpServerStatuses(...)` | `mcpServerStatus/list` is a connection-wide server capability snapshot, so it is public on `CodexAppServer` rather than `CodexThread` or `CodexTurnHandle`. |
+| App-wide MCP resource reads | `CodexAppServer.readMcpResource(...)` | `mcpServer/resource/read` is public as a read-only capability/resource inspection action. It stays app-server-owned because the resource may be connection-wide, with optional thread context only when the app-server needs it. |
 | App-wide hook diagnostics listing | `CodexAppServer.listHooks(...)` | `hooks/list` reports configured hooks, warnings, and load errors for working directories, so it is a read-only diagnostics/capability snapshot on the connection-owning app-server actor. |
 
 ### Observable-only for now
@@ -185,10 +187,14 @@ Remaining gap inside the observable-only slice:
 | --- | --- |
 | Command output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentCommands` as a command-centric observable companion instead of becoming new top-level public event cases. |
 | File-change output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentFiles` as a file-centric observable companion instead of becoming new top-level public event cases. |
-| File-change patch-updated notifications | Useful for richer `RecentFiles` previews later, but not yet wired into a stable public diff model. For now the generated type is internal scaffolding. |
+| File-change patch-updated notifications | The raw notification remains internal, but it now refreshes `RecentFiles` text previews. A richer structured diff model is still deferred until SwiftASB can own that shape deliberately. |
 | MCP tool-call progress notifications | The current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
 | Model-rerouted notifications | Public as hand-owned diagnostics so clients can explain runtime model changes without reading raw generated payloads. |
 | Model-verification notifications | Public as hand-owned diagnostics so clients can show or log verified model capability signals. |
+| Config-warning notifications | Public as hand-owned diagnostics because config-load warnings are passive operator signals, not requests that require a response. |
+| Deprecation-notice notifications | Public as hand-owned diagnostics because runtime compatibility notices should be visible without exposing generated wire payloads. |
+| MCP-server-status notifications | Public as hand-owned diagnostics and as app-snapshot refresh triggers because they affect MCP inspectors and settings views. |
+| Remote-control-status notifications | Public as hand-owned diagnostics because remote-control status is app-wide passive state, not a thread or turn action. |
 | Warning and guardian-warning notifications | Public as hand-owned diagnostics because these are passive operator/user signals, not requests that require a response. |
 | External-agent config import completed notifications | Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
 | Guardian denied-action approval endpoint | Generated internally because it appears in v0.124, but it needs a real guardian workflow model before it becomes public. |
@@ -227,10 +233,16 @@ families break down like this:
 | `CommandExecutionOutputDeltaNotification` | `Observable-only for now` |
 | `CommandExecOutputDeltaNotification` | `Internal-only for now` |
 | `FileChangeOutputDeltaNotification` | `Observable-only for now` |
-| `FileChangePatchUpdatedNotification` | `Internal-only for now` |
+| `FileChangePatchUpdatedNotification` | `Observable-only for now` |
 | `McpToolCallProgressNotification` | `Internal-only for now` |
 | `ModelVerificationNotification` | `Public now as diagnostics` |
 | `ModelReroutedNotification` | `Public now as diagnostics` |
+| `ConfigWarningNotification` | `Public now as diagnostics` |
+| `DeprecationNoticeNotification` | `Public now as diagnostics` |
+| `McpServerStatusUpdatedNotification` | `Public now as diagnostics and app-snapshot refresh` |
+| `RemoteControlStatusChangedNotification` | `Public now as diagnostics` |
+| `AppListUpdatedNotification` | `Observable-only for app-snapshot refresh` |
+| `SkillsChangedNotification` | `Observable-only for app-snapshot refresh` |
 | `HookStartedNotification` | `Observable-only for now` |
 | `HookCompletedNotification` | `Observable-only for now` |
 | `RawResponseItemCompletedNotification` | `Internal-only for now` |
@@ -319,14 +331,15 @@ The current remaining promotion questions are therefore narrower than before:
 
 1. should richer MCP progress stay inside the existing observable summaries, or
    graduate into additional public event cases?
-2. should `FileChangePatchUpdatedNotification` enrich `RecentFiles` with
-   structured patch previews, and if so, what stable file-diff model should the
-   package own instead of leaking generated wire shapes?
+2. should `FileChangePatchUpdatedNotification` graduate from text-preview
+   enrichment into structured patch previews, and if so, what stable file-diff
+   model should the package own instead of leaking generated wire shapes?
 3. should permission profiles become a public request/defaults model, or stay
    internal while the current sandbox and approval request models are enough?
    The next design should account for both the full active runtime
    `permissionProfile` and the named/provenance-oriented `activePermissionProfile`.
 4. diagnostics and control flows stay separate. Warning, guardian-warning,
+   config-warning, deprecation, MCP-server-status, remote-control-status,
    model-reroute, and model-verification families are passive public diagnostic
    events. Guardian denied-action approval stays internal until SwiftASB owns a
    stable request and response model for what the user is approving.

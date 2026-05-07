@@ -45,7 +45,7 @@ For copy-pasteable startup code, open the DocC getting-started guide:
 
 Use SwiftASB when an app needs to show what Codex is doing right now, keep recent command and file activity visible, answer interactive requests, or build SwiftUI state around a running Codex turn.
 
-For app-wide sidebars and launchers, `CodexAppServer.makeLibrary()` provides observable stored-thread lists, cwd or repository grouping, refresh actions, library-local selection state, and app-wide model, MCP, and hook diagnostics snapshots.
+For app-wide sidebars and launchers, `CodexAppServer.makeLibrary()` provides observable stored-thread lists, cwd or repository grouping, refresh actions, library-local selection state, and app-wide model, MCP, and hook diagnostics snapshots. Thread handles can also name, archive, unarchive, compact, and roll back stored threads through thread-scoped methods.
 
 Use `CodexAppServer.fs` when a sandboxed client needs filesystem metadata, directory listings, file bytes, file discovery, fuzzy file lookup, or file-change watches through the Codex app-server instead of reading local disk directly. `CodexWorkspace` carries app-server-owned workspace permission selections, active permission-profile provenance, and runtime filesystem/network permission facts for started threads and turns. Use `CodexAppServer.config` for effective config reads, and `CodexAppServer.extensions` for app, skill, plugin, and collaboration-mode inventory.
 
