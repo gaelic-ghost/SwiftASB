@@ -475,6 +475,53 @@ extension CodexAppServerTests {
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
+    @MainActor
+    @Test("library queues app snapshot refresh events during active loads")
+    func libraryQueuesAppSnapshotRefreshEventsDuringActiveLoads() async throws {
+        let transport = FakeCodexAppServerTransport()
+        await transport.setAppSnapshotResponseDelay(nanoseconds: 50_000_000)
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        _ = try await client.listThreads(.init(archived: false))
+
+        let library = try await client.makeLibrary(
+            configuration: .init(
+                groupedBy: .none,
+                reconcilesOnCreation: false,
+                loadsAppSnapshotsOnCreation: false
+            )
+        )
+
+        let refreshTask = Task { await library.refreshAppSnapshots() }
+        await waitForObservableState {
+            library.snapshotPhase == .loading
+        }
+
+        await transport.emitAppListUpdated()
+        await refreshTask.value
+
+        let capabilityRequests = await transport.requestPayloads(for: "modelProvider/capabilities/read")
+        let mcpRequests = await transport.requestPayloads(for: "mcpServerStatus/list")
+        let hooksRequests = await transport.requestPayloads(for: "hooks/list")
+
+        #expect(capabilityRequests.count == 2)
+        #expect(mcpRequests.count == 2)
+        #expect(hooksRequests.count == 2)
+        #expect(library.snapshotPhase == .idle)
+
+        await client.stop()
+    }
+
     @Test("thread list query descriptors provide common list shapes")
     func threadListQueryDescriptorsProvideCommonListShapes() {
         let projectQuery = CodexAppServer.ThreadListQD

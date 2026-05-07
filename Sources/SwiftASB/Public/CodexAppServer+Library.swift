@@ -421,6 +421,9 @@ public extension CodexAppServer {
         private var pendingEventReload = false
 
         @ObservationIgnored
+        private var pendingAppSnapshotRefresh = false
+
+        @ObservationIgnored
         private var selectionOrderByThreadID: [String: Int] = [:]
 
         @ObservationIgnored
@@ -532,9 +535,17 @@ public extension CodexAppServer {
 
         public func refreshAppSnapshots() async {
             if isLoadingAppSnapshots {
+                pendingAppSnapshotRefresh = true
                 return
             }
 
+            repeat {
+                pendingAppSnapshotRefresh = false
+                await loadAppSnapshotsOnce()
+            } while pendingAppSnapshotRefresh
+        }
+
+        private func loadAppSnapshotsOnce() async {
             snapshotPhase = .loading
             latestSnapshotErrorDescription = nil
 

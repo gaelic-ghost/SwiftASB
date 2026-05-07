@@ -301,4 +301,69 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @MainActor
+    @Test("patch-updated file deltas replace persisted recent-file payload")
+    func patchUpdatedFileDeltasReplacePersistedRecentFilePayload() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let historyStore = try ThreadHistoryStore(configuration: .inMemory())
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false
+            )
+        )
+        let turn = try await thread.startTextTurn("Patch Package.swift.")
+
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-file-live",
+            item: [
+                "id": "item-file-live",
+                "path": "/tmp/project/Package.swift",
+                "type": "fileChange",
+            ]
+        )
+
+        try await waitForCondition {
+            let files = try await client.recentFileWindow(threadID: thread.id, limit: 1).files
+            return files.first?.itemID == "item-file-live"
+        }
+
+        await transport.emitFileChangePatchUpdated(
+            threadID: thread.id,
+            turnID: turn.turn.id,
+            itemID: "item-file-live",
+            path: "/tmp/project/Package.swift",
+            diff: "@@\n+let dependency = \"swiftasb\"\n"
+        )
+
+        try await waitForCondition {
+            let files = try await client.recentFileWindow(threadID: thread.id, limit: 1).files
+            return files.first?.payloadText?.contains("swiftasb") == true
+        }
+
+        let file = try #require(try await client.recentFileWindow(threadID: thread.id, limit: 1).files.first)
+        #expect(file.path == "/tmp/project/Package.swift")
+        #expect(file.payloadText == "@@\n+let dependency = \"swiftasb\"\n")
+
+        await client.stop()
+    }
+
 }

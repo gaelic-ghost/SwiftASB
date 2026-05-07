@@ -2615,15 +2615,22 @@ public actor CodexAppServer {
             )
         case let .fileChangePatchUpdated(notification):
             let patchText = notification.changes.map(\.diff).joined(separator: "\n")
+            let path = notification.changes.first?.path
             let deltaEvent = FileChangeOutputDeltaEvent(
                 delta: patchText,
                 itemID: notification.itemID,
-                path: notification.changes.first?.path,
+                path: path,
                 replacesPayload: true,
                 threadID: notification.threadID,
                 turnID: notification.turnID
             )
             publishThreadFileDelta(deltaEvent, for: notification.threadID)
+            try? await historyStore?.recordItemReplacement(
+                turnID: notification.turnID,
+                itemID: notification.itemID,
+                text: patchText,
+                path: path
+            )
         case let .planDelta(notification):
             let planDelta = CodexTurnPlanDelta(
                 threadID: notification.threadID,
