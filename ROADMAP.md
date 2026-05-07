@@ -843,14 +843,16 @@ The live script surface should support these environment knobs consistently:
 ### First Implementation Slice
 
 The first post-v1 live-testing slice is the consolidated release-gate runner.
-It runs the currently proven high-signal probes in order: deterministic
-approval/server-request, multi-turn file mutation, and rollback. The permissions
+It runs the currently proven high-signal probes in order: broad smoke coverage
+for startup, raw transport initialize/thread/turn, binary diagnostics,
+app-wide model/MCP/hook snapshots, thread-name mutation, single-turn,
+cross-thread, and same-thread behavior; deterministic approval/server-request
+coverage; the multi-turn file mutation scenario; and rollback. The permissions
 approval mock-Responses probe now covers the largest answerable server-request
 family gap. The umbrella live integration-test runner now gives maintainers one
-entrypoint for release-gate, focused, and full opt-in live coverage. The next
-slice should either add focused modes around remaining promoted request
-families or broaden the release gate with startup, initialize, model/MCP,
-single-turn, and cross-thread probes if their runtime cost stays reasonable.
+entrypoint for release-gate, focused, and full opt-in live coverage, with
+`SWIFTASB_LIVE_CODEX_TIMEOUT_SECONDS` available when a slower runtime needs a
+longer per-operation timeout.
 
 ## Previous V1 Release Slice
 

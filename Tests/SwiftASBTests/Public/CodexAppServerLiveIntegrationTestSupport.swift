@@ -1484,7 +1484,7 @@ func runApprovalProbeCaseReport(
     do {
         let result = try await completeLiveTurnAcceptingApprovals(
             turn,
-            timeoutSeconds: 90,
+            timeoutSeconds: liveTimeoutSeconds(default: 90),
             operation: "waiting for the \(probeCase.label) approval probe to complete"
         )
         return .init(probeCase, thread: thread, result: result)
@@ -1534,7 +1534,7 @@ func runBehaviorMatrixCase(
         )
         let result = try await completeLiveTurnAcceptingApprovals(
             turn,
-            timeoutSeconds: 90,
+            timeoutSeconds: liveTimeoutSeconds(default: 90),
             operation: "waiting for the \(matrixCase.label) behavior-matrix case to complete"
         )
         return .init(
@@ -1635,7 +1635,7 @@ func probeLiveSameThreadMatrix(
         case let .failed(errorDescription):
             let completion = try? await awaitCompletion(
                 of: firstTurn,
-                timeoutSeconds: 45,
+                timeoutSeconds: liveTimeoutSeconds(default: 45),
                 operation: "waiting for the first behavior-matrix same-thread turn to complete"
             )
             return .init(
@@ -2206,6 +2206,16 @@ func withTimeout<T: Sendable>(
         group.cancelAll()
         return result
     }
+}
+
+func liveTimeoutSeconds(default defaultSeconds: Double) -> Double {
+    guard let rawValue = ProcessInfo.processInfo.environment["SWIFTASB_LIVE_CODEX_TIMEOUT_SECONDS"],
+          let seconds = Double(rawValue),
+          seconds > 0
+    else {
+        return defaultSeconds
+    }
+    return seconds
 }
 
 func prompt(label: String) -> String {

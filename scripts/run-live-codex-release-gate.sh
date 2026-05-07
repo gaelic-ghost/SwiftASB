@@ -10,7 +10,7 @@ export SWIFTASB_LIVE_CODEX_REPORT_DIR
 mkdir -p "$SWIFTASB_LIVE_CODEX_REPORT_DIR"
 
 printf '%s\n' 'Running SwiftASB live Codex release gate.'
-printf '%s\n' 'Step 1/4: live smoke probes'
+printf '%s\n' 'Step 1/4: startup, transport, capability, thread, turn, and concurrency smoke probes'
 env SWIFTASB_ENABLE_LIVE_CODEX_TRANSPORT_TESTS=1 \
     SWIFTASB_ENABLE_LIVE_CODEX_CAPABILITY_TESTS=1 \
     SWIFTASB_ENABLE_LIVE_CODEX_THREAD_MANAGEMENT_TESTS=1 \

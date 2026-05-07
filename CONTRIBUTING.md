@@ -128,7 +128,7 @@ scripts/run-live-codex-file-scenario.sh
 scripts/run-live-codex-rollback-scenario.sh
 ```
 
-Reports default to `tmp/live-codex-reports/`. Use `SWIFTASB_LIVE_CODEX_REPORT_DIR` for another report directory, `SWIFTASB_LIVE_CODEX_BIN` for a specific Codex executable, and `SWIFTASB_LIVE_CODEX_KEEP_WORKSPACES=1` to preserve temporary workspaces for debugging.
+Reports default to `tmp/live-codex-reports/`. Use `SWIFTASB_LIVE_CODEX_REPORT_DIR` for another report directory, `SWIFTASB_LIVE_CODEX_BIN` for a specific Codex executable, `SWIFTASB_LIVE_CODEX_TIMEOUT_SECONDS` to override per-operation live probe timeouts, and `SWIFTASB_LIVE_CODEX_KEEP_WORKSPACES=1` to preserve temporary workspaces for debugging.
 
 ### Maintainer Scripts
 
