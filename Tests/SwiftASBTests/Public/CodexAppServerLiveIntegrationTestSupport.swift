@@ -1,5 +1,6 @@
-import Foundation
 import CryptoKit
+import Darwin
+import Foundation
 import Testing
 @testable import SwiftASB
 
@@ -761,6 +762,13 @@ final class MockResponsesServer: @unchecked Sendable {
     func stop() {
         if process.isRunning {
             process.terminate()
+            let deadline = Date().addingTimeInterval(2)
+            while process.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+            if process.isRunning {
+                Darwin.kill(process.processIdentifier, SIGKILL)
+            }
             process.waitUntilExit()
         }
         try? FileManager.default.removeItem(at: rootDirectoryURL)
