@@ -478,6 +478,38 @@ actor ThreadHistoryStore {
         }
     }
 
+    func recordItemReplacement(turnID: String, itemID: String, text: String, path: String?) throws {
+        guard var builder = activeTurns[turnID], var activeItem = builder.items[itemID] else { return }
+        activeItem.streamedText = text
+        if let path {
+            let latestItem = activeItem.latestItem
+            activeItem.latestItem = CodexTurnItem(
+                id: latestItem.id,
+                kind: latestItem.kind,
+                command: latestItem.command,
+                path: path,
+                serverName: latestItem.serverName,
+                text: latestItem.text,
+                status: latestItem.status,
+                toolName: latestItem.toolName
+            )
+        }
+        builder.items[itemID] = activeItem
+        activeTurns[turnID] = builder
+
+        let stableID = Self.stableItemID(threadID: builder.threadID, turnID: turnID, itemID: itemID)
+        let streamedText = activeItem.streamedText
+        let replacementPath = activeItem.latestItem.path
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let item = try Self.fetchItem(stableID: stableID, in: context) else { return }
+            item.path = replacementPath
+            item.streamedText = streamedText
+            try context.saveIfChanged()
+        }
+    }
+
     func recordItemCompleted(
         threadID: String,
         turnID: String,

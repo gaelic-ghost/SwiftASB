@@ -11,6 +11,16 @@ public extension CodexAppServer {
         }
     }
 
+    /// Request used to archive or unarchive a stored thread.
+    struct ThreadArchiveRequest: Sendable, Equatable {
+        public var threadID: String
+
+        /// Creates a thread archive-state request.
+        public init(threadID: String) {
+            self.threadID = threadID
+        }
+    }
+
     /// Request used to roll back trailing turns from a stored thread.
     struct ThreadRollbackRequest: Sendable, Equatable {
         public var numberOfTurns: Int

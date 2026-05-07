@@ -434,6 +434,17 @@ public struct CodexThread: Sendable {
         try await appServer.setThreadName(.init(threadID: id, name: name))
     }
 
+    /// Archives this stored thread.
+    public func archive() async throws {
+        try await appServer.archiveThread(.init(threadID: id))
+    }
+
+    /// Unarchives this stored thread and returns refreshed thread metadata.
+    @discardableResult
+    public func unarchive() async throws -> CodexAppServer.ThreadInfo {
+        try await appServer.unarchiveThread(.init(threadID: id))
+    }
+
     /// Patches this thread's stored Git metadata.
     ///
     /// Each field in `gitInfo` can replace, clear, or leave the corresponding

@@ -1,6 +1,6 @@
 # Thread Management
 
-Name threads, patch stored metadata, compact context, and roll back trailing turns through the thread-scoped API.
+Name threads, archive or unarchive stored threads, patch stored metadata, compact context, and roll back trailing turns through the thread-scoped API.
 
 ## Overview
 
@@ -15,6 +15,17 @@ try await thread.setName("Release planning")
 ```
 
 The thread event stream may later report the new name through ``CodexThreadEvent/nameUpdated(_:)``.
+
+## Archive State
+
+Use ``CodexThread/archive()`` and ``CodexThread/unarchive()`` to move stored threads in or out of the archived list.
+
+```swift
+try await thread.archive()
+let refreshed = try await thread.unarchive()
+```
+
+Archive and unarchive requests update SwiftASB's local stored-thread archive state. The thread event stream may also report app-server archive notifications through ``CodexThreadEvent/archived(_:)`` and ``CodexThreadEvent/unarchived(_:)``.
 
 ## Metadata Updates
 
@@ -51,6 +62,8 @@ SwiftASB records enough local history to explain that a rollback happened. It do
 ### Thread Convenience
 
 - ``CodexThread/setName(_:)``
+- ``CodexThread/archive()``
+- ``CodexThread/unarchive()``
 - ``CodexThread/updateMetadata(gitInfo:)``
 - ``CodexThread/compactContext()``
 - ``CodexThread/rollbackLastTurns(_:)``
@@ -58,6 +71,8 @@ SwiftASB records enough local history to explain that a rollback happened. It do
 ### App-Server Requests
 
 - ``CodexAppServer/setThreadName(_:)``
+- ``CodexAppServer/archiveThread(_:)``
+- ``CodexAppServer/unarchiveThread(_:)``
 - ``CodexAppServer/updateThreadMetadata(_:)``
 - ``CodexAppServer/compactThread(_:)``
 - ``CodexAppServer/rollbackThread(_:)``
@@ -65,6 +80,7 @@ SwiftASB records enough local history to explain that a rollback happened. It do
 ### Models
 
 - ``CodexAppServer/ThreadSetNameRequest``
+- ``CodexAppServer/ThreadArchiveRequest``
 - ``CodexAppServer/ThreadMetadataUpdateRequest``
 - ``CodexAppServer/ThreadMetadataGitInfoUpdate``
 - ``CodexAppServer/ThreadMetadataFieldUpdate``

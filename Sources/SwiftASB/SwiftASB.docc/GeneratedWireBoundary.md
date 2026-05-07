@@ -25,11 +25,14 @@ Examples currently promoted through hand-owned public types include:
 
 - model catalog snapshots through ``CodexAppServer/listModels(_:)``
 - MCP server status snapshots through ``CodexAppServer/listMcpServerStatuses(_:)``
+- MCP resource reads through ``CodexAppServer/readMcpResource(_:)``
 - hook diagnostics snapshots through ``CodexAppServer/listHooks(_:)``
 - thread naming through ``CodexThread/setName(_:)``
+- thread archive-state actions through ``CodexThread/archive()`` and ``CodexThread/unarchive()``
 - thread metadata patches through ``CodexThread/updateMetadata(gitInfo:)``
 - thread rollback through ``CodexThread/rollbackLastTurns(_:)``
 - file and command deltas as inputs to ``CodexThread/RecentFiles`` and ``CodexThread/RecentCommands``
+- passive diagnostics through ``CodexAppServer/diagnosticEvents()``
 
 Other generated notifications and fields can remain internal until they support a public handle, event, observable companion, or diagnostic story.
 

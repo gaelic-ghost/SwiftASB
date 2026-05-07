@@ -4,7 +4,7 @@ Observe passive runtime diagnostics and read completed local turn history.
 
 ## Overview
 
-Diagnostics and history answer different questions. Diagnostics explain what the runtime is warning about right now: model reroutes, model verification results, guardian warnings, and general runtime warnings. History reads return completed turns that SwiftASB has persisted or hydrated from the app-server.
+Diagnostics and history answer different questions. Diagnostics explain what the runtime is warning about right now: model reroutes, model verification results, guardian warnings, config warnings, deprecation notices, MCP server status changes, remote-control status changes, and general runtime warnings. History reads return completed turns that SwiftASB has persisted or hydrated from the app-server.
 
 ```swift
 func observeDiagnostics(appServer: CodexAppServer) {
@@ -20,6 +20,14 @@ func observeDiagnostics(appServer: CodexAppServer) {
                     log("Model changed from \(reroute.fromModel) to \(reroute.toModel)")
                 case let .modelVerification(verification):
                     log("Verification count: \(verification.verifications.count)")
+                case let .configWarning(warning):
+                    log("Config warning: \(warning.summary)")
+                case let .deprecationNotice(notice):
+                    log("Deprecated: \(notice.summary)")
+                case let .mcpServerStatusChanged(status):
+                    log("MCP \(status.name): \(status.status.rawValue)")
+                case let .remoteControlStatusChanged(status):
+                    log("Remote control: \(status.status.rawValue)")
                 }
             }
         } catch {
@@ -66,6 +74,10 @@ Use ``CodexThread/windowAroundTurn(_:limit:)`` or ``CodexThread/windowAroundItem
 - ``CodexGuardianWarning``
 - ``CodexModelReroute``
 - ``CodexModelVerificationDiagnostic``
+- ``CodexConfigWarning``
+- ``CodexDeprecationNotice``
+- ``CodexMcpServerStatusDiagnostic``
+- ``CodexRemoteControlStatusDiagnostic``
 
 ### Local History
 

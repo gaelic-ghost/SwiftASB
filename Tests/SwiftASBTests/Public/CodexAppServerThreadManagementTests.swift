@@ -126,6 +126,41 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("archives and unarchives threads through the public thread handle")
+    func archivesAndUnarchivesThroughPublicHandle() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        try await thread.archive()
+        let unarchived = try await thread.unarchive()
+
+        #expect(unarchived.id == thread.id)
+
+        let archivePayload = try #require(await transport.recordedRequestPayload(for: "thread/archive"))
+        let archiveRequest = try #require(try JSONSerialization.jsonObject(with: archivePayload) as? [String: Any])
+        let archiveParams = try #require(archiveRequest["params"] as? [String: Any])
+        #expect(archiveParams["threadId"] as? String == thread.id)
+
+        let unarchivePayload = try #require(await transport.recordedRequestPayload(for: "thread/unarchive"))
+        let unarchiveRequest = try #require(try JSONSerialization.jsonObject(with: unarchivePayload) as? [String: Any])
+        let unarchiveParams = try #require(unarchiveRequest["params"] as? [String: Any])
+        #expect(unarchiveParams["threadId"] as? String == thread.id)
+
+        await client.stop()
+    }
+
     @Test("updates thread Git metadata through the public thread handle")
     func updatesThreadMetadataThroughPublicHandle() async throws {
         let transport = FakeCodexAppServerTransport()

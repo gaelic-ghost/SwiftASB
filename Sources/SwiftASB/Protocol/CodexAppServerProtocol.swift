@@ -5,6 +5,7 @@ struct CodexAppServerProtocol {
         case initialize = "initialize"
         case initialized = "initialized"
         case threadCompactStart = "thread/compact/start"
+        case threadArchive = "thread/archive"
         case threadFork = "thread/fork"
         case threadList = "thread/list"
         case threadRead = "thread/read"
@@ -15,6 +16,7 @@ struct CodexAppServerProtocol {
         case threadMetadataUpdate = "thread/metadata/update"
         case threadTurnsList = "thread/turns/list"
         case threadLoadedList = "thread/loaded/list"
+        case threadUnarchive = "thread/unarchive"
         case threadGoalGet = "thread/goal/get"
         case threadGoalSet = "thread/goal/set"
         case threadGoalClear = "thread/goal/clear"
@@ -34,6 +36,7 @@ struct CodexAppServerProtocol {
         case modelList = "model/list"
         case modelProviderCapabilitiesRead = "modelProvider/capabilities/read"
         case mcpServerStatusList = "mcpServerStatus/list"
+        case mcpResourceRead = "mcpServer/resource/read"
         case pluginList = "plugin/list"
         case pluginRead = "plugin/read"
         case skillsList = "skills/list"
@@ -94,6 +97,26 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadRollback, params: params),
             method: .threadRollback
+        )
+    }
+
+    func makeThreadArchiveRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadArchiveParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadArchive, params: params),
+            method: .threadArchive
+        )
+    }
+
+    func makeThreadUnarchiveRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadUnarchiveParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadUnarchive, params: params),
+            method: .threadUnarchive
         )
     }
 
@@ -384,6 +407,16 @@ struct CodexAppServerProtocol {
         )
     }
 
+    func makeMcpResourceReadRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireMCPResourceReadParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .mcpResourceRead, params: params),
+            method: .mcpResourceRead
+        )
+    }
+
     func makeTurnSteerRequest(
         id: CodexRPCRequestID,
         params: CodexProtocolTurnSteerParams
@@ -429,6 +462,30 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadStart,
             resultType: CodexWireThreadStartResponse.self
+        )
+    }
+
+    func decodeThreadArchiveResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadArchiveResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadArchive,
+            resultType: CodexProtocolThreadArchiveResponse.self
+        )
+    }
+
+    func decodeThreadUnarchiveResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadUnarchiveResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadUnarchive,
+            resultType: CodexWireThreadUnarchiveResponse.self
         )
     }
 
@@ -816,6 +873,18 @@ struct CodexAppServerProtocol {
         )
     }
 
+    func decodeMcpResourceReadResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireMCPResourceReadResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .mcpResourceRead,
+            resultType: CodexWireMCPResourceReadResponse.self
+        )
+    }
+
     func decodeServerEvent(
         _ serverEvent: CodexRPCServerEvent
     ) throws -> CodexAppServerProtocolEvent? {
@@ -871,6 +940,54 @@ struct CodexAppServerProtocol {
             }
         case let .notification(method, payload):
             switch method {
+            case "app/list/updated":
+                return .appListUpdated(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireAppListUpdatedNotification.self
+                    )
+                )
+            case "skills/changed":
+                return .skillsChanged(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: [String: CodexWireJSONValue].self
+                    )
+                )
+            case "mcpServer/status/updated":
+                return .mcpServerStatusUpdated(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireMCPServerStatusUpdatedNotification.self
+                    )
+                )
+            case "config/warning":
+                return .configWarning(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireConfigWarningNotification.self
+                    )
+                )
+            case "deprecation/notice":
+                return .deprecationNotice(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireDeprecationNoticeNotification.self
+                    )
+                )
+            case "remoteControl/status/changed":
+                return .remoteControlStatusChanged(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireRemoteControlStatusChangedNotification.self
+                    )
+                )
             case "thread/started":
                 return .threadStarted(
                     try decodeNotification(
@@ -1061,6 +1178,14 @@ struct CodexAppServerProtocol {
                         payload,
                         method: method,
                         resultType: CodexWireFileChangeOutputDeltaNotification.self
+                    )
+                )
+            case "item/fileChange/patchUpdated":
+                return .fileChangePatchUpdated(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireFileChangePatchUpdatedNotification.self
                     )
                 )
             case "item/agentMessage/delta":

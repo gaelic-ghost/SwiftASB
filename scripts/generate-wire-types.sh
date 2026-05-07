@@ -96,6 +96,10 @@ build_batch \
   InitializeParams \
   ThreadStartParams \
   ThreadStartResponse \
+  ThreadArchiveParams \
+  ThreadArchiveResponse \
+  ThreadUnarchiveParams \
+  ThreadUnarchiveResponse \
   ThreadRollbackParams \
   ThreadRollbackResponse \
   ThreadSetNameParams \
@@ -130,10 +134,13 @@ build_batch \
   ConfigReadParams \
   ConfigReadResponse \
   ConfigRequirementsReadResponse \
+  ConfigWarningNotification \
   AppsListParams \
   AppsListResponse \
+  AppListUpdatedNotification \
   SkillsListParams \
   SkillsListResponse \
+  SkillsChangedNotification \
   PluginListParams \
   PluginListResponse \
   PluginReadParams \
@@ -170,9 +177,14 @@ build_batch \
   ModelListResponse \
   ListMcpServerStatusParams \
   ListMcpServerStatusResponse \
+  McpResourceReadParams \
+  McpResourceReadResponse \
+  McpServerStatusUpdatedNotification \
   McpToolCallProgressNotification \
   ModelReroutedNotification \
   ModelVerificationNotification \
+  RemoteControlStatusChangedNotification \
+  DeprecationNoticeNotification \
   ServerRequestResolvedNotification \
   HookStartedNotification \
   HookCompletedNotification \

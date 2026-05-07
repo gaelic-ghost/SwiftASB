@@ -85,6 +85,18 @@ extension CodexThread {
                 isPayloadComplete = false
             }
 
+            fileprivate mutating func applyPatch(text: String, path: String?) {
+                payloadText = text
+                if let path, !path.isEmpty {
+                    self.path = path
+                    displayName = Self.makeDisplayName(path: path)
+                }
+                latestStatusText = Self.makePayloadSummary(text: text) ?? "Previewing file change"
+                status = .inProgress
+                isPayloadComplete = false
+                omittedPayloadCharacterCount = 0
+            }
+
             fileprivate mutating func apply(_ item: CodexTurnItem, status: Status) {
                 displayName = Self.makeDisplayName(path: item.path)
                 latestStatusText = Self.makeStatusSummary(status: item.status, text: item.text) ?? latestStatusText
@@ -358,7 +370,11 @@ extension CodexThread {
         private func apply(_ event: CodexAppServer.FileChangeOutputDeltaEvent) {
             let fileID = Self.fileSnapshotID(turnID: event.turnID, itemID: event.itemID)
             guard let index = files.firstIndex(where: { $0.id == fileID }) else { return }
-            files[index].apply(delta: event.delta)
+            if event.replacesPayload {
+                files[index].applyPatch(text: event.delta, path: event.path)
+            } else {
+                files[index].apply(delta: event.delta)
+            }
             refreshResidentMetrics()
             trimResidentFilesIfNeeded()
         }

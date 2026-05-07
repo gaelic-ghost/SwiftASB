@@ -25,6 +25,37 @@ public extension CodexAppServer {
         }
     }
 
+    /// Request used to read one advertised MCP resource.
+    struct McpResourceReadRequest: Sendable, Equatable {
+        public var server: String
+        public var threadID: String?
+        public var uri: String
+
+        /// Creates an MCP resource-read request.
+        ///
+        /// `threadID` is optional because some MCP resources are app-wide while
+        /// others may be scoped by Codex to an active thread context.
+        public init(server: String, uri: String, threadID: String? = nil) {
+            self.server = server
+            self.uri = uri
+            self.threadID = threadID
+        }
+    }
+
+    /// Resource contents returned by an MCP server.
+    struct McpResourceReadResult: Sendable, Equatable {
+        public let contents: [McpResourceContent]
+    }
+
+    /// One text or blob payload returned from an MCP resource read.
+    struct McpResourceContent: Sendable, Equatable {
+        public let blob: String?
+        public let metadata: JSONValue?
+        public let mimeType: String?
+        public let text: String?
+        public let uri: String
+    }
+
     /// One page of MCP server status results.
     struct McpServerStatusPage: Sendable, Equatable {
         public let nextCursor: String?
@@ -120,6 +151,24 @@ extension CodexAppServer.McpServerStatus.AuthStatus {
         case .unsupported:
             self = .unsupported
         }
+    }
+}
+
+extension CodexAppServer.McpResourceReadResult {
+    init(wireValue: CodexWireMCPResourceReadResponse) {
+        self.init(contents: wireValue.contents.map(CodexAppServer.McpResourceContent.init))
+    }
+}
+
+extension CodexAppServer.McpResourceContent {
+    init(wireValue: CodexWireResourceContent) {
+        self.init(
+            blob: wireValue.blob,
+            metadata: wireValue.meta.map(CodexAppServer.JSONValue.init(wireValue:)),
+            mimeType: wireValue.mimeType,
+            text: wireValue.text,
+            uri: wireValue.uri
+        )
     }
 }
 

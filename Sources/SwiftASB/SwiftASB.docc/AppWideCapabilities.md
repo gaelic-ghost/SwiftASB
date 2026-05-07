@@ -1,12 +1,12 @@
 # App-Wide Capabilities
 
-Discover model, MCP-server, hook diagnostics, and model-capability snapshots from the app-server owner.
+Discover model, MCP-server, MCP-resource, hook diagnostics, and model-capability snapshots from the app-server owner.
 
 ## Overview
 
 Some app-server operations describe the connection rather than one conversation thread. SwiftASB exposes those operations on ``CodexAppServer`` so consumers can populate settings screens, model pickers, feature gates, MCP inspectors, hook diagnostics, and other app-wide views without needing a thread handle.
 
-Use ``CodexAppServer/listModels(_:)`` to read the currently visible model catalog. Use ``CodexAppServer/readModelCapabilities()`` to decide whether the current model provider supports web search, image generation, or namespace tools. Use ``CodexAppServer/listMcpServerStatuses(_:)`` to inspect configured MCP servers, their auth status, and their resource, resource-template, and tool metadata. Use ``CodexAppServer/listHooks(_:)`` to inspect configured hooks, warnings, and load errors for one or more working directories before a turn runs.
+Use ``CodexAppServer/listModels(_:)`` to read the currently visible model catalog. Use ``CodexAppServer/readModelCapabilities()`` to decide whether the current model provider supports web search, image generation, or namespace tools. Use ``CodexAppServer/listMcpServerStatuses(_:)`` to inspect configured MCP servers, their auth status, and their resource, resource-template, and tool metadata. Use ``CodexAppServer/readMcpResource(_:)`` to read one advertised MCP resource. Use ``CodexAppServer/listHooks(_:)`` to inspect configured hooks, warnings, and load errors for one or more working directories before a turn runs.
 
 Use ``CodexAppServer/makeLibrary(configuration:)`` when these same model, MCP, and hook snapshots should live beside observable stored-thread lists. ``CodexAppServer/Library/refreshAppSnapshots()`` reads the current app-wide snapshots and publishes them as Library state; hook diagnostics use Library thread `cwd` values unless configuration passes explicit hook current-directory paths.
 
@@ -19,6 +19,10 @@ let modelCapabilities = try await appServer.readModelCapabilities()
 
 let statuses = try await appServer.listMcpServerStatuses(
     .init(detail: .toolsAndAuthOnly)
+)
+
+let resource = try await appServer.readMcpResource(
+    .init(server: "docs", uri: "docs://swiftasb/current")
 )
 
 let hooks = try await appServer.listHooks(
@@ -63,7 +67,7 @@ Use ``CodexAppServer/HookListSnapshot/hasDiagnostics`` for badges or sidebar sta
 
 ## Pagination
 
-Model and MCP capability APIs accept an optional cursor and return an optional next cursor. Keep requesting pages until `nextCursor` is `nil`. Hook diagnostics are returned as one snapshot grouped by working directory.
+Model and MCP status-list APIs accept an optional cursor and return an optional next cursor. Keep requesting pages until `nextCursor` is `nil`. MCP resource reads return the current contents for one server and URI. Hook diagnostics are returned as one snapshot grouped by working directory.
 
 ## Boundary
 
@@ -85,10 +89,14 @@ These types are public because a consumer can use them directly today. Other gen
 ### MCP Servers
 
 - ``CodexAppServer/listMcpServerStatuses(_:)``
+- ``CodexAppServer/readMcpResource(_:)``
 - ``CodexAppServer/McpServerStatusListRequest``
 - ``CodexAppServer/McpServerStatusPage``
 - ``CodexAppServer/McpServerStatus``
 - ``CodexAppServer/McpResource``
+- ``CodexAppServer/McpResourceReadRequest``
+- ``CodexAppServer/McpResourceReadResult``
+- ``CodexAppServer/McpResourceContent``
 - ``CodexAppServer/McpResourceTemplate``
 - ``CodexAppServer/McpTool``
 

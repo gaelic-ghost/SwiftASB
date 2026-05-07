@@ -44,19 +44,19 @@
 | Codex CLI schema review | `Shipped / ongoing` | The current reviewed compatibility window is `codex-cli 0.128.x`; the v0.128 schema families have been classified for the v1 boundary, and `scripts/dump-codex-schemas.sh` makes future versioned experimental dumps repeatable by default. Future Codex CLI schema families still need public/observable/internal decisions before promotion. |
 | Stdio subprocess transport | `Shipped internally` | The transport launches `codex app-server --listen stdio://`, frames newline-delimited JSON, correlates request IDs, and captures stderr for diagnostics. |
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
-| Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, core thread and turn methods, filesystem reads and watches, config reads, app/skill/plugin/collaboration-mode inventory, model/MCP/hook reads, and thread-goal methods are encoded through the protocol layer. |
-| Typed protocol response decoding | `Shipped internally` | `initialize`, core thread and turn methods, filesystem reads and watches, config reads, app/skill/plugin/collaboration-mode inventory, model/MCP/hook reads, and thread-goal responses are decoded and validated against request IDs. |
-| Typed protocol notification decoding | `Partially shipped` | The protocol layer now maps a broader batch of thread, turn, item, reasoning, hook, and reroute notifications, plus the item lifecycle needed to drive the current observable tool, MCP, file-edit, hook, and compaction summaries. |
+| Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, core thread and turn methods, archive-state actions, filesystem reads and watches, config reads, app/skill/plugin/collaboration-mode inventory, model/MCP/hook reads, MCP resource reads, and thread-goal methods are encoded through the protocol layer. |
+| Typed protocol response decoding | `Shipped internally` | `initialize`, core thread and turn methods, archive-state actions, filesystem reads and watches, config reads, app/skill/plugin/collaboration-mode inventory, model/MCP/hook reads, MCP resource reads, and thread-goal responses are decoded and validated against request IDs. |
+| Typed protocol notification decoding | `Partially shipped` | The protocol layer now maps a broader batch of app, thread, turn, item, reasoning, hook, MCP-status, config-warning, deprecation, remote-control, and reroute notifications, plus the item lifecycle needed to drive the current observable tool, MCP, file-edit, hook, and compaction summaries. |
 | Public owning client actor | `Shipped` | `CodexAppServer` owns transport plus protocol and exposes startup, shutdown, initialize, thread start, and turn start. |
 | Public value-typed request and result models | `Shipped` | Public API uses hand-owned Swift value types rather than exposing `CodexWire...` directly. |
-| App-wide capability surfaces | `Partially shipped` | `CodexAppServer.listModels(...)`, `CodexAppServer.readModelCapabilities()`, `CodexAppServer.listMcpServerStatuses(...)`, and `CodexAppServer.listHooks(...)` now wrap `model/list`, `modelProvider/capabilities/read`, `mcpServerStatus/list`, and `hooks/list` with hand-owned Swift models. These are connection-wide capability and diagnostics snapshots rather than thread-owned lifecycle actions. Broader app-wide settings and actions still need deliberate public models before promotion. |
+| App-wide capability surfaces | `Partially shipped` | `CodexAppServer.listModels(...)`, `CodexAppServer.readModelCapabilities()`, `CodexAppServer.listMcpServerStatuses(...)`, `CodexAppServer.readMcpResource(...)`, and `CodexAppServer.listHooks(...)` now wrap `model/list`, `modelProvider/capabilities/read`, `mcpServerStatus/list`, `mcpServer/resource/read`, and `hooks/list` with hand-owned Swift models. These are connection-wide capability and diagnostics snapshots rather than thread-owned lifecycle actions. Broader app-wide settings and actions still need deliberate public models before promotion. |
 | Initialize handshake | `Shipped` | `initialize(...)` automatically sends the follow-up `initialized` notification. |
 | Thread start flow | `Shipped` | `startThread(...)` returns `CodexThread`, which carries thread metadata plus a back-reference to the shared app-server owner. |
 | Stored thread list flow | `Shipped` | `listThreads(...)` wraps `thread/list`, returns typed stored-thread pages, and now reconciles local thread metadata plus explicit archived or unarchived list results back into the internal history store. |
 | Stored thread read flow | `Shipped` | `readThread(...)` wraps `thread/read`, returns typed thread and turn values, and hydrates the internal history store when turns are requested. |
 | Stored thread resume flow | `Shipped` | `resumeThread(...)` wraps `thread/resume`, returns a normal `CodexThread`, restores thread defaults, clears stale archived state for the reopened thread, and hydrates any resumed persisted turns into the same local history store without resetting completeness to a fresh-thread state. Callers can set `excludeTurns` when they plan to page history separately through `thread/turns/list`. |
 | Stored thread fork flow | `Shipped` | `forkThread(...)` wraps `thread/fork`, returns a normal `CodexThread`, persists copied fork history into thread-scoped local turn rows, and records explicit fork lineage through the source thread id plus the last shared turn id. Callers can set `excludeTurns` when they want the fork metadata first and copied turn history through paged reads afterward. |
-| Thread management actions | `Partially shipped` | `CodexThread.setName(...)` wraps `thread/name/set`, `CodexThread.updateMetadata(...)` wraps `thread/metadata/update`, and `CodexThread.rollbackLastTurns(...)` wraps `thread/rollback`. Metadata patches use an explicit replace/clear/unchanged field model so callers can express upstream null-vs-omitted semantics. Rollback reconciles visible local history to the app-server response, records a rollback marker, and now has opt-in live coverage against a disposable non-ephemeral thread, but it does not preserve full removed turn payloads as forensic archive data yet. |
+| Thread management actions | `Partially shipped` | `CodexThread.setName(...)` wraps `thread/name/set`, `CodexThread.archive()` wraps `thread/archive`, `CodexThread.unarchive()` wraps `thread/unarchive`, `CodexThread.updateMetadata(...)` wraps `thread/metadata/update`, and `CodexThread.rollbackLastTurns(...)` wraps `thread/rollback`. Metadata patches use an explicit replace/clear/unchanged field model so callers can express upstream null-vs-omitted semantics. Rollback reconciles visible local history to the app-server response, records a rollback marker, and now has opt-in live coverage against a disposable non-ephemeral thread, but it does not preserve full removed turn payloads as forensic archive data yet. |
 | App-server filesystem reads and watches | `Partially shipped` | `CodexAppServer.fs` now exposes the `CodexFS` namespace for app-server-routed metadata, directory listing, file-byte reads, bounded file discovery, SwiftASB-owned fuzzy ranking over app-server-returned entries, and filesystem watch notifications. This gives sandboxed clients a Codex-owned path for basic filesystem facts and picker/search views instead of requiring direct local disk reads. File mutations and repository-root discovery remain separate schema families for later promotion decisions. |
 | App-server config reads | `Partially shipped` | `CodexAppServer.config` now exposes `CodexConfig` for effective config and requirements reads through the app-server. Effective config stays JSON-shaped for now so SwiftASB does not turn unstable config keys into long-lived public Swift fields too early. |
 | App-server extension inventory | `Partially shipped` | `CodexAppServer.extensions` now exposes `CodexAppServer.CodexExtensions` for app, skill, plugin, and collaboration-mode inventory. Plugin install/uninstall/upgrade and skills config writes remain unpromoted until their permission and review model is clearer. |
@@ -69,17 +69,17 @@
 | Multiple simultaneous turns on one thread | `Resolved for now` | Live probing showed that same-thread overlap is not independently routable at the app-server layer today, so `SwiftASB` rejects overlapping same-thread turns client-side with `CodexAppServerError.invalidState`. |
 | `CodexThread` convenience wrapper | `Partially shipped` | `CodexThread` exists, owns thread-scoped turn creation, includes a `startTextTurn(...)` happy-path helper, exposes a typed thread event stream, wraps `compactContext()`, and can now vend a live `Dashboard` observable mirror with aggregate tool-calling, MCP-calling, hook-run, and thread-compaction state. |
 | Thread-scoped recent-turn observable | `Partially shipped` | `CodexThread.makeRecentTurns(limit:)` now vends a bounded recent-turn observable that prewarms from the local history store, supports explicit older/newer whole-turn window expansion, seeds upstream paging cursors even when the visible initial window came from local history, and falls back to `thread/turns/list` when needed. Live probing showed that upstream turn paging is available only after a non-ephemeral thread has materialized at least one user turn, so recent observable startup now degrades to an empty local-only view for the known ephemeral and pre-materialized live runtime responses instead of surfacing raw protocol text. `RecentTurns` now ships named cache-policy presets for chat UIs, full inspectors, and compact history rails; tracks both resident item counts and weighted resident item cost; slims low-value payloads out of older non-visible completed turns before evicting whole turns; rehydrates slimmed turns when they become visible again; and uses scroll-position, visibility, phase, and velocity signals to drive protected residency plus earlier prefetch. Richer weighting heuristics and deeper policy tuning are still open. |
-| Thread-scoped recent-file observable | `Partially shipped` | `CodexThread.makeRecentFiles(limit:)` and `makeRecentFiles(_:)` now vend a file-centric recent-files observable that hydrates from persisted file-change items, keeps one resident entry per file-change item, enriches live entries from `item/fileChange/outputDelta`, can load older file entries from the same turn before stepping farther back through older turns, and supports selection-aware shell-versus-payload slimming with automatic payload rehydration for protected files. `CodexThread.RecentFilesQD` gives callers a repeatable descriptor for the initial resident file window and cache policy. Live probing exercises a real create/edit/delete scenario, and recent-file startup now inherits the same empty local-only degradation as recent-turns for the known live history-unavailable responses. The current weighting now accounts for diff structure and line volume, and shell summaries prefer concise edit summaries over raw terminal status when sealed payload is available. The remaining open work is better payload-cost calibration at the margins and deciding whether `FileChangePatchUpdatedNotification` should enrich the observable with structured patch previews. |
+| Thread-scoped recent-file observable | `Partially shipped` | `CodexThread.makeRecentFiles(limit:)` and `makeRecentFiles(_:)` now vend a file-centric recent-files observable that hydrates from persisted file-change items, keeps one resident entry per file-change item, enriches live entries from `item/fileChange/outputDelta` and `item/fileChange/patchUpdated`, can load older file entries from the same turn before stepping farther back through older turns, and supports selection-aware shell-versus-payload slimming with automatic payload rehydration for protected files. `CodexThread.RecentFilesQD` gives callers a repeatable descriptor for the initial resident file window and cache policy. Live probing exercises a real create/edit/delete scenario, and recent-file startup now inherits the same empty local-only degradation as recent-turns for the known live history-unavailable responses. The current weighting now accounts for diff structure and line volume, and shell summaries prefer concise edit summaries over raw terminal status when sealed payload is available. The remaining open work is better payload-cost calibration at the margins and richer structured patch presentation beyond the current text preview. |
 | Thread-scoped recent-command observable | `Partially shipped` | `CodexThread.makeRecentCommands(limit:)` and `makeRecentCommands(_:)` now vend a command-centric recent-commands observable that hydrates from persisted `commandExecution` items, keeps one resident entry per command item, enriches live entries from `item/commandExecution/outputDelta`, can load older command entries from the same turn before stepping farther back through older turns, and supports selection-aware shell-versus-output slimming with automatic output rehydration for protected commands. `CodexThread.RecentCommandsQD` gives callers a repeatable descriptor for the initial resident command window and cache policy. Recent-command startup now inherits the same empty local-only degradation as recent-turns for the known live history-unavailable responses. Current output weighting accounts for output size and line structure, and shell summaries prefer concise command and output summaries over raw transport detail. The remaining open work is better output-cost calibration and sharper shell-summary heuristics. |
 | App-wide observable companion | `In Progress` | `CodexAppServer.makeLibrary()` and `CodexAppServer.Library` now expose Core Data-backed value snapshots for unarchived, archived, cwd-grouped, and repository-grouped threads, current Git branch and origin metadata, bindable sort/grouping policies, thread-list query descriptors, scoped refresh actions, library-local selection, recently selected ordering, local reloads after app-wide thread/turn events, and app-wide model/MCP/hook snapshots for launcher and sidebar UI. `CodexWorkspace` now promotes active permission-profile provenance and runtime filesystem/network permission facts from thread sessions, but the library still needs richer app-wide Git observables and broader app-wide settings/actions. |
 | Public query descriptors | `Partially shipped` | `CodexAppServer.ThreadListQD` now provides repeatable thread-list intent for direct app-server `thread/list` reads and app-wide `Library` loading, `CodexFS.FileDiscoveryQD` provides repeatable bounded file-discovery intent over app-server `fs/readDirectory` reads, `CodexThread.HistoryWindowQD` provides repeatable local completed-turn window intent for recent, older, newer, turn-centered, and item-centered reads, and `CodexThread.RecentFilesQD` plus `CodexThread.RecentCommandsQD` describe recent-activity companion startup. Repository grouping now uses app-server Git origin metadata when available and falls back to cwd. Remaining descriptor work includes broader public cursor semantics, selection-centered reads if a concrete caller needs them, and later search-hit hydration. |
 | Non-UI local history-reading helpers | `Partially shipped` | `CodexThread` now exposes a lightweight `HistoryWindow` page shape for recent local history, older or newer local windows around a known boundary turn id, centered `windowAroundTurn(...)` reads, centered `windowAroundItem(...)` reads, direct `ClosedTurn` reads for one turn, and convenience array helpers over those same windows. This gives non-UI callers an intentional path into the local history store without binding a UI-oriented observable, while still deferring a broader public cursor model, transcript search surface, and richer history-query helpers. |
 | Public API curation | `Shipped / ongoing` | The source-organization pass has split app-wide model, MCP, thread-management, history, and observable companion values into focused public files while preserving `CodexAppServer`, `CodexThread`, and `CodexTurnHandle` as the three real owners. The connected public-surface review closed the v1 ownership model; future curation should stay tied to concrete public API additions. |
 | DocC documentation | `Shipped / ongoing` | `Sources/SwiftASB/SwiftASB.docc/` contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, generated-wire boundary notes, and copy-pasteable walkthroughs for startup, progress/approval handling, diagnostics/history, and SwiftUI observable companions. The catalog is validated through Xcode `docbuild`; future work is ordinary stale-link, prose, and symbol-comment refinement as the public API grows. |
-| Swift Package Index readiness | `Shipped` | `.spi.yml` declares `SwiftASB` as the documentation target, and Swift Package Index now lists `gaelic-ghost/SwiftASB` with `v1.1.0` selected, a documentation link, compatibility/build results, Package ID `9B5839D9-9551-473F-A939-841534A3FC55`, and a 2026-05-06 update timestamp. |
+| Swift Package Index readiness | `Shipped` | `.spi.yml` declares `SwiftASB` as the documentation target, and Swift Package Index now lists `gaelic-ghost/SwiftASB` with `v1.1.1` selected, a documentation link, compatibility/build results, Package ID `9B5839D9-9551-473F-A939-841534A3FC55`, and a 2026-05-06 update timestamp. |
 | Contributor documentation split | `Shipped` | `README.md` is now focused on Swift and SwiftUI package users, while `CONTRIBUTING.md` owns contributor setup, validation, DocC, live-test flags, generated-wire refresh, and PR expectations. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `complete()` handoff into a caller-owned sealed turn snapshot. |
-| Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Raw command-output and file-change-output deltas now stay internal as transport detail but drive the shipped `RecentCommands` and `RecentFiles` companions, and streamed payloads are preserved when later completed snapshots are thinner. Richer MCP-progress detail still remains internal, while warning, guardian-warning, model-reroute, and model-verification notifications now surface through hand-owned diagnostic events. |
+| Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Raw command-output and file-change-output deltas now stay internal as transport detail but drive the shipped `RecentCommands` and `RecentFiles` companions, and streamed or patch-updated payloads are preserved when later completed snapshots are thinner. Richer MCP-progress detail still remains internal, while warning, guardian-warning, config-warning, deprecation, MCP-server-status, remote-control-status, model-reroute, and model-verification notifications now surface through hand-owned diagnostic events. |
 | Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, request resolution is tracked by JSON-RPC request id, and deterministic command-approval plus permissions-approval completion are covered through the real app-server with a mock Responses provider. Diagnostics are now separated from control flows: passive warning/model/guardian signals are public diagnostics, while guardian denied-action approval remains internal until SwiftASB owns a stable request/response model for it. |
 | Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list`, seeds previously unknown local threads from paged history, widens persisted turn identity to stay thread-scoped across forks, and records explicit fork lineage while preserving conservative reconciliation that keeps richer local detail when upstream stored history is thinner. Public history paging/search helpers and archive-retention policy are still open. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
@@ -104,7 +104,7 @@
 The next meaningful package step is no longer proving the v1 interactive
 lifecycle, SPI visibility, basic history hydration, first-pass reconciliation,
 or command-approval completion. Those slices now exist and shipped in the
-`v1.1.0` baseline.
+`v1.1.1` baseline.
 
 The next meaningful work is to widen the reviewed app-server schema and protocol
 coverage before adding more public query descriptors. Descriptors should compile
@@ -129,8 +129,9 @@ The package can now:
   `windowAroundTurn(...)` and `windowAroundItem(...)`
 - set thread names, patch stored Git metadata, and roll back trailing turns
   through `CodexThread`
-- list app-wide model, MCP-server, and hook diagnostics snapshots through
-  `CodexAppServer`
+- archive and unarchive stored threads through `CodexThread`
+- list app-wide model, MCP-server, MCP-resource, and hook diagnostics snapshots
+  through `CodexAppServer`
 - document the supported lifecycle in the README without sending consumers into
   the tests
 
@@ -162,10 +163,11 @@ That means the current priority order is:
    `excludeTurns` remains public on resume/fork request models because it
    directly supports the existing paged history model; permission-profile
    families stay internal until SwiftASB owns a deliberate public permission
-   model; hooks, models, and MCP status remain app-wide diagnostics/capability
-   snapshots; thread goals, realtime, fuzzy file search sessions, remote-control
-   status, marketplace/account-management families, and guardian denied-action
-   approval remain post-v1 until their consumer workflows are clearer.
+   model; hooks, models, MCP status, and MCP resource reads remain app-wide
+   diagnostics/capability snapshots; thread goals, realtime, fuzzy file search
+   sessions, marketplace/account-management families, and guardian
+   denied-action approval remain post-v1 until their consumer workflows are
+   clearer.
 5. Flesh out archive-aware retention and eviction beyond the current list-driven
    archive-state drift correction.
 6. Add any sharper binary-discovery diagnostics we want alongside the
@@ -175,7 +177,7 @@ That means the current priority order is:
 
 ## V1 Readiness Checklist
 
-This checklist records the work that made `SwiftASB` ready for the `v1.1.0`
+This checklist records the work that made `SwiftASB` ready for the `v1.1.1`
 tag. The goal was not to make every possible app-server feature public before
 v1. The goal was to make the supported lifecycle honest, durable, well
 documented, and intentionally shaped.
@@ -198,7 +200,7 @@ documented, and intentionally shaped.
   Decision: post-v1. It needs a stable user-facing control-flow model for what
   is being approved and how a Swift consumer should answer it.
 - [x] Keep marketplace upgrade, account-management variants, richer MCP
-  progress, external-agent config import, patch-updated file previews, and
+  progress, external-agent config import, structured patch rendering, and
   mixed recent activity out of v1.
   Decision: post-v1. The v1 surface should not widen just because the generated
   schema contains those families.
@@ -223,8 +225,8 @@ workflow earns them in a later feature release.
   such as Amazon Bedrock.
 - [ ] Richer MCP progress detail beyond the current dashboard/minimap summaries.
 - [ ] External-agent config import surfaces.
-- [ ] File patch-updated previews or structured patch rendering for
-  `RecentFiles`.
+- [x] File patch-updated text previews for `RecentFiles`.
+- [ ] Structured patch rendering for `RecentFiles`.
 - [ ] Mixed `RecentActivity` timeline. Keep `RecentTurns`, `RecentFiles`, and
   `RecentCommands` separate for v1.
 - [ ] Review and promote more app-server schema families before widening query
@@ -236,6 +238,10 @@ workflow earns them in a later feature release.
   settings/actions that earn public models.
 - [ ] SwiftASB-owned query descriptors for thread lists, project grouping,
   history windows, selection-centered reads, and later search-hit hydration.
+- [ ] Richer file-discovery hit metadata for UI highlighting and ranking
+  explanations, without exposing generated wire shapes.
+- [ ] Later upstream fuzzy file-search promotion after the app-server schema has
+  a clear search, cursor, and result-stability contract.
 - [ ] Broader public history cursor semantics.
 - [ ] Transcript search.
 - [ ] Richer non-UI history query helpers beyond the current local windows.
@@ -337,8 +343,8 @@ workflow earns them in a later feature release.
 
 ### Documentation And Examples
 
-- [x] Update stale release references after the `v1.1.0` release.
-  Decision: README now names `v1.1.0` as the current released baseline and no
+- [x] Update stale release references after the `v1.1.1` release.
+  Decision: README now names `v1.1.1` as the current released baseline and no
   longer describes the package as early development.
 - [x] Finish DocC symbol comments for the supported lifecycle, not just the
   conceptual articles.
@@ -424,8 +430,8 @@ workflow earns them in a later feature release.
   generated permission-profile shapes remain internal, `hooks/list` is public
   as a read-only diagnostics/capability snapshot, model-provider capabilities
   are a clean public candidate, and thread goals, realtime, fuzzy file search,
-  remote-control status, marketplace/account-management families, and guardian
-  denied-action approval stay post-v1.
+  remote-control management, marketplace/account-management families, and
+  guardian denied-action approval stay post-v1.
 - [x] Confirm generated wire stays internal in docs, source organization, and
   public examples.
   Decision: generated wire remains internal scaffolding. Public docs and README
@@ -489,7 +495,7 @@ workflow earns them in a later feature release.
 - [x] Confirm Swift Package Index listing and DocC rendering after the latest
   public tag is indexed.
   Decision: completed on 2026-05-06. Swift Package Index lists
-  `gaelic-ghost/SwiftASB`, selects `v1.1.0`, exposes a Documentation link,
+  `gaelic-ghost/SwiftASB`, selects `v1.1.1`, exposes a Documentation link,
   shows compatibility/build results, and reports Package ID
   `9B5839D9-9551-473F-A939-841534A3FC55`.
 - [x] Run `swift test`, `git diff --check`, and
@@ -503,10 +509,10 @@ workflow earns them in a later feature release.
   the `release/v1.0.0` branch on 2026-05-02 and on the
   `release/v1.0.1-prep` branch on 2026-05-02.
 - [x] Decide whether another targeted `v0.9.x` patch release is needed before
-  `v1.1.0`, or whether the remaining work should go straight into the v1
+  `v1.1.1`, or whether the remaining work should go straight into the v1
   release branch.
   Decision: no additional `v0.9.x` patch is needed. The remaining work should go
-  straight into the `v1.1.0` release branch.
+  straight into the `v1.1.1` release branch.
 - [x] Prepare v1 release notes with explicit sections for public surface,
   intentionally internal surfaces, compatibility window, migration notes,
   validation performed, and known post-v1 work.
@@ -530,8 +536,9 @@ workflow earns them in a later feature release.
   work, reading the minimap, and completing into a sealed turn snapshot.
 - SwiftUI companion surfaces are stable for v1: `Dashboard`, `Minimap`,
   `RecentTurns`, `RecentFiles`, and `RecentCommands`.
-- Public diagnostics cover runtime warnings, guardian warnings, model reroutes,
-  and model-verification events through hand-owned Swift values.
+- Public diagnostics cover runtime warnings, guardian warnings, config warnings,
+  deprecation notices, MCP-server status changes, remote-control status changes,
+  model reroutes, and model-verification events through hand-owned Swift values.
 
 #### Intentionally Internal Surfaces
 
@@ -539,7 +546,7 @@ workflow earns them in a later feature release.
   of the public Swift API.
 - Broader app-server families remain post-v1 until their consumer workflows are
   clearer, including guardian denied-action approval, marketplace/account
-  management, remote-control status, thread goals, realtime, fuzzy file search,
+  management, remote-control management, thread goals, realtime, fuzzy file search,
   hook mutation, external-agent config import, richer MCP progress, and
   structured patch previews.
 - A one-shot `run(...)` convenience API is intentionally deferred until the
@@ -558,7 +565,7 @@ workflow earns them in a later feature release.
 #### Migration Notes
 
 - Existing `v0.9.x` consumers should update the SwiftPM dependency to
-  `from: "1.1.0"` once the tag is published.
+  `from: "1.1.1"` once the tag is published.
 - The v1 API surface has removed stale pre-v1 compatibility shims and phantom
   fields that no longer exist in the reviewed `v0.128.0` schema.
 - Same-thread overlapping turns are rejected client-side with
@@ -582,7 +589,7 @@ workflow earns them in a later feature release.
 #### Known Post-V1 Work
 
 - Keep an eye on future Swift Package Index builds after compatibility-window
-  or DocC changes; the `v1.1.0` listing and documentation link are live.
+  or DocC changes; the `v1.1.1` listing and documentation link are live.
 - Add broader live server-request coverage for permissions and MCP elicitation
   if those become stronger public runtime guarantees.
 - Continue tuning recent companion cache calibration, richer file previews,
@@ -885,7 +892,7 @@ not as the current maintainer priority.
   reviewed Codex CLI support window.
 - [x] Confirm Swift Package Index listing and DocC rendering after the latest public
   tag is indexed.
-  Decision: completed on 2026-05-06 for `v1.1.0`.
+  Decision: completed on 2026-05-06 for `v1.1.1`.
 
 ### Deferred By The V1 Release Boundary
 
@@ -899,7 +906,7 @@ not as the current maintainer priority.
   provider-specific account families such as Amazon Bedrock.
 - Richer MCP progress detail beyond the current dashboard/minimap summaries.
 - External-agent config import surfaces.
-- File patch-updated previews or structured patch rendering for `RecentFiles`.
+- Structured patch rendering for `RecentFiles`.
 - Broader history cursor semantics, transcript search, and richer non-UI
   history query helpers beyond the current local windows.
 - Archive-aware retention/eviction and rollback forensic archival of removed
@@ -1154,7 +1161,7 @@ Completed
 - [x] Add version-compatibility policy notes for the local Codex binary.
 - [x] Refresh the compatibility window and promoted generated snapshot against the current `v0.124.0` schema dump once the added endpoint, notification, and field families have been classified.
 - [x] Curate the public API before v1 by splitting large source files along existing responsibility boundaries where still helpful, tightening public names/defaults, and finishing targeted source-level symbol documentation for the supported lifecycle.
-  Decision: completed for the `v1.1.0` boundary through the public API audit,
+  Decision: completed for the `v1.1.1` boundary through the public API audit,
   symbol inventory, source-comment pass, and focused public file organization.
 - [x] Add the first DocC documentation catalog before v1, including a package landing page, public-handle topic groups, and conceptual articles for the interactive lifecycle, history companions, and generated-wire boundary.
 - [x] Validate the DocC catalog through Xcode `docbuild` and document the maintainer command.
@@ -1166,7 +1173,7 @@ Completed
   observable companions. Keep any final pre-v1 edits focused on stale links,
   stale prose, and symbol comments that are still too terse.
 - [x] Confirm the Swift Package Index listing after the package is publicly indexed and tagged.
-  Decision: completed on 2026-05-06 for `v1.1.0`.
+  Decision: completed on 2026-05-06 for `v1.1.1`.
 - [x] Decide whether real subprocess integration tests are required before the first release.
   Decision: yes, but as opt-in suites rather than as part of the default `swift test` path while the live Codex runtime remains an external local dependency.
 - [x] Add an explicit source-available license for the package.
@@ -1213,18 +1220,24 @@ Completed
 - [ ] Add guardian denied-action approval once SwiftASB owns a stable request and response model for that control flow.
 - [ ] Add marketplace upgrade and account-management surfaces after SwiftASB has a concrete app-wide management workflow.
 - [ ] Add external-agent config import surfaces after external-agent configuration becomes a public app-server management workflow.
-- [ ] Add file patch-updated previews or structured patch rendering for `RecentFiles`.
+- [ ] Add structured patch rendering for `RecentFiles`.
+- [ ] Add richer `CodexFS.FileDiscoveryHit` search metadata soon, including
+  match kind, matched ranges, or ranking reason once UI highlighting needs an
+  explicit public model.
+- [ ] Promote an upstream app-server fuzzy file-search endpoint later if Codex
+  owns indexing, ignore rules, pagination, and result stability clearly enough
+  for SwiftASB to wrap it as a separate public API.
 - [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
 - [x] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
 - [x] Add a local-only startup mode for recent history observables when live upstream paging is unavailable because the thread is ephemeral or not yet materialized.
 - [x] Confirm the Swift Package Index listing after the package is publicly indexed and tagged.
-  Decision: completed on 2026-05-06 for `v1.1.0`.
+  Decision: completed on 2026-05-06 for `v1.1.1`.
 
 ## History
 
 - 2026-04-25: Added Xcode `docbuild` DocC validation, Swift Package Index metadata, and warning-clean DocC links.
 - 2026-04-25: Split README package-user guidance from contributor workflow in `CONTRIBUTING.md`.
-- 2026-05-06: Marked the `v1.1.0` SPI listing confirmed, closed the completed v1 milestone status drift, and moved the active maintainer priority to post-v1 query descriptors plus app-library grouping.
+- 2026-05-06: Marked the `v1.1.1` SPI listing confirmed, closed the completed v1 milestone status drift, and moved the active maintainer priority to post-v1 query descriptors plus app-library grouping.
 - 2026-05-06: Reprioritized the next post-v1 slice around broader app-server schema and protocol promotion before additional query descriptors, so sandboxed clients can rely on Codex-owned workspace and Git facts instead of SwiftASB filesystem inference.
 - 2026-05-06: Promoted the first read-only app-server filesystem slice through `CodexFS`, covering `fs/getMetadata`, `fs/readDirectory`, and `fs/readFile`, and added `thread/loaded/list` for loaded runtime thread ids.
 - 2026-05-06: Removed the older `CodexThread` local workspace-file helpers after `CodexFS` became the promoted app-server-routed filesystem namespace.

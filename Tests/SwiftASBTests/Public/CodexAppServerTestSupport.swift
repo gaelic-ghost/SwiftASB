@@ -46,6 +46,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var threadTurnsListErrorMessage: String?
     private var threadTurnsListResult: [String: Any]?
     private var threadTurnsListResultQueue: [[String: Any]]
+    private var appSnapshotResponseDelayNanoseconds: UInt64 = 0
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
     private var started = false
     private var initializedSeen = false
@@ -85,6 +86,10 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         threadListResultQueue = resultQueue
     }
 
+    func setAppSnapshotResponseDelay(nanoseconds: UInt64) {
+        appSnapshotResponseDelayNanoseconds = nanoseconds
+    }
+
     func requestPayloads(for method: String) -> [Data] {
         recordedRequestPayloads[method] ?? []
     }
@@ -108,6 +113,10 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         let method = try requestMethod(from: requestPayload)
         recordedMethods.append(method)
         recordedRequestPayloads[method, default: []].append(requestPayload)
+
+        if Self.isAppSnapshotRequest(method) {
+            try await Task.sleep(nanoseconds: appSnapshotResponseDelayNanoseconds)
+        }
 
         switch method {
         case "initialize":
@@ -267,6 +276,43 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                         ],
                     ],
                     "nextCursor": NSNull(),
+                ]
+            )
+        case "mcpServer/resource/read":
+            return responsePayload(
+                id: id,
+                result: [
+                    "contents": [
+                        [
+                            "_meta": ["source": "fixture"],
+                            "blob": NSNull(),
+                            "mimeType": "application/json",
+                            "text": #"{"events":[]}"#,
+                            "uri": "calendar://events/today",
+                        ],
+                    ],
+                ]
+            )
+        case "thread/archive":
+            return responsePayload(id: id, result: [:])
+        case "thread/unarchive":
+            return responsePayload(
+                id: id,
+                result: [
+                    "thread": [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350000,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-123",
+                        "modelProvider": "openai",
+                        "name": "Hydrated Thread",
+                        "preview": "Hydrated thread preview",
+                        "source": "cli",
+                        "status": ["type": "notLoaded"],
+                        "turns": [],
+                        "updatedAt": 1713350005,
+                    ],
                 ]
             )
         case "thread/name/set":
@@ -1647,6 +1693,46 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
     }
 
+    func emitFileChangePatchUpdated(
+        threadID: String,
+        turnID: String,
+        itemID: String,
+        path: String,
+        diff: String,
+        additionalChanges: [[String: String]] = []
+    ) {
+        let rawChanges = [["diff": diff, "path": path]] + additionalChanges
+        let changes = rawChanges.map { change in
+            [
+                "diff": change["diff"] ?? "",
+                "kind": [
+                    "type": "update",
+                ],
+                "path": change["path"] ?? "",
+            ] as [String: Any]
+        }
+        let payload = payloadObject([
+            "changes": changes,
+            "itemId": itemID,
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/fileChange/patchUpdated", payload: payload)
+        )
+    }
+
+    func emitAppListUpdated() {
+        let payload = payloadObject([
+            "data": [],
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "app/list/updated", payload: payload)
+        )
+    }
+
     func emitCommandExecutionOutputDelta(
         threadID: String,
         turnID: String,
@@ -1741,6 +1827,12 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
         let params = try #require(object["params"] as? [String: Any])
         return params[name]
+    }
+
+    private static func isAppSnapshotRequest(_ method: String) -> Bool {
+        method == "modelProvider/capabilities/read"
+            || method == "mcpServerStatus/list"
+            || method == "hooks/list"
     }
 
     private func responsePayload(id: CodexRPCRequestID, result: [String: Any]) -> Data {

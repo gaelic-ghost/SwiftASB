@@ -164,17 +164,29 @@ It now includes:
   - `PluginReadResponse`
   - `CollaborationModeListParams`
   - `CollaborationModeListResponse`
+  - `AppListUpdatedNotification`
+  - `SkillsChangedNotification`
+  - `ConfigWarningNotification`
 - app-wide capability requests and responses:
   - `ModelListParams`
   - `ModelListResponse`
   - `ListMcpServerStatusParams`
   - `ListMcpServerStatusResponse`
+  - `McpResourceReadParams`
+  - `McpResourceReadResponse`
+  - `McpServerStatusUpdatedNotification`
+  - `RemoteControlStatusChangedNotification`
+  - `DeprecationNoticeNotification`
 - thread lifecycle notifications:
+  - `ThreadArchiveParams`
+  - `ThreadArchiveResponse`
   - `ThreadStartedNotification`
   - `ThreadStatusChangedNotification`
   - `ThreadNameUpdatedNotification`
   - `ThreadTokenUsageUpdatedNotification`
   - `ThreadArchivedNotification`
+  - `ThreadUnarchiveParams`
+  - `ThreadUnarchiveResponse`
   - `ThreadUnarchivedNotification`
   - `ThreadClosedNotification`
 - turn lifecycle notifications:
