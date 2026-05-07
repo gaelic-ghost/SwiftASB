@@ -75,6 +75,17 @@ extension CodexAppServerTests {
         #expect(result.hits.first?.path == "/tmp/project/Sources/SwiftASB/CodexFS.swift")
         #expect(result.hits.first?.kind == .file)
         #expect(result.hits.first?.depth == 2)
+        #expect(result.hits.first?.matchKind == .subsequence)
+        #expect(result.hits.first?.matchedFileNameRanges == [
+            .init(length: 1, start: 0),
+            .init(length: 3, start: 4),
+        ])
+        #expect(result.hits.first?.matchedRelativePathRanges == [
+            .init(length: 1, start: 4),
+            .init(length: 3, start: 21),
+        ])
+        #expect(result.hits.first?.rankingReasons.map(\.kind).contains(.relativePathSubsequence) == true)
+        #expect(result.hits.first?.rankingReasons.map(\.kind).contains(.fileNameSubsequence) == true)
         #expect(result.hits.first?.score != nil)
 
         let directoryRequests = await transport.requestPayloads(for: "fs/readDirectory")
@@ -135,6 +146,14 @@ extension CodexAppServerTests {
             ".build/debug/CodexFS.o",
         ])
         #expect(hiddenEntries.hits.map(\.kind) == [.file, .directory, .file, .file, .file])
+        #expect(hiddenEntries.hits.first?.matchKind == .subsequence)
+        #expect(hiddenEntries.hits.first?.matchedFileNameRanges == [
+            .init(length: 1, start: 0),
+            .init(length: 2, start: 5),
+        ])
+        #expect(
+            hiddenEntries.hits.last?.rankingReasons.contains(.init(kind: .generatedPathPenalty, value: -105)) == true
+        )
 
         let noMatches = try await client.fs.discoverFiles(
             .files(under: "/tmp/project", matching: "definitely-not-here", limit: 10, maximumDepth: 3)

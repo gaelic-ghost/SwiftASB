@@ -20,6 +20,13 @@ let files = try await appServer.fs.discoverFiles(
 )
 ```
 
+Each ``FileDiscoveryHit`` includes UI-ready search metadata when a search term
+is present: ``FileDiscoveryHit/matchKind``, ``FileDiscoveryHit/matchedFileNameRanges``,
+``FileDiscoveryHit/matchedRelativePathRanges``, and
+``FileDiscoveryHit/rankingReasons``. Use those values to highlight matched
+characters and explain why one result ranked above another without duplicating
+SwiftASB's fuzzy scoring in app code.
+
 ## Topics
 
 ### Reads

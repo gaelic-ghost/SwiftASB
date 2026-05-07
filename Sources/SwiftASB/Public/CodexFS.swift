@@ -248,12 +248,74 @@ public struct CodexFS: Sendable {
             case other
         }
 
+        /// Search match shape that best explains why a hit ranked.
+        public enum MatchKind: String, Sendable, Equatable {
+            /// The normalized file name exactly equals the normalized search term.
+            case exactFileName
+            /// The normalized file name starts with the normalized search term.
+            case fileNamePrefix
+            /// The normalized file name contains the normalized search term.
+            case fileNameContains
+            /// The normalized relative path contains the normalized search term.
+            case relativePathContains
+            /// Word initials in the file name match the normalized search term.
+            case acronym
+            /// Search characters matched in order without a stronger contiguous match.
+            case subsequence
+        }
+
+        /// Character-offset range for highlighting matched text.
+        public struct MatchRange: Sendable, Equatable {
+            /// Number of matched characters in this contiguous range.
+            public let length: Int
+            /// Zero-based character offset where the match range begins.
+            public let start: Int
+        }
+
+        /// Ranking signal that contributed to a fuzzy file-discovery score.
+        public struct RankingReason: Sendable, Equatable {
+            /// Stable reason category for UI explanations.
+            public enum Kind: String, Sendable, Equatable {
+                /// File-name initials matched the search term.
+                case acronymMatch
+                /// File name exactly matched the search term.
+                case exactFileName
+                /// File name contained the search term.
+                case fileNameContains
+                /// File name started with the search term.
+                case fileNamePrefix
+                /// File name matched the search term as an ordered subsequence.
+                case fileNameSubsequence
+                /// Generated or build-output path components lowered the score.
+                case generatedPathPenalty
+                /// A matched character landed at a path, word, or punctuation boundary.
+                case pathBoundaryMatch
+                /// Relative path contained the search term.
+                case relativePathContains
+                /// Relative path matched the search term as an ordered subsequence.
+                case relativePathSubsequence
+            }
+
+            /// Stable reason category for the ranking signal.
+            public let kind: Kind
+            /// Score contribution for the signal. Penalties use negative values.
+            public let value: Int
+        }
+
         public var id: String { path }
 
         public let depth: Int
         public let fileName: String
         public let kind: Kind
+        /// Strongest search match shape for this hit, or nil when no search term was used.
+        public let matchKind: MatchKind?
+        /// Character ranges in `fileName` that matched the search term.
+        public let matchedFileNameRanges: [MatchRange]
+        /// Character ranges in `relativePath` that matched the search term.
+        public let matchedRelativePathRanges: [MatchRange]
         public let path: String
+        /// Stable ranking signals that explain the fuzzy score.
+        public let rankingReasons: [RankingReason]
         public let relativePath: String
         public let score: Int?
     }
@@ -384,21 +446,25 @@ private extension CodexFS {
             let childPath = appendingPathComponent(entry.fileName, to: directoryPath)
             let relativePath = appendingPathComponent(entry.fileName, to: relativeDirectoryPath)
             let kind = CodexFS.FileDiscoveryHit.Kind(entry.kind)
-            let score = query.searchTerm.flatMap {
-                fuzzyScore(query: $0, candidate: relativePath)
+            let match = query.searchTerm.flatMap {
+                fuzzyMatch(query: $0, relativePath: relativePath)
             }
 
             if query.includedKinds.contains(kind),
-               query.searchTerm == nil || score != nil
+               query.searchTerm == nil || match != nil
             {
                 hits.append(
                     .init(
                         depth: depth,
                         fileName: entry.fileName,
                         kind: kind,
+                        matchKind: match?.kind,
+                        matchedFileNameRanges: match?.fileNameRanges ?? [],
+                        matchedRelativePathRanges: match?.relativePathRanges ?? [],
                         path: childPath,
+                        rankingReasons: match?.rankingReasons ?? [],
                         relativePath: relativePath,
-                        score: score
+                        score: match?.score
                     )
                 )
             }
@@ -422,44 +488,86 @@ private extension CodexFS {
         return path.hasSuffix("/") ? path + component : path + "/" + component
     }
 
-    func fuzzyScore(query: String, candidate: String) -> Int? {
+    func fuzzyMatch(query: String, relativePath: String) -> FileDiscoveryMatch? {
         let normalizedQuery = query.lowercased()
         let queryCharacters = Array(normalizedQuery)
         guard !queryCharacters.isEmpty else { return nil }
 
-        let normalizedCandidate = candidate.lowercased()
-        let baseName = URL(fileURLWithPath: candidate).lastPathComponent.lowercased()
+        let normalizedRelativePath = relativePath.lowercased()
+        let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
+        let normalizedFileName = fileName.lowercased()
 
-        guard let pathScore = subsequenceScore(queryCharacters: queryCharacters, candidate: normalizedCandidate) else {
+        guard let pathMatch = subsequenceScore(queryCharacters: queryCharacters, candidate: normalizedRelativePath) else {
             return nil
         }
 
-        var score = pathScore
-        if let baseNameScore = subsequenceScore(queryCharacters: queryCharacters, candidate: baseName) {
-            score = max(score, baseNameScore + 35)
+        var score = pathMatch.score
+        var kind = CodexFS.FileDiscoveryHit.MatchKind.subsequence
+        var fileNameRanges: [CodexFS.FileDiscoveryHit.MatchRange] = []
+        var reasons: [CodexFS.FileDiscoveryHit.RankingReason] = [
+            .init(kind: .relativePathSubsequence, value: pathMatch.score),
+        ]
+
+        if pathMatch.hasBoundaryMatch {
+            reasons.append(.init(kind: .pathBoundaryMatch, value: 8))
         }
 
-        if baseName == normalizedQuery {
+        if let fileNameMatch = subsequenceScore(queryCharacters: queryCharacters, candidate: normalizedFileName) {
+            let fileNameScore = fileNameMatch.score + 35
+            score = max(score, fileNameScore)
+            fileNameRanges = fileNameMatch.ranges
+            reasons.append(.init(kind: .fileNameSubsequence, value: fileNameScore))
+            if fileNameMatch.hasBoundaryMatch {
+                reasons.append(.init(kind: .pathBoundaryMatch, value: 8))
+            }
+        }
+
+        if normalizedFileName == normalizedQuery {
             score += 120
-        } else if baseName.hasPrefix(normalizedQuery) {
+            kind = .exactFileName
+            reasons.append(.init(kind: .exactFileName, value: 120))
+        } else if normalizedFileName.hasPrefix(normalizedQuery) {
             score += 80
-        } else if baseName.contains(normalizedQuery) {
+            kind = .fileNamePrefix
+            reasons.append(.init(kind: .fileNamePrefix, value: 80))
+        } else if normalizedFileName.contains(normalizedQuery) {
             score += 60
-        } else if normalizedCandidate.contains(normalizedQuery) {
+            kind = .fileNameContains
+            reasons.append(.init(kind: .fileNameContains, value: 60))
+        } else if normalizedRelativePath.contains(normalizedQuery) {
             score += 25
+            kind = .relativePathContains
+            reasons.append(.init(kind: .relativePathContains, value: 25))
         }
 
-        if acronymMatches(query: normalizedQuery, candidate: baseName) {
+        if acronymMatches(query: normalizedQuery, candidate: normalizedFileName) {
             score += 35
+            if kind == .subsequence {
+                kind = .acronym
+            }
+            reasons.append(.init(kind: .acronymMatch, value: 35))
         }
 
-        return score - generatedPathPenalty(candidate: normalizedCandidate)
+        let penalty = generatedPathPenalty(candidate: normalizedRelativePath)
+        if penalty > 0 {
+            reasons.append(.init(kind: .generatedPathPenalty, value: -penalty))
+        }
+
+        return .init(
+            fileNameRanges: fileNameRanges,
+            kind: kind,
+            rankingReasons: reasons,
+            relativePathRanges: pathMatch.ranges,
+            score: score - penalty
+        )
     }
 
-    func subsequenceScore(queryCharacters: [Character], candidate: String) -> Int? {
+    func subsequenceScore(queryCharacters: [Character], candidate: String) -> SubsequenceMatch? {
         let candidateCharacters = Array(candidate)
         var queryIndex = 0
         var score = 0
+        var matchedOffsets: [Int] = []
+        var hasBoundaryMatch = false
         var previousMatchIndex: Int?
 
         for (candidateIndex, candidateCharacter) in candidateCharacters.enumerated() {
@@ -468,20 +576,48 @@ private extension CodexFS {
             score += 10
             if candidateIndex == 0 || isPathBoundary(candidateCharacters[candidateIndex - 1]) {
                 score += 8
+                hasBoundaryMatch = true
             }
             if let previousMatchIndex {
                 score += max(0, 6 - (candidateIndex - previousMatchIndex - 1))
             }
 
+            matchedOffsets.append(candidateIndex)
             previousMatchIndex = candidateIndex
             queryIndex += 1
 
             if queryIndex == queryCharacters.count {
-                return score - candidateCharacters.count
+                return .init(
+                    hasBoundaryMatch: hasBoundaryMatch,
+                    ranges: matchRanges(from: matchedOffsets),
+                    score: score - candidateCharacters.count
+                )
             }
         }
 
         return nil
+    }
+
+    func matchRanges(from offsets: [Int]) -> [CodexFS.FileDiscoveryHit.MatchRange] {
+        guard let firstOffset = offsets.first else { return [] }
+
+        var ranges: [CodexFS.FileDiscoveryHit.MatchRange] = []
+        var rangeStart = firstOffset
+        var previousOffset = firstOffset
+
+        for offset in offsets.dropFirst() {
+            if offset == previousOffset + 1 {
+                previousOffset = offset
+                continue
+            }
+
+            ranges.append(.init(length: previousOffset - rangeStart + 1, start: rangeStart))
+            rangeStart = offset
+            previousOffset = offset
+        }
+
+        ranges.append(.init(length: previousOffset - rangeStart + 1, start: rangeStart))
+        return ranges
     }
 
     func acronymMatches(query: String, candidate: String) -> Bool {
@@ -511,6 +647,20 @@ private extension CodexFS {
 
     func isPathBoundary(_ character: Character) -> Bool {
         character == "/" || character == "-" || character == "_" || character == "." || character == " "
+    }
+
+    struct FileDiscoveryMatch {
+        var fileNameRanges: [FileDiscoveryHit.MatchRange]
+        var kind: FileDiscoveryHit.MatchKind
+        var rankingReasons: [FileDiscoveryHit.RankingReason]
+        var relativePathRanges: [FileDiscoveryHit.MatchRange]
+        var score: Int
+    }
+
+    struct SubsequenceMatch {
+        var hasBoundaryMatch: Bool
+        var ranges: [FileDiscoveryHit.MatchRange]
+        var score: Int
     }
 }
 
