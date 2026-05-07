@@ -1698,18 +1698,21 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         turnID: String,
         itemID: String,
         path: String,
-        diff: String
+        diff: String,
+        additionalChanges: [[String: String]] = []
     ) {
-        let payload = payloadObject([
-            "changes": [
-                [
-                    "diff": diff,
-                    "kind": [
-                        "type": "update",
-                    ],
-                    "path": path,
+        let rawChanges = [["diff": diff, "path": path]] + additionalChanges
+        let changes = rawChanges.map { change in
+            [
+                "diff": change["diff"] ?? "",
+                "kind": [
+                    "type": "update",
                 ],
-            ],
+                "path": change["path"] ?? "",
+            ] as [String: Any]
+        }
+        let payload = payloadObject([
+            "changes": changes,
             "itemId": itemID,
             "threadId": threadID,
             "turnId": turnID,

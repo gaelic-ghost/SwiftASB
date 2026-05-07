@@ -2615,7 +2615,7 @@ public actor CodexAppServer {
             )
         case let .fileChangePatchUpdated(notification):
             let patchText = notification.changes.map(\.diff).joined(separator: "\n")
-            let path = notification.changes.first?.path
+            let path = notification.changes.count == 1 ? notification.changes.first?.path : nil
             let deltaEvent = FileChangeOutputDeltaEvent(
                 delta: patchText,
                 itemID: notification.itemID,

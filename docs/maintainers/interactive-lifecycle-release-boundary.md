@@ -138,10 +138,15 @@ Current observable-only families:
 | Thread-level aggregate tool activity | `CodexThread.Dashboard.toolCallingStatus` | This is a current-state blocked-or-busy summary, not canonical event history. |
 | Thread-level aggregate MCP activity | `CodexThread.Dashboard.mcpCallingStatus` | Same reason as tool activity: useful UI summary, but not a separate public event family yet. |
 | Thread-level recent file edits | `CodexThread.RecentFiles` | File viewers and diff panels need file-centric current state, not raw file-change delta notifications as a top-level event enum. |
+| File-change output delta notifications | `CodexThread.RecentFiles` | `Observable-only for now`: incremental file-change text feeds the file-centric companion, but raw notifications do not become top-level public event cases. |
+| File-change patch-updated notifications | `CodexThread.RecentFiles` | `Observable-only for now`: replacement patch previews feed the file-centric companion; richer structured diff rendering remains deferred. |
 | Thread-level recent command activity | `CodexThread.RecentCommands` | Terminal-style inspectors need command-centric current state, not raw command-output delta notifications as a top-level event enum. |
+| Command output delta notifications | `CodexThread.RecentCommands` | `Observable-only for now`: streamed command output feeds the command-centric companion, but raw notifications do not become top-level public event cases. |
 | Thread-level active hook runs | `CodexThread.Dashboard.hookRuns` | Consumers need a stable current-state view of which hooks are running or have just completed more than they need raw hook notifications as first-class event enums. |
+| Hook started / completed notifications | `CodexThread.Dashboard.hookRuns` | `Observable-only for now`: raw hook notifications update current hook-run state rather than becoming public event cases. |
 | Thread-level compaction status | `CodexThread.Dashboard.isCompactingThreadContext` | Current blocked-thread state matters to consumers, but the package does not yet expose full compaction progress as a public event stream. |
 | Hook permission-request event names | `CodexThread.Dashboard.HookRun.EventName.permissionRequest` | v0.124 adds this hook event name. The hook-run mirror can display it, but raw hook notifications still are not public event cases. |
+| App-list and skills-change notifications | App-wide snapshots | `Observable-only for app-snapshot refresh`: raw notifications trigger refreshed model, MCP, hook, and related app-wide mirrors. |
 
 Future observable-only families are acceptable when all of the following are
 true:
@@ -185,20 +190,9 @@ Remaining gap inside the observable-only slice:
 
 | Family | Why it remains internal |
 | --- | --- |
-| Command output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentCommands` as a command-centric observable companion instead of becoming new top-level public event cases. |
-| File-change output delta notifications | The raw notifications remain internal, but they now feed `CodexThread.RecentFiles` as a file-centric observable companion instead of becoming new top-level public event cases. |
-| File-change patch-updated notifications | The raw notification remains internal, but it now refreshes `RecentFiles` text previews. A richer structured diff model is still deferred until SwiftASB can own that shape deliberately. |
-| MCP tool-call progress notifications | The current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
-| Model-rerouted notifications | Public as hand-owned diagnostics so clients can explain runtime model changes without reading raw generated payloads. |
-| Model-verification notifications | Public as hand-owned diagnostics so clients can show or log verified model capability signals. |
-| Config-warning notifications | Public as hand-owned diagnostics because config-load warnings are passive operator signals, not requests that require a response. |
-| Deprecation-notice notifications | Public as hand-owned diagnostics because runtime compatibility notices should be visible without exposing generated wire payloads. |
-| MCP-server-status notifications | Public as hand-owned diagnostics and as app-snapshot refresh triggers because they affect MCP inspectors and settings views. |
-| Remote-control-status notifications | Public as hand-owned diagnostics because remote-control status is app-wide passive state, not a thread or turn action. |
-| Warning and guardian-warning notifications | Public as hand-owned diagnostics because these are passive operator/user signals, not requests that require a response. |
+| MCP tool-call progress notifications | `Internal-only for now`: the current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
 | External-agent config import completed notifications | Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
 | Guardian denied-action approval endpoint | Generated internally because it appears in v0.124, but it needs a real guardian workflow model before it becomes public. |
-| Hook started / completed notifications | The raw notifications remain internal; consumers see their current-state effect through `CodexThread.Dashboard.hookRuns` instead of through new event-enum cases. |
 | Raw response item completed notifications | Too low-level and transport-adjacent for the current public lifecycle boundary. |
 | Context compacted notifications | Interesting for diagnostics, but still not surfaced as a first-class public event; consumers currently see compaction through `Dashboard` and `Minimap` state plus explicit `compactContext()` control. |
 | Error notifications | The current public contract keeps lifecycle failures unified under `CodexAppServerError` instead of streaming raw protocol error-notification payloads. |

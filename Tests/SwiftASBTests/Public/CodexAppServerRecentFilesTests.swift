@@ -366,4 +366,56 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @MainActor
+    @Test("multi-file patch-updated deltas do not claim a single path")
+    func multiFilePatchUpdatedDeltasDoNotClaimSinglePath() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false
+            )
+        )
+        let events = await client.threadFileChangeOutputDeltaStream(threadID: thread.id)
+        let eventTask = Task {
+            var iterator = events.makeAsyncIterator()
+            return await iterator.next()
+        }
+
+        await transport.emitFileChangePatchUpdated(
+            threadID: thread.id,
+            turnID: "turn-live",
+            itemID: "item-file-live",
+            path: "/tmp/project/Package.swift",
+            diff: "@@\n+package\n",
+            additionalChanges: [
+                [
+                    "diff": "@@\n+readme\n",
+                    "path": "/tmp/project/README.md",
+                ],
+            ]
+        )
+
+        let event = try #require(await eventTask.value)
+        #expect(event.path == nil)
+        #expect(event.delta.contains("+package") == true)
+        #expect(event.delta.contains("+readme") == true)
+        #expect(event.replacesPayload == true)
+
+        await client.stop()
+    }
+
 }
