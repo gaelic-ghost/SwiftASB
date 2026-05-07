@@ -655,6 +655,7 @@ public actor CodexAppServer {
     /// caller owns only a thread identifier.
     public func archiveThread(_ request: ThreadArchiveRequest) async throws {
         try requireInitialized(for: "thread/archive")
+        let historyStore = try requireHistoryStore(for: "thread/archive")
 
         let requestID = CodexRPCRequestID.generated()
 
@@ -668,7 +669,7 @@ public actor CodexAppServer {
                 response,
                 expectedID: requestID
             )
-            try await requireHistoryStore(for: "thread/archive").recordThreadArchived(
+            try await historyStore.recordThreadArchived(
                 threadID: request.threadID,
                 isArchived: true
             )
@@ -686,6 +687,7 @@ public actor CodexAppServer {
     @discardableResult
     public func unarchiveThread(_ request: ThreadArchiveRequest) async throws -> ThreadInfo {
         try requireInitialized(for: "thread/unarchive")
+        let historyStore = try requireHistoryStore(for: "thread/unarchive")
 
         let requestID = CodexRPCRequestID.generated()
 
@@ -700,8 +702,8 @@ public actor CodexAppServer {
                 expectedID: requestID
             )
             let thread = ThreadInfo(wireValue: response.thread)
-            try await requireHistoryStore(for: "thread/unarchive").recordThreadMetadataUpdated(thread)
-            try await requireHistoryStore(for: "thread/unarchive").recordThreadArchived(
+            try await historyStore.recordThreadMetadataUpdated(thread)
+            try await historyStore.recordThreadArchived(
                 threadID: thread.id,
                 isArchived: false
             )
