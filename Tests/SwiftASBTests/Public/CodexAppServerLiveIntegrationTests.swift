@@ -412,7 +412,7 @@ struct CodexAppServerLiveIntegrationTests {
 
             let completion = try await awaitCompletion(
                 of: turn,
-                timeoutSeconds: 45,
+                timeoutSeconds: liveTimeoutSeconds(default: 45),
                 operation: "waiting for the single live turn to complete"
             )
             #expect(completion.turn.status == .completed)
@@ -461,12 +461,12 @@ struct CodexAppServerLiveIntegrationTests {
 
             async let crossThreadCompletionA = awaitCompletion(
                 of: crossThreadTurnA,
-                timeoutSeconds: 45,
+                timeoutSeconds: liveTimeoutSeconds(default: 45),
                 operation: "waiting for the first cross-thread turn to complete"
             )
             async let crossThreadCompletionB = awaitCompletion(
                 of: crossThreadTurnB,
-                timeoutSeconds: 45,
+                timeoutSeconds: liveTimeoutSeconds(default: 45),
                 operation: "waiting for the second cross-thread turn to complete"
             )
 
@@ -627,7 +627,7 @@ struct CodexAppServerLiveIntegrationTests {
             )
             let firstCompletion = try await awaitCompletion(
                 of: firstTurn,
-                timeoutSeconds: 45,
+                timeoutSeconds: liveTimeoutSeconds(default: 45),
                 operation: "waiting for the first live rollback turn to complete"
             )
             #expect(firstCompletion.turn.status == .completed)
@@ -638,7 +638,7 @@ struct CodexAppServerLiveIntegrationTests {
             )
             let secondCompletion = try await awaitCompletion(
                 of: secondTurn,
-                timeoutSeconds: 45,
+                timeoutSeconds: liveTimeoutSeconds(default: 45),
                 operation: "waiting for the second live rollback turn to complete"
             )
             #expect(secondCompletion.turn.status == .completed)
@@ -712,7 +712,7 @@ struct CodexAppServerLiveIntegrationTests {
             )
             let firstCompletion = try await awaitCompletion(
                 of: firstTurn,
-                timeoutSeconds: 45,
+                timeoutSeconds: liveTimeoutSeconds(default: 45),
                 operation: "waiting for the first live history turn to complete"
             )
             #expect(firstCompletion.turn.status == .completed)
@@ -723,7 +723,7 @@ struct CodexAppServerLiveIntegrationTests {
             )
             let secondCompletion = try await awaitCompletion(
                 of: secondTurn,
-                timeoutSeconds: 45,
+                timeoutSeconds: liveTimeoutSeconds(default: 45),
                 operation: "waiting for the second live history turn to complete"
             )
             #expect(secondCompletion.turn.status == .completed)

@@ -25,6 +25,8 @@ Modes:
   help            Show this help text.
 
 Environment:
+  SWIFTASB_LIVE_CODEX_TIMEOUT_SECONDS
+                                  Override per-operation live probe timeouts.
   SWIFTASB_LIVE_CODEX_REPORT_DIR  Directory for JSON reports from reporting probes.
   SWIFTASB_LIVE_CODEX_BIN         Codex executable path to test instead of PATH discovery.
   SWIFTASB_LIVE_CODEX_KEEP_WORKSPACES=1

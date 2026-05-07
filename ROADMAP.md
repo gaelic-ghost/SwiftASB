@@ -57,7 +57,7 @@
 | Stored thread resume flow | `Shipped` | `resumeThread(...)` wraps `thread/resume`, returns a normal `CodexThread`, restores thread defaults, clears stale archived state for the reopened thread, and hydrates any resumed persisted turns into the same local history store without resetting completeness to a fresh-thread state. Callers can set `excludeTurns` when they plan to page history separately through `thread/turns/list`. |
 | Stored thread fork flow | `Shipped` | `forkThread(...)` wraps `thread/fork`, returns a normal `CodexThread`, persists copied fork history into thread-scoped local turn rows, and records explicit fork lineage through the source thread id plus the last shared turn id. Callers can set `excludeTurns` when they want the fork metadata first and copied turn history through paged reads afterward. |
 | Thread management actions | `Partially shipped` | `CodexThread.setName(...)` wraps `thread/name/set`, `CodexThread.archive()` wraps `thread/archive`, `CodexThread.unarchive()` wraps `thread/unarchive`, `CodexThread.updateMetadata(...)` wraps `thread/metadata/update`, and `CodexThread.rollbackLastTurns(...)` wraps `thread/rollback`. Metadata patches use an explicit replace/clear/unchanged field model so callers can express upstream null-vs-omitted semantics. Rollback reconciles visible local history to the app-server response, records a rollback marker, and now has opt-in live coverage against a disposable non-ephemeral thread, but it does not preserve full removed turn payloads as forensic archive data yet. |
-| App-server filesystem reads and watches | `Partially shipped` | `CodexAppServer.fs` now exposes the `CodexFS` namespace for app-server-routed metadata, directory listing, file-byte reads, bounded file discovery, SwiftASB-owned fuzzy ranking over app-server-returned entries, and filesystem watch notifications. This gives sandboxed clients a Codex-owned path for basic filesystem facts and picker/search views instead of requiring direct local disk reads. File mutations and repository-root discovery remain separate schema families for later promotion decisions. |
+| App-server filesystem reads and watches | `Partially shipped` | `CodexAppServer.fs` now exposes the `CodexFS` namespace for app-server-routed metadata, directory listing, file-byte reads, bounded file discovery, SwiftASB-owned fuzzy ranking over app-server-returned entries, UI-ready discovery match metadata, and filesystem watch notifications. This gives sandboxed clients a Codex-owned path for basic filesystem facts and picker/search views instead of requiring direct local disk reads. File mutations and repository-root discovery remain separate schema families for later promotion decisions. |
 | App-server config reads | `Partially shipped` | `CodexAppServer.config` now exposes `CodexConfig` for effective config and requirements reads through the app-server. Effective config stays JSON-shaped for now so SwiftASB does not turn unstable config keys into long-lived public Swift fields too early. |
 | App-server extension inventory | `Partially shipped` | `CodexAppServer.extensions` now exposes `CodexAppServer.CodexExtensions` for app, skill, plugin, and collaboration-mode inventory. Plugin install/uninstall/upgrade and skills config writes remain unpromoted until their permission and review model is clearer. |
 | Thread goals | `Partially shipped` | `CodexThread.readGoal()`, `setGoal(...)`, and `clearGoal()` wrap `thread/goal/get`, `thread/goal/set`, and `thread/goal/clear`, and thread event streams now surface goal updated and cleared notifications. |
@@ -843,14 +843,16 @@ The live script surface should support these environment knobs consistently:
 ### First Implementation Slice
 
 The first post-v1 live-testing slice is the consolidated release-gate runner.
-It runs the currently proven high-signal probes in order: deterministic
-approval/server-request, multi-turn file mutation, and rollback. The permissions
+It runs the currently proven high-signal probes in order: broad smoke coverage
+for startup, raw transport initialize/thread/turn, binary diagnostics,
+app-wide model/MCP/hook snapshots, thread-name mutation, single-turn,
+cross-thread, and same-thread behavior; deterministic approval/server-request
+coverage; the multi-turn file mutation scenario; and rollback. The permissions
 approval mock-Responses probe now covers the largest answerable server-request
 family gap. The umbrella live integration-test runner now gives maintainers one
-entrypoint for release-gate, focused, and full opt-in live coverage. The next
-slice should either add focused modes around remaining promoted request
-families or broaden the release gate with startup, initialize, model/MCP,
-single-turn, and cross-thread probes if their runtime cost stays reasonable.
+entrypoint for release-gate, focused, and full opt-in live coverage, with
+`SWIFTASB_LIVE_CODEX_TIMEOUT_SECONDS` available when a slower runtime needs a
+longer per-operation timeout.
 
 ## Previous V1 Release Slice
 
@@ -1221,7 +1223,7 @@ Completed
 - [ ] Add marketplace upgrade and account-management surfaces after SwiftASB has a concrete app-wide management workflow.
 - [ ] Add external-agent config import surfaces after external-agent configuration becomes a public app-server management workflow.
 - [ ] Add structured patch rendering for `RecentFiles`.
-- [ ] Add richer `CodexFS.FileDiscoveryHit` search metadata soon, including
+- [x] Add richer `CodexFS.FileDiscoveryHit` search metadata soon, including
   match kind, matched ranges, or ranking reason once UI highlighting needs an
   explicit public model.
 - [ ] Promote an upstream app-server fuzzy file-search endpoint later if Codex
@@ -1246,3 +1248,4 @@ Completed
 - 2026-05-06: Promoted workspace permission-profile selections and runtime permission facts through `CodexWorkspace`, and exposed active permission profiles on thread sessions and handles.
 - 2026-05-06: Promoted bounded file discovery and fuzzy file lookup through `CodexFS.FileDiscoveryQD` and `CodexFS.discoverFiles(_:)`, keeping traversal on app-server `fs/readDirectory` while SwiftASB owns local ranking over returned entries.
 - 2026-05-06: Expanded deterministic coverage for promoted file discovery, config, extension inventory, and workspace-permission request descriptors.
+- 2026-05-07: Added UI-ready `CodexFS.FileDiscoveryHit` search metadata for match kind, matched file-name and relative-path character ranges, and stable ranking reasons.
