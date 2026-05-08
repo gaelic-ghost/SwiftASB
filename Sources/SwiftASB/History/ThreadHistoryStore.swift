@@ -106,6 +106,7 @@ actor ThreadHistoryStore {
         let name: String?
         let preview: String
         let rollbacks: [RollbackSnapshot]
+        let source: CodexAppServer.ThreadSource
         let state: StateSnapshot
         let statusFlags: [String]
         let statusType: String
@@ -163,6 +164,7 @@ actor ThreadHistoryStore {
         let modelProvider: String
         let name: String?
         let preview: String
+        let source: CodexAppServer.ThreadSource
         let statusFlags: [String]
         let statusType: String
         let updatedAt: Int
@@ -653,6 +655,7 @@ actor ThreadHistoryStore {
                 name: thread.name,
                 preview: thread.preview,
                 rollbacks: rollbacks,
+                source: (try Self.decode(CodexAppServer.ThreadSource.self, from: thread.sourceData)) ?? .unknown,
                 state: .init(completeness: state.completeness),
                 statusFlags: (try Self.decode([String].self, from: thread.statusFlagsData)) ?? [],
                 statusType: thread.statusType,
@@ -939,6 +942,7 @@ actor ThreadHistoryStore {
         thread.modelProvider = info.modelProvider
         thread.name = info.name
         thread.preview = info.preview
+        thread.sourceData = try? encode(info.source)
         thread.statusType = info.status.type.rawValue
         thread.statusFlagsData = try? encode(info.status.activeFlags.map(\.rawValue))
         thread.updatedAt = Int64(info.updatedAt)
@@ -1110,6 +1114,7 @@ actor ThreadHistoryStore {
             modelProvider: thread.modelProvider,
             name: thread.name,
             preview: thread.preview,
+            source: try decode(CodexAppServer.ThreadSource.self, from: thread.sourceData) ?? .unknown,
             statusFlags: try decode([String].self, from: thread.statusFlagsData) ?? [],
             statusType: thread.statusType,
             updatedAt: Int(thread.updatedAt)
@@ -1497,6 +1502,7 @@ actor ThreadHistoryStore {
             attribute("modelProvider", .stringAttributeType, isOptional: false),
             attribute("name", .stringAttributeType, isOptional: true),
             attribute("preview", .stringAttributeType, isOptional: false),
+            attribute("sourceData", .binaryDataAttributeType, isOptional: true),
             attribute("statusType", .stringAttributeType, isOptional: false),
             attribute("statusFlagsData", .binaryDataAttributeType, isOptional: true),
             attribute("updatedAt", .integer64AttributeType, isOptional: false),
@@ -1731,6 +1737,7 @@ final class HistoryThread: NSManagedObject {
     @NSManaged var modelProvider: String
     @NSManaged var name: String?
     @NSManaged var preview: String
+    @NSManaged var sourceData: Data?
     @NSManaged var state: HistoryThreadState?
     @NSManaged var statusFlagsData: Data?
     @NSManaged var statusType: String

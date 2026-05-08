@@ -339,6 +339,7 @@ public extension CodexAppServer {
             public let name: String?
             public let preview: String
             public let projectInfo: CodexWorkspace.ProjectInfo
+            public let source: CodexAppServer.ThreadSource
             public let status: CodexAppServer.ThreadStatus
             public let updatedAt: Int
         }
@@ -937,6 +938,7 @@ extension CodexAppServer.Library.ThreadSnapshot {
                     sha: snapshot.gitSHA
                 )
             ),
+            source: snapshot.source,
             status: .init(
                 type: .init(rawValue: snapshot.statusType) ?? .notLoaded,
                 activeFlags: snapshot.statusFlags.compactMap(CodexAppServer.ThreadActiveFlag.init(rawValue:))

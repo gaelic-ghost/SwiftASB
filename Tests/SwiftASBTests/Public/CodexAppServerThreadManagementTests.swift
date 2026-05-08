@@ -239,6 +239,7 @@ extension CodexAppServerTests {
         #expect(thread.workspace.currentDirectoryPath == "/tmp/project")
         #expect(thread.workspace.projectInfo == thread.info.projectInfo)
         #expect(thread.workspace.projectInfo.currentDirectoryPath == "/tmp/project")
+        #expect(thread.info.source == .cli)
 
         let entries = try #require(thread.permissionProfile?.fileSystem?.entries)
         #expect(entries.first?.access == .write)

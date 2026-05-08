@@ -170,6 +170,7 @@ extension CodexAppServerTests {
         #expect(repositoryGroup.threads.map(\.id) == ["thread-package-a", "thread-package-b"])
         #expect(repositoryGroup.threads.first?.projectInfo.repository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
         #expect(repositoryGroup.threads.first?.projectInfo.repository?.branch == "main")
+        #expect(repositoryGroup.threads.first?.source == .cli)
 
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
