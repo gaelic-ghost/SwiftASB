@@ -128,13 +128,84 @@ public enum CodexWorkspace {
         public let enabled: Bool
     }
 
+    /// App-server-owned project identity for a thread or library group.
+    public struct ProjectInfo: Sendable, Equatable, Identifiable {
+        /// Fact SwiftASB used to identify the project.
+        public enum IdentitySource: String, Sendable, Equatable {
+            /// The project identity comes from Codex-reported Git origin metadata.
+            case gitOrigin
+            /// The project identity falls back to the app-server current working directory.
+            case currentDirectory
+        }
+
+        public let id: String
+        public let identitySource: IdentitySource
+        public let displayName: String
+        public let currentDirectoryPath: String
+        public let repository: RepositoryInfo?
+
+        /// Creates project identity from app-server-owned cwd and optional Git metadata.
+        public init(
+            currentDirectoryPath: String,
+            repository: RepositoryInfo? = nil
+        ) {
+            self.currentDirectoryPath = currentDirectoryPath
+            self.repository = repository
+
+            if let originURL = repository?.originURL, !originURL.isEmpty {
+                self.id = originURL
+                self.identitySource = .gitOrigin
+                self.displayName = Self.displayName(forGitOriginURL: originURL)
+            } else {
+                self.id = currentDirectoryPath
+                self.identitySource = .currentDirectory
+                self.displayName = currentDirectoryPath.isEmpty ? "Unknown Project" : currentDirectoryPath
+            }
+        }
+
+        private static func displayName(forGitOriginURL originURL: String) -> String {
+            guard let url = URL(string: originURL),
+                  let host = url.host,
+                  let lastPathComponent = url.pathComponents.last else {
+                return originURL
+            }
+
+            let repositoryName = lastPathComponent.hasSuffix(".git")
+                ? String(lastPathComponent.dropLast(4))
+                : lastPathComponent
+            return repositoryName.isEmpty ? host : "\(repositoryName) (\(host))"
+        }
+    }
+
+    /// Codex-reported Git facts for a project or thread.
+    public struct RepositoryInfo: Sendable, Equatable {
+        public let originURL: String?
+        public let branch: String?
+        public let sha: String?
+
+        /// Creates repository facts reported by Codex.
+        public init(
+            originURL: String? = nil,
+            branch: String? = nil,
+            sha: String? = nil
+        ) {
+            self.originURL = originURL
+            self.branch = branch
+            self.sha = sha
+        }
+
+        internal var isEmpty: Bool {
+            originURL == nil && branch == nil && sha == nil
+        }
+    }
+
     /// Thread-session workspace snapshot built from app-server-owned facts.
     public struct SessionSnapshot: Sendable, Equatable {
         public let activePermissionProfile: ActivePermissionProfile?
         public let currentDirectoryPath: String
-        public let gitInfo: CodexAppServer.GitInfo?
         public let instructionSources: [String]
         public let permissionProfile: PermissionProfile?
+        public let projectInfo: ProjectInfo
         public let sandboxPolicy: CodexAppServer.SandboxPolicy
     }
 }
@@ -299,14 +370,24 @@ extension CodexWorkspace.NetworkPermissions {
     }
 }
 
+extension CodexWorkspace.RepositoryInfo {
+    init(wireValue: CodexWireGitInfo) {
+        self.init(
+            originURL: wireValue.originURL,
+            branch: wireValue.branch,
+            sha: wireValue.sha
+        )
+    }
+}
+
 extension CodexWorkspace.SessionSnapshot {
     init(session: CodexAppServer.ThreadSession) {
         self.init(
             activePermissionProfile: session.activePermissionProfile,
             currentDirectoryPath: session.currentDirectoryPath,
-            gitInfo: session.thread.gitInfo,
             instructionSources: session.instructionSources,
             permissionProfile: session.permissionProfile,
+            projectInfo: session.thread.projectInfo,
             sandboxPolicy: session.sandboxPolicy
         )
     }

@@ -332,20 +332,20 @@ public extension CodexAppServer {
             public let currentDirectoryPath: String
             public let ephemeral: Bool
             public let forkedFromThreadID: String?
-            public let currentGitBranch: String?
-            public let currentGitOriginURL: String?
             public let isArchived: Bool
             public let isClosed: Bool
             public let lastCompletedTurnAt: Int?
             public let modelProvider: String
             public let name: String?
             public let preview: String
+            public let projectInfo: CodexWorkspace.ProjectInfo
             public let status: CodexAppServer.ThreadStatus
             public let updatedAt: Int
         }
 
         public struct ThreadGroup: Sendable, Equatable, Identifiable {
             public let id: String
+            public let projectInfo: CodexWorkspace.ProjectInfo?
             public let title: String
             public let threads: [ThreadSnapshot]
         }
@@ -776,15 +776,21 @@ public extension CodexAppServer {
                 case .cwd:
                     thread.currentDirectoryPath
                 case .repository:
-                    thread.currentGitOriginURL ?? thread.currentDirectoryPath
+                    thread.projectInfo.id
                 }
             }
 
             return grouped
                 .map { key, threads in
-                    ThreadGroup(
+                    let projectInfo = projectInfo(
+                        forGroupID: key,
+                        threads: threads,
+                        groupedBy: groupedBy
+                    )
+                    return ThreadGroup(
                         id: key,
-                        title: title(forGroupID: key, groupedBy: groupedBy),
+                        projectInfo: projectInfo,
+                        title: projectInfo?.displayName ?? "Unknown Project",
                         threads: threads
                     )
                 }
@@ -793,28 +799,38 @@ public extension CodexAppServer {
                 }
         }
 
-        private static func title(
+        private static func projectInfo(
             forGroupID id: String,
+            threads: [ThreadSnapshot],
             groupedBy: GroupedBy
-        ) -> String {
-            guard !id.isEmpty else {
-                return "Unknown Project"
+        ) -> CodexWorkspace.ProjectInfo? {
+            guard groupedBy != .none else {
+                return nil
             }
 
             guard groupedBy == .repository else {
-                return id
+                return .init(currentDirectoryPath: id)
             }
 
-            guard let url = URL(string: id),
-                  let host = url.host,
-                  let lastPathComponent = url.pathComponents.last else {
-                return id
+            guard let representative = threads.first else {
+                return .init(currentDirectoryPath: id)
             }
 
-            let repoName = lastPathComponent.hasSuffix(".git")
-                ? String(lastPathComponent.dropLast(4))
-                : lastPathComponent
-            return repoName.isEmpty ? host : "\(repoName) (\(host))"
+            guard representative.projectInfo.identitySource == .gitOrigin else {
+                return representative.projectInfo
+            }
+
+            let repositories = threads.map(\.projectInfo.repository)
+            let branch = commonValue(repositories.map { $0?.branch })
+            let sha = commonValue(repositories.map { $0?.sha })
+            return .init(
+                currentDirectoryPath: representative.currentDirectoryPath,
+                repository: .init(
+                    originURL: id,
+                    branch: branch,
+                    sha: sha
+                )
+            )
         }
 
         private static func newest(
@@ -907,14 +923,20 @@ extension CodexAppServer.Library.ThreadSnapshot {
             currentDirectoryPath: snapshot.currentDirectoryPath,
             ephemeral: snapshot.ephemeral,
             forkedFromThreadID: snapshot.forkedFromThreadID,
-            currentGitBranch: snapshot.gitBranch,
-            currentGitOriginURL: snapshot.gitOriginURL,
             isArchived: snapshot.isArchived,
             isClosed: snapshot.isClosed,
             lastCompletedTurnAt: snapshot.lastCompletedTurnAt,
             modelProvider: snapshot.modelProvider,
             name: snapshot.name,
             preview: snapshot.preview,
+            projectInfo: .init(
+                currentDirectoryPath: snapshot.currentDirectoryPath,
+                repository: Self.repositoryInfo(
+                    branch: snapshot.gitBranch,
+                    originURL: snapshot.gitOriginURL,
+                    sha: snapshot.gitSHA
+                )
+            ),
             status: .init(
                 type: .init(rawValue: snapshot.statusType) ?? .notLoaded,
                 activeFlags: snapshot.statusFlags.compactMap(CodexAppServer.ThreadActiveFlag.init(rawValue:))
@@ -922,4 +944,22 @@ extension CodexAppServer.Library.ThreadSnapshot {
             updatedAt: snapshot.updatedAt
         )
     }
+
+    private static func repositoryInfo(
+        branch: String?,
+        originURL: String?,
+        sha: String?
+    ) -> CodexWorkspace.RepositoryInfo? {
+        let repository = CodexWorkspace.RepositoryInfo(
+            originURL: originURL,
+            branch: branch,
+            sha: sha
+        )
+        return repository.isEmpty ? nil : repository
+    }
+}
+
+private func commonValue(_ values: [String?]) -> String? {
+    guard let first = values.first else { return nil }
+    return values.allSatisfy { $0 == first } ? first : nil
 }

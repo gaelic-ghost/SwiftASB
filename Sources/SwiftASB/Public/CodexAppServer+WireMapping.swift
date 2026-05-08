@@ -554,10 +554,13 @@ extension CodexAppServer.ThreadInfo {
             currentDirectoryPath: wireValue.cwd,
             ephemeral: wireValue.ephemeral,
             forkedFromThreadID: wireValue.forkedFromID,
-            gitInfo: wireValue.gitInfo.map(CodexAppServer.GitInfo.init),
             modelProvider: wireValue.modelProvider,
             name: wireValue.name,
             preview: wireValue.preview,
+            projectInfo: .init(
+                currentDirectoryPath: wireValue.cwd,
+                repository: wireValue.gitInfo.map(CodexWorkspace.RepositoryInfo.init)
+            ),
             status: .init(wireValue: wireValue.status),
             updatedAt: wireValue.updatedAt
         )

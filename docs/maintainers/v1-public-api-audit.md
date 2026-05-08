@@ -449,10 +449,11 @@ Use these decisions for every public symbol:
   wire models.
 - [x] Record the repository grouping decision.
   Decision: `CodexAppServer.Library.GroupedBy.repository` groups thread
-  snapshots by app-server Git origin URL when available, then falls back to cwd.
-  SwiftASB stores and exposes `ThreadSnapshot.currentGitOriginURL` as
-  app-server-owned metadata; it does not inspect local filesystem directories to
-  derive repository roots.
+  snapshots by `CodexWorkspace.ProjectInfo` identity. That identity uses
+  app-server Git origin URL when available, then falls back to cwd. SwiftASB
+  stores Codex-reported branch, origin URL, and SHA facts under
+  `CodexWorkspace.RepositoryInfo`; it does not inspect local filesystem
+  directories to derive repository roots.
 - [x] Record the first post-v1 app-server filesystem promotion.
   Decision: `CodexFS` is the public namespace for read-only filesystem facts
   routed through the app-server. It currently owns metadata, directory listing,

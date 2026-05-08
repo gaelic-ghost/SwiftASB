@@ -78,12 +78,6 @@ public extension CodexAppServer {
         case replace(String)
     }
 
-    /// Stored Git metadata reported for a thread.
-    struct GitInfo: Sendable, Equatable {
-        public let branch: String?
-        public let originURL: String?
-        public let sha: String?
-    }
 }
 
 extension CodexAppServer.ThreadMetadataUpdateRequest {
@@ -115,15 +109,5 @@ extension CodexProtocolThreadMetadataUpdateParams.FieldUpdate {
         case let .replace(value):
             self = .replace(value)
         }
-    }
-}
-
-extension CodexAppServer.GitInfo {
-    init(wireValue: CodexWireGitInfo) {
-        self.init(
-            branch: wireValue.branch,
-            originURL: wireValue.originURL,
-            sha: wireValue.sha
-        )
     }
 }

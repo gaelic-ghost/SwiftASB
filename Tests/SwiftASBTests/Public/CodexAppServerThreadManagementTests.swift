@@ -187,9 +187,9 @@ extension CodexAppServerTests {
         )
 
         #expect(updatedThread.id == thread.id)
-        #expect(updatedThread.gitInfo?.branch == "main")
-        #expect(updatedThread.gitInfo?.originURL == nil)
-        #expect(updatedThread.gitInfo?.sha == "abc123")
+        #expect(updatedThread.projectInfo.repository?.branch == "main")
+        #expect(updatedThread.projectInfo.repository?.originURL == nil)
+        #expect(updatedThread.projectInfo.repository?.sha == "abc123")
 
         let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/metadata/update"))
         let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
@@ -237,7 +237,8 @@ extension CodexAppServerTests {
         #expect(thread.permissionProfile?.fileSystem?.kind == .restricted)
         #expect(thread.permissionProfile?.fileSystem?.globScanMaxDepth == 4)
         #expect(thread.workspace.currentDirectoryPath == "/tmp/project")
-        #expect(thread.workspace.gitInfo == thread.info.gitInfo)
+        #expect(thread.workspace.projectInfo == thread.info.projectInfo)
+        #expect(thread.workspace.projectInfo.currentDirectoryPath == "/tmp/project")
 
         let entries = try #require(thread.permissionProfile?.fileSystem?.entries)
         #expect(entries.first?.access == .write)

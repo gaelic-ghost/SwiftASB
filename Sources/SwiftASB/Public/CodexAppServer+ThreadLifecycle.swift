@@ -210,10 +210,10 @@ extension CodexAppServer {
         public let currentDirectoryPath: String
         public let ephemeral: Bool
         public let forkedFromThreadID: String?
-        public let gitInfo: GitInfo?
         public let modelProvider: String
         public let name: String?
         public let preview: String
+        public let projectInfo: CodexWorkspace.ProjectInfo
         public let status: ThreadStatus
         public let updatedAt: Int
     }

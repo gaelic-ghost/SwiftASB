@@ -61,6 +61,7 @@ Recent observable startup can begin as an empty local-only view when the live ap
 - ``instructionSources``
 - ``model``
 - ``modelProvider``
+- ``projectInfo``
 - ``activePermissionProfile``
 - ``permissionProfile``
 - ``reasoningEffort``

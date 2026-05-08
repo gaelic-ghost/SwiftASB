@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, and on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1735
-- Public/open types: 271
-- Public/open initializers: 115
-- Public/open methods and type methods: 124
-- Public/open enum cases: 321
-- Public/open properties: 904
+- Public/open symbols: 1834
+- Public/open types: 289
+- Public/open initializers: 124
+- Public/open methods and type methods: 129
+- Public/open enum cases: 350
+- Public/open properties: 941
 
 ## Public Types
 
@@ -21,7 +21,6 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.CLIExecutableDiagnostics.Source` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
 - `CodexAppServer.ClientInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
 - `CodexAppServer.Configuration` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
-- `CodexAppServer.GitInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.GranularApprovalPolicy` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.InitializeCapabilities` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
 - `CodexAppServer.InitializeRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
@@ -225,6 +224,9 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexWorkspace.PermissionProfile.Kind` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.PermissionSelection` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.PermissionSelectionModification` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.ProjectInfo` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.ProjectInfo.IdentitySource` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.RepositoryInfo` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.SessionSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 
 ## Public Initializers And Methods
@@ -735,10 +737,10 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
-- `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by app-server Git origin metadata with cwd fallback, and `ThreadSnapshot.currentGitOriginURL` exposes the persisted origin value used for that grouping.
-- `CodexWorkspace` owns app-server-owned permission selections and runtime workspace permission facts: `PermissionSelection`, `PermissionSelectionModification`, `ActivePermissionProfile`, `ActivePermissionModification`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, and `SessionSnapshot`.
+- `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by `CodexWorkspace.ProjectInfo` identity: app-server Git origin metadata with cwd fallback.
+- `CodexWorkspace` owns app-server-owned permission selections, runtime workspace permission facts, and project identity: `PermissionSelection`, `PermissionSelectionModification`, `ActivePermissionProfile`, `ActivePermissionModification`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, `ProjectInfo`, `RepositoryInfo`, and `SessionSnapshot`.
 - `CodexAppServer.ThreadStartRequest`, `ThreadResumeRequest`, `ThreadForkRequest`, `TurnStartRequest`, `CodexThread.TurnStartRequest`, and `CodexThread.startTextTurn(...)` now accept optional `CodexWorkspace.PermissionSelection` values.
-- `CodexAppServer.ThreadSession` and `CodexThread` now expose active permission-profile provenance, runtime permission facts, and a `CodexWorkspace.SessionSnapshot`.
+- `CodexAppServer.ThreadSession` and `CodexThread` now expose active permission-profile provenance, runtime permission facts, app-server-owned project identity, and a `CodexWorkspace.SessionSnapshot`.
 
 ## Public Property Counts By Source File
 
