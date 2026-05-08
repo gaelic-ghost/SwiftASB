@@ -21,7 +21,7 @@ Modes:
   file-scenario   Run the multi-turn create/edit/delete file scenario.
   rollback        Run the disposable stored-thread rollback scenario.
   same-thread     Run the observational same-thread overlap probe.
-  all             Run every opt-in CodexAppServer live test.
+  all             Run every opt-in CodexAppServer live integration test.
   help            Show this help text.
 
 Environment:
@@ -100,7 +100,7 @@ case "$mode" in
     all)
         env SWIFTASB_ENABLE_LIVE_CODEX_TESTS=1 \
             SWIFTASB_LIVE_CODEX_REPORT_DIR="$SWIFTASB_LIVE_CODEX_REPORT_DIR" \
-            swift test --filter CodexAppServerLive
+            swift test --filter CodexAppServerLiveIntegrationTests
         ;;
     help|--help|-h)
         usage
