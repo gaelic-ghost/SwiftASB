@@ -342,6 +342,11 @@ public extension CodexAppServer {
             public let source: CodexAppServer.ThreadSource
             public let status: CodexAppServer.ThreadStatus
             public let updatedAt: Int
+
+            /// Codex-reported cwd plus optional Git facts for this stored thread.
+            public var worktree: CodexWorkspace.WorktreeSnapshot {
+                projectInfo.worktree
+            }
         }
 
         public struct ThreadGroup: Sendable, Equatable, Identifiable {

@@ -110,6 +110,7 @@ extension CodexAppServerTests {
                         cwd: "/tmp/package-a",
                         gitBranch: "main",
                         gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+                        gitSHA: "abcdef1234567890",
                         name: "Package A",
                         preview: "First repo thread",
                         statusType: "notLoaded",
@@ -167,7 +168,12 @@ extension CodexAppServerTests {
         #expect(repositoryGroup.projectInfo?.identitySource == .gitOrigin)
         #expect(repositoryGroup.projectInfo?.repository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
         #expect(repositoryGroup.projectInfo?.repository?.branch == nil)
+        #expect(repositoryGroup.projectInfo?.worktree.id == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(repositoryGroup.projectInfo?.worktree.identitySource == .gitOrigin)
+        #expect(repositoryGroup.projectInfo?.worktree.hasRepositoryFacts == true)
         #expect(repositoryGroup.threads.map(\.id) == ["thread-package-a", "thread-package-b"])
+        #expect(repositoryGroup.threads.first?.worktree.id == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(repositoryGroup.threads.first?.worktree.repository?.shortSHA == "abcdef123456")
         #expect(repositoryGroup.threads.first?.projectInfo.repository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
         #expect(repositoryGroup.threads.first?.projectInfo.repository?.branch == "main")
         #expect(repositoryGroup.threads.first?.source == .cli)
@@ -609,6 +615,7 @@ private func storedThread(
     cwd: String,
     gitBranch: String? = nil,
     gitOriginURL: String? = nil,
+    gitSHA: String? = nil,
     name: String,
     preview: String,
     statusType: String,
@@ -632,13 +639,13 @@ private func storedThread(
         thread["gitInfo"] = [
             "branch": gitBranch,
             "originUrl": gitOriginURL as Any? ?? NSNull(),
-            "sha": NSNull(),
+            "sha": gitSHA as Any? ?? NSNull(),
         ]
-    } else if let gitOriginURL {
+    } else if gitOriginURL != nil || gitSHA != nil {
         thread["gitInfo"] = [
             "branch": NSNull(),
-            "originUrl": gitOriginURL,
-            "sha": NSNull(),
+            "originUrl": gitOriginURL as Any? ?? NSNull(),
+            "sha": gitSHA as Any? ?? NSNull(),
         ]
     }
     return thread

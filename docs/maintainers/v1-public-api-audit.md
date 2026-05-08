@@ -489,6 +489,16 @@ Use these decisions for every public symbol:
   and full runtime filesystem/network permission facts reported by the
   app-server. SwiftASB still does not infer repository roots or permission
   policy by walking local directories.
+- [x] Record the worktree snapshot promotion.
+  Decision: `CodexWorkspace.WorktreeSnapshot` is the public value for one
+  app-server-reported cwd plus optional Git origin, branch, and SHA facts.
+  `CodexWorkspace.ProjectInfo`, `CodexAppServer.ThreadInfo`,
+  `CodexAppServer.ThreadSession.workspace`, and
+  `CodexAppServer.Library.ThreadSnapshot` expose the same snapshot so UI and
+  Worktrunk-oriented callers can use one identity/display shape without running
+  Git or deriving repository roots locally. The current app-server schema does
+  not expose a Git worktree root or working-tree status surface, so those remain
+  future promotion candidates instead of inferred SwiftASB fields.
 - [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.
