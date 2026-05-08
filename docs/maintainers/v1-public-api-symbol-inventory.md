@@ -1,10 +1,10 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, and on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup and `CodexAppServer.ThreadSource` promotion. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, and on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1867
+- Public/open symbols: 1869
 - Public/open types: 293
 - Public/open initializers: 130
 - Public/open methods and type methods: 129
@@ -661,7 +661,9 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThread.Dashboard.HookRun.Entry.Kind.stop` - `case stop` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
 - `CodexThread.Dashboard.HookRun.Entry.Kind.warning` - `case warning` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
 - `CodexThread.Dashboard.HookRun.EventName.permissionRequest` - `case permissionRequest` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.EventName.postCompact` - `case postCompact` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
 - `CodexThread.Dashboard.HookRun.EventName.postToolUse` - `case postToolUse` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
+- `CodexThread.Dashboard.HookRun.EventName.preCompact` - `case preCompact` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
 - `CodexThread.Dashboard.HookRun.EventName.preToolUse` - `case preToolUse` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
 - `CodexThread.Dashboard.HookRun.EventName.sessionStart` - `case sessionStart` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift
 - `CodexThread.Dashboard.HookRun.EventName.stop` - `case stop` - Sources/SwiftASB/Public/CodexThread+Dashboard.swift

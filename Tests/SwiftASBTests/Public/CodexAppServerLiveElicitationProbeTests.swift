@@ -100,7 +100,8 @@ extension CodexAppServerLiveIntegrationTests {
                     sandbox: .readOnly,
                     serviceName: nil,
                     serviceTier: nil,
-                    sessionStartSource: nil
+                    sessionStartSource: nil,
+                    threadSource: nil
                 )
             )
             let threadResponsePayload = try await withTimeout(
@@ -282,7 +283,8 @@ extension CodexAppServerLiveIntegrationTests {
                     sandbox: .readOnly,
                     serviceName: nil,
                     serviceTier: nil,
-                    sessionStartSource: nil
+                    sessionStartSource: nil,
+                    threadSource: nil
                 )
             )
             let threadResponsePayload = try await withTimeout(
@@ -463,7 +465,8 @@ extension CodexAppServerLiveIntegrationTests {
                     sandbox: .readOnly,
                     serviceName: nil,
                     serviceTier: nil,
-                    sessionStartSource: nil
+                    sessionStartSource: nil,
+                    threadSource: nil
                 )
             )
             let threadResponsePayload = try await withTimeout(

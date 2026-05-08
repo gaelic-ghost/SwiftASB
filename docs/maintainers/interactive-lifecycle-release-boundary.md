@@ -50,6 +50,7 @@ runtime while the app-server schema is moving quickly before v1.
 Current policy:
 
 - support the latest reviewed public Codex CLI minor release
+- current reviewed minor release: `0.129.x`
 - widen back to a rolling window only after the latest generated-wire and public
   API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release

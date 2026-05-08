@@ -192,7 +192,7 @@ private let fakeCodexScript = """
 #!/bin/sh
 
 if [ "$1" = "--version" ]; then
-  printf '%s\\n' 'codex-cli 0.128.0'
+  printf '%s\\n' 'codex-cli 0.129.0'
   exit 0
 fi
 

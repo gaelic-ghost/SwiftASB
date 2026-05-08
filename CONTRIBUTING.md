@@ -115,7 +115,7 @@ Use the live integration runner when the local Codex CLI is available and the ch
 scripts/run-live-codex-integration-tests.sh
 ```
 
-The default mode runs the maintained release-gate set. Focused modes include `smoke`, `transport`, `capability`, `thread`, `turn`, `approval`, `behavior-matrix`, `server-requests`, `file-scenario`, `rollback`, `same-thread`, and `all`.
+The default mode runs the full local release gate, including the ordinary Swift package test suite and the maintained live Codex probe set. Focused modes include `smoke`, `transport`, `capability`, `thread`, `turn`, `approval`, `behavior-matrix`, `server-requests`, `file-scenario`, `rollback`, `same-thread`, and `all`.
 
 Other useful wrappers:
 
@@ -155,6 +155,8 @@ Start a standard release from a feature branch or isolated worktree with a clean
 ```bash
 bash scripts/repo-maintenance/release.sh --mode standard --version vX.Y.Z
 ```
+
+Standard release mode runs repo-maintenance validation, bumps release references, then runs the full local release gate before it tags, pushes, opens the release PR, watches remote CI, merges, fast-forwards `main`, and creates the GitHub release.
 
 ## Pull Request Expectations
 

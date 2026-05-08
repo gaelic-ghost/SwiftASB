@@ -99,7 +99,9 @@ public extension CodexAppServer {
         /// Hook event that triggers this configured hook.
         public enum EventName: String, Sendable, Equatable {
             case permissionRequest
+            case postCompact
             case postToolUse
+            case preCompact
             case preToolUse
             case sessionStart
             case stop
@@ -190,8 +192,12 @@ extension CodexAppServer.HookMetadata.EventName {
         switch protocolValue {
         case .permissionRequest:
             self = .permissionRequest
+        case .postCompact:
+            self = .postCompact
         case .postToolUse:
             self = .postToolUse
+        case .preCompact:
+            self = .preCompact
         case .preToolUse:
             self = .preToolUse
         case .sessionStart:

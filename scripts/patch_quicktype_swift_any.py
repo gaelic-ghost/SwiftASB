@@ -126,6 +126,21 @@ def patch_codable_output(source: str) -> str:
     patched = helper_pattern.sub(f"\n{JSON_VALUE_DECLARATION}\n", source)
     patched = patched.replace("JSONAny", "CodexWireJSONValue")
     patched = patched.replace("JSONNull", "CodexWireJSONValue")
+    patched = patch_cross_version_compatibility(patched)
+    return patched
+
+
+def patch_cross_version_compatibility(source: str) -> str:
+    """Keep the promoted v0.129 graph tolerant of v0.128 guardrail payloads."""
+    replacements = [
+        ("    let completedAtMS: Int\n", "    let completedAtMS: Int?\n"),
+        ("    let startedAtMS: Int\n", "    let startedAtMS: Int?\n"),
+        ("    let sessionID: String\n", "    let sessionID: String?\n"),
+    ]
+
+    patched = source
+    for old, new in replacements:
+        patched = patched.replace(old, new)
     return patched
 
 

@@ -1139,7 +1139,7 @@ public actor CodexAppServer {
         do {
             let requestPayload = try protocolLayer.makePluginListRequest(
                 id: requestID,
-                params: .init(cwds: request.currentDirectoryPaths)
+                params: .init(cwds: request.currentDirectoryPaths, marketplaceKinds: nil)
             )
             let responsePayload = try await transport.send(requestPayload, id: requestID)
             let response = try protocolLayer.decodePluginListResponse(

@@ -9,7 +9,7 @@ usage() {
 Usage: scripts/run-live-codex-integration-tests.sh [mode]
 
 Modes:
-  release-gate    Run the maintained release-gate live probe set. This is the default.
+  release-gate    Run the full local release gate, including swift test and live probes.
   smoke           Run startup, transport, capability, thread, turn, and concurrency probes.
   transport       Run raw transport initialize/thread/turn probes.
   capability      Run model, MCP, and hook diagnostics snapshot probes.

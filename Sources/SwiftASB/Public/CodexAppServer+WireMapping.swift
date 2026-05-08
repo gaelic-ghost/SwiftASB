@@ -117,7 +117,8 @@ extension CodexAppServer.ThreadStartRequest {
             sandbox: sandboxMode?.wireValue,
             serviceName: serviceName,
             serviceTier: serviceTier?.wireValue,
-            sessionStartSource: sessionStartSource?.wireValue
+            sessionStartSource: sessionStartSource?.wireValue,
+            threadSource: nil
         )
     }
 }
@@ -385,23 +386,13 @@ extension CodexAppServer.SandboxMode {
 }
 
 extension CodexAppServer.ServiceTier {
-    init?(wireValue: CodexWireServiceTier?) {
+    init?(wireValue: String?) {
         guard let wireValue else { return nil }
-        switch wireValue {
-        case .fast:
-            self = .fast
-        case .flex:
-            self = .flex
-        }
+        self.init(rawValue: wireValue)
     }
 
-    var wireValue: CodexWireServiceTier {
-        switch self {
-        case .fast:
-            .fast
-        case .flex:
-            .flex
-        }
+    var wireValue: String {
+        rawValue
     }
 }
 
@@ -750,8 +741,12 @@ extension CodexThread.Dashboard.HookRun.EventName {
         switch wireValue {
         case .permissionRequest:
             self = .permissionRequest
+        case .postCompact:
+            self = .postCompact
         case .postToolUse:
             self = .postToolUse
+        case .preCompact:
+            self = .preCompact
         case .preToolUse:
             self = .preToolUse
         case .sessionStart:

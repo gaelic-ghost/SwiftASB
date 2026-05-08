@@ -157,7 +157,7 @@ struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
     let personality: CodexWirePersonality?
     let sandbox: CodexWireSandboxMode?
     let serviceName: String?
-    let serviceTier: CodexWireServiceTier?
+    let serviceTier: String?
     let threadID: String
 
     enum CodingKeys: String, CodingKey {
@@ -194,7 +194,7 @@ struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
     let personality: CodexWirePersonality?
     let sandbox: CodexWireSandboxMode?
     let serviceName: String?
-    let serviceTier: CodexWireServiceTier?
+    let serviceTier: String?
     let threadID: String
 
     enum CodingKeys: String, CodingKey {
@@ -342,7 +342,9 @@ struct CodexProtocolHooksListResponse: Decodable, Equatable, Sendable {
 
     enum EventName: String, Decodable, Equatable, Sendable {
         case permissionRequest
+        case postCompact
         case postToolUse
+        case preCompact
         case preToolUse
         case sessionStart
         case stop
