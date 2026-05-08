@@ -75,9 +75,10 @@ extension CodexAppServerTests {
         await library.refresh()
 
         #expect(library.unarchivedThreads.map(\.id) == ["thread-new", "thread-123"])
-        #expect(library.unarchivedThreads.first?.currentGitBranch == "feature/library")
+        #expect(library.unarchivedThreads.first?.projectInfo.repository?.branch == "feature/library")
         #expect(library.archivedThreads.map(\.id) == ["thread-archived"])
         #expect(library.groups.map(\.id) == ["/tmp/project", "/tmp/project-a"])
+        #expect(library.groups.first(where: { $0.id == "/tmp/project-a" })?.projectInfo?.identitySource == .currentDirectory)
         #expect(library.groups.first(where: { $0.id == "/tmp/project-a" })?.threads.map(\.id) == ["thread-new"])
         #expect(library.lastReconciledAt != nil)
         #expect(library.latestErrorDescription == nil)
@@ -107,6 +108,7 @@ extension CodexAppServerTests {
                     storedThread(
                         id: "thread-package-a",
                         cwd: "/tmp/package-a",
+                        gitBranch: "main",
                         gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
                         name: "Package A",
                         preview: "First repo thread",
@@ -116,6 +118,7 @@ extension CodexAppServerTests {
                     storedThread(
                         id: "thread-package-b",
                         cwd: "/tmp/package-b",
+                        gitBranch: "feature/project-info",
                         gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
                         name: "Package B",
                         preview: "Second repo thread",
@@ -161,8 +164,13 @@ extension CodexAppServerTests {
             library.groups.first { $0.id == "https://github.com/gaelic-ghost/SwiftASB.git" }
         )
         #expect(repositoryGroup.title == "SwiftASB (github.com)")
+        #expect(repositoryGroup.projectInfo?.identitySource == .gitOrigin)
+        #expect(repositoryGroup.projectInfo?.repository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(repositoryGroup.projectInfo?.repository?.branch == nil)
         #expect(repositoryGroup.threads.map(\.id) == ["thread-package-a", "thread-package-b"])
-        #expect(repositoryGroup.threads.first?.currentGitOriginURL == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(repositoryGroup.threads.first?.projectInfo.repository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(repositoryGroup.threads.first?.projectInfo.repository?.branch == "main")
+        #expect(repositoryGroup.threads.first?.source == .cli)
 
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)

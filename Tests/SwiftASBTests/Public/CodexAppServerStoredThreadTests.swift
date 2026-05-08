@@ -69,12 +69,14 @@ extension CodexAppServerTests {
         #expect(archivedPage.threads.count == 1)
         #expect(archivedPage.threads[0].id == "thread-123")
         #expect(archivedPage.threads[0].name == "Archived release prep")
+        #expect(archivedPage.threads[0].source == .cli)
         #expect(archivedPage.nextCursor == "cursor-next")
 
         let archivedSnapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-123")
         let archivedThread = try #require(archivedSnapshot)
         #expect(archivedThread.isArchived == true)
         #expect(archivedThread.name == "Archived release prep")
+        #expect(archivedThread.source == .cli)
         #expect(archivedThread.statusType == "notLoaded")
         #expect(archivedThread.state.completeness == "partial")
 
@@ -106,13 +108,125 @@ extension CodexAppServerTests {
 
         #expect(activePage.threads.count == 1)
         #expect(activePage.threads[0].name == "Active release prep")
+        #expect(activePage.threads[0].source == .cli)
         #expect(activePage.nextCursor == nil)
 
         let activeSnapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-123")
         let activeThread = try #require(activeSnapshot)
         #expect(activeThread.isArchived == false)
         #expect(activeThread.name == "Active release prep")
+        #expect(activeThread.source == .cli)
         #expect(activeThread.statusType == "idle")
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @Test("maps custom and sub-agent thread sources from stored thread lists")
+    func mapsStoredThreadSources() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadListResult: [
+                "data": [
+                    [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350100,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-custom",
+                        "modelProvider": "openai",
+                        "name": "Zed Thread",
+                        "preview": "Started elsewhere",
+                        "source": [
+                            "custom": "zed",
+                        ],
+                        "status": ["type": "notLoaded"],
+                        "turns": [],
+                        "updatedAt": 1713350105,
+                    ],
+                    [
+                        "cliVersion": "0.128.0",
+                        "createdAt": 1713350200,
+                        "cwd": "/tmp/project",
+                        "ephemeral": false,
+                        "id": "thread-subagent",
+                        "modelProvider": "openai",
+                        "name": "Explorer Thread",
+                        "preview": "Spawned exploration",
+                        "source": [
+                            "subAgent": [
+                                "thread_spawn": [
+                                    "agent_nickname": "Explorer",
+                                    "agent_path": "/tmp/agents/explorer",
+                                    "agent_role": "explorer",
+                                    "depth": 1,
+                                    "parent_thread_id": "thread-parent",
+                                ],
+                            ],
+                        ],
+                        "status": ["type": "notLoaded"],
+                        "turns": [],
+                        "updatedAt": 1713350205,
+                    ],
+                ],
+            ]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let page = try await client.listThreads()
+
+        #expect(page.threads.map(\.source) == [
+            .custom("zed"),
+            .subAgent(
+                .init(
+                    kind: .threadSpawn,
+                    threadSpawn: .init(
+                        agentNickname: "Explorer",
+                        agentPath: "/tmp/agents/explorer",
+                        agentRole: "explorer",
+                        depth: 1,
+                        parentThreadID: "thread-parent"
+                    )
+                )
+            ),
+        ])
+
+        let customSnapshot = try #require(
+            try await client.debugThreadHistorySnapshot(threadID: "thread-custom")
+        )
+        #expect(customSnapshot.source == .custom("zed"))
+
+        let subAgentSnapshot = try #require(
+            try await client.debugThreadHistorySnapshot(threadID: "thread-subagent")
+        )
+        #expect(
+            subAgentSnapshot.source == .subAgent(
+                .init(
+                    kind: .threadSpawn,
+                    threadSpawn: .init(
+                        agentNickname: "Explorer",
+                        agentPath: "/tmp/agents/explorer",
+                        agentRole: "explorer",
+                        depth: 1,
+                        parentThreadID: "thread-parent"
+                    )
+                )
+            )
+        )
 
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
@@ -211,11 +325,13 @@ extension CodexAppServerTests {
         #expect(thread.currentDirectoryPath == "/tmp/project")
         #expect(thread.info.status.type == .idle)
         #expect(thread.info.preview == "Hydrated resume preview")
+        #expect(thread.info.source == .cli)
 
         let snapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-123")
         let threadSnapshot = try #require(snapshot)
         #expect(threadSnapshot.name == "Resumed Thread")
         #expect(threadSnapshot.isArchived == false)
+        #expect(threadSnapshot.source == .cli)
         #expect(threadSnapshot.statusType == "idle")
         #expect(threadSnapshot.defaults.approvalPolicy == "onRequest")
         #expect(threadSnapshot.defaults.currentDirectoryPath == "/tmp/project")
@@ -324,6 +440,7 @@ extension CodexAppServerTests {
         #expect(forkedThread.id == "thread-456")
         #expect(forkedThread.info.forkedFromThreadID == "thread-123")
         #expect(forkedThread.info.ephemeral == true)
+        #expect(forkedThread.info.source == .cli)
         #expect(forkedThread.info.status.type == .idle)
 
         let snapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-456")
@@ -331,6 +448,7 @@ extension CodexAppServerTests {
         #expect(threadSnapshot.forkedFromThreadID == "thread-123")
         #expect(threadSnapshot.forkedFromTurnID == "turn-shared-1")
         #expect(threadSnapshot.isArchived == false)
+        #expect(threadSnapshot.source == .cli)
         #expect(threadSnapshot.turns.count == 1)
         #expect(threadSnapshot.turns[0].id == "turn-shared-1")
         #expect(threadSnapshot.turns[0].items.count == 1)

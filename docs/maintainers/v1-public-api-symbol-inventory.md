@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot and on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, and on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup and `CodexAppServer.ThreadSource` promotion. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1735
-- Public/open types: 271
-- Public/open initializers: 115
-- Public/open methods and type methods: 124
-- Public/open enum cases: 321
-- Public/open properties: 904
+- Public/open symbols: 1867
+- Public/open types: 293
+- Public/open initializers: 130
+- Public/open methods and type methods: 129
+- Public/open enum cases: 363
+- Public/open properties: 951
 
 ## Public Types
 
@@ -21,7 +21,6 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.CLIExecutableDiagnostics.Source` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
 - `CodexAppServer.ClientInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
 - `CodexAppServer.Configuration` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
-- `CodexAppServer.GitInfo` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.GranularApprovalPolicy` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.InitializeCapabilities` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
 - `CodexAppServer.InitializeRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
@@ -63,6 +62,10 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.ThreadListSortDirection` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListSortKey` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListSourceKind` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.Kind` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.ThreadSpawn` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadMetadataFieldUpdate` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.ThreadMetadataGitInfoUpdate` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.ThreadMetadataUpdateRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
@@ -225,6 +228,9 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexWorkspace.PermissionProfile.Kind` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.PermissionSelection` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.PermissionSelectionModification` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.ProjectInfo` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.ProjectInfo.IdentitySource` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
+- `CodexWorkspace.RepositoryInfo` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.SessionSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 
 ## Public Initializers And Methods
@@ -291,6 +297,9 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.ThreadListSortDirection.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListSortKey.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListSourceKind.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.Kind.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.init(kind:other:threadSpawn:)` - `init(kind: CodexAppServer.ThreadSource.SubAgentSource.Kind, other: String? = nil, threadSpawn: CodexAppServer.ThreadSource.ThreadSpawn? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.ThreadSpawn.init(agentNickname:agentPath:agentRole:depth:parentThreadID:)` - `init(agentNickname: String? = nil, agentPath: String? = nil, agentRole: String? = nil, depth: Int, parentThreadID: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadMetadataGitInfoUpdate.init(branch:originURL:sha:)` - `init(branch: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged, originURL: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged, sha: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.ThreadMetadataUpdateRequest.init(threadID:gitInfo:)` - `init(threadID: String, gitInfo: CodexAppServer.ThreadMetadataGitInfoUpdate? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.ThreadReadRequest.init(threadID:includeTurns:)` - `init(threadID: String, includeTurns: Bool = false)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
@@ -425,6 +434,8 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.ModelListRequest.init(cursor:limit:includeHidden:)` - `init(cursor: String? = nil, limit: Int? = nil, includeHidden: Bool? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.ThreadForkRequest.init(threadID:approvalPolicy:approvalsReviewer:baseInstructions:config:currentDirectoryPath:developerInstructions:ephemeral:excludeTurns:model:modelProvider:personality:sandboxMode:serviceName:serviceTier:)` - `init(threadID: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, baseInstructions: String? = nil, config: [String : CodexAppServer.JSONValue]? = nil, currentDirectoryPath: String? = nil, developerInstructions: String? = nil, ephemeral: Bool? = nil, excludeTurns: Bool? = nil, model: String? = nil, modelProvider: String? = nil, personality: CodexAppServer.Personality? = nil, sandboxMode: CodexAppServer.SandboxMode? = nil, serviceName: String? = nil, serviceTier: CodexAppServer.ServiceTier? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListRequest.init(cursor:limit:sortKey:sortDirection:modelProviders:sourceKinds:archived:currentDirectoryPath:searchTerm:)` - `init(cursor: String? = nil, limit: Int? = nil, sortKey: CodexAppServer.ThreadListSortKey? = nil, sortDirection: CodexAppServer.ThreadListSortDirection? = nil, modelProviders: [String]? = nil, sourceKinds: [CodexAppServer.ThreadListSourceKind]? = nil, archived: Bool? = nil, currentDirectoryPath: String? = nil, searchTerm: String? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.init(kind:other:threadSpawn:)` - `init(kind: CodexAppServer.ThreadSource.SubAgentSource.Kind, other: String? = nil, threadSpawn: CodexAppServer.ThreadSource.ThreadSpawn? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.ThreadSpawn.init(agentNickname:agentPath:agentRole:depth:parentThreadID:)` - `init(agentNickname: String? = nil, agentPath: String? = nil, agentRole: String? = nil, depth: Int, parentThreadID: String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadMetadataGitInfoUpdate.init(branch:originURL:sha:)` - `init(branch: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged, originURL: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged, sha: CodexAppServer.ThreadMetadataFieldUpdate = .unchanged)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.ThreadMetadataUpdateRequest.init(threadID:gitInfo:)` - `init(threadID: String, gitInfo: CodexAppServer.ThreadMetadataGitInfoUpdate? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.ThreadReadRequest.init(threadID:includeTurns:)` - `init(threadID: String, includeTurns: Bool = false)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
@@ -557,6 +568,19 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.ThreadListSourceKind.exec` - `case exec` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListSourceKind.unknown` - `case unknown` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListSourceKind.vscode` - `case vscode` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.appServer` - `case appServer` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.cli` - `case cli` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.exec` - `case exec` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.vscode` - `case vscode` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.custom(_:)` - `case custom(String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.subAgent(_:)` - `case subAgent(CodexAppServer.ThreadSource.SubAgentSource)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.unknown` - `case unknown` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.Kind.compact` - `case compact` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.Kind.memoryConsolidation` - `case memoryConsolidation` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.Kind.review` - `case review` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.Kind.threadSpawn` - `case threadSpawn` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.Kind.other` - `case other` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
+- `CodexAppServer.ThreadSource.SubAgentSource.Kind.unknown` - `case unknown` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadMetadataFieldUpdate.clear` - `case clear` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.ThreadMetadataFieldUpdate.replace(_:)` - `case replace(String)` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
 - `CodexAppServer.ThreadMetadataFieldUpdate.unchanged` - `case unchanged` - Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift
@@ -735,10 +759,11 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
-- `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by app-server Git origin metadata with cwd fallback, and `ThreadSnapshot.currentGitOriginURL` exposes the persisted origin value used for that grouping.
-- `CodexWorkspace` owns app-server-owned permission selections and runtime workspace permission facts: `PermissionSelection`, `PermissionSelectionModification`, `ActivePermissionProfile`, `ActivePermissionModification`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, and `SessionSnapshot`.
+- `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by `CodexWorkspace.ProjectInfo` identity: app-server Git origin metadata with cwd fallback.
+- `CodexWorkspace` owns app-server-owned permission selections, runtime workspace permission facts, and project identity: `PermissionSelection`, `PermissionSelectionModification`, `ActivePermissionProfile`, `ActivePermissionModification`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, `ProjectInfo`, `RepositoryInfo`, and `SessionSnapshot`.
 - `CodexAppServer.ThreadStartRequest`, `ThreadResumeRequest`, `ThreadForkRequest`, `TurnStartRequest`, `CodexThread.TurnStartRequest`, and `CodexThread.startTextTurn(...)` now accept optional `CodexWorkspace.PermissionSelection` values.
-- `CodexAppServer.ThreadSession` and `CodexThread` now expose active permission-profile provenance, runtime permission facts, and a `CodexWorkspace.SessionSnapshot`.
+- `CodexAppServer.ThreadSession` and `CodexThread` now expose active permission-profile provenance, runtime permission facts, app-server-owned project identity, and a `CodexWorkspace.SessionSnapshot`.
+- `CodexAppServer.ThreadInfo` and `CodexAppServer.Library.ThreadSnapshot` now expose `CodexAppServer.ThreadSource` so launcher UIs can badge CLI, app-server, editor, custom, and sub-agent threads without reading generated wire values.
 
 ## Public Property Counts By Source File
 
@@ -746,17 +771,17 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexAppServer+CodexExtensions.swift`: 113 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 10 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Hooks.swift`: 32 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 55 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 56 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+LoadedThreads.swift`: 4 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 34 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 43 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 23 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 96 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift`: 12 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift`: 105 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift`: 10 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift`: 24 public properties
 - `Sources/SwiftASB/Public/CodexConfig.swift`: 18 public properties
-- `Sources/SwiftASB/Public/CodexDiagnostics.swift`: 14 public properties
+- `Sources/SwiftASB/Public/CodexDiagnostics.swift`: 29 public properties
 - `Sources/SwiftASB/Public/CodexErrors.swift`: 1 public properties
-- `Sources/SwiftASB/Public/CodexFS.swift`: 36 public properties
+- `Sources/SwiftASB/Public/CodexFS.swift`: 44 public properties
 - `Sources/SwiftASB/Public/CodexInteractiveRequests.swift`: 74 public properties
 - `Sources/SwiftASB/Public/CodexThread+Dashboard.swift`: 29 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift`: 25 public properties
@@ -764,4 +789,4 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift`: 54 public properties
 - `Sources/SwiftASB/Public/CodexThread.swift`: 71 public properties
 - `Sources/SwiftASB/Public/CodexTurnHandle.swift`: 108 public properties
-- `Sources/SwiftASB/Public/CodexWorkspace.swift`: 27 public properties
+- `Sources/SwiftASB/Public/CodexWorkspace.swift`: 34 public properties

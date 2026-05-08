@@ -142,6 +142,7 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``ThreadMetadataFieldUpdate``
 - ``ThreadSession``
 - ``ThreadInfo``
+- ``ThreadSource``
 - ``ThreadReadRequest``
 - ``ThreadReadResult``
 - ``ThreadListRequest``
@@ -150,7 +151,6 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``LoadedThreadListPage``
 - ``ThreadTurnsListRequest``
 - ``ThreadTurnsPage``
-- ``GitInfo``
 - ``CodexWorkspace``
 
 ### Turn Models

@@ -210,10 +210,11 @@ extension CodexAppServer {
         public let currentDirectoryPath: String
         public let ephemeral: Bool
         public let forkedFromThreadID: String?
-        public let gitInfo: GitInfo?
         public let modelProvider: String
         public let name: String?
         public let preview: String
+        public let projectInfo: CodexWorkspace.ProjectInfo
+        public let source: ThreadSource
         public let status: ThreadStatus
         public let updatedAt: Int
     }
@@ -271,6 +272,84 @@ extension CodexAppServer {
         case exec
         case unknown
         case vscode
+    }
+
+    /// App-server-reported source for a stored or active thread.
+    public enum ThreadSource: Sendable, Equatable, Codable {
+        /// Thread started by the Codex app-server owner.
+        case appServer
+        /// Thread started by the Codex CLI.
+        case cli
+        /// Thread started by a direct exec integration.
+        case exec
+        /// Thread started by a VS Code integration.
+        case vscode
+        /// Thread started by a named integration outside the built-in cases.
+        case custom(String)
+        /// Thread created by a Codex sub-agent.
+        case subAgent(SubAgentSource)
+        /// Source omitted or unknown to the app-server.
+        case unknown
+
+        /// App-server-reported source for an agent-created child thread.
+        public struct SubAgentSource: Sendable, Equatable, Codable {
+            /// Sub-agent source family reported by Codex.
+            public enum Kind: String, Sendable, Equatable, Codable {
+                case compact
+                case memoryConsolidation
+                case review
+                case threadSpawn
+                case other
+                case unknown
+            }
+
+            /// Coarse source family for the sub-agent thread.
+            public let kind: Kind
+            /// Raw source label when Codex reports a sub-agent source outside the known families.
+            public let other: String?
+            /// Thread-spawn details when `kind` is ``Kind/threadSpawn``.
+            public let threadSpawn: ThreadSpawn?
+
+            /// Creates a sub-agent source value.
+            public init(
+                kind: Kind,
+                other: String? = nil,
+                threadSpawn: ThreadSpawn? = nil
+            ) {
+                self.kind = kind
+                self.other = other
+                self.threadSpawn = threadSpawn
+            }
+        }
+
+        /// Metadata for a sub-agent thread-spawn source.
+        public struct ThreadSpawn: Sendable, Equatable, Codable {
+            /// Human-facing nickname Codex assigned to the spawned agent, when available.
+            public let agentNickname: String?
+            /// Agent path reported by Codex, when available.
+            public let agentPath: String?
+            /// Role assigned to the spawned agent, when available.
+            public let agentRole: String?
+            /// Spawn depth relative to the parent thread.
+            public let depth: Int
+            /// Parent thread identifier that spawned this agent thread.
+            public let parentThreadID: String
+
+            /// Creates a thread-spawn source value.
+            public init(
+                agentNickname: String? = nil,
+                agentPath: String? = nil,
+                agentRole: String? = nil,
+                depth: Int,
+                parentThreadID: String
+            ) {
+                self.agentNickname = agentNickname
+                self.agentPath = agentPath
+                self.agentRole = agentRole
+                self.depth = depth
+                self.parentThreadID = parentThreadID
+            }
+        }
     }
 
     public struct ThreadListRequest: Sendable, Equatable {

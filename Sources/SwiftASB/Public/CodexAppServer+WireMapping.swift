@@ -554,12 +554,93 @@ extension CodexAppServer.ThreadInfo {
             currentDirectoryPath: wireValue.cwd,
             ephemeral: wireValue.ephemeral,
             forkedFromThreadID: wireValue.forkedFromID,
-            gitInfo: wireValue.gitInfo.map(CodexAppServer.GitInfo.init),
             modelProvider: wireValue.modelProvider,
             name: wireValue.name,
             preview: wireValue.preview,
+            projectInfo: .init(
+                currentDirectoryPath: wireValue.cwd,
+                repository: wireValue.gitInfo.map(CodexWorkspace.RepositoryInfo.init)
+            ),
+            source: .init(wireValue: wireValue.source),
             status: .init(wireValue: wireValue.status),
             updatedAt: wireValue.updatedAt
+        )
+    }
+}
+
+extension CodexAppServer.ThreadSource {
+    init(wireValue: CodexWireSessionSourceUnion) {
+        switch wireValue {
+        case let .enumeration(source):
+            self.init(wireValue: source)
+        case let .codexWireSessionSource(source):
+            if let custom = source.custom, !custom.isEmpty {
+                self = .custom(custom)
+            } else if let subAgent = source.subAgent {
+                self = .subAgent(.init(wireValue: subAgent))
+            } else {
+                self = .unknown
+            }
+        }
+    }
+
+    private init(wireValue: CodexWireSessionSourceEnum) {
+        switch wireValue {
+        case .appServer:
+            self = .appServer
+        case .cli:
+            self = .cli
+        case .exec:
+            self = .exec
+        case .unknown:
+            self = .unknown
+        case .vscode:
+            self = .vscode
+        }
+    }
+}
+
+extension CodexAppServer.ThreadSource.SubAgentSource {
+    init(wireValue: CodexWireSubAgentSourceUnion) {
+        switch wireValue {
+        case let .enumeration(source):
+            self.init(kind: .init(wireValue: source))
+        case let .codexWireSubAgentSource(source):
+            if let threadSpawn = source.threadSpawn {
+                self.init(
+                    kind: .threadSpawn,
+                    threadSpawn: .init(wireValue: threadSpawn)
+                )
+            } else if let other = source.other, !other.isEmpty {
+                self.init(kind: .other, other: other)
+            } else {
+                self.init(kind: .unknown)
+            }
+        }
+    }
+}
+
+extension CodexAppServer.ThreadSource.SubAgentSource.Kind {
+    init(wireValue: CodexWireSubAgentSourceEnum) {
+        switch wireValue {
+        case .compact:
+            self = .compact
+        case .memoryConsolidation:
+            self = .memoryConsolidation
+        case .review:
+            self = .review
+        }
+    }
+}
+
+extension CodexAppServer.ThreadSource.ThreadSpawn {
+    init(wireValue: CodexWireThreadSpawn) {
+        self.init(
+            agentNickname: wireValue.agentNickname,
+            agentPath: wireValue.agentPath,
+            agentRole: wireValue.agentRole,
+            depth: wireValue.depth,
+            parentThreadID: wireValue.parentThreadID
         )
     }
 }
