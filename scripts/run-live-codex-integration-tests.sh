@@ -9,7 +9,7 @@ usage() {
 Usage: scripts/run-live-codex-integration-tests.sh [mode]
 
 Modes:
-  release-gate    Run the maintained release-gate live probe set. This is the default.
+  release-gate    Run the full local release gate, including swift test and live probes.
   smoke           Run startup, transport, capability, thread, turn, and concurrency probes.
   transport       Run raw transport initialize/thread/turn probes.
   capability      Run model, MCP, and hook diagnostics snapshot probes.
@@ -21,7 +21,7 @@ Modes:
   file-scenario   Run the multi-turn create/edit/delete file scenario.
   rollback        Run the disposable stored-thread rollback scenario.
   same-thread     Run the observational same-thread overlap probe.
-  all             Run every opt-in CodexAppServer live integration test.
+  all             Run every opt-in CodexAppServer live test.
   help            Show this help text.
 
 Environment:
@@ -100,7 +100,7 @@ case "$mode" in
     all)
         env SWIFTASB_ENABLE_LIVE_CODEX_TESTS=1 \
             SWIFTASB_LIVE_CODEX_REPORT_DIR="$SWIFTASB_LIVE_CODEX_REPORT_DIR" \
-            swift test --filter CodexAppServerLiveIntegrationTests
+            swift test --filter CodexAppServerLive
         ;;
     help|--help|-h)
         usage
