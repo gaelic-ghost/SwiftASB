@@ -79,8 +79,9 @@ struct CodexAppServerProtocolTests {
                 personality: .friendly,
                 sandbox: .workspaceWrite,
                 serviceName: "codex",
-                serviceTier: .fast,
-                sessionStartSource: .clear
+                serviceTier: "fast",
+                sessionStartSource: .clear,
+                threadSource: nil
             )
         )
 
@@ -270,7 +271,7 @@ struct CodexAppServerProtocolTests {
                 personality: .friendly,
                 sandbox: .workspaceWrite,
                 serviceName: "codex",
-                serviceTier: .fast,
+                serviceTier: "fast",
                 threadID: "thread-123"
             )
         )
@@ -312,7 +313,7 @@ struct CodexAppServerProtocolTests {
                 personality: .pragmatic,
                 sandbox: .workspaceWrite,
                 serviceName: "codex",
-                serviceTier: .fast,
+                serviceTier: "fast",
                 threadID: "thread-123"
             )
         )
@@ -591,7 +592,7 @@ struct CodexAppServerProtocolTests {
 
         let pluginPayload = try protocolLayer.makePluginListRequest(
             id: .string("plugin-list-1"),
-            params: .init(cwds: ["/tmp/project"])
+            params: .init(cwds: ["/tmp/project"], marketplaceKinds: nil)
         )
         let pluginRequest = try #require(try JSONSerialization.jsonObject(with: pluginPayload) as? [String: Any])
         #expect(pluginRequest["method"] as? String == "plugin/list")
@@ -640,7 +641,7 @@ struct CodexAppServerProtocolTests {
                 personality: .pragmatic,
                 responsesapiClientMetadata: nil,
                 sandboxPolicy: nil,
-                serviceTier: .flex,
+                serviceTier: "flex",
                 summary: .concise,
                 threadID: "thread-123"
             )
@@ -770,7 +771,7 @@ struct CodexAppServerProtocolTests {
         #expect(response.cwd == "/tmp/project")
         #expect(response.model == "gpt-5.4")
         #expect(response.modelProvider == "openai")
-        #expect(response.serviceTier == .fast)
+        #expect(response.serviceTier == "fast")
         #expect(response.thread.id == "thread-123")
         #expect(response.thread.preview == "Hello")
         #expect(response.thread.turns.isEmpty)

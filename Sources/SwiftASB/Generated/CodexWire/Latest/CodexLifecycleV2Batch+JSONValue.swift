@@ -67,6 +67,25 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let pluginListResponse: CodexWirePluginListResponse?
     let pluginReadParams: CodexWirePluginReadParams?
     let pluginReadResponse: CodexWirePluginReadResponse?
+    let pluginShareDeleteParams: CodexWirePluginShareDeleteParams?
+    let pluginShareDeleteResponse, pluginShareListParams: [String: CodexWireJSONValue]?
+    let pluginShareListResponse: CodexWirePluginShareListResponse?
+    let pluginShareSaveParams: CodexWirePluginShareSaveParams?
+    let pluginShareSaveResponse: CodexWirePluginShareSaveResponse?
+    let pluginShareUpdateTargetsParams: CodexWirePluginShareUpdateTargetsParams?
+    let pluginShareUpdateTargetsResponse: CodexWirePluginShareUpdateTargetsResponse?
+    let pluginSkillReadParams: CodexWirePluginSkillReadParams?
+    let pluginSkillReadResponse: CodexWirePluginSkillReadResponse?
+    let processExitedNotification: CodexWireProcessExitedNotification?
+    let processKillParams: CodexWireProcessKillParams?
+    let processKillResponse: [String: CodexWireJSONValue]?
+    let processOutputDeltaNotification: CodexWireProcessOutputDeltaNotification?
+    let processResizePtyParams: CodexWireProcessResizePtyParams?
+    let processResizePtyResponse: [String: CodexWireJSONValue]?
+    let processSpawnParams: CodexWireProcessSpawnParams?
+    let processSpawnResponse: [String: CodexWireJSONValue]?
+    let processWriteStdinParams: CodexWireProcessWriteStdinParams?
+    let processWriteStdinResponse: [String: CodexWireJSONValue]?
     let rawResponseItemCompletedNotification: CodexWireRawResponseItemCompletedNotification?
     let reasoningSummaryPartAddedNotification: CodexWireReasoningSummaryPartAddedNotification?
     let reasoningSummaryTextDeltaNotification: CodexWireReasoningSummaryTextDeltaNotification?
@@ -118,12 +137,13 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let turnStartParams: CodexWireTurnStartParams?
     let turnStartResponse: CodexWireTurnStartResponse?
     let warningNotification: CodexWireWarningNotification?
+    let windowsSandboxReadinessResponse: CodexWireWindowsSandboxReadinessResponse?
 
     enum CodingKeys: String, CodingKey {
         case agentMessageDeltaNotification, appListUpdatedNotification, appsListParams, appsListResponse, collaborationModeListParams, collaborationModeListResponse, commandExecOutputDeltaNotification, commandExecutionOutputDeltaNotification, configReadParams, configReadResponse, configRequirementsReadResponse, configWarningNotification, contextCompactedNotification, deprecationNoticeNotification, errorNotification, externalAgentConfigImportCompletedNotification, fileChangeOutputDeltaNotification, fileChangePatchUpdatedNotification, fsChangedNotification, fsGetMetadataParams, fsGetMetadataResponse, fsReadDirectoryParams, fsReadDirectoryResponse, fsReadFileParams, fsReadFileResponse, fsUnwatchParams, fsUnwatchResponse, fsWatchParams, fsWatchResponse, guardianWarningNotification, hookCompletedNotification, hookStartedNotification, initializeParams, itemCompletedNotification, itemGuardianApprovalReviewCompletedNotification, itemGuardianApprovalReviewStartedNotification, itemStartedNotification
         case listMCPServerStatusParams = "listMcpServerStatusParams"
         case listMCPServerStatusResponse = "listMcpServerStatusResponse"
-        case mcpResourceReadParams, mcpResourceReadResponse, mcpServerStatusUpdatedNotification, mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, remoteControlStatusChangedNotification, serverRequestResolvedNotification, skillsChangedNotification, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadArchiveParams, threadArchiveResponse, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, threadUnarchiveParams, threadUnarchiveResponse, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification
+        case mcpResourceReadParams, mcpResourceReadResponse, mcpServerStatusUpdatedNotification, mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, pluginShareDeleteParams, pluginShareDeleteResponse, pluginShareListParams, pluginShareListResponse, pluginShareSaveParams, pluginShareSaveResponse, pluginShareUpdateTargetsParams, pluginShareUpdateTargetsResponse, pluginSkillReadParams, pluginSkillReadResponse, processExitedNotification, processKillParams, processKillResponse, processOutputDeltaNotification, processResizePtyParams, processResizePtyResponse, processSpawnParams, processSpawnResponse, processWriteStdinParams, processWriteStdinResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, remoteControlStatusChangedNotification, serverRequestResolvedNotification, skillsChangedNotification, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadArchiveParams, threadArchiveResponse, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, threadUnarchiveParams, threadUnarchiveResponse, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification, windowsSandboxReadinessResponse
     }
 }
 
@@ -366,7 +386,7 @@ struct CodexWireCommandExecOutputDeltaNotification: Codable, Equatable, Sendable
     /// Client-supplied, connection-scoped `processId` from the original `command/exec` request.
     let processID: String
     /// Output stream for this chunk.
-    let stream: CodexWireCommandExecOutputStream
+    let stream: CodexWireOutputStream
 
     enum CodingKeys: String, CodingKey {
         case capReached, deltaBase64
@@ -382,7 +402,11 @@ struct CodexWireCommandExecOutputDeltaNotification: Codable, Equatable, Sendable
 /// stdout stream. PTY mode multiplexes terminal output here.
 ///
 /// stderr stream.
-enum CodexWireCommandExecOutputStream: String, Codable, Equatable, Sendable {
+///
+/// Output stream this chunk belongs to.
+///
+/// Stream label for `process/outputDelta` notifications.
+enum CodexWireOutputStream: String, Codable, Equatable, Sendable {
     case stderr = "stderr"
     case stdout = "stdout"
 }
@@ -459,7 +483,7 @@ struct CodexWireConfig: Codable, Equatable, Sendable {
     let reviewModel: String?
     let sandboxMode: CodexWireSandboxMode?
     let sandboxWorkspaceWrite: CodexWireSandboxWorkspaceWrite?
-    let serviceTier: CodexWireServiceTier?
+    let serviceTier: String?
     let tools: CodexWireToolsV2?
     let webSearch: CodexWireWebSearchMode?
 
@@ -657,7 +681,7 @@ struct CodexWireProfileV2: Codable, Equatable, Sendable {
     let modelReasoningEffort: CodexWireReasoningEffort?
     let modelReasoningSummary: CodexWireReasoningSummary?
     let modelVerbosity: CodexWireVerbosity?
-    let serviceTier: CodexWireServiceTier?
+    let serviceTier: String?
     let tools: CodexWireToolsV2?
     let webSearch: CodexWireWebSearchMode?
 
@@ -674,11 +698,6 @@ struct CodexWireProfileV2: Codable, Equatable, Sendable {
         case tools
         case webSearch = "web_search"
     }
-}
-
-enum CodexWireServiceTier: String, Codable, Equatable, Sendable {
-    case fast = "fast"
-    case flex = "flex"
 }
 
 //
@@ -899,14 +918,16 @@ enum CodexWireResidencyRequirement: String, Codable, Equatable, Sendable {
 // MARK: - CodexWireManagedHooksRequirements
 struct CodexWireManagedHooksRequirements: Codable, Equatable, Sendable {
     let managedDir: String?
-    let permissionRequest, postToolUse, preToolUse, sessionStart: [CodexWireConfiguredHookMatcherGroup]
-    let stop, userPromptSubmit: [CodexWireConfiguredHookMatcherGroup]
+    let permissionRequest, postCompact, postToolUse, preCompact: [CodexWireConfiguredHookMatcherGroup]
+    let preToolUse, sessionStart, stop, userPromptSubmit: [CodexWireConfiguredHookMatcherGroup]
     let windowsManagedDir: String?
 
     enum CodingKeys: String, CodingKey {
         case managedDir
         case permissionRequest = "PermissionRequest"
+        case postCompact = "PostCompact"
         case postToolUse = "PostToolUse"
+        case preCompact = "PreCompact"
         case preToolUse = "PreToolUse"
         case sessionStart = "SessionStart"
         case stop = "Stop"
@@ -1236,6 +1257,9 @@ enum CodexWireCodexErrorInfoEnum: String, Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
+/// Deprecated legacy notification for `apply_patch` textual output.
+///
+/// The server no longer emits this notification.
 // MARK: - CodexWireFileChangeOutputDeltaNotification
 struct CodexWireFileChangeOutputDeltaNotification: Codable, Equatable, Sendable {
     let delta, itemID, threadID, turnID: String
@@ -1572,7 +1596,9 @@ enum CodexWireHookOutputEntryKind: String, Codable, Equatable, Sendable {
 
 enum CodexWireHookEventName: String, Codable, Equatable, Sendable {
     case permissionRequest = "permissionRequest"
+    case postCompact = "postCompact"
     case postToolUse = "postToolUse"
+    case preCompact = "preCompact"
     case preToolUse = "preToolUse"
     case sessionStart = "sessionStart"
     case stop = "stop"
@@ -1683,10 +1709,13 @@ struct CodexWireClientInfo: Codable, Equatable, Sendable {
 
 // MARK: - CodexWireItemCompletedNotification
 struct CodexWireItemCompletedNotification: Codable, Equatable, Sendable {
+    /// Unix timestamp (in milliseconds) when this item lifecycle completed.
+    let completedAtMS: Int?
     let item: CodexWireThreadItem
     let threadID, turnID: String
 
     enum CodingKeys: String, CodingKey {
+        case completedAtMS = "completedAtMs"
         case item
         case threadID = "threadId"
         case turnID = "turnId"
@@ -2377,10 +2406,13 @@ struct CodexWireItemGuardianApprovalReviewStartedNotification: Codable, Equatabl
 // MARK: - CodexWireItemStartedNotification
 struct CodexWireItemStartedNotification: Codable, Equatable, Sendable {
     let item: CodexWireThreadItem
+    /// Unix timestamp (in milliseconds) when this item lifecycle started.
+    let startedAtMS: Int?
     let threadID, turnID: String
 
     enum CodingKeys: String, CodingKey {
         case item
+        case startedAtMS = "startedAtMs"
         case threadID = "threadId"
         case turnID = "turnId"
     }
@@ -2635,6 +2667,7 @@ struct CodexWireModelListResponse: Codable, Equatable, Sendable {
 
 // MARK: - CodexWireModel
 struct CodexWireModel: Codable, Equatable, Sendable {
+    /// Deprecated: use `serviceTiers` instead.
     let additionalSpeedTiers: [String]?
     let availabilityNux: CodexWireModelAvailabilityNux?
     let defaultReasoningEffort: CodexWireReasoningEffort
@@ -2644,6 +2677,7 @@ struct CodexWireModel: Codable, Equatable, Sendable {
     let inputModalities: [CodexWireInputModality]?
     let isDefault: Bool
     let model: String
+    let serviceTiers: [CodexWireModelServiceTier]?
     let supportedReasoningEfforts: [CodexWireReasoningEffortOption]
     let supportsPersonality: Bool?
     let upgrade: String?
@@ -2669,6 +2703,17 @@ struct CodexWireModelAvailabilityNux: Codable, Equatable, Sendable {
 enum CodexWireInputModality: String, Codable, Equatable, Sendable {
     case image = "image"
     case text = "text"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireModelServiceTier
+struct CodexWireModelServiceTier: Codable, Equatable, Sendable {
+    let description, id, name: String
 }
 
 //
@@ -2773,6 +2818,15 @@ struct CodexWirePluginListParams: Codable, Equatable, Sendable {
     /// Optional working directories used to discover repo marketplaces. When omitted, only
     /// home-scoped marketplaces and the official curated marketplace are considered.
     let cwds: [String]?
+    /// Optional marketplace kind filter. When omitted, only local marketplaces are queried, plus
+    /// the default remote catalog when enabled by feature flag.
+    let marketplaceKinds: [CodexWirePluginListMarketplaceKind]?
+}
+
+enum CodexWirePluginListMarketplaceKind: String, Codable, Equatable, Sendable {
+    case local = "local"
+    case sharedWithMe = "shared-with-me"
+    case workspaceDirectory = "workspace-directory"
 }
 
 //
@@ -2840,18 +2894,33 @@ struct CodexWireMarketplaceInterface: Codable, Equatable, Sendable {
 // MARK: - CodexWirePluginSummary
 struct CodexWirePluginSummary: Codable, Equatable, Sendable {
     let authPolicy: CodexWirePluginAuthPolicy
+    /// Availability state for installing and using the plugin.
+    let availability: CodexWirePluginAvailability?
     let enabled: Bool
     let id: String
     let installed: Bool
     let installPolicy: CodexWirePluginInstallPolicy
     let interface: CodexWirePluginInterface?
+    let keywords: [String]?
     let name: String
+    /// Remote sharing context associated with this plugin when available.
+    let shareContext: CodexWirePluginShareContext?
     let source: CodexWirePluginSource
 }
 
 enum CodexWirePluginAuthPolicy: String, Codable, Equatable, Sendable {
     case onInstall = "ON_INSTALL"
     case onUse = "ON_USE"
+}
+
+/// Availability state for installing and using the plugin.
+///
+/// Plugin-service currently sends `"ENABLED"` for available remote plugins. Codex app-server
+/// exposes `"AVAILABLE"` in its API; the alias keeps decoding compatible with that upstream
+/// response.
+enum CodexWirePluginAvailability: String, Codable, Equatable, Sendable {
+    case available = "AVAILABLE"
+    case disabledByAdmin = "DISABLED_BY_ADMIN"
 }
 
 enum CodexWirePluginInstallPolicy: String, Codable, Equatable, Sendable {
@@ -2900,6 +2969,24 @@ struct CodexWirePluginInterface: Codable, Equatable, Sendable {
         case screenshots, screenshotUrls, shortDescription
         case termsOfServiceURL = "termsOfServiceUrl"
         case websiteURL = "websiteUrl"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginShareContext
+struct CodexWirePluginShareContext: Codable, Equatable, Sendable {
+    let creatorAccountUserID, creatorName: String?
+    let remotePluginID: String
+
+    enum CodingKeys: String, CodingKey {
+        case creatorAccountUserID = "creatorAccountUserId"
+        case creatorName
+        case remotePluginID = "remotePluginId"
     }
 }
 
@@ -3013,6 +3100,360 @@ struct CodexWireSkillSummary: Codable, Equatable, Sendable {
 struct CodexWireSkillInterface: Codable, Equatable, Sendable {
     let brandColor, defaultPrompt, displayName, iconLarge: String?
     let iconSmall, shortDescription: String?
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginShareDeleteParams
+struct CodexWirePluginShareDeleteParams: Codable, Equatable, Sendable {
+    let remotePluginID: String
+
+    enum CodingKeys: String, CodingKey {
+        case remotePluginID = "remotePluginId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginShareListResponse
+struct CodexWirePluginShareListResponse: Codable, Equatable, Sendable {
+    let data: [CodexWirePluginShareListItem]
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginShareListItem
+struct CodexWirePluginShareListItem: Codable, Equatable, Sendable {
+    let localPluginPath: String?
+    let plugin: CodexWirePluginSummary
+    let shareURL: String
+
+    enum CodingKeys: String, CodingKey {
+        case localPluginPath, plugin
+        case shareURL = "shareUrl"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginShareSaveParams
+struct CodexWirePluginShareSaveParams: Codable, Equatable, Sendable {
+    let discoverability: CodexWirePluginShareDiscoverability?
+    let pluginPath: String
+    let remotePluginID: String?
+    let shareTargets: [CodexWirePluginShareTarget]?
+
+    enum CodingKeys: String, CodingKey {
+        case discoverability, pluginPath
+        case remotePluginID = "remotePluginId"
+        case shareTargets
+    }
+}
+
+enum CodexWirePluginShareDiscoverability: String, Codable, Equatable, Sendable {
+    case listed = "LISTED"
+    case pluginShareDiscoverabilityPRIVATE = "PRIVATE"
+    case unlisted = "UNLISTED"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginShareTarget
+struct CodexWirePluginShareTarget: Codable, Equatable, Sendable {
+    let principalID: String
+    let principalType: CodexWirePluginSharePrincipalType
+
+    enum CodingKeys: String, CodingKey {
+        case principalID = "principalId"
+        case principalType
+    }
+}
+
+enum CodexWirePluginSharePrincipalType: String, Codable, Equatable, Sendable {
+    case group = "group"
+    case user = "user"
+    case workspace = "workspace"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginShareSaveResponse
+struct CodexWirePluginShareSaveResponse: Codable, Equatable, Sendable {
+    let remotePluginID, shareURL: String
+
+    enum CodingKeys: String, CodingKey {
+        case remotePluginID = "remotePluginId"
+        case shareURL = "shareUrl"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginShareUpdateTargetsParams
+struct CodexWirePluginShareUpdateTargetsParams: Codable, Equatable, Sendable {
+    let remotePluginID: String
+    let shareTargets: [CodexWirePluginShareTarget]
+
+    enum CodingKeys: String, CodingKey {
+        case remotePluginID = "remotePluginId"
+        case shareTargets
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginShareUpdateTargetsResponse
+struct CodexWirePluginShareUpdateTargetsResponse: Codable, Equatable, Sendable {
+    let principals: [CodexWirePluginSharePrincipal]
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginSharePrincipal
+struct CodexWirePluginSharePrincipal: Codable, Equatable, Sendable {
+    let name, principalID: String
+    let principalType: CodexWirePluginSharePrincipalType
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case principalID = "principalId"
+        case principalType
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginSkillReadParams
+struct CodexWirePluginSkillReadParams: Codable, Equatable, Sendable {
+    let remoteMarketplaceName, remotePluginID, skillName: String
+
+    enum CodingKeys: String, CodingKey {
+        case remoteMarketplaceName
+        case remotePluginID = "remotePluginId"
+        case skillName
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWirePluginSkillReadResponse
+struct CodexWirePluginSkillReadResponse: Codable, Equatable, Sendable {
+    let contents: String?
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Final process exit notification for `process/spawn`.
+// MARK: - CodexWireProcessExitedNotification
+struct CodexWireProcessExitedNotification: Codable, Equatable, Sendable {
+    /// Process exit code.
+    let exitCode: Int
+    /// Client-supplied, connection-scoped `processHandle` from `process/spawn`.
+    let processHandle: String
+    /// Buffered stderr capture.
+    ///
+    /// Empty when stderr was streamed via `process/outputDelta`.
+    let stderr: String
+    /// Whether stderr reached `outputBytesCap`.
+    ///
+    /// In streaming mode, stderr is empty and cap state is also reported on the final stderr
+    /// `process/outputDelta` notification.
+    let stderrCapReached: Bool
+    /// Buffered stdout capture.
+    ///
+    /// Empty when stdout was streamed via `process/outputDelta`.
+    let stdout: String
+    /// Whether stdout reached `outputBytesCap`.
+    ///
+    /// In streaming mode, stdout is empty and cap state is also reported on the final stdout
+    /// `process/outputDelta` notification.
+    let stdoutCapReached: Bool
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Terminate a running `process/spawn` session.
+// MARK: - CodexWireProcessKillParams
+struct CodexWireProcessKillParams: Codable, Equatable, Sendable {
+    /// Client-supplied, connection-scoped `processHandle` from `process/spawn`.
+    let processHandle: String
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Base64-encoded output chunk emitted for a streaming `process/spawn` request.
+// MARK: - CodexWireProcessOutputDeltaNotification
+struct CodexWireProcessOutputDeltaNotification: Codable, Equatable, Sendable {
+    /// True on the final streamed chunk for this stream when output was truncated by
+    /// `outputBytesCap`.
+    let capReached: Bool
+    /// Base64-encoded output bytes.
+    let deltaBase64: String
+    /// Client-supplied, connection-scoped `processHandle` from `process/spawn`.
+    let processHandle: String
+    /// Output stream this chunk belongs to.
+    let stream: CodexWireOutputStream
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Resize a running PTY-backed `process/spawn` session.
+// MARK: - CodexWireProcessResizePtyParams
+struct CodexWireProcessResizePtyParams: Codable, Equatable, Sendable {
+    /// Client-supplied, connection-scoped `processHandle` from `process/spawn`.
+    let processHandle: String
+    /// New PTY size in character cells.
+    let size: CodexWireProcessTerminalSize
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// New PTY size in character cells.
+///
+/// PTY size in character cells for `process/spawn` PTY sessions.
+// MARK: - CodexWireProcessTerminalSize
+struct CodexWireProcessTerminalSize: Codable, Equatable, Sendable {
+    /// Terminal width in character cells.
+    let cols: Int
+    /// Terminal height in character cells.
+    let rows: Int
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Spawn a standalone process (argv vector) without a Codex sandbox on the host where the
+/// app server is running.
+///
+/// `process/spawn` returns after the process has started and the connection-scoped
+/// `processHandle` has been registered. Process output and exit are reported via
+/// `process/outputDelta` and `process/exited` notifications.
+// MARK: - CodexWireProcessSpawnParams
+struct CodexWireProcessSpawnParams: Codable, Equatable, Sendable {
+    /// Command argv vector. Empty arrays are rejected.
+    let command: [String]
+    /// Absolute working directory for the process.
+    let cwd: String
+    /// Optional environment overrides merged into the app-server process environment.
+    ///
+    /// Matching names override inherited values. Set a key to `null` to unset an inherited
+    /// variable.
+    let env: [String: String?]?
+    /// Optional per-stream stdout/stderr capture cap in bytes.
+    ///
+    /// When omitted, the server default applies. Set to `null` to disable the cap.
+    let outputBytesCap: Int?
+    /// Client-supplied, connection-scoped process handle.
+    ///
+    /// Duplicate active handles are rejected on the same connection. The same handle can be
+    /// reused after the prior process exits.
+    let processHandle: String
+    /// Optional initial PTY size in character cells. Only valid when `tty` is true.
+    let size: CodexWireProcessTerminalSize?
+    /// Allow follow-up `process/writeStdin` requests to write stdin bytes.
+    let streamStdin: Bool?
+    /// Stream stdout/stderr via `process/outputDelta` notifications.
+    ///
+    /// Streamed bytes are not duplicated into the `process/exited` notification.
+    let streamStdoutStderr: Bool?
+    /// Optional timeout in milliseconds.
+    ///
+    /// When omitted, the server default applies. Set to `null` to disable the timeout.
+    let timeoutMS: Int?
+    /// Enable PTY mode.
+    ///
+    /// This implies `streamStdin` and `streamStdoutStderr`.
+    let tty: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case command, cwd, env, outputBytesCap, processHandle, size, streamStdin, streamStdoutStderr
+        case timeoutMS = "timeoutMs"
+        case tty
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Write stdin bytes to a running `process/spawn` session, close stdin, or both.
+// MARK: - CodexWireProcessWriteStdinParams
+struct CodexWireProcessWriteStdinParams: Codable, Equatable, Sendable {
+    /// Close stdin after writing `deltaBase64`, if present.
+    let closeStdin: Bool?
+    /// Optional base64-encoded stdin bytes to write.
+    let deltaBase64: String?
+    /// Client-supplied, connection-scoped `processHandle` from `process/spawn`.
+    let processHandle: String
 }
 
 //
@@ -3211,6 +3652,7 @@ enum CodexWireSummaryTextReasoningItemReasoningSummaryType: String, Codable, Equ
 
 enum CodexWireResponseItemType: String, Codable, Equatable, Sendable {
     case compaction = "compaction"
+    case contextCompaction = "context_compaction"
     case customToolCall = "custom_tool_call"
     case customToolCallOutput = "custom_tool_call_output"
     case functionCall = "function_call"
@@ -3815,10 +4257,14 @@ struct CodexWireThread: Codable, Equatable, Sendable {
     let path: String?
     /// Usually the first user message in the thread, if available.
     let preview: String
+    /// Session id shared by threads that belong to the same session tree.
+    let sessionID: String?
     /// Origin of the thread (CLI, VSCode, codex exec, codex app-server, etc.).
     let source: CodexWireSessionSourceUnion
     /// Current runtime status for the thread.
     let status: CodexWireThreadStatus
+    /// Optional analytics source classification for this thread.
+    let threadSource: CodexWireThreadSource?
     /// Only populated on `thread/resume`, `thread/rollback`, `thread/fork`, and `thread/read`
     /// (when `includeTurns` is true) responses. For all other responses and notifications
     /// returning a Thread, the turns field will be an empty list.
@@ -3829,7 +4275,9 @@ struct CodexWireThread: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case agentNickname, agentRole, cliVersion, createdAt, cwd, ephemeral
         case forkedFromID = "forkedFromId"
-        case gitInfo, id, modelProvider, name, path, preview, source, status, turns, updatedAt
+        case gitInfo, id, modelProvider, name, path, preview
+        case sessionID = "sessionId"
+        case source, status, threadSource, turns, updatedAt
     }
 }
 
@@ -3996,6 +4444,12 @@ enum CodexWireThreadStatusType: String, Codable, Equatable, Sendable {
     case systemError = "systemError"
 }
 
+enum CodexWireThreadSource: String, Codable, Equatable, Sendable {
+    case memoryConsolidation = "memory_consolidation"
+    case subagent = "subagent"
+    case user = "user"
+}
+
 //
 // Hashable or Equatable:
 // The compiler will not be able to synthesize the implementation of Hashable or Equatable
@@ -4011,9 +4465,10 @@ struct CodexWireTurn: Codable, Equatable, Sendable {
     /// Only populated when the Turn's status is failed.
     let error: CodexWireTurnError?
     let id: String
-    /// Only populated on a `thread/resume` or `thread/fork` response. For all other responses
-    /// and notifications returning a Turn, the items field will be an empty list.
+    /// Thread items currently included in this turn payload.
     let items: [CodexWireThreadItem]
+    /// Describes how much of `items` has been loaded for this turn.
+    let itemsView: CodexWireTurnItemsView?
     /// Unix timestamp (in seconds) when the turn started.
     let startedAt: Int?
     let status: CodexWireTurnStatus
@@ -4021,8 +4476,22 @@ struct CodexWireTurn: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case completedAt
         case durationMS = "durationMs"
-        case error, id, items, startedAt, status
+        case error, id, items, itemsView, startedAt, status
     }
+}
+
+/// Describes how much of `items` has been loaded for this turn.
+///
+/// `items` was not loaded for this turn. The field is intentionally empty.
+///
+/// `items` contains only a display summary for this turn.
+///
+/// `items` contains every ThreadItem available from persisted app-server history for this
+/// turn.
+enum CodexWireTurnItemsView: String, Codable, Equatable, Sendable {
+    case full = "full"
+    case notLoaded = "notLoaded"
+    case summary = "summary"
 }
 
 enum CodexWireTurnStatus: String, Codable, Equatable, Sendable {
@@ -4136,14 +4605,15 @@ struct CodexWireThreadStartParams: Codable, Equatable, Sendable {
     /// `modifications` for supported turn/thread adjustments instead of replacing the full
     /// permissions profile.
     let permissions: CodexWirePermissionProfileSelectionParams?
-    /// If true, persist additional rollout EventMsg variants required to reconstruct a richer
-    /// thread history on resume/fork/read.
+    /// Deprecated and ignored by app-server. Kept only so older clients can continue sending the
+    /// field while rollout persistence always uses the limited history policy.
     let persistExtendedHistory: Bool?
     let personality: CodexWirePersonality?
     let sandbox: CodexWireSandboxMode?
-    let serviceName: String?
-    let serviceTier: CodexWireServiceTier?
+    let serviceName, serviceTier: String?
     let sessionStartSource: CodexWireThreadStartSource?
+    /// Optional client-supplied analytics source classification for this thread.
+    let threadSource: CodexWireThreadSource?
 }
 
 //
@@ -4248,7 +4718,7 @@ struct CodexWireThreadStartResponse: Codable, Equatable, Sendable {
     /// Legacy sandbox policy retained for compatibility. Experimental clients should prefer
     /// `permissionProfile` when they need exact runtime permissions.
     let sandbox: CodexWireSandboxPolicy
-    let serviceTier: CodexWireServiceTier?
+    let serviceTier: String?
     let thread: CodexWireThread
 }
 
@@ -4667,7 +5137,7 @@ struct CodexWireTurnStartParams: Codable, Equatable, Sendable {
     /// Override the sandbox policy for this turn and subsequent turns.
     let sandboxPolicy: CodexWireDangerFullAccessSandboxPolicyClass?
     /// Override the service tier for this turn and subsequent turns.
-    let serviceTier: CodexWireServiceTier?
+    let serviceTier: String?
     /// Override the reasoning summary for this turn and subsequent turns.
     let summary: CodexWireReasoningSummary?
     let threadID: String
@@ -4770,6 +5240,23 @@ struct CodexWireWarningNotification: Codable, Equatable, Sendable {
         case message
         case threadID = "threadId"
     }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireWindowsSandboxReadinessResponse
+struct CodexWireWindowsSandboxReadinessResponse: Codable, Equatable, Sendable {
+    let status: CodexWireWindowsSandboxReadiness
+}
+
+enum CodexWireWindowsSandboxReadiness: String, Codable, Equatable, Sendable {
+    case notConfigured = "notConfigured"
+    case ready = "ready"
+    case updateRequired = "updateRequired"
 }
 
 indirect enum CodexWireJSONValue: Codable, Equatable, Sendable {

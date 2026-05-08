@@ -21,7 +21,9 @@ extension CodexThread {
 
             public enum EventName: String, Sendable, Equatable {
                 case permissionRequest
+                case postCompact
                 case postToolUse
+                case preCompact
                 case preToolUse
                 case sessionStart
                 case stop

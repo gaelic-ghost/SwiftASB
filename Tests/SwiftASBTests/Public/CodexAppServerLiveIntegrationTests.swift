@@ -152,7 +152,8 @@ struct CodexAppServerLiveIntegrationTests {
                     sandbox: .workspaceWrite,
                     serviceName: nil,
                     serviceTier: nil,
-                    sessionStartSource: nil
+                    sessionStartSource: nil,
+                    threadSource: nil
                 )
             )
             let threadResponsePayload = try await withTimeout(
@@ -197,7 +198,7 @@ struct CodexAppServerLiveIntegrationTests {
             let diagnostics = try await client.cliExecutableDiagnostics()
             #expect(diagnostics.resolvedExecutablePath == harness.codexExecutableURL.path)
             #expect(diagnostics.versionString.contains("codex-cli"))
-            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.128.x"))
+            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.129.x"))
 
             await client.stop()
         } catch {
@@ -295,7 +296,8 @@ struct CodexAppServerLiveIntegrationTests {
                     sandbox: .workspaceWrite,
                     serviceName: nil,
                     serviceTier: nil,
-                    sessionStartSource: nil
+                    sessionStartSource: nil,
+                    threadSource: nil
                 )
             )
             let threadResponsePayload = try await withTimeout(
