@@ -576,7 +576,8 @@ struct CodexAppServerLiveIntegrationTests {
             let thread = try await startThread(
                 on: client,
                 workspacePath: harness.threadAWorkspace.path,
-                label: "thread-name"
+                label: "thread-name",
+                ephemeral: false
             )
             let expectedName = "SwiftASB live name \(UUID().uuidString)"
 
