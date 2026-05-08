@@ -142,24 +142,42 @@ That means the current priority order is:
    special attention to workspace, filesystem, Git/repository, and app-server
    action families that let sandboxed clients ask Codex for facts instead of
    reading disk directly.
-2. Continue promoting app-server-owned workspace and Git facts beyond the
+2. Add a deliberate `codex mcp-server` support plan as a separate integration
+   lane from `codex app-server`. The current MCP mode should be treated as an
+   external-agent bridge with a smaller stdio tool surface, not as a replacement
+   for the app-server lifecycle SwiftASB already wraps. Verify the live
+   `initialize`, `tools/list`, `resources/list`, and `prompts/list` surface
+   before deciding whether SwiftASB should expose client helpers, examples, or a
+   dedicated package module for it.
+3. Continue promoting app-server-owned workspace and Git facts beyond the
    current cwd, origin metadata, and runtime permission-profile provenance: Git
    worktree root if upstream exposes it, branch/SHA observables, and any
    workspace listing/search/status actions that upstream already owns.
-3. Finish the next descriptor increment beyond the current list, history, and
+4. Evaluate a Worktrunk-based worktree system only after the workspace and Git
+   fact boundary is clearer. The useful shape is a SwiftASB-supported way for
+   clients to ask Codex-owned services for workspace/worktree identity,
+   branch/status facts, and safe handoff points, without committing
+   machine-local paths or turning SwiftASB into a Worktrunk clone.
+5. Explore a custom approval auto-reviewer after the answerable
+   server-request model is stable enough to distinguish advisory review from
+   action approval. The first useful slice should classify approval requests and
+   produce review recommendations; automatically answering requests should wait
+   for an explicit policy model and tests that prove dangerous actions stay
+   user-controlled.
+6. Finish the next descriptor increment beyond the current list, history, and
    recent-activity descriptors: broader public cursor semantics, any
    selection-centered reads that become necessary, and later search-hit
    hydration.
-4. Finish the next `CodexAppServer.Library` slice around richer Git observables
+7. Finish the next `CodexAppServer.Library` slice around richer Git observables
    and app-wide settings/actions, using promoted app-server facts and descriptor
    values where they make list and selection behavior explicit.
-5. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` after v1 as
+8. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` after v1 as
    real UI usage teaches better calibration. The v1 review keeps the separate
    turn/file/command companions, current cache-policy names and defaults,
    selection/visibility protection, slimming behavior, and rehydration model as
    stable enough; remaining work is calibration and richer previews, not proving
    the model exists.
-6. Keep future Codex CLI schema additions classified before public promotion:
+9. Keep future Codex CLI schema additions classified before public promotion:
    `excludeTurns` remains public on resume/fork request models because it
    directly supports the existing paged history model; permission-profile
    families stay internal until SwiftASB owns a deliberate public permission
@@ -168,11 +186,11 @@ That means the current priority order is:
    sessions, marketplace/account-management families, and guardian
    denied-action approval remain post-v1 until their consumer workflows are
    clearer.
-5. Flesh out archive-aware retention and eviction beyond the current list-driven
+10. Flesh out archive-aware retention and eviction beyond the current list-driven
    archive-state drift correction.
-6. Add any sharper binary-discovery diagnostics we want alongside the
+11. Add any sharper binary-discovery diagnostics we want alongside the
    current-reviewed compatibility window before a broader compatibility release.
-7. Revisit whether a convenience `run(...)` API is earned only after the
+12. Revisit whether a convenience `run(...)` API is earned only after the
    lower-level lifecycle has more production mileage.
 
 ## V1 Readiness Checklist
@@ -233,6 +251,15 @@ workflow earns them in a later feature release.
   descriptors, prioritizing workspace, filesystem, Git/repository, and
   app-server action surfaces that let sandboxed clients ask Codex for facts
   instead of reading local disk directly.
+- [ ] Add `codex mcp-server` support as a separate external-agent bridge from
+  `codex app-server`, starting with live surface verification and a clear
+  boundary between MCP tools and SwiftASB's app-server lifecycle API.
+- [ ] Plan a custom approval auto-reviewer that can classify approval requests
+  and recommend responses without silently approving actions before SwiftASB has
+  an explicit policy model.
+- [ ] Plan a Worktrunk-based worktree system around Codex-owned workspace,
+  Git, and worktree facts, keeping machine-local paths out of public dependency
+  or package metadata.
 - [ ] Finish the `CodexAppServer` app-wide observable companion with derived
   repository-root grouping, richer Git observables, and any broader app-wide
   settings/actions that earn public models.
@@ -1243,6 +1270,13 @@ Completed
 - [ ] Promote an upstream app-server fuzzy file-search endpoint later if Codex
   owns indexing, ignore rules, pagination, and result stability clearly enough
   for SwiftASB to wrap it as a separate public API.
+- [ ] Add `codex mcp-server` examples or helpers after the live MCP tool surface
+  is verified and its relationship to the app-server lifecycle is documented.
+- [ ] Add a custom approval auto-reviewer after policy, logging, and
+  user-control boundaries are explicit enough to avoid accidental approvals.
+- [ ] Add a Worktrunk-based worktree system once SwiftASB can lean on
+  app-server-owned workspace and Git facts instead of local filesystem
+  inference.
 - [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
 - [x] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
 - [x] Add a local-only startup mode for recent history observables when live upstream paging is unavailable because the thread is ephemeral or not yet materialized.
@@ -1263,3 +1297,4 @@ Completed
 - 2026-05-06: Promoted bounded file discovery and fuzzy file lookup through `CodexFS.FileDiscoveryQD` and `CodexFS.discoverFiles(_:)`, keeping traversal on app-server `fs/readDirectory` while SwiftASB owns local ranking over returned entries.
 - 2026-05-06: Expanded deterministic coverage for promoted file discovery, config, extension inventory, and workspace-permission request descriptors.
 - 2026-05-07: Added UI-ready `CodexFS.FileDiscoveryHit` search metadata for match kind, matched file-name and relative-path character ranges, and stable ranking reasons.
+- 2026-05-08: Added post-v1 roadmap candidates for `codex mcp-server` support, a custom approval auto-reviewer, and a Worktrunk-based worktree system.
