@@ -143,16 +143,46 @@ public enum CodexWorkspace {
         public let displayName: String
         public let currentDirectoryPath: String
         public let repository: RepositoryInfo?
+        public let worktree: WorktreeSnapshot
 
         /// Creates project identity from app-server-owned cwd and optional Git metadata.
         public init(
             currentDirectoryPath: String,
             repository: RepositoryInfo? = nil
         ) {
-            self.currentDirectoryPath = currentDirectoryPath
-            self.repository = repository
+            let worktree = WorktreeSnapshot(
+                currentDirectoryPath: currentDirectoryPath,
+                repository: repository
+            )
+            self.id = worktree.id
+            self.identitySource = worktree.identitySource
+            self.displayName = worktree.displayName
+            self.currentDirectoryPath = worktree.currentDirectoryPath
+            self.repository = worktree.repository
+            self.worktree = worktree
+        }
+    }
 
-            if let originURL = repository?.originURL, !originURL.isEmpty {
+    /// Codex-reported workspace plus optional Git facts for one thread worktree.
+    ///
+    /// This value is intentionally a snapshot of app-server payloads. It does
+    /// not infer a repository root, run Git commands, or inspect local disk.
+    public struct WorktreeSnapshot: Sendable, Equatable, Identifiable {
+        public let id: String
+        public let identitySource: ProjectInfo.IdentitySource
+        public let displayName: String
+        public let currentDirectoryPath: String
+        public let repository: RepositoryInfo?
+
+        /// Creates a worktree snapshot from an app-server cwd and optional Git facts.
+        public init(
+            currentDirectoryPath: String,
+            repository: RepositoryInfo? = nil
+        ) {
+            self.currentDirectoryPath = currentDirectoryPath
+            self.repository = repository?.normalized
+
+            if let originURL = self.repository?.originURL, !originURL.isEmpty {
                 self.id = originURL
                 self.identitySource = .gitOrigin
                 self.displayName = Self.displayName(forGitOriginURL: originURL)
@@ -161,6 +191,11 @@ public enum CodexWorkspace {
                 self.identitySource = .currentDirectory
                 self.displayName = currentDirectoryPath.isEmpty ? "Unknown Project" : currentDirectoryPath
             }
+        }
+
+        /// True when the app-server reported any Git metadata for this worktree.
+        public var hasRepositoryFacts: Bool {
+            repository?.hasFacts == true
         }
 
         private static func displayName(forGitOriginURL originURL: String) -> String {
@@ -189,13 +224,36 @@ public enum CodexWorkspace {
             branch: String? = nil,
             sha: String? = nil
         ) {
-            self.originURL = originURL
-            self.branch = branch
-            self.sha = sha
+            self.originURL = Self.normalizedFact(originURL)
+            self.branch = Self.normalizedFact(branch)
+            self.sha = Self.normalizedFact(sha)
+        }
+
+        /// True when Codex reported at least one Git fact for this thread.
+        public var hasFacts: Bool {
+            !isEmpty
+        }
+
+        /// Short display form for the reported commit SHA.
+        public var shortSHA: String? {
+            guard let sha, !sha.isEmpty else { return nil }
+            return String(sha.prefix(12))
         }
 
         internal var isEmpty: Bool {
             originURL == nil && branch == nil && sha == nil
+        }
+
+        internal var normalized: Self? {
+            isEmpty ? nil : self
+        }
+
+        private static func normalizedFact(_ value: String?) -> String? {
+            guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !trimmed.isEmpty else {
+                return nil
+            }
+            return trimmed
         }
     }
 
@@ -207,6 +265,7 @@ public enum CodexWorkspace {
         public let permissionProfile: PermissionProfile?
         public let projectInfo: ProjectInfo
         public let sandboxPolicy: CodexAppServer.SandboxPolicy
+        public let worktree: WorktreeSnapshot
     }
 }
 
@@ -388,7 +447,8 @@ extension CodexWorkspace.SessionSnapshot {
             instructionSources: session.instructionSources,
             permissionProfile: session.permissionProfile,
             projectInfo: session.thread.projectInfo,
-            sandboxPolicy: session.sandboxPolicy
+            sandboxPolicy: session.sandboxPolicy,
+            worktree: session.thread.projectInfo.worktree
         )
     }
 }

@@ -2,7 +2,7 @@
 
 This document is the working checklist for the `SwiftASB` v1 public API
 curation pass. The goal is to freeze a compact, Swift-native surface for the
-supported app-server lifecycle before `v1.1.4`, not to expose every generated
+supported app-server lifecycle before `v1.2.0`, not to expose every generated
 wire family.
 
 ## Current Public Source Inventory
@@ -429,7 +429,7 @@ Use these decisions for every public symbol:
 
 - [x] Add symbol comments for every stable v1 public type and method that is not
   self-explanatory from its declaration.
-  Decision: complete for the `v1.1.4` release boundary. Default-bearing public
+  Decision: complete for the `v1.2.0` release boundary. Default-bearing public
   initializers and methods now document whether omission delegates to Codex,
   chooses a SwiftASB local-history/UI default, or applies an explicit safety
   default such as `.turn` or `.unchanged`. The source-level pass also covers the
@@ -489,13 +489,26 @@ Use these decisions for every public symbol:
   and full runtime filesystem/network permission facts reported by the
   app-server. SwiftASB still does not infer repository roots or permission
   policy by walking local directories.
+- [x] Record the worktree snapshot promotion.
+  Decision: `CodexWorkspace.WorktreeSnapshot` is the public value for one
+  app-server-reported cwd plus optional Git origin, branch, and SHA facts.
+  `CodexWorkspace.ProjectInfo`, `CodexAppServer.ThreadInfo`,
+  `CodexAppServer.ThreadSession.workspace`, and
+  `CodexAppServer.Library.ThreadSnapshot` expose the same snapshot so UI and
+  Worktrunk-oriented callers can use one identity/display shape without running
+  Git or deriving repository roots locally. `CodexAppServer.Library` also keeps
+  stable worktree groups, selected worktree/repository context, and sorted
+  worktree/repository thread filters available independent of the caller's
+  visible grouping mode. The current app-server schema does not expose a Git
+  worktree root or working-tree status surface, so those remain future
+  promotion candidates instead of inferred SwiftASB fields.
 - [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.
   Decision: covered by the startup, progress/approval, diagnostics/history, and
   SwiftUI observable companion walkthroughs in `Sources/SwiftASB/SwiftASB.docc/`.
 - [x] Update stale README release references before the next release.
-  Decision: README now names `v1.1.4` as the current released baseline.
+  Decision: README now names `v1.2.0` as the current released baseline.
 - [x] Confirm README, DocC, and this audit use the same v1 release boundary.
   Decision: README, DocC, and this audit now describe the same narrow v1
   promise: app-server lifecycle, app-wide capability reads, stored-thread

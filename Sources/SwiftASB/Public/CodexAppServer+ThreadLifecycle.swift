@@ -217,6 +217,11 @@ extension CodexAppServer {
         public let source: ThreadSource
         public let status: ThreadStatus
         public let updatedAt: Int
+
+        /// Codex-reported cwd plus optional Git facts for this thread.
+        public var worktree: CodexWorkspace.WorktreeSnapshot {
+            projectInfo.worktree
+        }
     }
 
     /// Request used to read a stored thread snapshot.

@@ -87,9 +87,11 @@ final class ThreadInspectorModel {
 
 ## Selection And Cache Behavior
 
-`CodexAppServer.Library` is the app-wide companion for launchers, sidebars, and project browsers. It publishes value snapshots for unarchived threads, archived threads, cwd groups, ``CodexWorkspace/ProjectInfo`` values for thread and repository-group identity, and ``CodexAppServer/ThreadSource`` values for source badges; it also reloads from local persistence after app-wide thread and turn events such as archive, unarchive, name changes, status changes, and completed turns.
+`CodexAppServer.Library` is the app-wide companion for launchers, sidebars, and project browsers. It publishes value snapshots for unarchived threads, archived threads, cwd groups, stable worktree groups, ``CodexWorkspace/ProjectInfo`` values for thread and repository-group identity, ``CodexWorkspace/WorktreeSnapshot`` values for Codex-reported cwd plus optional Git facts, and ``CodexAppServer/ThreadSource`` values for source badges; it also reloads from local persistence after app-wide thread and turn events such as archive, unarchive, name changes, status changes, and completed turns.
 
 Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/selectThread(_:)-(String?)`` for library-local selection. The selection timestamp stays inside the library and can drive ``CodexAppServer/Library/SortedBy/selectedNewestFirst`` without writing UI preference state into Codex's stored thread metadata.
+
+Use ``CodexAppServer/Library/worktreeGroups`` when a sidebar needs repository/workspace sections independent of the current visible grouping mode. Use ``CodexAppServer/Library/threads(inWorktreeID:includeArchived:)`` or ``CodexAppServer/Library/threads(inRepositoryOriginURL:includeArchived:)`` when a project browser needs the sorted threads for one Codex-reported worktree or Git origin without reading local disk.
 
 Use ``CodexAppServer/Library/refreshAppSnapshots()`` when the same app-wide UI needs model capabilities, MCP server status, and hook diagnostics. Library derives hook `cwd` requests from its stored thread snapshots unless configuration provides explicit hook current-directory paths.
 

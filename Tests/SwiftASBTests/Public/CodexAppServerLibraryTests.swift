@@ -110,6 +110,7 @@ extension CodexAppServerTests {
                         cwd: "/tmp/package-a",
                         gitBranch: "main",
                         gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+                        gitSHA: "abcdef1234567890",
                         name: "Package A",
                         preview: "First repo thread",
                         statusType: "notLoaded",
@@ -167,10 +168,124 @@ extension CodexAppServerTests {
         #expect(repositoryGroup.projectInfo?.identitySource == .gitOrigin)
         #expect(repositoryGroup.projectInfo?.repository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
         #expect(repositoryGroup.projectInfo?.repository?.branch == nil)
+        #expect(repositoryGroup.projectInfo?.worktree.id == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(repositoryGroup.projectInfo?.worktree.identitySource == .gitOrigin)
+        #expect(repositoryGroup.projectInfo?.worktree.hasRepositoryFacts == true)
         #expect(repositoryGroup.threads.map(\.id) == ["thread-package-a", "thread-package-b"])
+        #expect(repositoryGroup.threads.first?.worktree.id == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(repositoryGroup.threads.first?.worktree.repository?.shortSHA == "abcdef123456")
         #expect(repositoryGroup.threads.first?.projectInfo.repository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
         #expect(repositoryGroup.threads.first?.projectInfo.repository?.branch == "main")
         #expect(repositoryGroup.threads.first?.source == .cli)
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @MainActor
+    @Test("library exposes worktree views independent of visible grouping")
+    func libraryExposesWorktreeViewsIndependentOfVisibleGrouping() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadListResultQueue: [
+                [
+                    "data": [
+                        storedThread(
+                            id: "thread-active",
+                            cwd: "/tmp/package-active",
+                            gitBranch: "main",
+                            gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+                            gitSHA: "abcdef1234567890",
+                            name: "Active package",
+                            preview: "Active repo thread",
+                            statusType: "notLoaded",
+                            updatedAt: 1713350030
+                        ),
+                        storedThread(
+                            id: "thread-standalone",
+                            cwd: "/tmp/standalone",
+                            name: "Standalone",
+                            preview: "Standalone thread",
+                            statusType: "notLoaded",
+                            updatedAt: 1713350020
+                        ),
+                    ],
+                    "nextCursor": NSNull(),
+                ],
+                [
+                    "data": [
+                        storedThread(
+                            id: "thread-archived",
+                            cwd: "/tmp/package-archived",
+                            gitBranch: "main",
+                            gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+                            name: "Archived package",
+                            preview: "Archived repo thread",
+                            statusType: "notLoaded",
+                            updatedAt: 1713350010
+                        ),
+                    ],
+                    "nextCursor": NSNull(),
+                ],
+            ]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(transport: transport, historyStore: historyStore)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(clientInfo: .init(name: "SwiftASBTests", title: "SwiftASB Tests", version: "0.1.0"))
+        )
+
+        let library = try await client.makeLibrary(
+            configuration: .init(
+                pageSize: 10,
+                groupedBy: .none,
+                reconcilesOnCreation: false,
+                loadsAppSnapshotsOnCreation: false
+            )
+        )
+
+        await library.refresh()
+
+        #expect(library.groups.isEmpty)
+        #expect(library.worktreeGroups.map(\.id) == [
+            "/tmp/standalone",
+            "https://github.com/gaelic-ghost/SwiftASB.git",
+        ])
+        #expect(library.worktreeGroups.first(where: {
+            $0.id == "https://github.com/gaelic-ghost/SwiftASB.git"
+        })?.worktree?.repository?.shortSHA == "abcdef123456")
+        let repositoryWorktree = try #require(library.worktreeGroups.first(where: {
+            $0.id == "https://github.com/gaelic-ghost/SwiftASB.git"
+        })?.worktree)
+        #expect(library.threads(inRepositoryOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git").map(\.id) == [
+            "thread-active",
+        ])
+        #expect(library.threads(in: repositoryWorktree).map(\.id) == [
+            "thread-active",
+        ])
+        #expect(library.threads(inWorktreeID: repositoryWorktree.id).map(\.id) == [
+            "thread-active",
+        ])
+        #expect(library.threads(
+            inRepositoryOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+            includeArchived: true
+        ).map(\.id) == [
+            "thread-active",
+            "thread-archived",
+        ])
+        #expect(library.threads(in: repositoryWorktree, includeArchived: true).map(\.id) == [
+            "thread-active",
+            "thread-archived",
+        ])
+        #expect(library.threads(inWorktreeID: repositoryWorktree.id, includeArchived: true).map(\.id) == [
+            "thread-active",
+            "thread-archived",
+        ])
+
+        library.selectThread("thread-active")
+        #expect(library.selectedWorktree?.id == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(library.selectedRepository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
 
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
@@ -609,6 +724,7 @@ private func storedThread(
     cwd: String,
     gitBranch: String? = nil,
     gitOriginURL: String? = nil,
+    gitSHA: String? = nil,
     name: String,
     preview: String,
     statusType: String,
@@ -632,13 +748,13 @@ private func storedThread(
         thread["gitInfo"] = [
             "branch": gitBranch,
             "originUrl": gitOriginURL as Any? ?? NSNull(),
-            "sha": NSNull(),
+            "sha": gitSHA as Any? ?? NSNull(),
         ]
-    } else if let gitOriginURL {
+    } else if gitOriginURL != nil || gitSHA != nil {
         thread["gitInfo"] = [
             "branch": NSNull(),
-            "originUrl": gitOriginURL,
-            "sha": NSNull(),
+            "originUrl": gitOriginURL as Any? ?? NSNull(),
+            "sha": gitSHA as Any? ?? NSNull(),
         ]
     }
     return thread
