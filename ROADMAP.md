@@ -158,7 +158,12 @@ That means the current priority order is:
    fact boundary is clearer. The useful shape is a SwiftASB-supported way for
    clients to ask Codex-owned services for workspace/worktree identity,
    branch/status facts, and safe handoff points, without committing
-   machine-local paths or turning SwiftASB into a Worktrunk clone.
+   machine-local paths or turning SwiftASB into a Worktrunk clone. Richer local
+   file-write, repository-root, and working-tree status enrichment should live
+   behind a separate optional app-access layer where a consuming macOS app can
+   report user-granted directory access or pass a security-scoped bookmark,
+   following Apple's sandbox model instead of treating local disk access as an
+   implicit SwiftASB capability.
 5. Explore a custom approval auto-reviewer after the answerable
    server-request model is stable enough to distinguish advisory review from
    action approval. The first useful slice should classify approval requests and
@@ -261,6 +266,10 @@ workflow earns them in a later feature release.
 - [ ] Plan a Worktrunk-based worktree system around Codex-owned workspace,
   Git, and worktree facts, keeping machine-local paths out of public dependency
   or package metadata.
+- [ ] Plan an optional macOS app-access layer for user-granted directory access
+  and security-scoped bookmark handoff, so consuming apps can explicitly tell
+  SwiftASB when richer local file-write, repository-root, and working-tree
+  status enrichment is allowed.
 - [ ] Finish the `CodexAppServer` app-wide observable companion with derived
   repository-root grouping, richer Git observables, and any broader app-wide
   settings/actions that earn public models.
@@ -1278,6 +1287,10 @@ Completed
 - [ ] Add a Worktrunk-based worktree system once SwiftASB can lean on
   app-server-owned workspace and Git facts instead of local filesystem
   inference.
+- [ ] Add an optional sandbox-friendly app-access capability layer for
+  consuming macOS apps that have explicit user-granted directory access,
+  including security-scoped bookmark handoff if that proves to be the right
+  integration shape.
 - [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
 - [x] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
 - [x] Add a local-only startup mode for recent history observables when live upstream paging is unavailable because the thread is ephemeral or not yet materialized.
@@ -1301,3 +1314,4 @@ Completed
 - 2026-05-08: Added `CodexWorkspace.WorktreeSnapshot` so thread, session, and library snapshots expose a single app-server-owned cwd plus Git-facts value without inferring repository roots from local disk.
 - 2026-05-08: Added post-v1 roadmap candidates for `codex mcp-server` support, a custom approval auto-reviewer, and a Worktrunk-based worktree system.
 - 2026-05-08: Added stable `CodexAppServer.Library.worktreeGroups`, selected worktree/repository context, and repository/worktree thread filters for app-wide sidebars without changing the caller-selected visible grouping mode.
+- 2026-05-08: Added a future optional macOS app-access layer for user-granted directory access and security-scoped bookmark handoff, keeping richer local repository and file-write enrichment separate from app-server-reported workspace facts.
