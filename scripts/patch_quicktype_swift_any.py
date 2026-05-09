@@ -131,7 +131,7 @@ def patch_codable_output(source: str) -> str:
 
 
 def patch_cross_version_compatibility(source: str) -> str:
-    """Keep the promoted v0.129 graph tolerant of v0.128 guardrail payloads."""
+    """Keep the promoted v0.130 graph tolerant of older guardrail payloads."""
     replacements = [
         ("    let completedAtMS: Int\n", "    let completedAtMS: Int?\n"),
         ("    let startedAtMS: Int\n", "    let startedAtMS: Int?\n"),

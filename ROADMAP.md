@@ -41,7 +41,7 @@
 | --- | --- | --- |
 | Bundled schema-driven wire generation | `Shipped internally` | `scripts/generate-wire-types.sh` derives from the bundled v2 schema, patches dynamic JSON to `CodexWireJSONValue`, and validates the staged Swift output. |
 | Promoted generated v2 wire snapshot | `Shipped internally` | `Sources/SwiftASB/Generated/CodexWire/Latest/` now contains a wider lifecycle batch covering bootstrap, stored and loaded thread reads, filesystem reads and watches, config reads, extension inventory, thread goals, and many thread, turn, item, reasoning, and tool-progress notifications, alongside the hand-owned `CodexWireInitializeResponse` shim. |
-| Codex CLI schema review | `Shipped / ongoing` | The current reviewed compatibility window is `codex-cli 0.129.x`; the v0.129 schema families have been classified for the current boundary, and `scripts/dump-codex-schemas.sh` makes future versioned experimental dumps repeatable by default. Future Codex CLI schema families still need public/observable/internal decisions before promotion. |
+| Codex CLI schema review | `Shipped / ongoing` | The current reviewed compatibility window is `codex-cli 0.130.x`; the v0.130 schema families have been classified for the current boundary, and `scripts/dump-codex-schemas.sh` makes future versioned experimental dumps repeatable by default. Future Codex CLI schema families still need public/observable/internal decisions before promotion. |
 | Stdio subprocess transport | `Shipped internally` | The transport launches `codex app-server --listen stdio://`, frames newline-delimited JSON, correlates request IDs, and captures stderr for diagnostics. |
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
 | Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, core thread and turn methods, archive-state actions, filesystem reads and watches, config reads, app/skill/plugin/collaboration-mode inventory, model/MCP/hook reads, MCP resource reads, and thread-goal methods are encoded through the protocol layer. |
@@ -83,7 +83,7 @@
 | Server request / approval handling | `Partially shipped` | Typed approval and elicitation request models now surface on thread and turn event streams, explicit response APIs exist on `CodexThread` and `CodexTurnHandle`, request resolution is tracked by JSON-RPC request id, and deterministic command-approval plus permissions-approval completion are covered through the real app-server with a mock Responses provider. Diagnostics are now separated from control flows: passive warning/model/guardian signals are public diagnostics, while guardian denied-action approval remains internal until SwiftASB owns a stable request/response model for it. |
 | Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list`, seeds previously unknown local threads from paged history, widens persisted turn identity to stay thread-scoped across forks, and records explicit fork lineage while preserving conservative reconciliation that keeps richer local detail when upstream stored history is thinner. Public history paging/search helpers and archive-retention policy are still open. |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
-| Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a current-reviewed Codex CLI support window of `0.129.x`, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
+| Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a current-reviewed Codex CLI support window of `0.130.x`, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
 | README-level consumer docs | `Shipped / ongoing` | The README covers installation, runtime assumptions, first-use examples, the supported lifecycle, SwiftUI companion surfaces, and the current Codex CLI compatibility window. Future README work should track new public API additions rather than prerelease readiness. |
 | Agent workflow guidance | `Shipped / ongoing` | SwiftASB-specific Codex guidance now ships through `socket`'s [`swiftasb-skills`](https://github.com/gaelic-ghost/socket/tree/main/plugins/swiftasb-skills) plugin, with skills for explaining SwiftASB, choosing an integration shape, building SwiftUI-facing app state, and diagnosing integration failures. This repo now points package users and maintainers at that plugin while keeping SwiftASB source, DocC, tests, generated-wire review, and release notes here as the package source of truth. |
 | End-to-end subprocess integration tests | `Shipped / ongoing` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including raw transport startup, single-turn completion, cross-thread completion, app-wide model/MCP/hook diagnostics snapshots, thread-name mutation, stored-history materialization, same-thread concurrency probing, deterministic command and permissions approvals through a mock Responses provider, a best-effort prompt-driven approval-path probe, a disposable live rollback scenario, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The umbrella runner is `scripts/run-live-codex-integration-tests.sh`; it defaults to the release-gate set and exposes focused modes for smoke, transport, capability, thread, turn, approval, file-scenario, rollback, same-thread, and all opt-in live tests. Stored-history materialization remains in focused `thread`/`all` runs instead of the release-gate smoke group because the live app-server can delay history materialization. |
@@ -488,6 +488,15 @@ workflow earns them in a later feature release.
   Request-side `serviceTier` stays public as the existing hand-owned
   `CodexAppServer.ServiceTier` while the internal wire now carries open string
   values.
+- [x] Classify the Codex CLI `v0.130.0` schema diff before promotion.
+  Decision: remove the generated device-key request families from the promoted
+  boundary, keep plugin-sharing and guardian-review timing additions internal,
+  preserve `skills/list` source compatibility while rejecting the removed
+  per-cwd extra user roots option with a descriptive error, expose the new
+  `thread/turns/items/list` page as a hand-owned low-level stored item API, let
+  `thread/turns/list` request an explicit item-detail view through
+  `CodexAppServer.TurnItemsView`, and promote plugin detail hook summaries as
+  read-only extension inventory.
 - [x] Confirm generated wire stays internal in docs, source organization, and
   public examples.
   Decision: generated wire remains internal scaffolding. Public docs and README
@@ -497,14 +506,14 @@ workflow earns them in a later feature release.
   declarations expose `CodexWire...` names.
 - [x] Re-run schema drift fixture coverage after any promoted generated-wire
   refresh.
-  Progress: `swift test` has been rerun after the v0.129 promoted-wire refresh
+  Progress: `swift test` has been rerun after the v0.130 promoted-wire refresh
   and exercises the v0.128 permission-profile fixtures, request/response
-  envelopes, notification fixtures, public conversion paths, and v0.129
+  envelopes, notification fixtures, public conversion paths, and v0.130
   generated-wire compatibility for new thread and item lifecycle fields.
 - [x] Decide whether v1 should support only the latest documented rolling window
   or whether a shorter first-v1 compatibility promise is more honest.
   Decision: use a narrow latest-reviewed-minor support window, currently
-  `0.129.x`, and widen deliberately after generated-wire and public API review
+  `0.130.x`, and widen deliberately after generated-wire and public API review
   catches up
   with later Codex CLI releases.
 
@@ -614,7 +623,7 @@ workflow earns them in a later feature release.
 #### Compatibility Window
 
 - The compatibility promise is intentionally narrow while app-server schema is
-  moving quickly: reviewed support for Codex CLI `0.129.x`.
+  moving quickly: reviewed support for Codex CLI `0.130.x`.
 - SwiftASB discovers `codex` from an explicit executable URL, `PATH`, common
   Homebrew locations, or the npm global prefix, and exposes startup diagnostics
   through `cliExecutableDiagnostics()`.
@@ -933,12 +942,12 @@ not as the current maintainer priority.
 - Centered local history reads through `windowAroundTurn(...)` and
   `windowAroundItem(...)` before any broader cursor or transcript-search
   contract.
-- A `v0.129.0` experimental schema compatibility pass has refreshed the staging
-  generator, updated the Codex CLI compatibility window, kept plugin-sharing,
-  process-control, Windows-sandbox-readiness, thread-source, and turn-items-view
-  schema families internal, made new thread/item required fields tolerant of
-  v0.128 payloads, and promoted compact hook event names through the existing
-  hook metadata and dashboard surfaces.
+- A `v0.130.0` experimental schema compatibility pass has refreshed the staging
+  generator, updated the Codex CLI compatibility window, kept plugin-sharing
+  and guardian-review timing internal, promoted stored turn-item paging and
+  explicit turn-item view selection, rejected the removed per-cwd extra skill
+  roots request option with a descriptive error, and exposed plugin detail hook
+  summaries through the extension inventory surface.
 - API curation and DocC docs good enough that a Swift consumer can understand
   the supported package surface without reading maintainer notes, including
   walkthroughs for the primary v1 lifecycle jobs.

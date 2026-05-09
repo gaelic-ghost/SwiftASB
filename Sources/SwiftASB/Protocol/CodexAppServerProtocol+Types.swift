@@ -266,12 +266,14 @@ struct CodexProtocolThreadListResponse: Decodable, Equatable, Sendable {
 
 struct CodexProtocolThreadTurnsListParams: Encodable, Equatable, Sendable {
     let cursor: String?
+    let itemsView: CodexWireTurnItemsView?
     let limit: Int?
     let sortDirection: CodexProtocolThreadTurnsSortDirection?
     let threadID: String
 
     enum CodingKeys: String, CodingKey {
         case cursor
+        case itemsView
         case limit
         case sortDirection
         case threadID = "threadId"

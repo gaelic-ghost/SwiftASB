@@ -84,6 +84,8 @@ public extension CodexAppServer {
 
             public var currentDirectoryPaths: [String]?
             public var forceReload: Bool?
+            /// Deprecated by Codex CLI 0.130.0. The app-server no longer accepts
+            /// per-cwd extra skill roots on `skills/list`.
             public var perCurrentDirectoryExtraUserRoots: [ExtraUserRootsForCurrentDirectory]?
 
             public init(
@@ -220,11 +222,19 @@ public extension CodexAppServer {
         public struct PluginDetail: Sendable, Equatable {
             public let apps: [AppSummary]
             public let description: String?
+            public let hooks: [PluginHookSummary]
             public let marketplaceName: String
             public let marketplacePath: String?
             public let mcpServers: [String]
             public let skills: [SkillSummary]
             public let summary: PluginSummary
+        }
+
+        public struct PluginHookSummary: Sendable, Equatable, Identifiable {
+            public var id: String { key }
+
+            public let eventName: HookMetadata.EventName
+            public let key: String
         }
 
         public struct AppSummary: Sendable, Equatable, Identifiable {
@@ -500,12 +510,45 @@ extension CodexAppServer.CodexExtensions.PluginDetail {
         self.init(
             apps: wireValue.apps.map(CodexAppServer.CodexExtensions.AppSummary.init),
             description: wireValue.description,
+            hooks: wireValue.hooks.map(CodexAppServer.CodexExtensions.PluginHookSummary.init),
             marketplaceName: wireValue.marketplaceName,
             marketplacePath: wireValue.marketplacePath,
             mcpServers: wireValue.mcpServers,
             skills: wireValue.skills.map(CodexAppServer.CodexExtensions.SkillSummary.init),
             summary: .init(wireValue: wireValue.summary)
         )
+    }
+}
+
+extension CodexAppServer.CodexExtensions.PluginHookSummary {
+    init(wireValue: CodexWirePluginHookSummary) {
+        self.init(
+            eventName: .init(wireValue: wireValue.eventName),
+            key: wireValue.key
+        )
+    }
+}
+
+extension CodexAppServer.HookMetadata.EventName {
+    init(wireValue: CodexWireHookEventName) {
+        switch wireValue {
+        case .permissionRequest:
+            self = .permissionRequest
+        case .postCompact:
+            self = .postCompact
+        case .postToolUse:
+            self = .postToolUse
+        case .preCompact:
+            self = .preCompact
+        case .preToolUse:
+            self = .preToolUse
+        case .sessionStart:
+            self = .sessionStart
+        case .stop:
+            self = .stop
+        case .userPromptSubmit:
+            self = .userPromptSubmit
+        }
     }
 }
 

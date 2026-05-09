@@ -1100,6 +1100,11 @@ public actor CodexAppServer {
         _ request: CodexExtensions.SkillListRequest
     ) async throws -> CodexExtensions.SkillListSnapshot {
         try requireInitialized(for: "skills/list")
+        if request.perCurrentDirectoryExtraUserRoots != nil {
+            throw CodexAppServerError.invalidState(
+                reason: "Codex CLI 0.130.0 removed per-cwd extra user roots from skills/list; pass currentDirectoryPaths and forceReload only."
+            )
+        }
 
         let requestID = CodexRPCRequestID.generated()
 
@@ -1108,13 +1113,7 @@ public actor CodexAppServer {
                 id: requestID,
                 params: .init(
                     cwds: request.currentDirectoryPaths,
-                    forceReload: request.forceReload,
-                    perCwdExtraUserRoots: request.perCurrentDirectoryExtraUserRoots?.map {
-                        .init(
-                            cwd: $0.currentDirectoryPath,
-                            extraUserRoots: $0.extraUserRoots
-                        )
-                    }
+                    forceReload: request.forceReload
                 )
             )
             let responsePayload = try await transport.send(requestPayload, id: requestID)
@@ -1263,6 +1262,7 @@ public actor CodexAppServer {
                 id: requestID,
                 params: .init(
                     cursor: request.cursor,
+                    itemsView: request.itemsView.map(CodexWireTurnItemsView.init),
                     limit: request.limit,
                     sortDirection: request.sortDirection.map(CodexProtocolThreadTurnsSortDirection.init),
                     threadID: request.threadID
@@ -1291,6 +1291,45 @@ public actor CodexAppServer {
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "thread/turns/list")
+        }
+    }
+
+    /// Reads a page of stored items for one turn directly from the app-server.
+    ///
+    /// This low-level paging API returns app-server item snapshots without
+    /// assuming the caller has loaded the full containing turn. Paged item reads
+    /// do not mutate SwiftASB's local history store because a single item page
+    /// does not carry enough information to safely reconcile whole-turn item
+    /// ordering.
+    public func listThreadTurnItems(_ request: ThreadTurnsItemsListRequest) async throws -> ThreadTurnsItemsPage {
+        try requireInitialized(for: "thread/turns/items/list")
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeThreadTurnsItemsListRequest(
+                id: requestID,
+                params: .init(
+                    cursor: request.cursor,
+                    limit: request.limit,
+                    sortDirection: request.sortDirection.map(CodexWireSortDirection.init),
+                    threadID: request.threadID,
+                    turnID: request.turnID
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeThreadTurnsItemsListResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(
+                backwardsCursor: response.backwardsCursor,
+                items: response.data.map(CodexTurnItem.init(wireValue:)),
+                nextCursor: response.nextCursor
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "thread/turns/items/list")
         }
     }
 
