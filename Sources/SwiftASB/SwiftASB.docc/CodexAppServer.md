@@ -49,6 +49,8 @@ Use ``config`` to read effective app-server configuration and requirements polic
 
 Use ``extensions`` to read app, skill, plugin, and collaboration-mode inventory through the app-server instead of inspecting installed plugin or skill directories directly.
 
+Use ``CodexExtensions/upgradeMarketplace(_:)`` for the narrow extension-maintenance mutation SwiftASB owns today: upgrading an already-configured plugin marketplace through app-server `command/exec`. The method preflights `plugin/list`, respects ``SwiftASBFeaturePolicy``'s `extensionMaintenance` category, and emits a ``SwiftASBFeatureOperationEvent``.
+
 Use ``makeLibrary(configuration:)`` when a GUI or CLI client needs an app-wide observable over stored threads. The library loads local Core Data-backed snapshots first, then reconciles unarchived app-server pages before archived pages. It publishes SwiftASB value snapshots, not Core Data objects.
 
 `Library` also reloads local snapshots after app-wide thread and turn events, so archive, unarchive, name, status, and completed-turn changes can update sidebars without each consumer wiring per-thread event streams.
@@ -102,6 +104,8 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``CodexConfig``
 - ``extensions``
 - ``CodexExtensions``
+- ``CodexExtensions/MarketplaceUpgradeRequest``
+- ``CodexExtensions/MarketplaceUpgradeResult``
 - ``listModels(_:)``
 - ``ModelListRequest``
 - ``ModelListPage``

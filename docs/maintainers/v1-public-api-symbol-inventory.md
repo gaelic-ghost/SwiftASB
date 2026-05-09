@@ -762,6 +762,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexFS` now includes bounded file discovery and SwiftASB-owned fuzzy ranking over app-server-returned directory entries: `FileDiscoveryQD`, `FileDiscoveryResult`, `FileDiscoveryHit`, `FileDiscoveryHit.Kind`, and `discoverFiles(_:)`.
 - `CodexConfig` owns effective config reads: `ReadRequest`, `Snapshot`, `Layer`, `LayerMetadata`, `LayerSource`, `LayerSource.Kind`, `RequirementsSnapshot`, `read(_:)`, and `readRequirements()`.
 - `CodexAppServer.CodexExtensions` owns app-server extension inventory: `AppListRequest`, `AppListPage`, `AppInfo`, `SkillListRequest`, `SkillListSnapshot`, `PluginListRequest`, `PluginListSnapshot`, `PluginReadRequest`, `PluginDetail`, `PluginHookSummary`, `CollaborationModeList`, `listApps(_:)`, `listSkills(_:)`, `listPlugins(_:)`, `readPlugin(_:)`, and `listCollaborationModes()`.
+- `CodexAppServer.CodexExtensions` also owns the first extension-maintenance mutation: `MarketplaceUpgradeRequest`, `MarketplaceUpgradeResult`, and `upgradeMarketplace(_:)` for already-configured plugin marketplaces.
 - `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
@@ -776,8 +777,8 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 
 ## Public Property Counts By Source File
 
-- `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 19 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+CodexExtensions.swift`: 113 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 20 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+CodexExtensions.swift`: 126 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 10 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Hooks.swift`: 32 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 66 public properties

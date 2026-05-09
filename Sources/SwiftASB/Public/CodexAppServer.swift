@@ -88,6 +88,7 @@ public actor CodexAppServer {
 
     private let transport: any CodexAppServerTransporting
     private let protocolLayer: CodexAppServerProtocol
+    private let featurePolicy: SwiftASBFeaturePolicy
     private static let logger = Logger(
         subsystem: "com.gaelic-ghost.SwiftASB",
         category: "CodexAppServer"
@@ -125,6 +126,7 @@ public actor CodexAppServer {
     /// Omitting `configuration` uses SwiftASB's standard app-server launch
     /// command and local Codex executable discovery.
     public init(configuration: Configuration = .init()) {
+        self.featurePolicy = configuration.featurePolicy
         self.transport = CodexAppServerTransport(
             configuration: CodexAppServerTransport.Configuration(
                 codexExecutableURL: configuration.codexExecutableURL,
@@ -146,10 +148,12 @@ public actor CodexAppServer {
     internal init(
         transport: any CodexAppServerTransporting,
         protocolLayer: CodexAppServerProtocol = CodexAppServerProtocol(),
-        historyStore: ThreadHistoryStore? = nil
+        historyStore: ThreadHistoryStore? = nil,
+        featurePolicy: SwiftASBFeaturePolicy = .defaults
     ) {
         self.transport = transport
         self.protocolLayer = protocolLayer
+        self.featurePolicy = featurePolicy
         if let historyStore {
             self.historyStore = historyStore
             self.historyStoreInitializationError = nil
@@ -336,6 +340,26 @@ public actor CodexAppServer {
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "command/exec")
+        }
+    }
+
+    internal func codexCommandExecutablePath() async -> String {
+        await transport.executableResolution()?.resolvedExecutableURL?.path ?? "codex"
+    }
+
+    internal func requireFeatureEnabled(
+        _ categoryID: SwiftASBFeatureCategory.ID,
+        for operation: String
+    ) throws {
+        guard featurePolicy.mode(for: categoryID) != .disabled else {
+            let categoryName = SwiftASBFeatureCategory.builtInCategory(id: categoryID)?.displayName
+                ?? categoryID.rawValue
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB cannot run \(operation) because the \(categoryName) feature category is disabled. \
+                Enable \(categoryID.rawValue) in SwiftASBFeaturePolicy before requesting this SwiftASB-owned mutation.
+                """
+            )
         }
     }
 

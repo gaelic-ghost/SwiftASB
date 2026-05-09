@@ -31,6 +31,7 @@ extension CodexAppServer {
         public var arguments: [String]
         public var currentDirectoryURL: URL?
         public var environment: [String: String]?
+        public var featurePolicy: SwiftASBFeaturePolicy
 
         /// Creates launch configuration for the app-server subprocess.
         ///
@@ -38,17 +39,20 @@ extension CodexAppServer {
         /// supported local install locations. Omitting `arguments` starts the
         /// standard stdio app-server command. Omitting `currentDirectoryURL` or
         /// `environment` lets the launched process inherit the caller's current
-        /// process defaults.
+        /// process defaults. Omitting `featurePolicy` uses SwiftASB's built-in
+        /// feature-category defaults.
         public init(
             codexExecutableURL: URL? = nil,
             arguments: [String] = ["app-server", "--listen", "stdio://"],
             currentDirectoryURL: URL? = nil,
-            environment: [String: String]? = nil
+            environment: [String: String]? = nil,
+            featurePolicy: SwiftASBFeaturePolicy = .defaults
         ) {
             self.codexExecutableURL = codexExecutableURL
             self.arguments = arguments
             self.currentDirectoryURL = currentDirectoryURL
             self.environment = environment
+            self.featurePolicy = featurePolicy
         }
     }
 

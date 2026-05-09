@@ -301,10 +301,15 @@ Status: shipped on `docs/feature-permission-plan`.
 
 ### Slice 5: Existing Extension Maintenance
 
-- Promote the narrow installed-extension update path after the app-server schema
-  and current Codex behavior are verified.
-- Keep listing and update checks on by default.
-- Treat new installs, uninstalls, config mutation, and sharing mutation as
+- Status: shipped.
+- Verified the promoted app-server schema has read-only `plugin/list` and
+  `plugin/read` but no plugin-marketplace upgrade method.
+- Verified the installed Codex CLI exposes
+  `codex plugin marketplace upgrade [MARKETPLACE_NAME]`.
+- Added `CodexAppServer.CodexExtensions.upgradeMarketplace(_:)` as a typed
+  `extensionMaintenance` intent backed by app-server `command/exec`.
+- Kept listing and update checks on by default.
+- Treated new installs, uninstalls, config mutation, and sharing mutation as
   separate stricter categories.
 
 ### Slice 6: Swift Repo Guidance Sync

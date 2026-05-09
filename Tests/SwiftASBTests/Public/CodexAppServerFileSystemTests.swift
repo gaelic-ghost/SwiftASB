@@ -372,6 +372,107 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("CodexExtensions upgrades configured marketplaces through command exec")
+    func codexExtensionsUpgradesConfiguredMarketplacesThroughCommandExec() async throws {
+        let transport = FakeCodexAppServerTransport(
+            commandExecResult: [
+                "exitCode": 0,
+                "stderr": "",
+                "stdout": "Marketplace openai-curated upgraded.\n",
+            ]
+        )
+        let client = CodexAppServer(transport: transport)
+        let operationStream = await client.featureOperationEvents()
+        let operationTask = Task {
+            var iterator = operationStream.makeAsyncIterator()
+            return await iterator.next()
+        }
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let result = try await client.extensions.upgradeMarketplace(
+            .init(
+                marketplaceName: "openai-curated",
+                currentDirectoryPaths: ["/tmp/project"],
+                timeoutMilliseconds: 30_000
+            )
+        )
+
+        #expect(result.marketplaceName == "openai-curated")
+        #expect(result.exitCode == 0)
+        #expect(result.status == .succeeded)
+        #expect(result.stdout == "Marketplace openai-curated upgraded.\n")
+        #expect(result.command == ["codex", "plugin", "marketplace", "upgrade", "openai-curated"])
+
+        let methods = await transport.recordedMethods
+        #expect(methods.contains("plugin/list"))
+        #expect(methods.contains("command/exec"))
+        #expect(!methods.contains("thread/start"))
+
+        let pluginsRequest = try #require(await transport.recordedRequestPayload(for: "plugin/list"))
+        #expect(value(at: ["params", "cwds"], in: try decodedJSONObject(from: pluginsRequest)) as? [String] == ["/tmp/project"])
+
+        let commandRequest = try #require(await transport.recordedRequestPayload(for: "command/exec"))
+        let commandJSON = try decodedJSONObject(from: commandRequest)
+        #expect(value(at: ["params", "command"], in: commandJSON) as? [String] == result.command)
+        #expect(value(at: ["params", "timeoutMs"], in: commandJSON) as? Int == 30_000)
+        #expect(value(at: ["params", "permissionProfile"], in: commandJSON) == nil)
+        #expect(value(at: ["params", "sandboxPolicy"], in: commandJSON) == nil)
+
+        let operation = try #require(await operationTask.value)
+        #expect(operation.categoryID == .extensionMaintenance)
+        #expect(operation.operationID == result.operationID)
+        #expect(operation.title == "Upgrade plugin marketplace")
+        #expect(operation.status == .succeeded)
+        #expect(operation.commands.first?.argv == result.command)
+        #expect(operation.appServerMethod == "command/exec")
+        #expect(operation.intentKind == "extensionMarketplaceUpgrade")
+        #expect(operation.rollback.isAvailable == false)
+
+        await client.stop()
+    }
+
+    @Test("CodexExtensions refuses marketplace upgrades when maintenance is disabled")
+    func codexExtensionsRefusesMarketplaceUpgradesWhenMaintenanceIsDisabled() async throws {
+        var featurePolicy = SwiftASBFeaturePolicy.defaults
+        featurePolicy.setMode(.disabled, for: .extensionMaintenance)
+
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport, featurePolicy: featurePolicy)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        await #expect(throws: CodexAppServerError.self) {
+            try await client.extensions.upgradeMarketplace(
+                .init(marketplaceName: "openai-curated")
+            )
+        }
+
+        let methods = await transport.recordedMethods
+        #expect(!methods.contains("plugin/list"))
+        #expect(!methods.contains("command/exec"))
+
+        await client.stop()
+    }
+
     @Test("CodexExtensions rejects removed per-cwd extra skill roots option")
     func codexExtensionsRejectsRemovedPerCwdExtraSkillRootsOption() async throws {
         let transport = FakeCodexAppServerTransport()

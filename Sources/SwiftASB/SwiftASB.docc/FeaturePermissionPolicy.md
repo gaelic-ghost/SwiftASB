@@ -20,6 +20,13 @@ app-server method or SwiftASB intent kind, result status, rollback metadata, and
 diagnostic text when a feature operation fails. Routine read-only refreshes such
 as selected-worktree Git status hydration stay quiet.
 
+Pass ``SwiftASBFeaturePolicy`` through ``CodexAppServer/Configuration`` to
+control app-server-owned convenience mutations. The default policy enables
+``SwiftASBFeatureCategory/ID/extensionMaintenance``, which permits
+``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` for already-configured
+plugin marketplaces while leaving new installs, removals, sharing changes, and
+configuration writes out of scope.
+
 The initial built-in categories are:
 
 - ``SwiftASBFeatureCategory/ID/gitObservability``
