@@ -60,6 +60,7 @@
 | App-server filesystem reads and watches | `Partially shipped` | `CodexAppServer.fs` now exposes the `CodexFS` namespace for app-server-routed metadata, directory listing, file-byte reads, bounded file discovery, SwiftASB-owned fuzzy ranking over app-server-returned entries, UI-ready discovery match metadata, and filesystem watch notifications. This gives sandboxed clients a Codex-owned path for basic filesystem facts and picker/search views instead of requiring direct local disk reads. File mutations and repository-root discovery remain separate schema families for later promotion decisions. |
 | App-server config reads | `Partially shipped` | `CodexAppServer.config` now exposes `CodexConfig` for effective config and requirements reads through the app-server. Effective config stays JSON-shaped for now so SwiftASB does not turn unstable config keys into long-lived public Swift fields too early. |
 | App-server extension inventory | `Partially shipped` | `CodexAppServer.extensions` now exposes `CodexAppServer.CodexExtensions` for app, skill, plugin, and collaboration-mode inventory. Plugin install/uninstall/upgrade and skills config writes remain unpromoted until their permission and review model is clearer. |
+| SwiftASB feature permission policy | `First slice shipped` | `SwiftASBFeaturePolicy`, `SwiftASBFeatureCategory`, and `SwiftASBHostAccess` now describe feature-category defaults and host access declarations. Maintainer planning targets quiet read-only Git/config/extension inventory by default, one-time mutation-category enablement, and human-readable mutation events instead of repeated prompts. See [`docs/maintainers/feature-permission-policy-plan.md`](docs/maintainers/feature-permission-policy-plan.md). |
 | Thread goals | `Partially shipped` | `CodexThread.readGoal()`, `setGoal(...)`, and `clearGoal()` wrap `thread/goal/get`, `thread/goal/set`, and `thread/goal/clear`, and thread event streams now surface goal updated and cleared notifications. |
 | Paged turn-history flow | `Shipped` | `listThreadTurns(...)` wraps `thread/turns/list`, returns typed paged turn values, and can now seed the local history cache even before that thread has been loaded locally. |
 | Typed async thread event stream | `Partially shipped` | `CodexThread.events` now streams `thread/started`, `thread/status/changed`, `thread/archived`, `thread/unarchived`, `thread/name/updated`, `thread/tokenUsage/updated`, `thread/goal/updated`, `thread/goal/cleared`, and `thread/closed`, but broader thread lifecycle coverage is still pending. |
@@ -137,24 +138,32 @@ The package can now:
 
 That means the current priority order is:
 
-1. Review the currently bundled app-server schema families that are not yet
+1. Implement the feature permission policy described in
+   [`docs/maintainers/feature-permission-policy-plan.md`](docs/maintainers/feature-permission-policy-plan.md):
+   read-only and inventory features stay enabled by default, mutation
+   categories are enabled once by the consuming app, and every write/mutation
+   emits human-readable observable operation events instead of recurring
+   prompts.
+2. Review the currently bundled app-server schema families that are not yet
    promoted through SwiftASB's hand-shaped protocol/public surfaces, with
    special attention to workspace, filesystem, Git/repository, and app-server
    action families that let sandboxed clients ask Codex for facts instead of
    reading disk directly.
-2. Continue promoting app-server-owned workspace and Git facts beyond the
+3. Continue promoting app-server-owned workspace and Git facts beyond the
    current cwd, origin metadata, runtime permission-profile provenance, and
    `CodexWorkspace.WorktreeSnapshot`: Git worktree root if upstream exposes it,
    branch/SHA observables, and any workspace listing/search/status actions that
-   upstream already owns.
-3. Add a deliberate `codex mcp-server` support plan as a separate integration
+   upstream already owns. Use sandboxed `command/exec` fallback only for typed
+   Git fact intents that upstream does not expose yet; do not use unsandboxed
+   `process/spawn` for permission-sensitive helpers.
+4. Add a deliberate `codex mcp-server` support plan as a separate integration
    lane from `codex app-server`. The current MCP mode should be treated as an
    external-agent bridge with a smaller stdio tool surface, not as a replacement
    for the app-server lifecycle SwiftASB already wraps. Verify the live
    `initialize`, `tools/list`, `resources/list`, and `prompts/list` surface
    before deciding whether SwiftASB should expose client helpers, examples, or a
    dedicated package module for it.
-4. Evaluate a Worktrunk-based worktree system only after the workspace and Git
+5. Evaluate a Worktrunk-based worktree system only after the workspace and Git
    fact boundary is clearer. The useful shape is a SwiftASB-supported way for
    clients to ask Codex-owned services for workspace/worktree identity,
    branch/status facts, and safe handoff points, without committing
@@ -164,32 +173,32 @@ That means the current priority order is:
    report user-granted directory access or pass a security-scoped bookmark,
    following Apple's sandbox model instead of treating local disk access as an
    implicit SwiftASB capability.
-5. Plan command-execution-backed Git and GitHub actions for consuming apps that
+6. Plan command-execution-backed Git and GitHub actions for consuming apps that
    want Codex-like repository operations through SwiftASB. The first useful
    shape should route explicit user-reviewed actions through installed `git`
    and optional `gh` binaries when available, keep command output and approval
    decisions observable, and reuse the app-access/perms model instead of
    silently expanding filesystem authority.
-6. Explore a custom approval auto-reviewer after the answerable
+7. Explore a custom approval auto-reviewer after the answerable
    server-request model is stable enough to distinguish advisory review from
    action approval. The first useful slice should classify approval requests and
    produce review recommendations; automatically answering requests should wait
    for an explicit policy model and tests that prove dangerous actions stay
    user-controlled.
-7. Finish the next descriptor increment beyond the current list, history, and
+8. Finish the next descriptor increment beyond the current list, history, and
    recent-activity descriptors: broader public cursor semantics, any
    selection-centered reads that become necessary, and later search-hit
    hydration.
-8. Finish the next `CodexAppServer.Library` slice around app-wide
+9. Finish the next `CodexAppServer.Library` slice around app-wide
    settings/actions, using promoted app-server facts and descriptor values
    where they make list and selection behavior explicit.
-9. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` after v1 as
+10. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` after v1 as
    real UI usage teaches better calibration. The v1 review keeps the separate
    turn/file/command companions, current cache-policy names and defaults,
    selection/visibility protection, slimming behavior, and rehydration model as
    stable enough; remaining work is calibration and richer previews, not proving
    the model exists.
-10. Keep future Codex CLI schema additions classified before public promotion:
+11. Keep future Codex CLI schema additions classified before public promotion:
    `excludeTurns` remains public on resume/fork request models because it
    directly supports the existing paged history model; permission-profile
    families stay internal until SwiftASB owns a deliberate public permission
@@ -198,11 +207,11 @@ That means the current priority order is:
    sessions, marketplace/account-management families, and guardian
    denied-action approval remain post-v1 until their consumer workflows are
    clearer.
-11. Flesh out archive-aware retention and eviction beyond the current list-driven
+12. Flesh out archive-aware retention and eviction beyond the current list-driven
    archive-state drift correction.
-12. Add any sharper binary-discovery diagnostics we want alongside the
+13. Add any sharper binary-discovery diagnostics we want alongside the
    current-reviewed compatibility window before a broader compatibility release.
-13. Revisit whether a convenience `run(...)` API is earned only after the
+14. Revisit whether a convenience `run(...)` API is earned only after the
    lower-level lifecycle has more production mileage.
 
 ## V1 Readiness Checklist
@@ -259,6 +268,18 @@ workflow earns them in a later feature release.
 - [ ] Structured patch rendering for `RecentFiles`.
 - [ ] Mixed `RecentActivity` timeline. Keep `RecentTurns`, `RecentFiles`, and
   `RecentCommands` separate for v1.
+- [ ] Implement the SwiftASB feature permission policy: built-in category
+  descriptors, read-only defaults, host-access declaration, mutation-category
+  enablement, and human-readable mutation events.
+- [ ] Promote sandboxed `command/exec` as the internal execution primitive for
+  typed Git/GitHub helper intents, while keeping unsandboxed `process/spawn`
+  out of permission-sensitive public helpers.
+- [ ] Add proactive Git observability refresh to `CodexAppServer.Library` so
+  selected threads/worktrees hydrate branch, SHA, repository, remote, and status
+  facts when `gitObservability` is enabled.
+- [ ] Add the trusted Swift repo guidance sync category, starting with
+  Apple/Swift repo guidance, Git preflight, idempotent writes, observable
+  mutation events, and one-action rollback when possible.
 - [ ] Review and promote more app-server schema families before widening query
   descriptors, prioritizing workspace, filesystem, Git/repository, and
   app-server action surfaces that let sandboxed clients ask Codex for facts
@@ -1290,7 +1311,9 @@ Completed
 - [ ] Add a broader public history cursor or transcript search surface after the local history contract is clearer.
 - [ ] Add richer MCP progress detail either as public event cases or as deeper observable companion state.
 - [ ] Add guardian denied-action approval once SwiftASB owns a stable request and response model for that control flow.
-- [ ] Add marketplace upgrade and account-management surfaces after SwiftASB has a concrete app-wide management workflow.
+- [ ] Add marketplace upgrade and account-management surfaces after SwiftASB has
+  a concrete app-wide management workflow and feature-category policy for
+  extension inventory, maintenance, and mutation.
 - [ ] Add external-agent config import surfaces after external-agent configuration becomes a public app-server management workflow.
 - [ ] Add structured patch rendering for `RecentFiles`.
 - [x] Add richer `CodexFS.FileDiscoveryHit` search metadata soon, including
@@ -1338,3 +1361,4 @@ Completed
 - 2026-05-08: Added stable `CodexAppServer.Library.worktreeGroups`, selected worktree/repository context, and repository/worktree thread filters for app-wide sidebars without changing the caller-selected visible grouping mode.
 - 2026-05-08: Added a future optional macOS app-access layer for user-granted directory access and security-scoped bookmark handoff, keeping richer local repository and file-write enrichment separate from app-server-reported workspace facts.
 - 2026-05-08: Added future command-execution-backed Git and GitHub actions through installed `git` and optional `gh`, scoped by explicit user-reviewed command intents and the app-access permission model.
+- 2026-05-09: Added the feature permission policy implementation plan, shifting the next app-wide action work toward quiet read-only defaults, one-time mutation-category enablement, proactive Git observability, and human-readable mutation events.

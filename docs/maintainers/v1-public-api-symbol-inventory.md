@@ -771,6 +771,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexAppServer.ThreadStartRequest`, `ThreadResumeRequest`, `ThreadForkRequest`, `TurnStartRequest`, `CodexThread.TurnStartRequest`, and `CodexThread.startTextTurn(...)` now accept optional `CodexWorkspace.PermissionSelection` values.
 - `CodexAppServer.ThreadSession` and `CodexThread` now expose active permission-profile provenance, runtime permission facts, app-server-owned project identity, app-server-owned worktree snapshots, and a `CodexWorkspace.SessionSnapshot`.
 - `CodexAppServer.ThreadInfo` and `CodexAppServer.Library.ThreadSnapshot` now expose `CodexAppServer.ThreadSource` so launcher UIs can badge CLI, app-server, editor, custom, and sub-agent threads without reading generated wire values.
+- `SwiftASBFeaturePolicy`, `SwiftASBFeatureCategory`, `SwiftASBFeatureMode`, `SwiftASBFeatureSensitivity`, `SwiftASBFeatureEventPolicy`, and `SwiftASBHostAccess` now describe SwiftASB-owned convenience-feature policy, built-in category defaults, and host access declarations without replacing Codex app-server sandboxing.
 
 ## Public Property Counts By Source File
 
@@ -797,3 +798,4 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexThread.swift`: 71 public properties
 - `Sources/SwiftASB/Public/CodexTurnHandle.swift`: 108 public properties
 - `Sources/SwiftASB/Public/CodexWorkspace.swift`: 44 public properties
+- `Sources/SwiftASB/Public/SwiftASBFeaturePolicy.swift`: 13 public properties
