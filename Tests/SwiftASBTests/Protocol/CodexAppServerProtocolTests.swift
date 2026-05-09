@@ -90,8 +90,10 @@ struct CodexAppServerProtocolTests {
 
     @Test("decodes command/exec output as connection-scoped command output")
     func decodesCommandExecOutputAsConnectionScopedOutput() throws {
-        let payload = #"{"capReached":false,"deltaBase64":"aGVsbG8K","processId":"swiftasb-command-1","stream":"stdout"}"#
-            .data(using: .utf8)!
+        let payload = try #require(
+            #"{"capReached":false,"deltaBase64":"aGVsbG8K","processId":"swiftasb-command-1","stream":"stdout"}"#
+                .data(using: .utf8)
+        )
 
         let event = try protocolLayer.decodeServerEvent(
             .notification(method: "command/exec/outputDelta", payload: payload)

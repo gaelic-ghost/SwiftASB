@@ -104,6 +104,7 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``CodexConfig``
 - ``extensions``
 - ``CodexExtensions``
+- ``CodexExtensions/upgradeMarketplace(_:)``
 - ``CodexExtensions/MarketplaceUpgradeRequest``
 - ``CodexExtensions/MarketplaceUpgradeResult``
 - ``listModels(_:)``

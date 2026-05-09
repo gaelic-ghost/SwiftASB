@@ -316,7 +316,7 @@ public enum CodexWorkspace {
         }
 
         public var isDirty: Bool {
-            changedFileCount > 0
+            changedFileCount > 0 || untrackedFileCount > 0
         }
     }
 

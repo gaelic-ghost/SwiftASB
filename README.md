@@ -31,7 +31,7 @@ SwiftASB is a native Swift client/runtime layer for AI coding agent app-servers 
 
 ### Motivation
 
-I built SwiftASB because I saw so many others building and forking existing Apps for agentic coding on thee desktop. I wanted to build my own, of course, but I also wanted to make it easier for anyone to build a custom UI tailored to the way they like to work. SwiftASB handles the complexity and rough edges, providing a rock-solid foundation for everyone from vibecoders to staff engineers. Just grab the `swiftasb-skills` plugin from [Socket Marketplace](https://www.github.com/gaelic-ghost/socket) and you're off to the races.
+I built SwiftASB because I saw so many others building and forking existing Apps for agentic coding on the desktop. I wanted to build my own, of course, but I also wanted to make it easier for anyone to build a custom UI tailored to the way they like to work. SwiftASB handles the complexity and rough edges, providing a rock-solid foundation for everyone from vibecoders to staff engineers. Just grab the `swiftasb-skills` plugin from [Socket Marketplace](https://www.github.com/gaelic-ghost/socket) and you're off to the races.
 
 ## Quick Start
 

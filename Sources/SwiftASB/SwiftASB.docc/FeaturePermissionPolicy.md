@@ -9,9 +9,11 @@ Codex approvals answer server-originated requests during a thread or turn.
 Feature policy says which SwiftASB convenience categories a consuming app has
 enabled.
 
-Read-only and inventory categories are available by default. Mutation categories
-are disabled until the consuming app enables them, and enabled mutations should
-emit human-readable operation events as those surfaces land.
+Read-only and inventory categories are available by default. Most mutation
+categories are disabled until the consuming app enables them, and enabled
+mutations should emit human-readable operation events as those surfaces land.
+The deliberate default-enabled exception is extension maintenance for
+already-configured plugin marketplaces.
 
 Use ``CodexAppServer/featureOperationEvents()`` to observe those mutation
 records. Each ``SwiftASBFeatureOperationEvent`` carries the category id, stable

@@ -473,6 +473,38 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("CodexExtensions refuses marketplace upgrades when maintenance is read-only")
+    func codexExtensionsRefusesMarketplaceUpgradesWhenMaintenanceIsReadOnly() async throws {
+        var featurePolicy = SwiftASBFeaturePolicy.defaults
+        featurePolicy.setMode(.readOnly, for: .extensionMaintenance)
+
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport, featurePolicy: featurePolicy)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        await #expect(throws: CodexAppServerError.self) {
+            try await client.extensions.upgradeMarketplace(
+                .init(marketplaceName: "openai-curated")
+            )
+        }
+
+        let methods = await transport.recordedMethods
+        #expect(!methods.contains("plugin/list"))
+        #expect(!methods.contains("command/exec"))
+
+        await client.stop()
+    }
+
     @Test("CodexExtensions rejects removed per-cwd extra skill roots option")
     func codexExtensionsRejectsRemovedPerCwdExtraSkillRootsOption() async throws {
         let transport = FakeCodexAppServerTransport()

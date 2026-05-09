@@ -351,12 +351,12 @@ public actor CodexAppServer {
         _ categoryID: SwiftASBFeatureCategory.ID,
         for operation: String
     ) throws {
-        guard featurePolicy.mode(for: categoryID) != .disabled else {
+        guard featurePolicy.mode(for: categoryID) == .enabled else {
             let categoryName = SwiftASBFeatureCategory.builtInCategory(id: categoryID)?.displayName
                 ?? categoryID.rawValue
             throw CodexAppServerError.invalidState(
                 reason: """
-                SwiftASB cannot run \(operation) because the \(categoryName) feature category is disabled. \
+                SwiftASB cannot run \(operation) because the \(categoryName) feature category is not enabled. \
                 Enable \(categoryID.rawValue) in SwiftASBFeaturePolicy before requesting this SwiftASB-owned mutation.
                 """
             )
@@ -2539,6 +2539,7 @@ public actor CodexAppServer {
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
                 )
                 await self.finishAllLibraryEventStreams()
+                await self.finishAllFeatureOperationEventStreams()
                 await self.finishAllFSChangeStreams()
                 await self.finishAllTurnEventStreams(
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
@@ -2886,6 +2887,7 @@ public actor CodexAppServer {
             finishAllThreadEventStreams(throwing: nil)
             finishAllDiagnosticEventStreams(throwing: nil)
             finishAllLibraryEventStreams()
+            finishAllFeatureOperationEventStreams()
             finishAllFSChangeStreams()
             finishAllThreadObservableActivityStreams()
             finishAllThreadCommandDeltaStreams()
@@ -2907,6 +2909,7 @@ public actor CodexAppServer {
             )
         )
         finishAllLibraryEventStreams()
+        finishAllFeatureOperationEventStreams()
         finishAllFSChangeStreams()
         finishAllThreadObservableActivityStreams()
         finishAllThreadCommandDeltaStreams()

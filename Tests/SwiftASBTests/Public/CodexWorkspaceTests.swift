@@ -94,4 +94,15 @@ struct CodexWorkspaceTests {
         #expect(snapshot.isDirty)
         #expect(snapshot.source == .appServerAndCommandExec)
     }
+
+    @Test("Git status summary treats untracked-only worktrees as dirty")
+    func gitStatusSummaryTreatsUntrackedOnlyWorktreesAsDirty() {
+        let status = CodexWorkspace.GitStatusSummary(
+            branch: "main",
+            changedFileCount: 0,
+            untrackedFileCount: 2
+        )
+
+        #expect(status.isDirty)
+    }
 }
