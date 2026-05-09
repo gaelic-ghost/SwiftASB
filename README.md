@@ -35,10 +35,16 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 
 ## Quick Start
 
-Add SwiftASB to your `Package.swift` (or Xcode Project) as a dependency:
+Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-	.package(url: "https://github.com/gaelic-ghost/swiftasb", from: "1.1.2"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.2.1"),
+```
+
+Then add the library product to your target dependencies:
+
+```swift
+.product(name: "SwiftASB", package: "SwiftASB"),
 ```
 
 Check your Codex version:
