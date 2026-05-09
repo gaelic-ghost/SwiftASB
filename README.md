@@ -2,6 +2,12 @@
 
 SwiftASB helps Swift apps work with the local Codex app-server without making app builders deal with Codex's raw app-server messages directly.
 
+Listen to the SwiftASB Codex apps promo clip:
+
+<audio controls src="docs/media/swiftasb-codex-apps-promo.mp3"></audio>
+
+[Download the promo clip](docs/media/swiftasb-codex-apps-promo.mp3)
+
 ## Table of Contents
 
 - [Overview](#overview)
