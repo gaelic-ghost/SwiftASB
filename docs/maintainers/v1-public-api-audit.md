@@ -2,7 +2,7 @@
 
 This document is the working checklist for the `SwiftASB` v1 public API
 curation pass. The goal is to freeze a compact, Swift-native surface for the
-supported app-server lifecycle before `v1.2.1`, not to expose every generated
+supported app-server lifecycle before `v1.3.0`, not to expose every generated
 wire family.
 
 ## Current Public Source Inventory
@@ -429,7 +429,7 @@ Use these decisions for every public symbol:
 
 - [x] Add symbol comments for every stable v1 public type and method that is not
   self-explanatory from its declaration.
-  Decision: complete for the `v1.2.1` release boundary. Default-bearing public
+  Decision: complete for the `v1.3.0` release boundary. Default-bearing public
   initializers and methods now document whether omission delegates to Codex,
   chooses a SwiftASB local-history/UI default, or applies an explicit safety
   default such as `.turn` or `.unchanged`. The source-level pass also covers the
@@ -508,7 +508,7 @@ Use these decisions for every public symbol:
   Decision: covered by the startup, progress/approval, diagnostics/history, and
   SwiftUI observable companion walkthroughs in `Sources/SwiftASB/SwiftASB.docc/`.
 - [x] Update stale README release references before the next release.
-  Decision: README now names `v1.2.1` as the current released baseline.
+  Decision: README now names `v1.3.0` as the current released baseline.
 - [x] Confirm README, DocC, and this audit use the same v1 release boundary.
   Decision: README, DocC, and this audit now describe the same narrow v1
   promise: app-server lifecycle, app-wide capability reads, stored-thread
