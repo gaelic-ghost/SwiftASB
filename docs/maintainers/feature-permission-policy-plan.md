@@ -291,9 +291,13 @@ Status: shipped on `docs/feature-permission-plan`.
 
 ### Slice 4: Mutation Event Stream
 
-- Add an app-wide observable/event stream for SwiftASB-owned feature operations.
-- Emit events for any enabled mutation category.
-- Keep read-only refreshes quiet unless they fail in a user-visible way.
+- Status: shipped.
+- Added `SwiftASBFeatureOperationEvent` as the public, human-readable operation
+  record for SwiftASB-owned feature mutations.
+- Added `CodexAppServer.featureOperationEvents()` as the app-wide observable
+  stream.
+- Kept read-only refreshes quiet unless a future feature promotes a
+  user-visible failure signal.
 
 ### Slice 5: Existing Extension Maintenance
 

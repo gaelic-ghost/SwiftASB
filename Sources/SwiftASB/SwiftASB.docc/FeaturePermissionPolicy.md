@@ -13,6 +13,13 @@ Read-only and inventory categories are available by default. Mutation categories
 are disabled until the consuming app enables them, and enabled mutations should
 emit human-readable operation events as those surfaces land.
 
+Use ``CodexAppServer/featureOperationEvents()`` to observe those mutation
+records. Each ``SwiftASBFeatureOperationEvent`` carries the category id, stable
+operation id, title, summary, reason, timing, affected paths, commands,
+app-server method or SwiftASB intent kind, result status, rollback metadata, and
+diagnostic text when a feature operation fails. Routine read-only refreshes such
+as selected-worktree Git status hydration stay quiet.
+
 The initial built-in categories are:
 
 - ``SwiftASBFeatureCategory/ID/gitObservability``
@@ -38,3 +45,4 @@ through a user-selected directory or security-scoped bookmark.
 - ``SwiftASBFeatureSensitivity``
 - ``SwiftASBFeatureEventPolicy``
 - ``SwiftASBHostAccess``
+- ``SwiftASBFeatureOperationEvent``

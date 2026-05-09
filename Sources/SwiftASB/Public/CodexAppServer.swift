@@ -99,12 +99,14 @@ public actor CodexAppServer {
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
     private var diagnosticEventContinuations: [UUID: AsyncThrowingStream<CodexDiagnosticEvent, Error>.Continuation] = [:]
     private var libraryEventContinuations: [UUID: AsyncStream<LibraryEvent>.Continuation] = [:]
+    private var featureOperationEventContinuations: [UUID: AsyncStream<SwiftASBFeatureOperationEvent>.Continuation] = [:]
     private var fsChangeContinuations: [String: [UUID: AsyncStream<CodexFS.ChangeEvent>.Continuation]] = [:]
     private var threadObservableActivityContinuations: [String: [UUID: AsyncStream<CodexThread.Dashboard.ActivityState>.Continuation]] = [:]
     private var threadCommandDeltaContinuations: [String: [UUID: AsyncStream<CommandExecutionOutputDeltaEvent>.Continuation]] = [:]
     private var threadFileDeltaContinuations: [String: [UUID: AsyncStream<FileChangeOutputDeltaEvent>.Continuation]] = [:]
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
     private var bufferedDiagnosticEvents: [CodexDiagnosticEvent] = []
+    private var bufferedFeatureOperationEvents: [SwiftASBFeatureOperationEvent] = []
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var threadTurnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
     private var turnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
@@ -191,6 +193,7 @@ public actor CodexAppServer {
         finishAllThreadEventStreams(throwing: nil)
         finishAllDiagnosticEventStreams(throwing: nil)
         finishAllLibraryEventStreams()
+        finishAllFeatureOperationEventStreams()
         finishAllFSChangeStreams()
         finishAllThreadObservableActivityStreams()
         finishAllThreadCommandDeltaStreams()
@@ -205,6 +208,7 @@ public actor CodexAppServer {
         turnThreadIDs.removeAll()
         bufferedThreadEvents.removeAll()
         bufferedDiagnosticEvents.removeAll()
+        bufferedFeatureOperationEvents.removeAll()
         bufferedTurnEvents.removeAll()
         bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
@@ -241,6 +245,17 @@ public actor CodexAppServer {
     /// event feed fails unexpectedly.
     public func diagnosticEvents() -> AsyncThrowingStream<CodexDiagnosticEvent, Error> {
         makeDiagnosticEventStream()
+    }
+
+    /// Subscribes to SwiftASB-owned feature-operation events.
+    ///
+    /// Feature-operation events are app-wide, human-readable records for
+    /// SwiftASB convenience operations such as future repo-guidance sync,
+    /// extension maintenance, and typed Git actions. Routine read-only
+    /// refreshes do not emit events. The stream finishes normally when the
+    /// app-server is stopped through SwiftASB.
+    public func featureOperationEvents() -> AsyncStream<SwiftASBFeatureOperationEvent> {
+        makeFeatureOperationEventStream()
     }
 
     /// Performs the app-server initialize handshake.
@@ -1609,6 +1624,21 @@ public actor CodexAppServer {
         }
     }
 
+    internal func publishFeatureOperationEvent(_ event: SwiftASBFeatureOperationEvent) {
+        bufferedFeatureOperationEvents.append(event)
+        if bufferedFeatureOperationEvents.count > 100 {
+            bufferedFeatureOperationEvents.removeFirst(bufferedFeatureOperationEvents.count - 100)
+        }
+
+        guard !featureOperationEventContinuations.isEmpty else {
+            return
+        }
+
+        for continuation in featureOperationEventContinuations.values {
+            continuation.yield(event)
+        }
+    }
+
     internal func fsChangeStream(watchID: String) -> AsyncStream<CodexFS.ChangeEvent> {
         let streamID = UUID()
 
@@ -2913,6 +2943,24 @@ public actor CodexAppServer {
         }
     }
 
+    private func makeFeatureOperationEventStream() -> AsyncStream<SwiftASBFeatureOperationEvent> {
+        let streamID = UUID()
+
+        return AsyncStream { continuation in
+            featureOperationEventContinuations[streamID] = continuation
+
+            for event in bufferedFeatureOperationEvents {
+                continuation.yield(event)
+            }
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeFeatureOperationEventContinuation(streamID: streamID)
+                }
+            }
+        }
+    }
+
     private func makeTurnEventStream(
         turnID: String
     ) -> AsyncThrowingStream<CodexTurnEvent, Error> {
@@ -3008,6 +3056,10 @@ public actor CodexAppServer {
 
     private func removeLibraryEventContinuation(streamID: UUID) {
         libraryEventContinuations.removeValue(forKey: streamID)
+    }
+
+    private func removeFeatureOperationEventContinuation(streamID: UUID) {
+        featureOperationEventContinuations.removeValue(forKey: streamID)
     }
 
     private func removeFSChangeContinuation(streamID: UUID, watchID: String) {
@@ -3270,6 +3322,15 @@ public actor CodexAppServer {
     private func finishAllLibraryEventStreams() {
         let activeContinuations = libraryEventContinuations.values
         libraryEventContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            continuation.finish()
+        }
+    }
+
+    private func finishAllFeatureOperationEventStreams() {
+        let activeContinuations = featureOperationEventContinuations.values
+        featureOperationEventContinuations.removeAll()
 
         for continuation in activeContinuations {
             continuation.finish()

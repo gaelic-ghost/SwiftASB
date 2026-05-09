@@ -15,6 +15,7 @@ The public surface has three main handles:
 - ``CodexConfig`` owns app-server-routed configuration reads for sandboxed clients.
 - ``CodexAppServer/CodexExtensions`` owns app, skill, plugin, and collaboration-mode inventory.
 - ``SwiftASBFeaturePolicy`` owns SwiftASB convenience-feature categories, defaults, and host-access declarations.
+- ``SwiftASBFeatureOperationEvent`` reports SwiftASB-owned mutation operations in human-readable form.
 - ``CodexThread`` owns a single conversation thread, including new turns, thread-management actions, thread event streams, local history windows, and thread-scoped observable companions.
 - ``CodexTurnHandle`` owns one active turn, including turn events, steering, interruption, server-request responses, and an observable current-state minimap.
 
@@ -44,6 +45,7 @@ Generated Codex wire types remain internal scaffolding. Public callers should us
 - ``CodexAppServer/CodexExtensions``
 - ``SwiftASBFeaturePolicy``
 - ``SwiftASBFeatureCategory``
+- ``SwiftASBFeatureOperationEvent``
 - ``CodexThread``
 - ``CodexTurnHandle``
 

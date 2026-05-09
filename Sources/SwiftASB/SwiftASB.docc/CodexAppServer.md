@@ -35,6 +35,8 @@ Use ``cliExecutableDiagnostics()`` when a UI or command-line tool needs to expla
 
 Use ``diagnosticEvents()`` to observe passive runtime diagnostics that are not control requests. These events let clients show or log warnings, guardian warnings, config warnings, deprecation notices, MCP-server status changes, remote-control status changes, model reroutes, and model verification results without exposing generated wire payloads.
 
+Use ``featureOperationEvents()`` to observe human-readable SwiftASB feature-operation records for enabled mutation categories. Routine read-only refreshes stay quiet; writes and maintenance actions report what changed, why SwiftASB changed it, where it changed, and whether rollback is available.
+
 ## App-Wide Capabilities
 
 Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, ``readMcpResource(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, MCP server surface, MCP resource contents, and configured hook diagnostics.
@@ -76,6 +78,8 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``CLIExecutableDiagnostics``
 - ``diagnosticEvents()``
 - ``CodexDiagnosticEvent``
+- ``featureOperationEvents()``
+- ``SwiftASBFeatureOperationEvent``
 
 ### Startup
 
