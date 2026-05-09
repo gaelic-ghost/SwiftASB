@@ -17,7 +17,7 @@ SwiftASB helps Swift apps work with the local Codex app-server without making ap
 
 ### Status
 
-SwiftASB has a supported v1 public API for the core local Codex app-server lifecycle. `v1.2.0` is the current released baseline.
+SwiftASB has a supported v1 public API for the core local Codex app-server lifecycle. `v1.2.1` is the current released baseline.
 
 ### What This Project Is
 
@@ -33,9 +33,9 @@ Add SwiftASB from the GitHub package URL:
 
 https://github.com/gaelic-ghost/SwiftASB
 
-Use release `v1.2.0` or newer unless your project intentionally pins an older version.
+Use release `v1.2.1` or newer unless your project intentionally pins an older version.
 
-You also need a local Codex CLI installation with app-server support. SwiftASB looks for `codex` in the usual command-line locations, and apps can provide an exact executable path when they need stricter control.
+You also need a local Codex CLI installation with app-server support. SwiftASB currently reviews against the `0.130.x` Codex CLI app-server schema window, looks for `codex` in the usual command-line locations, and apps can provide an exact executable path when they need stricter control.
 
 For copy-pasteable startup code, open the DocC getting-started guide:
 

@@ -2,7 +2,7 @@
 set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-SCHEMA_VERSION=${SCHEMA_VERSION:-v0.129.0}
+SCHEMA_VERSION=${SCHEMA_VERSION:-v0.130.0}
 SCHEMA_ROOT="$ROOT_DIR/codex-schemas/$SCHEMA_VERSION"
 DERIVED_DIR="$ROOT_DIR/tmp/derived-schemas/${SCHEMA_VERSION//./_}"
 OUT_DIR="$ROOT_DIR/tmp/quicktype-wire/${SCHEMA_VERSION//./_}"
@@ -110,6 +110,8 @@ build_batch \
   ThreadCompactStartResponse \
   ThreadTurnsListParams \
   ThreadTurnsListResponse \
+  ThreadTurnsItemsListParams \
+  ThreadTurnsItemsListResponse \
   ThreadLoadedListParams \
   ThreadLoadedListResponse \
   ThreadGoalGetParams \

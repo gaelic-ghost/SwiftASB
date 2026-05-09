@@ -309,10 +309,7 @@ extension CodexAppServerTests {
         let skills = try await client.extensions.listSkills(
             .init(
                 currentDirectoryPaths: ["/tmp/project"],
-                forceReload: true,
-                perCurrentDirectoryExtraUserRoots: [
-                    .init(currentDirectoryPath: "/tmp/project", extraUserRoots: ["/tmp/extra-skills"]),
-                ]
+                forceReload: true
             )
         )
         #expect(skills.entries.first?.errors.first?.message == "Skipped duplicate skill.")
@@ -336,6 +333,8 @@ extension CodexAppServerTests {
         #expect(plugin.marketplacePath == "/tmp/marketplaces/openai-curated.json")
         #expect(plugin.description == "GitHub plugin detail fixture.")
         #expect(plugin.apps.first?.needsAuth == true)
+        #expect(plugin.hooks.map(\.key) == ["github-pre-tool-use", "github-post-tool-use"])
+        #expect(plugin.hooks.map(\.eventName) == [.preToolUse, .postToolUse])
         #expect(plugin.skills.first?.displayName == "PR Review")
         #expect(plugin.summary.name == "GitHub")
         #expect(plugin.summary.sourceKind == .git)
@@ -356,9 +355,7 @@ extension CodexAppServerTests {
         let skillsRequestJSON = try decodedJSONObject(from: skillsRequest)
         #expect(value(at: ["params", "cwds"], in: skillsRequestJSON) as? [String] == ["/tmp/project"])
         #expect(value(at: ["params", "forceReload"], in: skillsRequestJSON) as? Bool == true)
-        let extraRoots = try #require(value(at: ["params", "perCwdExtraUserRoots"], in: skillsRequestJSON) as? [[String: Any]])
-        #expect(extraRoots.first?["cwd"] as? String == "/tmp/project")
-        #expect(extraRoots.first?["extraUserRoots"] as? [String] == ["/tmp/extra-skills"])
+        #expect(value(at: ["params", "perCwdExtraUserRoots"], in: skillsRequestJSON) == nil)
 
         let pluginsRequest = try #require(await transport.recordedRequestPayload(for: "plugin/list"))
         let pluginsRequestJSON = try decodedJSONObject(from: pluginsRequest)
@@ -371,6 +368,50 @@ extension CodexAppServerTests {
 
         let collaborationRequest = try #require(await transport.recordedRequestPayload(for: "collaborationMode/list"))
         #expect(value(at: ["params"], in: try decodedJSONObject(from: collaborationRequest)) as? [String: Any] != nil)
+
+        await client.stop()
+    }
+
+    @Test("CodexExtensions rejects removed per-cwd extra skill roots option")
+    func codexExtensionsRejectsRemovedPerCwdExtraSkillRootsOption() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        do {
+            _ = try await client.extensions.listSkills(
+                .init(
+                    currentDirectoryPaths: ["/tmp/project"],
+                    perCurrentDirectoryExtraUserRoots: [
+                        .init(currentDirectoryPath: "/tmp/project", extraUserRoots: ["/tmp/extra-skills"]),
+                    ]
+                )
+            )
+            Issue.record("Expected per-cwd extra skill roots to be rejected for Codex CLI 0.130.0.")
+        } catch let error as CodexAppServerError {
+            guard case let .invalidState(reason) = error else {
+                Issue.record("Expected removed per-cwd extra skill roots to throw an invalidState error.")
+                await client.stop()
+                return
+            }
+
+            #expect(
+                reason
+                    == "Codex CLI 0.130.0 removed per-cwd extra user roots from skills/list; pass currentDirectoryPaths and forceReload only."
+            )
+        }
+
+        #expect(await transport.recordedRequestPayload(for: "skills/list") == nil)
 
         await client.stop()
     }

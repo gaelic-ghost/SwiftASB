@@ -15,6 +15,7 @@ struct CodexAppServerProtocol {
         case threadStart = "thread/start"
         case threadMetadataUpdate = "thread/metadata/update"
         case threadTurnsList = "thread/turns/list"
+        case threadTurnsItemsList = "thread/turns/items/list"
         case threadLoadedList = "thread/loaded/list"
         case threadUnarchive = "thread/unarchive"
         case threadGoalGet = "thread/goal/get"
@@ -187,6 +188,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadTurnsList, params: params),
             method: .threadTurnsList
+        )
+    }
+
+    func makeThreadTurnsItemsListRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadTurnsItemsListParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadTurnsItemsList, params: params),
+            method: .threadTurnsItemsList
         )
     }
 
@@ -606,6 +617,18 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadTurnsList,
             resultType: CodexProtocolThreadTurnsListResponse.self
+        )
+    }
+
+    func decodeThreadTurnsItemsListResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireThreadTurnsItemsListResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadTurnsItemsList,
+            resultType: CodexWireThreadTurnsItemsListResponse.self
         )
     }
 

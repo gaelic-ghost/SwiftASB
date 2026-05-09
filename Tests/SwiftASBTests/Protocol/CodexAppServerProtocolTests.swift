@@ -342,6 +342,7 @@ struct CodexAppServerProtocolTests {
             id: .string("thread-turns-list-1"),
             params: .init(
                 cursor: "cursor-newer",
+                itemsView: .full,
                 limit: 10,
                 sortDirection: .desc,
                 threadID: "thread-123"
@@ -355,9 +356,36 @@ struct CodexAppServerProtocolTests {
 
         let params = try #require(object["params"] as? [String: Any])
         #expect(params["cursor"] as? String == "cursor-newer")
+        #expect(params["itemsView"] as? String == "full")
         #expect(params["limit"] as? Int == 10)
         #expect(params["sortDirection"] as? String == "desc")
         #expect(params["threadId"] as? String == "thread-123")
+    }
+
+    @Test("encodes thread/turns/items/list requests with the expected method and params payload")
+    func encodesThreadTurnsItemsListRequest() throws {
+        let payload = try protocolLayer.makeThreadTurnsItemsListRequest(
+            id: .string("thread-turns-items-list-1"),
+            params: .init(
+                cursor: "cursor-items",
+                limit: 20,
+                sortDirection: .asc,
+                threadID: "thread-123",
+                turnID: "turn-456"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/turns/items/list")
+        #expect(object["id"] as? String == "thread-turns-items-list-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["cursor"] as? String == "cursor-items")
+        #expect(params["limit"] as? Int == 20)
+        #expect(params["sortDirection"] as? String == "asc")
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["turnId"] as? String == "turn-456")
     }
 
     @Test("encodes thread/compact/start requests with the expected method and params payload")
@@ -584,7 +612,7 @@ struct CodexAppServerProtocolTests {
 
         let skillsPayload = try protocolLayer.makeSkillsListRequest(
             id: .string("skills-list-1"),
-            params: .init(cwds: ["/tmp/project"], forceReload: true, perCwdExtraUserRoots: nil)
+            params: .init(cwds: ["/tmp/project"], forceReload: true)
         )
         let skillsRequest = try #require(try JSONSerialization.jsonObject(with: skillsPayload) as? [String: Any])
         #expect(skillsRequest["method"] as? String == "skills/list")

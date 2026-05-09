@@ -837,6 +837,30 @@ extension CodexProtocolThreadTurnsSortDirection {
     }
 }
 
+extension CodexWireSortDirection {
+    init(_ direction: CodexAppServer.ThreadTurnsSortDirection) {
+        switch direction {
+        case .asc:
+            self = .asc
+        case .desc:
+            self = .desc
+        }
+    }
+}
+
+extension CodexWireTurnItemsView {
+    init(_ itemsView: CodexAppServer.TurnItemsView) {
+        switch itemsView {
+        case .full:
+            self = .full
+        case .notLoaded:
+            self = .notLoaded
+        case .summary:
+            self = .summary
+        }
+    }
+}
+
 extension CodexProtocolThreadListSortKey {
     init(_ key: CodexAppServer.ThreadListSortKey) {
         switch key {

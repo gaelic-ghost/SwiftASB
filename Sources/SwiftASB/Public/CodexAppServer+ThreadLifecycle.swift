@@ -407,25 +407,36 @@ extension CodexAppServer {
         case desc
     }
 
+    /// Amount of item detail to include when listing stored turns.
+    public enum TurnItemsView: String, Sendable, Equatable {
+        case full
+        case notLoaded
+        case summary
+    }
+
     public struct ThreadTurnsListRequest: Sendable, Equatable {
         public var cursor: String?
+        public var itemsView: TurnItemsView?
         public var limit: Int?
         public var sortDirection: ThreadTurnsSortDirection?
         public var threadID: String
 
         /// Creates a paged turn-list request for a stored thread.
         ///
-        /// Nil pagination and sort fields are omitted, which keeps the
-        /// app-server in charge of its default page size and ordering.
+        /// Nil pagination, item-view, and sort fields are omitted, which keeps
+        /// the app-server in charge of its default page size, item detail, and
+        /// ordering.
         public init(
             threadID: String,
             limit: Int? = nil,
             cursor: String? = nil,
+            itemsView: TurnItemsView? = nil,
             sortDirection: ThreadTurnsSortDirection? = nil
         ) {
             self.threadID = threadID
             self.limit = limit
             self.cursor = cursor
+            self.itemsView = itemsView
             self.sortDirection = sortDirection
         }
     }
@@ -435,6 +446,39 @@ extension CodexAppServer {
         public let backwardsCursor: String?
         public let nextCursor: String?
         public let turns: [TurnInfo]
+    }
+
+    public struct ThreadTurnsItemsListRequest: Sendable, Equatable {
+        public var cursor: String?
+        public var limit: Int?
+        public var sortDirection: ThreadTurnsSortDirection?
+        public var threadID: String
+        public var turnID: String
+
+        /// Creates a paged item-list request for one stored turn.
+        ///
+        /// Nil pagination and sort fields are omitted, which keeps the
+        /// app-server in charge of its default page size and ordering.
+        public init(
+            threadID: String,
+            turnID: String,
+            limit: Int? = nil,
+            cursor: String? = nil,
+            sortDirection: ThreadTurnsSortDirection? = nil
+        ) {
+            self.threadID = threadID
+            self.turnID = turnID
+            self.limit = limit
+            self.cursor = cursor
+            self.sortDirection = sortDirection
+        }
+    }
+
+    /// One page of stored item-history results for a turn.
+    public struct ThreadTurnsItemsPage: Sendable, Equatable {
+        public let backwardsCursor: String?
+        public let items: [CodexTurnItem]
+        public let nextCursor: String?
     }
 
     /// Current app-server status for a thread.

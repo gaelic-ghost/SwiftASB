@@ -382,6 +382,49 @@ extension CodexAppServerTests {
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
 
+    @Test("lists stored turn items without requiring a local turn snapshot")
+    func listsStoredTurnItems() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let page = try await client.listThreadTurnItems(
+            .init(
+                threadID: "thread-123",
+                turnID: "turn-older",
+                limit: 2,
+                sortDirection: .asc
+            )
+        )
+
+        #expect(page.backwardsCursor == "cursor-newer-items")
+        #expect(page.nextCursor == "cursor-older-items")
+        #expect(page.items.map(\.id) == ["item-command-1", "item-agent-1"])
+        #expect(page.items.first?.kind == .commandExecution)
+        #expect(page.items.first?.command == "swift test")
+
+        let payloads = await transport.requestPayloads(for: "thread/turns/items/list")
+        let payload = try #require(payloads.first)
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        #expect(params["turnId"] as? String == "turn-older")
+        #expect(params["limit"] as? Int == 2)
+        #expect(params["sortDirection"] as? String == "asc")
+
+        await client.stop()
+    }
+
     @Test("streams thread lifecycle notifications through CodexThread.events")
     func streamsThreadLifecycleNotifications() async throws {
         let transport = FakeCodexAppServerTransport()

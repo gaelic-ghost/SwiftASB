@@ -46,6 +46,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var threadTurnsListErrorMessage: String?
     private var threadTurnsListResult: [String: Any]?
     private var threadTurnsListResultQueue: [[String: Any]]
+    private var threadTurnsItemsListResult: [String: Any]?
     private var appSnapshotResponseDelayNanoseconds: UInt64 = 0
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
     private var started = false
@@ -63,7 +64,8 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         turnStartIDQueue: [String] = [],
         threadTurnsListErrorMessage: String? = nil,
         threadTurnsListResult: [String: Any]? = nil,
-        threadTurnsListResultQueue: [[String: Any]] = []
+        threadTurnsListResultQueue: [[String: Any]] = [],
+        threadTurnsItemsListResult: [String: Any]? = nil
     ) {
         self.resolvedExecutable = executableResolution
         self.threadListResult = threadListResult
@@ -76,6 +78,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         self.threadTurnsListErrorMessage = threadTurnsListErrorMessage
         self.threadTurnsListResult = threadTurnsListResult
         self.threadTurnsListResultQueue = threadTurnsListResultQueue
+        self.threadTurnsItemsListResult = threadTurnsItemsListResult
     }
 
     func setThreadListResult(_ result: [String: Any]?) {
@@ -812,6 +815,16 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                             ],
                         ],
                         "description": "GitHub plugin detail fixture.",
+                        "hooks": [
+                            [
+                                "eventName": "preToolUse",
+                                "key": "github-pre-tool-use",
+                            ],
+                            [
+                                "eventName": "postToolUse",
+                                "key": "github-post-tool-use",
+                            ],
+                        ],
                         "marketplaceName": "openai-curated",
                         "marketplacePath": "/tmp/marketplaces/openai-curated.json",
                         "mcpServers": [],
@@ -1097,6 +1110,28 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                         ],
                     ],
                     "nextCursor": "cursor-older",
+                ]
+            )
+        case "thread/turns/items/list":
+            return responsePayload(
+                id: id,
+                result: threadTurnsItemsListResult ?? [
+                    "backwardsCursor": "cursor-newer-items",
+                    "data": [
+                        [
+                            "id": "item-command-1",
+                            "command": "swift test",
+                            "status": "completed",
+                            "type": "commandExecution",
+                        ],
+                        [
+                            "id": "item-agent-1",
+                            "status": "completed",
+                            "text": "Done.",
+                            "type": "agentMessage",
+                        ],
+                    ],
+                    "nextCursor": "cursor-older-items",
                 ]
             )
         case "turn/start":
