@@ -54,4 +54,44 @@ struct CodexWorkspaceTests {
         #expect(snapshot.repository == nil)
         #expect(!snapshot.hasRepositoryFacts)
     }
+
+    @Test("Git status snapshot preserves root remotes and dirty summary")
+    func gitStatusSnapshotPreservesRootRemotesAndDirtySummary() {
+        let snapshot = CodexWorkspace.GitStatusSnapshot(
+            worktreeID: "https://github.com/gaelic-ghost/SwiftASB.git",
+            currentDirectoryPath: "/tmp/SwiftASB",
+            repositoryRootPath: "/tmp/SwiftASB",
+            repository: .init(
+                originURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+                branch: "docs/feature-permission-plan",
+                sha: "abcdef1234567890"
+            ),
+            remotes: [
+                .init(
+                    name: "origin",
+                    url: "https://github.com/gaelic-ghost/SwiftASB.git",
+                    purpose: .fetch
+                ),
+            ],
+            status: .init(
+                branch: "docs/feature-permission-plan",
+                upstream: "origin/docs/feature-permission-plan",
+                aheadCount: 1,
+                changedFileCount: 2,
+                untrackedFileCount: 1
+            ),
+            source: .appServerAndCommandExec
+        )
+
+        #expect(snapshot.id == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(snapshot.repositoryRootPath == "/tmp/SwiftASB")
+        #expect(snapshot.repository?.shortSHA == "abcdef123456")
+        #expect(snapshot.remotes.map(\.name) == ["origin"])
+        #expect(snapshot.status.upstream == "origin/docs/feature-permission-plan")
+        #expect(snapshot.status.aheadCount == 1)
+        #expect(snapshot.status.changedFileCount == 2)
+        #expect(snapshot.status.untrackedFileCount == 1)
+        #expect(snapshot.isDirty)
+        #expect(snapshot.source == .appServerAndCommandExec)
+    }
 }

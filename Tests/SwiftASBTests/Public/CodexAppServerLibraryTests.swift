@@ -645,6 +645,93 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @MainActor
+    @Test("library refreshes selected worktree Git status through command exec")
+    func libraryRefreshesSelectedWorktreeGitStatusThroughCommandExec() async throws {
+        let transport = FakeCodexAppServerTransport(
+            commandExecResultQueue: [
+                commandExecResult(stdout: "/tmp/project\n"),
+                commandExecResult(stdout: "abcdef1234567890\n"),
+                commandExecResult(
+                    stdout: """
+                    origin\thttps://github.com/gaelic-ghost/SwiftASB.git (fetch)
+                    origin\thttps://github.com/gaelic-ghost/SwiftASB.git (push)
+                    upstream\thttps://github.com/openai/codex.git (fetch)
+
+                    """
+                ),
+                commandExecResult(
+                    stdout: """
+                    ## docs/feature-permission-plan...origin/docs/feature-permission-plan [ahead 1, behind 2]
+                     M Sources/SwiftASB/Public/CodexWorkspace.swift
+                    ?? docs/media/swiftasb-codex-apps-promo.mp3
+
+                    """
+                ),
+            ]
+        )
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        _ = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                ephemeral: false
+            )
+        )
+
+        let library = try await client.makeLibrary(
+            configuration: .init(
+                pageSize: 20,
+                reconcilesOnCreation: false,
+                loadsAppSnapshotsOnCreation: false
+            )
+        )
+        library.selectThread("thread-123")
+        try await waitForCondition {
+            await MainActor.run {
+                library.selectedGitStatus != nil
+            }
+        }
+
+        let status = try #require(library.selectedGitStatus)
+        #expect(status.currentDirectoryPath == "/tmp/project")
+        #expect(status.repositoryRootPath == "/tmp/project")
+        #expect(status.repository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(status.repository?.branch == "docs/feature-permission-plan")
+        #expect(status.repository?.shortSHA == "abcdef123456")
+        #expect(status.remotes.count == 3)
+        #expect(status.status.upstream == "origin/docs/feature-permission-plan")
+        #expect(status.status.aheadCount == 1)
+        #expect(status.status.behindCount == 2)
+        #expect(status.status.changedFileCount == 2)
+        #expect(status.status.untrackedFileCount == 1)
+        #expect(status.source == .commandExec)
+        #expect(library.latestGitStatusErrorDescription == nil)
+
+        let commandPayloads = await transport.requestPayloads(for: "command/exec")
+        #expect(commandPayloads.count == 4)
+        let firstCommand = try decodedJSONObject(from: commandPayloads[0])
+        #expect(value(at: ["params", "command"], in: firstCommand) as? [String] == [
+            "git",
+            "-C",
+            "/tmp/project",
+            "rev-parse",
+            "--show-toplevel",
+        ])
+
+        await client.stop()
+    }
+
     @Test("thread list query descriptors provide common list shapes")
     func threadListQueryDescriptorsProvideCommonListShapes() {
         let projectQuery = CodexAppServer.ThreadListQD
@@ -762,6 +849,18 @@ private func storedThread(
 
 private func decodedJSONObject(from data: Data) throws -> [String: Any] {
     try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+}
+
+private func commandExecResult(
+    exitCode: Int = 0,
+    stdout: String,
+    stderr: String = ""
+) -> [String: Any] {
+    [
+        "exitCode": exitCode,
+        "stderr": stderr,
+        "stdout": stdout,
+    ]
 }
 
 private func value(

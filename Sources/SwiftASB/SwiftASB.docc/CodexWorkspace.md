@@ -23,6 +23,8 @@ let thread = try await appServer.startThread(
 
 Use ``SessionSnapshot`` or the workspace values on ``CodexThread`` when a UI needs to show what Codex actually activated for the session: current directory, Git metadata, instruction sources, legacy sandbox policy, active profile id, and exact filesystem/network permissions.
 
+Use ``GitStatusSnapshot`` through ``CodexAppServer/Library/selectedGitStatus`` when a library UI wants live selected-worktree Git facts. SwiftASB starts from Codex-reported repository metadata, then uses sandboxed app-server `command/exec` for repository root, remotes, and porcelain status details that are not attached to stored thread metadata yet.
+
 ## Topics
 
 ### Request Selection
@@ -42,3 +44,13 @@ Use ``SessionSnapshot`` or the workspace values on ``CodexThread`` when a UI nee
 - ``FileSystemPath``
 - ``FileSystemSpecialPath``
 - ``NetworkPermissions``
+
+### Git Observability
+
+- ``ProjectInfo``
+- ``RepositoryInfo``
+- ``WorktreeSnapshot``
+- ``GitStatusSnapshot``
+- ``GitStatusSummary``
+- ``GitRemoteInfo``
+- ``GitFactSource``

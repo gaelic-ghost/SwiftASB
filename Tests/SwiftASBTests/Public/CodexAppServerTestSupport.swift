@@ -48,6 +48,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var threadTurnsListResultQueue: [[String: Any]]
     private var threadTurnsItemsListResult: [String: Any]?
     private var commandExecResult: [String: Any]
+    private var commandExecResultQueue: [[String: Any]]
     private var appSnapshotResponseDelayNanoseconds: UInt64 = 0
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
     private var started = false
@@ -71,7 +72,8 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
             "exitCode": 0,
             "stderr": "",
             "stdout": "",
-        ]
+        ],
+        commandExecResultQueue: [[String: Any]] = []
     ) {
         self.resolvedExecutable = executableResolution
         self.threadListResult = threadListResult
@@ -86,6 +88,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         self.threadTurnsListResultQueue = threadTurnsListResultQueue
         self.threadTurnsItemsListResult = threadTurnsItemsListResult
         self.commandExecResult = commandExecResult
+        self.commandExecResultQueue = commandExecResultQueue
     }
 
     func setThreadListResult(_ result: [String: Any]?) {
@@ -1142,6 +1145,12 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 ]
             )
         case "command/exec":
+            if !commandExecResultQueue.isEmpty {
+                return responsePayload(
+                    id: id,
+                    result: commandExecResultQueue.removeFirst()
+                )
+            }
             return responsePayload(
                 id: id,
                 result: commandExecResult

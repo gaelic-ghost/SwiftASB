@@ -280,6 +280,8 @@ Status: shipped on `docs/feature-permission-plan`.
 
 ### Slice 3: Git Observability
 
+Status: shipped on `docs/feature-permission-plan`.
+
 - Add typed Git fact intents backed by app-server facts first and sandboxed
   `command/exec` fallback second.
 - Hydrate `CodexWorkspace.WorktreeSnapshot` or a sibling Git-status snapshot
