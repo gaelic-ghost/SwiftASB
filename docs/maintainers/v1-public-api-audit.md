@@ -496,9 +496,12 @@ Use these decisions for every public symbol:
   `CodexAppServer.ThreadSession.workspace`, and
   `CodexAppServer.Library.ThreadSnapshot` expose the same snapshot so UI and
   Worktrunk-oriented callers can use one identity/display shape without running
-  Git or deriving repository roots locally. The current app-server schema does
-  not expose a Git worktree root or working-tree status surface, so those remain
-  future promotion candidates instead of inferred SwiftASB fields.
+  Git or deriving repository roots locally. `CodexAppServer.Library` also keeps
+  stable worktree groups, selected worktree/repository context, and sorted
+  worktree/repository thread filters available independent of the caller's
+  visible grouping mode. The current app-server schema does not expose a Git
+  worktree root or working-tree status surface, so those remain future
+  promotion candidates instead of inferred SwiftASB fields.
 - [x] Add DocC examples for app-server startup, thread/turn start, progress
   observation, approval response, diagnostics, recent history, and SwiftUI
   observable companions.

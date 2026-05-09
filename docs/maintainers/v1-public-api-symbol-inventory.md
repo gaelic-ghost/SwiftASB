@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, and on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, and on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.Library` worktree-group helpers, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1883
+- Public/open symbols: 1890
 - Public/open types: 294
 - Public/open initializers: 131
-- Public/open methods and type methods: 129
+- Public/open methods and type methods: 132
 - Public/open enum cases: 363
-- Public/open properties: 963
+- Public/open properties: 967
 
 ## Public Types
 
@@ -326,6 +326,9 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexAppServer.Library.selectThread(_:)` - `@MainActor func selectThread(_ threadID: String?)` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.selectThread(_:)` - `@MainActor func selectThread(_ thread: CodexAppServer.Library.ThreadSnapshot)` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.Library.clearSelection()` - `@MainActor func clearSelection()` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.Library.threads(in:includeArchived:)` - `@MainActor func threads(in worktree: CodexWorkspace.WorktreeSnapshot, includeArchived: Bool = false) -> [CodexAppServer.Library.ThreadSnapshot]` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.Library.threads(inWorktreeID:includeArchived:)` - `@MainActor func threads(inWorktreeID worktreeID: String, includeArchived: Bool = false) -> [CodexAppServer.Library.ThreadSnapshot]` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
+- `CodexAppServer.Library.threads(inRepositoryOriginURL:includeArchived:)` - `@MainActor func threads(inRepositoryOriginURL originURL: String, includeArchived: Bool = false) -> [CodexAppServer.Library.ThreadSnapshot]` - Sources/SwiftASB/Public/CodexAppServer+Library.swift
 - `CodexAppServer.cliExecutableDiagnostics()` - `func cliExecutableDiagnostics() async throws -> CodexAppServer.CLIExecutableDiagnostics` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.compactThread(_:)` - `func compactThread(_ request: CodexAppServer.ThreadCompactRequest) async throws` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.diagnosticEvents()` - `func diagnosticEvents() -> AsyncThrowingStream<CodexDiagnosticEvent, any Error>` - Sources/SwiftASB/Public/CodexAppServer.swift
@@ -763,6 +766,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
 - `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by `CodexWorkspace.ProjectInfo` identity: app-server Git origin metadata with cwd fallback.
+- `CodexAppServer.Library` exposes stable worktree groups, selected worktree/repository context, and sorted repository/worktree thread filters for sidebar and project-browser UIs independent of the caller-selected visible grouping mode.
 - `CodexWorkspace` owns app-server-owned permission selections, runtime workspace permission facts, project identity, and worktree snapshots: `PermissionSelection`, `PermissionSelectionModification`, `ActivePermissionProfile`, `ActivePermissionModification`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, `ProjectInfo`, `RepositoryInfo`, `SessionSnapshot`, and `WorktreeSnapshot`.
 - `CodexAppServer.ThreadStartRequest`, `ThreadResumeRequest`, `ThreadForkRequest`, `TurnStartRequest`, `CodexThread.TurnStartRequest`, and `CodexThread.startTextTurn(...)` now accept optional `CodexWorkspace.PermissionSelection` values.
 - `CodexAppServer.ThreadSession` and `CodexThread` now expose active permission-profile provenance, runtime permission facts, app-server-owned project identity, app-server-owned worktree snapshots, and a `CodexWorkspace.SessionSnapshot`.
@@ -774,7 +778,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexAppServer+CodexExtensions.swift`: 113 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 10 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Hooks.swift`: 32 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 57 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 61 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+LoadedThreads.swift`: 4 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 43 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 23 public properties

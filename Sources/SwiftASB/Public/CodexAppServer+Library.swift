@@ -354,6 +354,11 @@ public extension CodexAppServer {
             public let projectInfo: CodexWorkspace.ProjectInfo?
             public let title: String
             public let threads: [ThreadSnapshot]
+
+            /// Codex-reported cwd plus optional Git facts for this group.
+            public var worktree: CodexWorkspace.WorktreeSnapshot? {
+                projectInfo?.worktree
+            }
         }
 
         public private(set) var archivedThreads: [ThreadSnapshot]
@@ -388,6 +393,7 @@ public extension CodexAppServer {
             }
         }
         public private(set) var unarchivedThreads: [ThreadSnapshot]
+        public private(set) var worktreeGroups: [ThreadGroup]
         public private(set) var snapshotCurrentDirectoryPaths: [String]?
         public private(set) var snapshotPhase: SnapshotPhase
 
@@ -406,6 +412,14 @@ public extension CodexAppServer {
         public var selectedThread: ThreadSnapshot? {
             guard let selectedThreadID else { return nil }
             return allThreads.first { $0.id == selectedThreadID }
+        }
+
+        public var selectedWorktree: CodexWorkspace.WorktreeSnapshot? {
+            selectedThread?.worktree
+        }
+
+        public var selectedRepository: CodexWorkspace.RepositoryInfo? {
+            selectedThread?.worktree.repository
         }
 
         @ObservationIgnored
@@ -475,6 +489,7 @@ public extension CodexAppServer {
             self.snapshotPhase = .idle
             self.sortedBy = configuration.sortedBy
             self.unarchivedThreads = []
+            self.worktreeGroups = []
             applyVisibleState()
 
             if configuration.reconcilesOnCreation {
@@ -618,6 +633,29 @@ public extension CodexAppServer {
             selectThread(nil)
         }
 
+        public func threads(
+            in worktree: CodexWorkspace.WorktreeSnapshot,
+            includeArchived: Bool = false
+        ) -> [ThreadSnapshot] {
+            threads(inWorktreeID: worktree.id, includeArchived: includeArchived)
+        }
+
+        public func threads(
+            inWorktreeID worktreeID: String,
+            includeArchived: Bool = false
+        ) -> [ThreadSnapshot] {
+            sortedVisibleThreads(includeArchived: includeArchived)
+                .filter { $0.worktree.id == worktreeID }
+        }
+
+        public func threads(
+            inRepositoryOriginURL originURL: String,
+            includeArchived: Bool = false
+        ) -> [ThreadSnapshot] {
+            sortedVisibleThreads(includeArchived: includeArchived)
+                .filter { $0.worktree.repository?.originURL == originURL }
+        }
+
         private func refreshArchiveScope(_ archived: Bool) async {
             if isReconciling || isLoadingLocalSnapshot {
                 return
@@ -697,6 +735,10 @@ public extension CodexAppServer {
                 from: unarchivedThreads,
                 groupedBy: groupedBy
             )
+            worktreeGroups = Self.groups(
+                from: unarchivedThreads,
+                groupedBy: .repository
+            )
         }
 
         private func recordSelection(threadID: String) {
@@ -722,6 +764,15 @@ public extension CodexAppServer {
             let uniquePaths = Array(Set(currentDirectoryPaths))
                 .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
             return uniquePaths.isEmpty ? nil : uniquePaths
+        }
+
+        private func sortedVisibleThreads(includeArchived: Bool) -> [ThreadSnapshot] {
+            let threads = includeArchived ? allThreads : allThreads.filter { !$0.isArchived }
+            return Self.sort(
+                threads,
+                by: sortedBy,
+                selectionOrderByThreadID: selectionOrderByThreadID
+            )
         }
 
         private static func sort(

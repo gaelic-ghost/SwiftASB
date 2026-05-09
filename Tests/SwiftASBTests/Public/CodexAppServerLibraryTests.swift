@@ -183,6 +183,98 @@ extension CodexAppServerTests {
     }
 
     @MainActor
+    @Test("library exposes worktree views independent of visible grouping")
+    func libraryExposesWorktreeViewsIndependentOfVisibleGrouping() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadListResultQueue: [
+                [
+                    "data": [
+                        storedThread(
+                            id: "thread-active",
+                            cwd: "/tmp/package-active",
+                            gitBranch: "main",
+                            gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+                            gitSHA: "abcdef1234567890",
+                            name: "Active package",
+                            preview: "Active repo thread",
+                            statusType: "notLoaded",
+                            updatedAt: 1713350030
+                        ),
+                        storedThread(
+                            id: "thread-standalone",
+                            cwd: "/tmp/standalone",
+                            name: "Standalone",
+                            preview: "Standalone thread",
+                            statusType: "notLoaded",
+                            updatedAt: 1713350020
+                        ),
+                    ],
+                    "nextCursor": NSNull(),
+                ],
+                [
+                    "data": [
+                        storedThread(
+                            id: "thread-archived",
+                            cwd: "/tmp/package-archived",
+                            gitBranch: "main",
+                            gitOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+                            name: "Archived package",
+                            preview: "Archived repo thread",
+                            statusType: "notLoaded",
+                            updatedAt: 1713350010
+                        ),
+                    ],
+                    "nextCursor": NSNull(),
+                ],
+            ]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(transport: transport, historyStore: historyStore)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(clientInfo: .init(name: "SwiftASBTests", title: "SwiftASB Tests", version: "0.1.0"))
+        )
+
+        let library = try await client.makeLibrary(
+            configuration: .init(
+                pageSize: 10,
+                groupedBy: .none,
+                reconcilesOnCreation: false,
+                loadsAppSnapshotsOnCreation: false
+            )
+        )
+
+        await library.refresh()
+
+        #expect(library.groups.isEmpty)
+        #expect(library.worktreeGroups.map(\.id) == [
+            "/tmp/standalone",
+            "https://github.com/gaelic-ghost/SwiftASB.git",
+        ])
+        #expect(library.worktreeGroups.first(where: {
+            $0.id == "https://github.com/gaelic-ghost/SwiftASB.git"
+        })?.worktree?.repository?.shortSHA == "abcdef123456")
+        #expect(library.threads(inRepositoryOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git").map(\.id) == [
+            "thread-active",
+        ])
+        #expect(library.threads(
+            inRepositoryOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
+            includeArchived: true
+        ).map(\.id) == [
+            "thread-active",
+            "thread-archived",
+        ])
+
+        library.selectThread("thread-active")
+        #expect(library.selectedWorktree?.id == "https://github.com/gaelic-ghost/SwiftASB.git")
+        #expect(library.selectedRepository?.originURL == "https://github.com/gaelic-ghost/SwiftASB.git")
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @MainActor
     @Test("library can sort local snapshots by name without changing persistence")
     func librarySortsLocalSnapshotsByName() async throws {
         let transport = FakeCodexAppServerTransport()
