@@ -198,11 +198,11 @@ That means the current priority order is:
    sessions, marketplace/account-management families, and guardian
    denied-action approval remain post-v1 until their consumer workflows are
    clearer.
-10. Flesh out archive-aware retention and eviction beyond the current list-driven
+11. Flesh out archive-aware retention and eviction beyond the current list-driven
    archive-state drift correction.
-11. Add any sharper binary-discovery diagnostics we want alongside the
+12. Add any sharper binary-discovery diagnostics we want alongside the
    current-reviewed compatibility window before a broader compatibility release.
-12. Revisit whether a convenience `run(...)` API is earned only after the
+13. Revisit whether a convenience `run(...)` API is earned only after the
    lower-level lifecycle has more production mileage.
 
 ## V1 Readiness Checklist

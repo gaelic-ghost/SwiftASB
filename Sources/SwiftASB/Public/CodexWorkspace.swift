@@ -224,9 +224,9 @@ public enum CodexWorkspace {
             branch: String? = nil,
             sha: String? = nil
         ) {
-            self.originURL = originURL
-            self.branch = branch
-            self.sha = sha
+            self.originURL = Self.normalizedFact(originURL)
+            self.branch = Self.normalizedFact(branch)
+            self.sha = Self.normalizedFact(sha)
         }
 
         /// True when Codex reported at least one Git fact for this thread.
@@ -246,6 +246,14 @@ public enum CodexWorkspace {
 
         internal var normalized: Self? {
             isEmpty ? nil : self
+        }
+
+        private static func normalizedFact(_ value: String?) -> String? {
+            guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !trimmed.isEmpty else {
+                return nil
+            }
+            return trimmed
         }
     }
 

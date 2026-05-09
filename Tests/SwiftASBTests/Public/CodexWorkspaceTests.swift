@@ -37,4 +37,21 @@ struct CodexWorkspaceTests {
         #expect(snapshot.repository == nil)
         #expect(!snapshot.hasRepositoryFacts)
     }
+
+    @Test("worktree snapshot ignores blank Git facts")
+    func worktreeSnapshotIgnoresBlankGitFacts() {
+        let snapshot = CodexWorkspace.WorktreeSnapshot(
+            currentDirectoryPath: "/tmp/blank-git",
+            repository: .init(
+                originURL: "   ",
+                branch: "\n\t",
+                sha: ""
+            )
+        )
+
+        #expect(snapshot.id == "/tmp/blank-git")
+        #expect(snapshot.identitySource == .currentDirectory)
+        #expect(snapshot.repository == nil)
+        #expect(!snapshot.hasRepositoryFacts)
+    }
 }

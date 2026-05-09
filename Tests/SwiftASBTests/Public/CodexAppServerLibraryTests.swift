@@ -255,13 +255,30 @@ extension CodexAppServerTests {
         #expect(library.worktreeGroups.first(where: {
             $0.id == "https://github.com/gaelic-ghost/SwiftASB.git"
         })?.worktree?.repository?.shortSHA == "abcdef123456")
+        let repositoryWorktree = try #require(library.worktreeGroups.first(where: {
+            $0.id == "https://github.com/gaelic-ghost/SwiftASB.git"
+        })?.worktree)
         #expect(library.threads(inRepositoryOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git").map(\.id) == [
+            "thread-active",
+        ])
+        #expect(library.threads(in: repositoryWorktree).map(\.id) == [
+            "thread-active",
+        ])
+        #expect(library.threads(inWorktreeID: repositoryWorktree.id).map(\.id) == [
             "thread-active",
         ])
         #expect(library.threads(
             inRepositoryOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
             includeArchived: true
         ).map(\.id) == [
+            "thread-active",
+            "thread-archived",
+        ])
+        #expect(library.threads(in: repositoryWorktree, includeArchived: true).map(\.id) == [
+            "thread-active",
+            "thread-archived",
+        ])
+        #expect(library.threads(inWorktreeID: repositoryWorktree.id, includeArchived: true).map(\.id) == [
             "thread-active",
             "thread-archived",
         ])
