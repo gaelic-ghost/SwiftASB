@@ -36,7 +36,7 @@ API_AUDIT_PATH="$REPO_ROOT/docs/maintainers/v1-public-api-audit.md"
 current_version=$(
   {
     sed -n 's/.*from: "\([0-9][0-9.]*[-A-Za-z0-9.]*\)".*/\1/p' "$README_PATH"
-    sed -n 's/.*`v\([0-9][0-9.]*[-A-Za-z0-9.]*\)`.*/\1/p' "$README_PATH"
+    sed -n 's/.*`v\([0-9][0-9.]*[-A-Za-z0-9.]*\)`.*current and latest release.*/\1/p' "$README_PATH"
   } | head -n 1
 )
 
@@ -48,6 +48,21 @@ current_version=$(
 tmp_file="${TMPDIR:-/tmp}/swiftasb-readme-version.XXXXXX"
 tmp_file=$(mktemp "$tmp_file")
 trap 'rm -f "$tmp_file"' EXIT INT TERM
+
+count_readme_release_references() {
+  awk \
+    -v version="$1" '
+      index($0, "current and latest release") && index($0, "`v" version "`") {
+        count += 1
+      }
+      index($0, "from: \"" version "\"") {
+        count += 1
+      }
+      END {
+        print count + 0
+      }
+    ' "$README_PATH"
+}
 
 rewrite_release_references() {
   input_path="$1"
@@ -64,9 +79,24 @@ rewrite_release_references() {
     ' "$input_path" >"$output_path"
 }
 
+readme_reference_count="$(count_readme_release_references "$current_version")"
+[ "$readme_reference_count" -ge 2 ] || {
+  printf 'ERROR: SwiftASB version bump expected at least two README release references for %s, but found %s.\n' "$current_version" "$readme_reference_count" >&2
+  printf 'Expected the README status sentence and SwiftPM dependency snippet to both carry the release version.\n' >&2
+  exit 1
+}
+
 rewrite_release_references "$README_PATH" "$tmp_file"
 
 mv "$tmp_file" "$README_PATH"
+
+if [ "$current_version" != "$release_version" ]; then
+  stale_readme_reference_count="$(count_readme_release_references "$current_version")"
+  [ "$stale_readme_reference_count" = "0" ] || {
+    printf 'ERROR: SwiftASB version bump left %s stale README release reference(s) for %s.\n' "$stale_readme_reference_count" "$current_version" >&2
+    exit 1
+  }
+fi
 
 for doc_path in "$ROADMAP_PATH" "$API_AUDIT_PATH"; do
   tmp_file="${TMPDIR:-/tmp}/swiftasb-release-doc-version.XXXXXX"
