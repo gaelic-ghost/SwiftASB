@@ -1,3 +1,5 @@
+import Foundation
+
 public extension CodexAppServer {
     /// App-server-owned extension inventory for apps, skills, plugins, and collaboration modes.
     struct CodexExtensions: Sendable {
@@ -219,6 +221,32 @@ public extension CodexAppServer {
             }
         }
 
+        public struct MarketplaceUpgradeRequest: Sendable, Equatable {
+            public var currentDirectoryPaths: [String]?
+            public var marketplaceName: String
+            public var timeoutMilliseconds: Int
+
+            public init(
+                marketplaceName: String,
+                currentDirectoryPaths: [String]? = nil,
+                timeoutMilliseconds: Int = 120_000
+            ) {
+                self.marketplaceName = marketplaceName
+                self.currentDirectoryPaths = currentDirectoryPaths
+                self.timeoutMilliseconds = max(1_000, timeoutMilliseconds)
+            }
+        }
+
+        public struct MarketplaceUpgradeResult: Sendable, Equatable {
+            public let command: [String]
+            public let exitCode: Int
+            public let marketplaceName: String
+            public let operationID: String
+            public let status: SwiftASBFeatureOperationEvent.Status
+            public let stderr: String
+            public let stdout: String
+        }
+
         public struct PluginDetail: Sendable, Equatable {
             public let apps: [AppSummary]
             public let description: String?
@@ -290,6 +318,19 @@ public extension CodexAppServer {
             try await appServer.readExtensionPlugin(request)
         }
 
+        /// Upgrades an already-configured plugin marketplace through Codex.
+        ///
+        /// SwiftASB preflights the marketplace through `plugin/list`, runs the
+        /// installed Codex CLI's `plugin marketplace upgrade` command through
+        /// app-server `command/exec`, and emits a feature-operation event. New
+        /// marketplace installs and marketplace removals remain separate,
+        /// stricter mutation categories.
+        public func upgradeMarketplace(
+            _ request: MarketplaceUpgradeRequest
+        ) async throws -> MarketplaceUpgradeResult {
+            try await appServer.upgradeExtensionMarketplace(request)
+        }
+
         public func listCollaborationModes() async throws -> CollaborationModeList {
             try await appServer.listExtensionCollaborationModes()
         }
@@ -298,6 +339,105 @@ public extension CodexAppServer {
     /// App-server-owned extension inventory surface.
     var extensions: CodexExtensions {
         CodexExtensions(appServer: self)
+    }
+}
+
+extension CodexAppServer {
+    func upgradeExtensionMarketplace(
+        _ request: CodexExtensions.MarketplaceUpgradeRequest
+    ) async throws -> CodexExtensions.MarketplaceUpgradeResult {
+        try requireFeatureEnabled(.extensionMaintenance, for: "plugin marketplace upgrade")
+
+        let marketplaceName = request.marketplaceName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !marketplaceName.isEmpty else {
+            throw CodexAppServerError.invalidState(
+                reason: "SwiftASB cannot upgrade a plugin marketplace without a marketplace name."
+            )
+        }
+
+        let pluginSnapshot = try await listExtensionPlugins(
+            .init(currentDirectoryPaths: request.currentDirectoryPaths)
+        )
+        guard let marketplace = pluginSnapshot.marketplaces.first(where: { $0.name == marketplaceName }) else {
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB cannot upgrade plugin marketplace \(marketplaceName) because plugin/list did not report an existing marketplace with that name. \
+                Refresh extension inventory and choose a configured marketplace before requesting maintenance.
+                """
+            )
+        }
+
+        let startedAt = Date()
+        let operationID = "extension-maintenance:marketplace-upgrade:\(marketplaceName):\(UUID().uuidString)"
+        let command = [
+            await codexCommandExecutablePath(),
+            "plugin",
+            "marketplace",
+            "upgrade",
+            marketplaceName,
+        ]
+        let result = try await executeCommand(
+            .init(
+                command: command,
+                outputBytesCap: 32_768,
+                timeoutMilliseconds: request.timeoutMilliseconds
+            )
+        )
+        let completedAt = Date()
+        let status: SwiftASBFeatureOperationEvent.Status =
+            result.exitCode == 0 ? .succeeded : .failed
+        let affectedPaths = marketplace.path.map { [$0] } ?? []
+        let summary: String
+        if result.exitCode == 0 {
+            summary = "Upgraded plugin marketplace \(marketplaceName)."
+        } else {
+            summary = "Plugin marketplace \(marketplaceName) upgrade exited with code \(result.exitCode)."
+        }
+
+        publishFeatureOperationEvent(
+            .init(
+                categoryID: .extensionMaintenance,
+                operationID: operationID,
+                title: "Upgrade plugin marketplace",
+                summary: summary,
+                reason: "Extension maintenance is enabled for already-configured plugin marketplaces.",
+                startedAt: startedAt,
+                completedAt: completedAt,
+                affectedPaths: affectedPaths,
+                commands: [
+                    .init(argv: command)
+                ],
+                appServerMethod: "command/exec",
+                intentKind: "extensionMarketplaceUpgrade",
+                status: status,
+                rollback: .unavailable,
+                diagnosticText: result.exitCode == 0 ? nil : Self.commandDiagnosticText(result)
+            )
+        )
+
+        return .init(
+            command: command,
+            exitCode: result.exitCode,
+            marketplaceName: marketplaceName,
+            operationID: operationID,
+            status: status,
+            stderr: result.stderr,
+            stdout: result.stdout
+        )
+    }
+
+    private static func commandDiagnosticText(_ result: CommandExecResult) -> String {
+        let stderr = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !stderr.isEmpty {
+            return stderr
+        }
+
+        let stdout = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !stdout.isEmpty {
+            return stdout
+        }
+
+        return "The command exited with code \(result.exitCode) and did not report output."
     }
 }
 

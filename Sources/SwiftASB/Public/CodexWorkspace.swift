@@ -248,12 +248,110 @@ public enum CodexWorkspace {
             isEmpty ? nil : self
         }
 
-        private static func normalizedFact(_ value: String?) -> String? {
+        internal static func normalizedFact(_ value: String?) -> String? {
             guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !trimmed.isEmpty else {
                 return nil
             }
             return trimmed
+        }
+    }
+
+    /// Source that produced a Git observability snapshot.
+    public enum GitFactSource: String, Sendable, Equatable {
+        /// The snapshot only uses Git facts Codex already attached to thread or worktree metadata.
+        case appServer
+        /// The snapshot only uses facts refreshed through sandboxed app-server `command/exec`.
+        case commandExec
+        /// The snapshot combines Codex-owned metadata with sandboxed app-server `command/exec` facts.
+        case appServerAndCommandExec
+    }
+
+    /// One named Git remote reported by `git remote -v`.
+    public struct GitRemoteInfo: Sendable, Equatable {
+        public enum Purpose: String, Sendable, Equatable {
+            case fetch
+            case push
+            case unknown
+        }
+
+        public let name: String
+        public let purpose: Purpose
+        public let url: String
+
+        public init(
+            name: String,
+            url: String,
+            purpose: Purpose = .unknown
+        ) {
+            self.name = name
+            self.url = url
+            self.purpose = purpose
+        }
+    }
+
+    /// Parsed summary from `git status --porcelain=v1 --branch`.
+    public struct GitStatusSummary: Sendable, Equatable {
+        public let aheadCount: Int?
+        public let behindCount: Int?
+        public let branch: String?
+        public let changedFileCount: Int
+        public let untrackedFileCount: Int
+        public let upstream: String?
+
+        public init(
+            branch: String? = nil,
+            upstream: String? = nil,
+            aheadCount: Int? = nil,
+            behindCount: Int? = nil,
+            changedFileCount: Int = 0,
+            untrackedFileCount: Int = 0
+        ) {
+            self.branch = RepositoryInfo.normalizedFact(branch)
+            self.upstream = RepositoryInfo.normalizedFact(upstream)
+            self.aheadCount = aheadCount
+            self.behindCount = behindCount
+            self.changedFileCount = max(0, changedFileCount)
+            self.untrackedFileCount = max(0, untrackedFileCount)
+        }
+
+        public var isDirty: Bool {
+            changedFileCount > 0 || untrackedFileCount > 0
+        }
+    }
+
+    /// Live Git facts for a selected worktree.
+    public struct GitStatusSnapshot: Sendable, Equatable, Identifiable {
+        public let currentDirectoryPath: String
+        public let id: String
+        public let remotes: [GitRemoteInfo]
+        public let repository: RepositoryInfo?
+        public let repositoryRootPath: String?
+        public let source: GitFactSource
+        public let status: GitStatusSummary
+        public let worktreeID: String
+
+        public init(
+            worktreeID: String,
+            currentDirectoryPath: String,
+            repositoryRootPath: String? = nil,
+            repository: RepositoryInfo? = nil,
+            remotes: [GitRemoteInfo] = [],
+            status: GitStatusSummary = .init(),
+            source: GitFactSource
+        ) {
+            self.worktreeID = worktreeID
+            self.currentDirectoryPath = currentDirectoryPath
+            self.repositoryRootPath = RepositoryInfo.normalizedFact(repositoryRootPath)
+            self.repository = repository?.normalized
+            self.remotes = remotes
+            self.status = status
+            self.source = source
+            self.id = worktreeID
+        }
+
+        public var isDirty: Bool {
+            status.isDirty
         }
     }
 

@@ -93,6 +93,8 @@ Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/sel
 
 Use ``CodexAppServer/Library/worktreeGroups`` when a sidebar needs repository/workspace sections independent of the current visible grouping mode. Use ``CodexAppServer/Library/threads(inWorktreeID:includeArchived:)`` or ``CodexAppServer/Library/threads(inRepositoryOriginURL:includeArchived:)`` when a project browser needs the sorted threads for one Codex-reported worktree or Git origin without reading local disk.
 
+When `gitObservability` is enabled in ``SwiftASBFeaturePolicy``, selecting a library thread refreshes ``CodexAppServer/Library/selectedGitStatus`` for that worktree. The status snapshot combines Codex-reported branch, SHA, and origin metadata with sandboxed app-server `command/exec` facts for repository root, remotes, ahead/behind, and dirty/untracked counts.
+
 Use ``CodexAppServer/Library/refreshAppSnapshots()`` when the same app-wide UI needs model capabilities, MCP server status, and hook diagnostics. Library derives hook `cwd` requests from its stored thread snapshots unless configuration provides explicit hook current-directory paths.
 
 Recent companions keep caller-owned UI inputs mutable. For example, views can update selected file or command identifiers and visible item identifiers. SwiftASB uses that information to protect visible or selected payloads while slimming older low-value entries when the resident cache exceeds its budget.

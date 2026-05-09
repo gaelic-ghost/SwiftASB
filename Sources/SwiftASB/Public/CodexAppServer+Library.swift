@@ -233,6 +233,7 @@ public extension CodexAppServer {
     @Observable
     final class Library {
         public struct Configuration: Sendable, Equatable {
+            public var featurePolicy: SwiftASBFeaturePolicy
             public var groupedBy: GroupedBy
             public var hookListCurrentDirectoryPaths: [String]?
             public var loadsAppSnapshotsOnCreation: Bool
@@ -249,6 +250,7 @@ public extension CodexAppServer {
                 sortedBy: SortedBy = .updatedNewestFirst,
                 groupedBy: GroupedBy = .cwd,
                 query: CodexAppServer.ThreadListQD = .init(),
+                featurePolicy: SwiftASBFeaturePolicy = .defaults,
                 reconcilesOnCreation: Bool = true,
                 loadsAppSnapshotsOnCreation: Bool = true,
                 hookListCurrentDirectoryPaths: [String]? = nil,
@@ -259,6 +261,7 @@ public extension CodexAppServer {
                 self.maxPagesPerArchiveState = max(1, maxPagesPerArchiveState)
                 self.sortedBy = sortedBy
                 self.groupedBy = groupedBy
+                self.featurePolicy = featurePolicy
                 self.loadsAppSnapshotsOnCreation = loadsAppSnapshotsOnCreation
                 self.hookListCurrentDirectoryPaths = hookListCurrentDirectoryPaths
                 self.mcpServerStatusRequest = mcpServerStatusRequest
@@ -364,8 +367,11 @@ public extension CodexAppServer {
         public private(set) var archivedThreads: [ThreadSnapshot]
         public private(set) var groups: [ThreadGroup]
         public private(set) var hookListSnapshot: CodexAppServer.HookListSnapshot?
+        public private(set) var gitStatusByWorktreeID: [String: CodexWorkspace.GitStatusSnapshot]
         public private(set) var lastReconciledAt: Date?
+        public private(set) var lastGitStatusReadAt: Date?
         public private(set) var lastSnapshotsReadAt: Date?
+        public private(set) var latestGitStatusErrorDescription: String?
         public private(set) var latestSnapshotErrorDescription: String?
         public private(set) var latestErrorDescription: String?
         public private(set) var mcpServers: [CodexAppServer.McpServerStatus]
@@ -379,6 +385,7 @@ public extension CodexAppServer {
                     recordSelection(threadID: selectedThreadID)
                 }
                 applyVisibleState()
+                scheduleSelectedGitStatusRefresh()
             }
         }
         public var groupedBy: GroupedBy {
@@ -422,8 +429,15 @@ public extension CodexAppServer {
             selectedThread?.worktree.repository
         }
 
+        public var selectedGitStatus: CodexWorkspace.GitStatusSnapshot? {
+            selectedWorktree.flatMap { gitStatusByWorktreeID[$0.id] }
+        }
+
         @ObservationIgnored
         private let appServer: CodexAppServer
+
+        @ObservationIgnored
+        private let featurePolicy: SwiftASBFeaturePolicy
 
         @ObservationIgnored
         private var allThreads: [ThreadSnapshot]
@@ -461,6 +475,9 @@ public extension CodexAppServer {
         @ObservationIgnored
         private var snapshotTask: Task<Void, Never>?
 
+        @ObservationIgnored
+        private var gitStatusTask: Task<Void, Never>?
+
         internal init(
             appServer: CodexAppServer,
             configuration: Configuration,
@@ -470,11 +487,15 @@ public extension CodexAppServer {
             self.allThreads = initialThreads
             self.archivedThreads = []
             self.configuredHookListCurrentDirectoryPaths = configuration.hookListCurrentDirectoryPaths
+            self.featurePolicy = configuration.featurePolicy
+            self.gitStatusByWorktreeID = [:]
             self.groups = []
             self.groupedBy = configuration.groupedBy
             self.hookListSnapshot = nil
             self.lastReconciledAt = nil
+            self.lastGitStatusReadAt = nil
             self.lastSnapshotsReadAt = nil
+            self.latestGitStatusErrorDescription = nil
             self.latestSnapshotErrorDescription = nil
             self.latestErrorDescription = nil
             self.maxPagesPerArchiveState = configuration.maxPagesPerArchiveState
@@ -505,6 +526,7 @@ public extension CodexAppServer {
             eventTask?.cancel()
             refreshTask?.cancel()
             snapshotTask?.cancel()
+            gitStatusTask?.cancel()
         }
 
         public func refresh() async {
@@ -633,6 +655,33 @@ public extension CodexAppServer {
             selectThread(nil)
         }
 
+        public func refreshSelectedGitStatus() async {
+            guard featurePolicy.mode(for: .gitObservability) != .disabled else {
+                gitStatusByWorktreeID.removeAll()
+                latestGitStatusErrorDescription = nil
+                return
+            }
+            guard let worktree = selectedWorktree else {
+                latestGitStatusErrorDescription = nil
+                return
+            }
+
+            do {
+                let snapshot = try await appServer.refreshGitStatus(for: worktree)
+                if let snapshot {
+                    gitStatusByWorktreeID[worktree.id] = snapshot
+                    lastGitStatusReadAt = Date()
+                } else {
+                    gitStatusByWorktreeID.removeValue(forKey: worktree.id)
+                }
+                latestGitStatusErrorDescription = nil
+            } catch is CancellationError {
+                return
+            } catch {
+                latestGitStatusErrorDescription = error.localizedDescription
+            }
+        }
+
         public func threads(
             in worktree: CodexWorkspace.WorktreeSnapshot,
             includeArchived: Bool = false
@@ -718,6 +767,7 @@ public extension CodexAppServer {
                 allThreads = try await appServer.libraryThreadSnapshots(query: query)
                 clearSelectionIfThreadDisappeared()
                 applyVisibleState()
+                scheduleSelectedGitStatusRefresh()
             } catch {
                 latestErrorDescription = error.localizedDescription
             }
@@ -739,6 +789,19 @@ public extension CodexAppServer {
                 from: unarchivedThreads,
                 groupedBy: .repository
             )
+        }
+
+        private func scheduleSelectedGitStatusRefresh() {
+            gitStatusTask?.cancel()
+
+            guard selectedThreadID != nil,
+                  featurePolicy.mode(for: .gitObservability) != .disabled else {
+                return
+            }
+
+            gitStatusTask = Task { [weak self] in
+                await self?.refreshSelectedGitStatus()
+            }
         }
 
         private func recordSelection(threadID: String) {

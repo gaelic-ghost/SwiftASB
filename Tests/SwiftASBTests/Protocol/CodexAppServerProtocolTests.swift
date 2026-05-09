@@ -50,6 +50,66 @@ struct CodexAppServerProtocolTests {
         #expect(object["id"] == nil)
     }
 
+    @Test("encodes command/exec without permission or sandbox overrides by default")
+    func encodesCommandExecWithConfiguredPermissionDefaults() throws {
+        let payload = try protocolLayer.makeCommandExecRequest(
+            id: .string("command-exec-1"),
+            params: .init(
+                command: ["git", "status", "--short"],
+                cwd: "/tmp/project",
+                disableOutputCap: nil,
+                disableTimeout: nil,
+                env: nil,
+                outputBytesCap: 16_384,
+                permissionProfile: nil,
+                processID: nil,
+                sandboxPolicy: nil,
+                size: nil,
+                streamStdin: nil,
+                streamStdoutStderr: nil,
+                timeoutMS: 5_000,
+                tty: nil
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "command/exec")
+        #expect(object["id"] as? String == "command-exec-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["command"] as? [String] == ["git", "status", "--short"])
+        #expect(params["cwd"] as? String == "/tmp/project")
+        #expect(params["outputBytesCap"] as? Int == 16_384)
+        #expect(params["timeoutMs"] as? Int == 5_000)
+        #expect(params["permissionProfile"] == nil)
+        #expect(params["sandboxPolicy"] == nil)
+        #expect(params["processId"] == nil)
+        #expect(params["streamStdoutStderr"] == nil)
+    }
+
+    @Test("decodes command/exec output as connection-scoped command output")
+    func decodesCommandExecOutputAsConnectionScopedOutput() throws {
+        let payload = try #require(
+            #"{"capReached":false,"deltaBase64":"aGVsbG8K","processId":"swiftasb-command-1","stream":"stdout"}"#
+                .data(using: .utf8)
+        )
+
+        let event = try protocolLayer.decodeServerEvent(
+            .notification(method: "command/exec/outputDelta", payload: payload)
+        )
+
+        guard case let .commandExecOutputDelta(notification) = event else {
+            Issue.record("Expected command/exec output to decode separately from thread command-execution output.")
+            return
+        }
+
+        #expect(notification.processID == "swiftasb-command-1")
+        #expect(notification.deltaBase64 == "aGVsbG8K")
+        #expect(notification.stream == .stdout)
+        #expect(notification.capReached == false)
+    }
+
     @Test("encodes thread/start requests with the expected method and params payload")
     func encodesThreadStartRequest() throws {
         let payload = try protocolLayer.makeThreadStartRequest(

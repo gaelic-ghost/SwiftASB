@@ -100,6 +100,140 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("streams SwiftASB feature operation events")
+    func streamsSwiftASBFeatureOperationEvents() async throws {
+        let client = CodexAppServer(transport: FakeCodexAppServerTransport())
+        let stream = await client.featureOperationEvents()
+        let nextEventTask = Task {
+            var iterator = stream.makeAsyncIterator()
+            return await iterator.next()
+        }
+
+        let event = SwiftASBFeatureOperationEvent(
+            categoryID: .extensionMaintenance,
+            operationID: "plugin-upgrade-1",
+            title: "Upgrade installed plugin",
+            summary: "Upgraded an already-installed plugin.",
+            reason: "Extension maintenance is enabled by the host app.",
+            startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            completedAt: Date(timeIntervalSince1970: 1_700_000_001),
+            affectedPaths: ["/Users/example/.codex/plugins/cache/socket/example"],
+            commands: [
+                .init(
+                    argv: ["codex", "plugin", "upgrade", "example"],
+                    currentDirectoryPath: "/Users/example"
+                ),
+            ],
+            appServerMethod: "extension/plugin/upgrade",
+            intentKind: "extensionMaintenance",
+            status: .succeeded
+        )
+
+        await client.publishFeatureOperationEvent(event)
+
+        let receivedEvent = try await withThrowingTaskGroup(
+            of: SwiftASBFeatureOperationEvent?.self
+        ) { group in
+            group.addTask {
+                await nextEventTask.value
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+                throw TimeoutError()
+            }
+
+            let result = try await group.next()
+            group.cancelAll()
+            return try #require(result)
+        }
+
+        #expect(receivedEvent == event)
+
+        await client.stop()
+    }
+
+    @Test("replays buffered feature operation events to later subscribers")
+    func replaysBufferedFeatureOperationEventsToLaterSubscribers() async throws {
+        let client = CodexAppServer(transport: FakeCodexAppServerTransport())
+        let event = SwiftASBFeatureOperationEvent(
+            categoryID: .gitActions,
+            operationID: "branch-create-1",
+            title: "Create Git branch",
+            summary: "Created a feature branch.",
+            reason: "Git actions are enabled by the host app.",
+            startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            completedAt: Date(timeIntervalSince1970: 1_700_000_001),
+            commands: [
+                .init(argv: ["git", "switch", "-c", "docs/example"])
+            ],
+            appServerMethod: "command/exec",
+            intentKind: "gitBranchCreate",
+            status: .succeeded
+        )
+
+        await client.publishFeatureOperationEvent(event)
+
+        let replayStream = await client.featureOperationEvents()
+        var iterator = replayStream.makeAsyncIterator()
+        let receivedEvent = await iterator.next()
+
+        #expect(receivedEvent == event)
+
+        await client.stop()
+    }
+
+    @Test("runs internal commands through command/exec without thread transcript methods")
+    func runsInternalCommandsThroughCommandExecWithoutThreadTranscriptMethods() async throws {
+        let transport = FakeCodexAppServerTransport(
+            commandExecResult: [
+                "exitCode": 0,
+                "stderr": "",
+                "stdout": "## docs/feature-permission-plan\n",
+            ]
+        )
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let result = try await client.executeCommand(
+            .init(
+                command: ["git", "status", "--short", "--branch"],
+                currentDirectoryPath: "/tmp/project",
+                outputBytesCap: 4096,
+                timeoutMilliseconds: 5_000
+            )
+        )
+
+        #expect(result.exitCode == 0)
+        #expect(result.stdout == "## docs/feature-permission-plan\n")
+        #expect(result.stderr == "")
+
+        let methods = await transport.recordedMethods
+        #expect(methods.contains("command/exec"))
+        #expect(!methods.contains("thread/start"))
+        #expect(!methods.contains("turn/start"))
+        #expect(!methods.contains("thread/turns/items/list"))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "command/exec"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["command"] as? [String] == ["git", "status", "--short", "--branch"])
+        #expect(params["cwd"] as? String == "/tmp/project")
+        #expect(params["permissionProfile"] == nil)
+        #expect(params["sandboxPolicy"] == nil)
+
+        await client.stop()
+    }
+
     @Test("lists app-wide models through the public client")
     func listsAppWideModels() async throws {
         let transport = FakeCodexAppServerTransport()

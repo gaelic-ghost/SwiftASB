@@ -10,6 +10,8 @@ Use ``CodexAppServer/listModels(_:)`` to read the currently visible model catalo
 
 Use ``CodexAppServer/makeLibrary(configuration:)`` when these same model, MCP, and hook snapshots should live beside observable stored-thread lists. ``CodexAppServer/Library/refreshAppSnapshots()`` reads the current app-wide snapshots and publishes them as Library state; hook diagnostics use Library thread `cwd` values unless configuration passes explicit hook current-directory paths.
 
+Use ``CodexAppServer/extensions`` for app, skill, plugin, and collaboration-mode inventory. ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` is the narrow maintenance mutation in this app-wide family: it upgrades an already-configured plugin marketplace through app-server `command/exec` and reports the operation through ``CodexAppServer/featureOperationEvents()``.
+
 ```swift
 let models = try await appServer.listModels(
     .init(limit: 50, includeHidden: false)
@@ -109,3 +111,11 @@ These types are public because a consumer can use them directly today. Other gen
 - ``CodexAppServer/HookMetadata``
 - ``CodexAppServer/HookError``
 - ``CodexAppServer/HookDiagnostic``
+
+### Extensions
+
+- ``CodexAppServer/extensions``
+- ``CodexAppServer/CodexExtensions``
+- ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)``
+- ``CodexAppServer/CodexExtensions/MarketplaceUpgradeRequest``
+- ``CodexAppServer/CodexExtensions/MarketplaceUpgradeResult``

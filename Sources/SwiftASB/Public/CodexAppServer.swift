@@ -88,6 +88,7 @@ public actor CodexAppServer {
 
     private let transport: any CodexAppServerTransporting
     private let protocolLayer: CodexAppServerProtocol
+    private let featurePolicy: SwiftASBFeaturePolicy
     private static let logger = Logger(
         subsystem: "com.gaelic-ghost.SwiftASB",
         category: "CodexAppServer"
@@ -99,12 +100,14 @@ public actor CodexAppServer {
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
     private var diagnosticEventContinuations: [UUID: AsyncThrowingStream<CodexDiagnosticEvent, Error>.Continuation] = [:]
     private var libraryEventContinuations: [UUID: AsyncStream<LibraryEvent>.Continuation] = [:]
+    private var featureOperationEventContinuations: [UUID: AsyncStream<SwiftASBFeatureOperationEvent>.Continuation] = [:]
     private var fsChangeContinuations: [String: [UUID: AsyncStream<CodexFS.ChangeEvent>.Continuation]] = [:]
     private var threadObservableActivityContinuations: [String: [UUID: AsyncStream<CodexThread.Dashboard.ActivityState>.Continuation]] = [:]
     private var threadCommandDeltaContinuations: [String: [UUID: AsyncStream<CommandExecutionOutputDeltaEvent>.Continuation]] = [:]
     private var threadFileDeltaContinuations: [String: [UUID: AsyncStream<FileChangeOutputDeltaEvent>.Continuation]] = [:]
     private var bufferedThreadEvents: [String: [CodexThreadEvent]] = [:]
     private var bufferedDiagnosticEvents: [CodexDiagnosticEvent] = []
+    private var bufferedFeatureOperationEvents: [SwiftASBFeatureOperationEvent] = []
     private var bufferedTerminalThreadEvents: [String: CodexThreadEvent] = [:]
     private var threadTurnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
     private var turnEventContinuations: [String: [UUID: AsyncThrowingStream<CodexTurnEvent, Error>.Continuation]] = [:]
@@ -123,6 +126,7 @@ public actor CodexAppServer {
     /// Omitting `configuration` uses SwiftASB's standard app-server launch
     /// command and local Codex executable discovery.
     public init(configuration: Configuration = .init()) {
+        self.featurePolicy = configuration.featurePolicy
         self.transport = CodexAppServerTransport(
             configuration: CodexAppServerTransport.Configuration(
                 codexExecutableURL: configuration.codexExecutableURL,
@@ -144,10 +148,12 @@ public actor CodexAppServer {
     internal init(
         transport: any CodexAppServerTransporting,
         protocolLayer: CodexAppServerProtocol = CodexAppServerProtocol(),
-        historyStore: ThreadHistoryStore? = nil
+        historyStore: ThreadHistoryStore? = nil,
+        featurePolicy: SwiftASBFeaturePolicy = .defaults
     ) {
         self.transport = transport
         self.protocolLayer = protocolLayer
+        self.featurePolicy = featurePolicy
         if let historyStore {
             self.historyStore = historyStore
             self.historyStoreInitializationError = nil
@@ -191,6 +197,7 @@ public actor CodexAppServer {
         finishAllThreadEventStreams(throwing: nil)
         finishAllDiagnosticEventStreams(throwing: nil)
         finishAllLibraryEventStreams()
+        finishAllFeatureOperationEventStreams()
         finishAllFSChangeStreams()
         finishAllThreadObservableActivityStreams()
         finishAllThreadCommandDeltaStreams()
@@ -205,6 +212,7 @@ public actor CodexAppServer {
         turnThreadIDs.removeAll()
         bufferedThreadEvents.removeAll()
         bufferedDiagnosticEvents.removeAll()
+        bufferedFeatureOperationEvents.removeAll()
         bufferedTurnEvents.removeAll()
         bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
@@ -243,6 +251,17 @@ public actor CodexAppServer {
         makeDiagnosticEventStream()
     }
 
+    /// Subscribes to SwiftASB-owned feature-operation events.
+    ///
+    /// Feature-operation events are app-wide, human-readable records for
+    /// SwiftASB convenience operations such as future repo-guidance sync,
+    /// extension maintenance, and typed Git actions. Routine read-only
+    /// refreshes do not emit events. The stream finishes normally when the
+    /// app-server is stopped through SwiftASB.
+    public func featureOperationEvents() -> AsyncStream<SwiftASBFeatureOperationEvent> {
+        makeFeatureOperationEventStream()
+    }
+
     /// Performs the app-server initialize handshake.
     ///
     /// Call this once after `start()`. SwiftASB sends the app-server's required
@@ -270,6 +289,77 @@ public actor CodexAppServer {
             return InitializeSession(wireValue: response)
         } catch {
             throw CodexAppServerError.wrap(error, operation: "initialize")
+        }
+    }
+
+    /// Runs one argv command through app-server `command/exec`.
+    ///
+    /// This intentionally omits permission-profile and sandbox overrides so
+    /// Codex applies the user's configured command permissions by default.
+    internal func executeCommand(_ request: CommandExecRequest) async throws -> CommandExecResult {
+        try requireInitialized(for: "command/exec")
+
+        guard !request.command.isEmpty else {
+            throw CodexAppServerError.invalidState(
+                reason: "SwiftASB cannot run command/exec with an empty argv vector."
+            )
+        }
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeCommandExecRequest(
+                id: requestID,
+                params: CodexProtocolCommandExecParams(
+                    command: request.command,
+                    cwd: request.currentDirectoryPath,
+                    disableOutputCap: nil,
+                    disableTimeout: nil,
+                    env: request.environment.isEmpty ? nil : request.environment,
+                    outputBytesCap: request.outputBytesCap,
+                    permissionProfile: nil,
+                    processID: nil,
+                    sandboxPolicy: nil,
+                    size: nil,
+                    streamStdin: nil,
+                    streamStdoutStderr: nil,
+                    timeoutMS: request.timeoutMilliseconds,
+                    tty: nil
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeCommandExecResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(
+                exitCode: response.exitCode,
+                stdout: response.stdout,
+                stderr: response.stderr
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "command/exec")
+        }
+    }
+
+    internal func codexCommandExecutablePath() async -> String {
+        await transport.executableResolution()?.resolvedExecutableURL?.path ?? "codex"
+    }
+
+    internal func requireFeatureEnabled(
+        _ categoryID: SwiftASBFeatureCategory.ID,
+        for operation: String
+    ) throws {
+        guard featurePolicy.mode(for: categoryID) == .enabled else {
+            let categoryName = SwiftASBFeatureCategory.builtInCategory(id: categoryID)?.displayName
+                ?? categoryID.rawValue
+            throw CodexAppServerError.invalidState(
+                reason: """
+                SwiftASB cannot run \(operation) because the \(categoryName) feature category is not enabled. \
+                Enable \(categoryID.rawValue) in SwiftASBFeaturePolicy before requesting this SwiftASB-owned mutation.
+                """
+            )
         }
     }
 
@@ -1558,6 +1648,21 @@ public actor CodexAppServer {
         }
     }
 
+    internal func publishFeatureOperationEvent(_ event: SwiftASBFeatureOperationEvent) {
+        bufferedFeatureOperationEvents.append(event)
+        if bufferedFeatureOperationEvents.count > 100 {
+            bufferedFeatureOperationEvents.removeFirst(bufferedFeatureOperationEvents.count - 100)
+        }
+
+        guard !featureOperationEventContinuations.isEmpty else {
+            return
+        }
+
+        for continuation in featureOperationEventContinuations.values {
+            continuation.yield(event)
+        }
+    }
+
     internal func fsChangeStream(watchID: String) -> AsyncStream<CodexFS.ChangeEvent> {
         let streamID = UUID()
 
@@ -2434,6 +2539,7 @@ public actor CodexAppServer {
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
                 )
                 await self.finishAllLibraryEventStreams()
+                await self.finishAllFeatureOperationEventStreams()
                 await self.finishAllFSChangeStreams()
                 await self.finishAllTurnEventStreams(
                     throwing: CodexAppServerError.wrap(error, operation: "server events")
@@ -2616,6 +2722,8 @@ public actor CodexAppServer {
                 itemID: notification.itemID,
                 delta: notification.delta
             )
+        case .commandExecOutputDelta:
+            break
         case let .hookStarted(notification):
             updateThreadObservableActivityForHookRun(
                 notification.run,
@@ -2779,6 +2887,7 @@ public actor CodexAppServer {
             finishAllThreadEventStreams(throwing: nil)
             finishAllDiagnosticEventStreams(throwing: nil)
             finishAllLibraryEventStreams()
+            finishAllFeatureOperationEventStreams()
             finishAllFSChangeStreams()
             finishAllThreadObservableActivityStreams()
             finishAllThreadCommandDeltaStreams()
@@ -2800,6 +2909,7 @@ public actor CodexAppServer {
             )
         )
         finishAllLibraryEventStreams()
+        finishAllFeatureOperationEventStreams()
         finishAllFSChangeStreams()
         finishAllThreadObservableActivityStreams()
         finishAllThreadCommandDeltaStreams()
@@ -2855,6 +2965,24 @@ public actor CodexAppServer {
             continuation.onTermination = { _ in
                 Task {
                     await self.removeDiagnosticEventContinuation(streamID: streamID)
+                }
+            }
+        }
+    }
+
+    private func makeFeatureOperationEventStream() -> AsyncStream<SwiftASBFeatureOperationEvent> {
+        let streamID = UUID()
+
+        return AsyncStream { continuation in
+            featureOperationEventContinuations[streamID] = continuation
+
+            for event in bufferedFeatureOperationEvents {
+                continuation.yield(event)
+            }
+
+            continuation.onTermination = { _ in
+                Task {
+                    await self.removeFeatureOperationEventContinuation(streamID: streamID)
                 }
             }
         }
@@ -2955,6 +3083,10 @@ public actor CodexAppServer {
 
     private func removeLibraryEventContinuation(streamID: UUID) {
         libraryEventContinuations.removeValue(forKey: streamID)
+    }
+
+    private func removeFeatureOperationEventContinuation(streamID: UUID) {
+        featureOperationEventContinuations.removeValue(forKey: streamID)
     }
 
     private func removeFSChangeContinuation(streamID: UUID, watchID: String) {
@@ -3217,6 +3349,15 @@ public actor CodexAppServer {
     private func finishAllLibraryEventStreams() {
         let activeContinuations = libraryEventContinuations.values
         libraryEventContinuations.removeAll()
+
+        for continuation in activeContinuations {
+            continuation.finish()
+        }
+    }
+
+    private func finishAllFeatureOperationEventStreams() {
+        let activeContinuations = featureOperationEventContinuations.values
+        featureOperationEventContinuations.removeAll()
 
         for continuation in activeContinuations {
             continuation.finish()

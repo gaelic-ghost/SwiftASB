@@ -35,6 +35,8 @@ Use ``cliExecutableDiagnostics()`` when a UI or command-line tool needs to expla
 
 Use ``diagnosticEvents()`` to observe passive runtime diagnostics that are not control requests. These events let clients show or log warnings, guardian warnings, config warnings, deprecation notices, MCP-server status changes, remote-control status changes, model reroutes, and model verification results without exposing generated wire payloads.
 
+Use ``featureOperationEvents()`` to observe human-readable SwiftASB feature-operation records for enabled mutation categories. Routine read-only refreshes stay quiet; writes and maintenance actions report what changed, why SwiftASB changed it, where it changed, and whether rollback is available.
+
 ## App-Wide Capabilities
 
 Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, ``readMcpResource(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, MCP server surface, MCP resource contents, and configured hook diagnostics.
@@ -46,6 +48,8 @@ Use ``CodexWorkspace`` values when starting or resuming a thread with a named pe
 Use ``config`` to read effective app-server configuration and requirements policy without opening local config files from the Swift process.
 
 Use ``extensions`` to read app, skill, plugin, and collaboration-mode inventory through the app-server instead of inspecting installed plugin or skill directories directly.
+
+Use ``CodexExtensions/upgradeMarketplace(_:)`` for the narrow extension-maintenance mutation SwiftASB owns today: upgrading an already-configured plugin marketplace through app-server `command/exec`. The method preflights `plugin/list`, respects ``SwiftASBFeaturePolicy``'s `extensionMaintenance` category, and emits a ``SwiftASBFeatureOperationEvent``.
 
 Use ``makeLibrary(configuration:)`` when a GUI or CLI client needs an app-wide observable over stored threads. The library loads local Core Data-backed snapshots first, then reconciles unarchived app-server pages before archived pages. It publishes SwiftASB value snapshots, not Core Data objects.
 
@@ -76,6 +80,8 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``CLIExecutableDiagnostics``
 - ``diagnosticEvents()``
 - ``CodexDiagnosticEvent``
+- ``featureOperationEvents()``
+- ``SwiftASBFeatureOperationEvent``
 
 ### Startup
 
@@ -98,6 +104,9 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``CodexConfig``
 - ``extensions``
 - ``CodexExtensions``
+- ``CodexExtensions/upgradeMarketplace(_:)``
+- ``CodexExtensions/MarketplaceUpgradeRequest``
+- ``CodexExtensions/MarketplaceUpgradeResult``
 - ``listModels(_:)``
 - ``ModelListRequest``
 - ``ModelListPage``

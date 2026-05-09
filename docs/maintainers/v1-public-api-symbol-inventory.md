@@ -762,23 +762,26 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexFS` now includes bounded file discovery and SwiftASB-owned fuzzy ranking over app-server-returned directory entries: `FileDiscoveryQD`, `FileDiscoveryResult`, `FileDiscoveryHit`, `FileDiscoveryHit.Kind`, and `discoverFiles(_:)`.
 - `CodexConfig` owns effective config reads: `ReadRequest`, `Snapshot`, `Layer`, `LayerMetadata`, `LayerSource`, `LayerSource.Kind`, `RequirementsSnapshot`, `read(_:)`, and `readRequirements()`.
 - `CodexAppServer.CodexExtensions` owns app-server extension inventory: `AppListRequest`, `AppListPage`, `AppInfo`, `SkillListRequest`, `SkillListSnapshot`, `PluginListRequest`, `PluginListSnapshot`, `PluginReadRequest`, `PluginDetail`, `PluginHookSummary`, `CollaborationModeList`, `listApps(_:)`, `listSkills(_:)`, `listPlugins(_:)`, `readPlugin(_:)`, and `listCollaborationModes()`.
+- `CodexAppServer.CodexExtensions` also owns the first extension-maintenance mutation: `MarketplaceUpgradeRequest`, `MarketplaceUpgradeResult`, and `upgradeMarketplace(_:)` for already-configured plugin marketplaces.
 - `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
 - `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by `CodexWorkspace.ProjectInfo` identity: app-server Git origin metadata with cwd fallback.
 - `CodexAppServer.Library` exposes stable worktree groups, selected worktree/repository context, and sorted repository/worktree thread filters for sidebar and project-browser UIs independent of the caller-selected visible grouping mode.
-- `CodexWorkspace` owns app-server-owned permission selections, runtime workspace permission facts, project identity, and worktree snapshots: `PermissionSelection`, `PermissionSelectionModification`, `ActivePermissionProfile`, `ActivePermissionModification`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, `ProjectInfo`, `RepositoryInfo`, `SessionSnapshot`, and `WorktreeSnapshot`.
+- `CodexWorkspace` owns app-server-owned permission selections, runtime workspace permission facts, project identity, worktree snapshots, and selected-worktree Git observability values: `PermissionSelection`, `PermissionSelectionModification`, `ActivePermissionProfile`, `ActivePermissionModification`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, `ProjectInfo`, `RepositoryInfo`, `SessionSnapshot`, `WorktreeSnapshot`, `GitStatusSnapshot`, `GitStatusSummary`, `GitRemoteInfo`, and `GitFactSource`.
 - `CodexAppServer.ThreadStartRequest`, `ThreadResumeRequest`, `ThreadForkRequest`, `TurnStartRequest`, `CodexThread.TurnStartRequest`, and `CodexThread.startTextTurn(...)` now accept optional `CodexWorkspace.PermissionSelection` values.
 - `CodexAppServer.ThreadSession` and `CodexThread` now expose active permission-profile provenance, runtime permission facts, app-server-owned project identity, app-server-owned worktree snapshots, and a `CodexWorkspace.SessionSnapshot`.
 - `CodexAppServer.ThreadInfo` and `CodexAppServer.Library.ThreadSnapshot` now expose `CodexAppServer.ThreadSource` so launcher UIs can badge CLI, app-server, editor, custom, and sub-agent threads without reading generated wire values.
+- `SwiftASBFeaturePolicy`, `SwiftASBFeatureCategory`, `SwiftASBFeatureMode`, `SwiftASBFeatureSensitivity`, `SwiftASBFeatureEventPolicy`, and `SwiftASBHostAccess` now describe SwiftASB-owned convenience-feature policy, built-in category defaults, and host access declarations without replacing Codex app-server sandboxing.
+- `SwiftASBFeatureOperationEvent`, `SwiftASBFeatureOperationEvent.Status`, `SwiftASBFeatureOperationEvent.Command`, and `SwiftASBFeatureOperationEvent.Rollback` now describe human-readable SwiftASB-owned mutation records for the app-wide feature-operation event stream.
 
 ## Public Property Counts By Source File
 
-- `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 19 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+CodexExtensions.swift`: 113 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift`: 20 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+CodexExtensions.swift`: 126 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift`: 10 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Hooks.swift`: 32 public properties
-- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 61 public properties
+- `Sources/SwiftASB/Public/CodexAppServer+Library.swift`: 66 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+LoadedThreads.swift`: 4 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+MCP.swift`: 43 public properties
 - `Sources/SwiftASB/Public/CodexAppServer+Models.swift`: 23 public properties
@@ -796,4 +799,6 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift`: 54 public properties
 - `Sources/SwiftASB/Public/CodexThread.swift`: 71 public properties
 - `Sources/SwiftASB/Public/CodexTurnHandle.swift`: 108 public properties
-- `Sources/SwiftASB/Public/CodexWorkspace.swift`: 44 public properties
+- `Sources/SwiftASB/Public/CodexWorkspace.swift`: 63 public properties
+- `Sources/SwiftASB/Public/SwiftASBFeatureOperationEvent.swift`: 20 public properties
+- `Sources/SwiftASB/Public/SwiftASBFeaturePolicy.swift`: 13 public properties
