@@ -15,7 +15,7 @@ func runOneTurn() async throws {
         Task { await appServer.stop() }
     }
 
-    let startup = try await appServer.start(
+    let session = try await appServer.start(
         .init(
             clientInfo: .init(
                 name: "ExampleClient",
@@ -24,7 +24,7 @@ func runOneTurn() async throws {
             )
         )
     )
-    print("Started Codex:", startup.cliExecutableDiagnostics.versionString)
+    print("Started Codex:", session.cliExecutableDiagnostics.versionString)
 
     let thread = try await appServer.startThread(
         .init(

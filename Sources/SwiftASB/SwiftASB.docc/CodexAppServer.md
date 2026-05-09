@@ -10,7 +10,7 @@ Create one app-server actor for a client process or window group that should sha
 
 ```swift
 let appServer = CodexAppServer()
-let startup = try await appServer.start(
+let session = try await appServer.start(
     .init(
         clientInfo: .init(
             name: "ExampleClient",
