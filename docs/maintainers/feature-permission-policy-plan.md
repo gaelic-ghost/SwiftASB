@@ -257,6 +257,8 @@ it must still surface what changed.
 
 ### Slice 1: Policy Types And Descriptors
 
+Status: shipped on `docs/feature-permission-plan`.
+
 - Add public feature-policy value types.
 - Add built-in category descriptors with names, descriptions, reasons, defaults,
   sensitivity, and event policy.
@@ -264,6 +266,8 @@ it must still surface what changed.
 - Document the categories in DocC.
 
 ### Slice 2: Command Execution Protocol Surface
+
+Status: shipped on `docs/feature-permission-plan`.
 
 - Promote app-server `command/exec` request/response types through an internal
   protocol layer.

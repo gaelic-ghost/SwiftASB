@@ -47,6 +47,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var threadTurnsListResult: [String: Any]?
     private var threadTurnsListResultQueue: [[String: Any]]
     private var threadTurnsItemsListResult: [String: Any]?
+    private var commandExecResult: [String: Any]
     private var appSnapshotResponseDelayNanoseconds: UInt64 = 0
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
     private var started = false
@@ -65,7 +66,12 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         threadTurnsListErrorMessage: String? = nil,
         threadTurnsListResult: [String: Any]? = nil,
         threadTurnsListResultQueue: [[String: Any]] = [],
-        threadTurnsItemsListResult: [String: Any]? = nil
+        threadTurnsItemsListResult: [String: Any]? = nil,
+        commandExecResult: [String: Any] = [
+            "exitCode": 0,
+            "stderr": "",
+            "stdout": "",
+        ]
     ) {
         self.resolvedExecutable = executableResolution
         self.threadListResult = threadListResult
@@ -79,6 +85,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         self.threadTurnsListResult = threadTurnsListResult
         self.threadTurnsListResultQueue = threadTurnsListResultQueue
         self.threadTurnsItemsListResult = threadTurnsItemsListResult
+        self.commandExecResult = commandExecResult
     }
 
     func setThreadListResult(_ result: [String: Any]?) {
@@ -1133,6 +1140,11 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     ],
                     "nextCursor": "cursor-older-items",
                 ]
+            )
+        case "command/exec":
+            return responsePayload(
+                id: id,
+                result: commandExecResult
             )
         case "turn/start":
             let turnID = turnStartIDQueue.isEmpty ? "turn-123" : turnStartIDQueue.removeFirst()

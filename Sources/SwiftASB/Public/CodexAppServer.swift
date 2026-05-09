@@ -273,6 +273,57 @@ public actor CodexAppServer {
         }
     }
 
+    /// Runs one argv command through app-server `command/exec`.
+    ///
+    /// This intentionally omits permission-profile and sandbox overrides so
+    /// Codex applies the user's configured command permissions by default.
+    internal func executeCommand(_ request: CommandExecRequest) async throws -> CommandExecResult {
+        try requireInitialized(for: "command/exec")
+
+        guard !request.command.isEmpty else {
+            throw CodexAppServerError.invalidState(
+                reason: "SwiftASB cannot run command/exec with an empty argv vector."
+            )
+        }
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeCommandExecRequest(
+                id: requestID,
+                params: CodexProtocolCommandExecParams(
+                    command: request.command,
+                    cwd: request.currentDirectoryPath,
+                    disableOutputCap: nil,
+                    disableTimeout: nil,
+                    env: request.environment.isEmpty ? nil : request.environment,
+                    outputBytesCap: request.outputBytesCap,
+                    permissionProfile: nil,
+                    processID: nil,
+                    sandboxPolicy: nil,
+                    size: nil,
+                    streamStdin: nil,
+                    streamStdoutStderr: nil,
+                    timeoutMS: request.timeoutMilliseconds,
+                    tty: nil
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeCommandExecResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            return .init(
+                exitCode: response.exitCode,
+                stdout: response.stdout,
+                stderr: response.stderr
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "command/exec")
+        }
+    }
+
     /// Reads the app-server's current model catalog.
     ///
     /// Omitting `request` sends an empty list request, leaving pagination and
@@ -2616,6 +2667,8 @@ public actor CodexAppServer {
                 itemID: notification.itemID,
                 delta: notification.delta
             )
+        case .commandExecOutputDelta:
+            break
         case let .hookStarted(notification):
             updateThreadObservableActivityForHookRun(
                 notification.run,

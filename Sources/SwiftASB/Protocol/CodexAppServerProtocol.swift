@@ -33,6 +33,7 @@ struct CodexAppServerProtocol {
         case collaborationModeList = "collaborationMode/list"
         case configRead = "config/read"
         case configRequirementsRead = "configRequirements/read"
+        case commandExec = "command/exec"
         case hooksList = "hooks/list"
         case modelList = "model/list"
         case modelProviderCapabilitiesRead = "modelProvider/capabilities/read"
@@ -285,6 +286,16 @@ struct CodexAppServerProtocol {
         try encodeRequestWithoutParams(
             JSONRPCRequestEnvelopeWithoutParams(id: id, method: .configRequirementsRead),
             method: .configRequirementsRead
+        )
+    }
+
+    func makeCommandExecRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolCommandExecParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .commandExec, params: params),
+            method: .commandExec
         )
     }
 
@@ -737,6 +748,18 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .configRequirementsRead,
             resultType: CodexWireConfigRequirementsReadResponse.self
+        )
+    }
+
+    func decodeCommandExecResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolCommandExecResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .commandExec,
+            resultType: CodexProtocolCommandExecResponse.self
         )
     }
 
@@ -1193,6 +1216,14 @@ struct CodexAppServerProtocol {
                         payload,
                         method: method,
                         resultType: CodexWireCommandExecutionOutputDeltaNotification.self
+                    )
+                )
+            case "command/exec/outputDelta":
+                return .commandExecOutputDelta(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireCommandExecOutputDeltaNotification.self
                     )
                 )
             case "item/fileChange/outputDelta":

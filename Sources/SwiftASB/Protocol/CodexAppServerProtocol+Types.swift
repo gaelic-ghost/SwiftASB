@@ -36,6 +36,7 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case turnCompleted(CodexWireTurnCompletedNotification)
 	case itemStarted(CodexWireItemStartedNotification)
 	case itemCompleted(CodexWireItemCompletedNotification)
+	case commandExecOutputDelta(CodexWireCommandExecOutputDeltaNotification)
 	case commandExecutionOutputDelta(CodexWireCommandExecutionOutputDeltaNotification)
 	case fileChangeOutputDelta(CodexWireFileChangeOutputDeltaNotification)
 	case fileChangePatchUpdated(CodexWireFileChangePatchUpdatedNotification)
@@ -64,6 +65,42 @@ struct CodexProtocolModelProviderCapabilitiesReadResponse: Decodable, Equatable,
     let imageGeneration: Bool
     let namespaceTools: Bool
     let webSearch: Bool
+}
+
+struct CodexProtocolCommandExecParams: Encodable, Equatable, Sendable {
+    let command: [String]
+    let cwd: String?
+    let disableOutputCap: Bool?
+    let disableTimeout: Bool?
+    let env: [String: String?]?
+    let outputBytesCap: Int?
+    let permissionProfile: CodexWirePermissionProfile?
+    let processID: String?
+    let sandboxPolicy: CodexWireSandboxPolicy?
+    let size: TerminalSize?
+    let streamStdin: Bool?
+    let streamStdoutStderr: Bool?
+    let timeoutMS: Int?
+    let tty: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case command, cwd, disableOutputCap, disableTimeout, env, outputBytesCap, permissionProfile
+        case processID = "processId"
+        case sandboxPolicy, size, streamStdin, streamStdoutStderr
+        case timeoutMS = "timeoutMs"
+        case tty
+    }
+
+    struct TerminalSize: Encodable, Equatable, Sendable {
+        let cols: Int
+        let rows: Int
+    }
+}
+
+struct CodexProtocolCommandExecResponse: Decodable, Equatable, Sendable {
+    let exitCode: Int
+    let stderr: String
+    let stdout: String
 }
 
 struct CodexProtocolCollaborationModeListParams: Encodable, Equatable, Sendable {}

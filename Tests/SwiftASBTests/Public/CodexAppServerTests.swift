@@ -100,6 +100,58 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("runs internal commands through command/exec without thread transcript methods")
+    func runsInternalCommandsThroughCommandExecWithoutThreadTranscriptMethods() async throws {
+        let transport = FakeCodexAppServerTransport(
+            commandExecResult: [
+                "exitCode": 0,
+                "stderr": "",
+                "stdout": "## docs/feature-permission-plan\n",
+            ]
+        )
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let result = try await client.executeCommand(
+            .init(
+                command: ["git", "status", "--short", "--branch"],
+                currentDirectoryPath: "/tmp/project",
+                outputBytesCap: 4096,
+                timeoutMilliseconds: 5_000
+            )
+        )
+
+        #expect(result.exitCode == 0)
+        #expect(result.stdout == "## docs/feature-permission-plan\n")
+        #expect(result.stderr == "")
+
+        let methods = await transport.recordedMethods
+        #expect(methods.contains("command/exec"))
+        #expect(!methods.contains("thread/start"))
+        #expect(!methods.contains("turn/start"))
+        #expect(!methods.contains("thread/turns/items/list"))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "command/exec"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["command"] as? [String] == ["git", "status", "--short", "--branch"])
+        #expect(params["cwd"] as? String == "/tmp/project")
+        #expect(params["permissionProfile"] == nil)
+        #expect(params["sandboxPolicy"] == nil)
+
+        await client.stop()
+    }
+
     @Test("lists app-wide models through the public client")
     func listsAppWideModels() async throws {
         let transport = FakeCodexAppServerTransport()
