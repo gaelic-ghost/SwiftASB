@@ -1,6 +1,6 @@
 # SwiftASB
 
-SwiftASB helps Swift apps work with the local Codex app-server without making app builders deal with Codex's raw app-server messages directly.
+*Faster-Than-Light Framework for Custom Codex Apps and Integrations in Swift*
 
 Listen to the SwiftASB Codex apps promo clip:
 
@@ -23,25 +23,36 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB has a supported v1 public API for the core local Codex app-server lifecycle. `v1.2.1` is the current released baseline.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.2.1` is the current and latest release.
 
 ### What This Project Is
 
-TBD
+SwiftASB is a native Swift client/runtime layer for AI coding agent app-servers and streaming orchestration systems.
 
 ### Motivation
 
-TBD
+I built SwiftASB because I saw so many others building and forking existing Apps for agentic coding on thee desktop. I wanted to build my own, of course, but I also wanted to make it easier for anyone to build a custom UI tailored to the way they like to work. SwiftASB handles the complexity and rough edges, providing a rock-solid foundation for everyone from vibecoders to staff engineers. Just grab the `swiftasb-skills` plugin from [Socket Marketplace](https://www.github.com/gaelic-ghost/socket) and you're off to the races.
 
 ## Quick Start
 
-Add SwiftASB from the GitHub package URL:
+Add SwiftASB to your `Package.swift` (or Xcode Project) as a dependency:
 
-https://github.com/gaelic-ghost/SwiftASB
+```swift
+	.package(url: "https://github.com/gaelic-ghost/swiftasb", from: "1.1.2"),
+```
 
-Use release `v1.2.1` or newer unless your project intentionally pins an older version.
+Check your Codex version:
 
-You also need a local Codex CLI installation with app-server support. SwiftASB currently reviews against the `0.130.x` Codex CLI app-server schema window, looks for `codex` in the usual command-line locations, and apps can provide an exact executable path when they need stricter control.
+```bash
+codex --version
+```
+*Note: SwiftASB supports the latest version of Codex CLI, as well as the prior two minor versions. This policy will be revised once Codex CLI reaches a v1.x.x release.*
+
+Add the Socket Marketplace to Codex and enable the SwiftASB Skills Plugin:
+
+```bash
+codex plugin marketplace add socket
+```
 
 For copy-pasteable startup code, open the DocC getting-started guide:
 
