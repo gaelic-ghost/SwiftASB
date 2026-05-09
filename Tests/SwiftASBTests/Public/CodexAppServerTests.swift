@@ -100,6 +100,128 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("starts and initializes through the ergonomic startup request")
+    func startsAndInitializesThroughStartupRequest() async throws {
+        let transport = FakeCodexAppServerTransport(
+            executableResolution: .init(
+                launchExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+                launchArgumentsPrefix: [],
+                resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+                source: .homebrewAppleSilicon,
+                versionString: "codex-cli 0.130.0",
+                compatibility: .supported(documentedWindow: "0.130.x")
+            )
+        )
+        let client = CodexAppServer(transport: transport)
+
+        let startup = try await client.start(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        #expect(startup.cliExecutableDiagnostics.versionString == "codex-cli 0.130.0")
+        #expect(startup.initializeSession.codexHome == "/Users/galew/.codex")
+        #expect(await transport.recordedMethods == ["initialize", "initialized"])
+
+        await client.stop()
+    }
+
+    @Test("startup request throws a typed error for an unsupported Codex CLI")
+    func startupRequestThrowsTypedUnsupportedCLIError() async throws {
+        let transport = FakeCodexAppServerTransport(
+            executableResolution: .init(
+                launchExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+                launchArgumentsPrefix: [],
+                resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+                source: .homebrewAppleSilicon,
+                versionString: "codex-cli 0.128.0",
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.130.x")
+            )
+        )
+        let client = CodexAppServer(transport: transport)
+
+        await #expect(throws: CodexAppServerStartupError.incompatibleCodexCLI(
+            diagnostics: .init(
+                source: .homebrewAppleSilicon,
+                resolvedExecutablePath: "/opt/homebrew/bin/codex",
+                versionString: "codex-cli 0.128.0",
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.130.x")
+            )
+        )) {
+            try await client.start(
+                .init(
+                    clientInfo: .init(
+                        name: "SwiftASBTests",
+                        title: "SwiftASB Tests",
+                        version: "0.1.0"
+                    )
+                )
+            )
+        }
+
+        #expect(await transport.recordedMethods.isEmpty)
+        #expect(await transport.isStarted == false)
+    }
+
+    @Test("startup request can allow Codex CLI versions outside the reviewed window")
+    func startupRequestCanAllowUnsupportedCLI() async throws {
+        let transport = FakeCodexAppServerTransport(
+            executableResolution: .init(
+                launchExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+                launchArgumentsPrefix: [],
+                resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+                source: .homebrewAppleSilicon,
+                versionString: "codex-cli 0.128.0",
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.130.x")
+            )
+        )
+        let client = CodexAppServer(transport: transport)
+
+        _ = try await client.start(
+            .init(
+                compatibilityPolicy: .allowOutsideReviewedSupportWindow,
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        #expect(await transport.recordedMethods == ["initialize", "initialized"])
+
+        await client.stop()
+    }
+
+    @Test("startup request maps executable discovery failures to typed startup errors")
+    func startupRequestMapsExecutableDiscoveryFailures() async throws {
+        let transport = FakeCodexAppServerTransport(
+            startError: .executableDiscoveryFailed(
+                reason: "SwiftASB could not locate a usable `codex` executable."
+            )
+        )
+        let client = CodexAppServer(transport: transport)
+
+        await #expect(throws: CodexAppServerStartupError.codexCLINotFound(
+            reason: "SwiftASB could not locate a usable `codex` executable."
+        )) {
+            try await client.start(
+                .init(
+                    clientInfo: .init(
+                        name: "SwiftASBTests",
+                        title: "SwiftASB Tests",
+                        version: "0.1.0"
+                    )
+                )
+            )
+        }
+    }
+
     @Test("streams SwiftASB feature operation events")
     func streamsSwiftASBFeatureOperationEvents() async throws {
         let client = CodexAppServer(transport: FakeCodexAppServerTransport())

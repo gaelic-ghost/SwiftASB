@@ -10,9 +10,7 @@ Create one app-server actor for a client process or window group that should sha
 
 ```swift
 let appServer = CodexAppServer()
-try await appServer.start()
-
-let session = try await appServer.initialize(
+let startup = try await appServer.start(
     .init(
         clientInfo: .init(
             name: "ExampleClient",
@@ -29,7 +27,9 @@ Always call ``stop()`` when the owner is done with the subprocess.
 
 ## Connection Lifecycle
 
-Call ``start()`` before sending protocol requests. Call ``initialize(_:)`` once the transport is running; SwiftASB sends the required `initialized` notification after a successful response.
+Call ``start(_:)`` when a client wants SwiftASB to own the normal startup sequence. The one-call startup path launches the subprocess, validates Codex CLI compatibility, performs the initialize handshake, and returns ``StartupSession``. It throws ``CodexAppServerStartupError`` when startup fails before the app-server session is ready.
+
+Use the lower-level ``start()`` and ``initialize(_:)`` pair when a client intentionally owns each step. SwiftASB sends the required `initialized` notification after a successful initialize response.
 
 Use ``cliExecutableDiagnostics()`` when a UI or command-line tool needs to explain which `codex` executable was found and whether its version is inside the documented compatibility window.
 
@@ -78,6 +78,8 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 
 - ``Configuration``
 - ``CLIExecutableDiagnostics``
+- ``StartupCompatibilityPolicy``
+- ``CodexAppServerStartupError``
 - ``diagnosticEvents()``
 - ``CodexDiagnosticEvent``
 - ``featureOperationEvents()``
@@ -86,8 +88,11 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 ### Startup
 
 - ``start()``
+- ``start(_:)``
 - ``stop()``
 - ``initialize(_:)``
+- ``StartupRequest``
+- ``StartupSession``
 - ``InitializeRequest``
 - ``InitializeCapabilities``
 - ``ClientInfo``

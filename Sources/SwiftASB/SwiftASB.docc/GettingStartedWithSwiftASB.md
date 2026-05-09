@@ -11,17 +11,11 @@ import SwiftASB
 
 func runOneTurn() async throws {
     let appServer = CodexAppServer()
-    try await appServer.start()
     defer {
         Task { await appServer.stop() }
     }
 
-    let diagnostics = try await appServer.cliExecutableDiagnostics()
-    guard case .supported = diagnostics.compatibility else {
-        throw RuntimeError("Unsupported Codex CLI: \(diagnostics.versionString)")
-    }
-
-    try await appServer.initialize(
+    let startup = try await appServer.start(
         .init(
             clientInfo: .init(
                 name: "ExampleClient",
@@ -30,6 +24,7 @@ func runOneTurn() async throws {
             )
         )
     )
+    print("Started Codex:", startup.cliExecutableDiagnostics.versionString)
 
     let thread = try await appServer.startThread(
         .init(
@@ -50,18 +45,15 @@ func runOneTurn() async throws {
     }
 }
 
-struct RuntimeError: Error, CustomStringConvertible {
-    var description: String
-
-    init(_ description: String) {
-        self.description = description
-    }
-}
 ```
 
 ## Startup Order
 
-Call ``CodexAppServer/start()`` before every other protocol operation. Then call ``CodexAppServer/initialize(_:)`` once. SwiftASB sends the required `initialized` notification after the initialize response succeeds.
+For most clients, call ``CodexAppServer/start(_:)`` with a ``CodexAppServer/StartupRequest``. That launches the local Codex app-server subprocess, checks the selected Codex CLI against SwiftASB's reviewed compatibility window, sends `initialize`, sends the required `initialized` notification, and returns a ``CodexAppServer/StartupSession``.
+
+If startup fails before the session is ready, SwiftASB throws ``CodexAppServerStartupError`` with a typed reason such as a missing Codex CLI executable, an incompatible CLI version, an unparseable CLI version string, a launch failure, or an initialize failure.
+
+Call ``CodexAppServer/start()`` and then ``CodexAppServer/initialize(_:)`` only when the client intentionally owns each startup step. This lower-level path is useful for custom compatibility policy, diagnostics-only startup screens, and tests that need to inspect the selected binary before deciding whether to initialize.
 
 ``CodexAppServer/cliExecutableDiagnostics()`` is available after startup and before initialization. Use it when a UI or command-line client needs to show which `codex` executable was launched and whether it is inside SwiftASB's reviewed compatibility window.
 
@@ -74,8 +66,12 @@ Call ``CodexAppServer/start()`` before every other protocol operation. Then call
 ### Startup
 
 - ``CodexAppServer/start()``
+- ``CodexAppServer/start(_:)``
 - ``CodexAppServer/stop()``
 - ``CodexAppServer/initialize(_:)``
+- ``CodexAppServer/StartupRequest``
+- ``CodexAppServer/StartupSession``
+- ``CodexAppServerStartupError``
 - ``CodexAppServer/cliExecutableDiagnostics()``
 
 ### First Thread And Turn

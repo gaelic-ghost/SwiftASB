@@ -64,6 +64,12 @@ For copy-pasteable startup code, open the DocC getting-started guide:
 
 - `Sources/SwiftASB/SwiftASB.docc/GettingStartedWithSwiftASB.md`
 
+Most clients should start with `CodexAppServer.start(_:)`. The one-call startup
+API launches the local Codex app-server, verifies the selected Codex CLI against
+SwiftASB's reviewed compatibility window, initializes the session, and throws
+typed `CodexAppServerStartupError` values for missing, incompatible, or
+unparseable CLI installs.
+
 ## Usage
 
 Use SwiftASB when an app needs to show what Codex is doing right now, keep recent command and file activity visible, answer interactive requests, or build SwiftUI state around a running Codex turn.

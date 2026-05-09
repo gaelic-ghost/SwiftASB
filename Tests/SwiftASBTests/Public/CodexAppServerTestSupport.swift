@@ -51,12 +51,14 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var commandExecResultQueue: [[String: Any]]
     private var appSnapshotResponseDelayNanoseconds: UInt64 = 0
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
+    private let startError: CodexTransportError?
     private var started = false
     private var initializedSeen = false
     private var serverEventContinuation: AsyncStream<CodexRPCServerEvent>.Continuation?
 
     init(
         executableResolution: CodexCLIExecutableResolver.Resolution? = nil,
+        startError: CodexTransportError? = nil,
         threadListResult: [String: Any]? = nil,
         threadListResultQueue: [[String: Any]] = [],
         threadReadResult: [String: Any]? = nil,
@@ -76,6 +78,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         commandExecResultQueue: [[String: Any]] = []
     ) {
         self.resolvedExecutable = executableResolution
+        self.startError = startError
         self.threadListResult = threadListResult
         self.threadListResultQueue = threadListResultQueue
         self.threadReadResult = threadReadResult
@@ -107,7 +110,14 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         recordedRequestPayloads[method] ?? []
     }
 
+    var isStarted: Bool {
+        started
+    }
+
     func start() throws {
+        if let startError {
+            throw startError
+        }
         started = true
         initializedSeen = false
     }
