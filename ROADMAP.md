@@ -164,26 +164,32 @@ That means the current priority order is:
    report user-granted directory access or pass a security-scoped bookmark,
    following Apple's sandbox model instead of treating local disk access as an
    implicit SwiftASB capability.
-5. Explore a custom approval auto-reviewer after the answerable
+5. Plan command-execution-backed Git and GitHub actions for consuming apps that
+   want Codex-like repository operations through SwiftASB. The first useful
+   shape should route explicit user-reviewed actions through installed `git`
+   and optional `gh` binaries when available, keep command output and approval
+   decisions observable, and reuse the app-access/perms model instead of
+   silently expanding filesystem authority.
+6. Explore a custom approval auto-reviewer after the answerable
    server-request model is stable enough to distinguish advisory review from
    action approval. The first useful slice should classify approval requests and
    produce review recommendations; automatically answering requests should wait
    for an explicit policy model and tests that prove dangerous actions stay
    user-controlled.
-6. Finish the next descriptor increment beyond the current list, history, and
+7. Finish the next descriptor increment beyond the current list, history, and
    recent-activity descriptors: broader public cursor semantics, any
    selection-centered reads that become necessary, and later search-hit
    hydration.
-7. Finish the next `CodexAppServer.Library` slice around app-wide
+8. Finish the next `CodexAppServer.Library` slice around app-wide
    settings/actions, using promoted app-server facts and descriptor values
    where they make list and selection behavior explicit.
-8. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` after v1 as
+9. Keep tuning `RecentTurns`, `RecentFiles`, and `RecentCommands` after v1 as
    real UI usage teaches better calibration. The v1 review keeps the separate
    turn/file/command companions, current cache-policy names and defaults,
    selection/visibility protection, slimming behavior, and rehydration model as
    stable enough; remaining work is calibration and richer previews, not proving
    the model exists.
-9. Keep future Codex CLI schema additions classified before public promotion:
+10. Keep future Codex CLI schema additions classified before public promotion:
    `excludeTurns` remains public on resume/fork request models because it
    directly supports the existing paged history model; permission-profile
    families stay internal until SwiftASB owns a deliberate public permission
@@ -270,6 +276,10 @@ workflow earns them in a later feature release.
   and security-scoped bookmark handoff, so consuming apps can explicitly tell
   SwiftASB when richer local file-write, repository-root, and working-tree
   status enrichment is allowed.
+- [ ] Plan command-execution-backed Git and GitHub actions through installed
+  `git` and optional `gh`, including capability diagnostics, user-reviewed
+  command intents, observable output, and permission/access boundaries for
+  repository mutations.
 - [ ] Finish the `CodexAppServer` app-wide observable companion with derived
   repository-root grouping, richer Git observables, and any broader app-wide
   settings/actions that earn public models.
@@ -1291,6 +1301,9 @@ Completed
   consuming macOS apps that have explicit user-granted directory access,
   including security-scoped bookmark handoff if that proves to be the right
   integration shape.
+- [ ] Add command-execution-backed Git and GitHub action helpers for consuming
+  apps that want Codex-like repository operations through `git` and `gh` when
+  those tools are installed and the app has the required access grant.
 - [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
 - [x] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
 - [x] Add a local-only startup mode for recent history observables when live upstream paging is unavailable because the thread is ephemeral or not yet materialized.
@@ -1315,3 +1328,4 @@ Completed
 - 2026-05-08: Added post-v1 roadmap candidates for `codex mcp-server` support, a custom approval auto-reviewer, and a Worktrunk-based worktree system.
 - 2026-05-08: Added stable `CodexAppServer.Library.worktreeGroups`, selected worktree/repository context, and repository/worktree thread filters for app-wide sidebars without changing the caller-selected visible grouping mode.
 - 2026-05-08: Added a future optional macOS app-access layer for user-granted directory access and security-scoped bookmark handoff, keeping richer local repository and file-write enrichment separate from app-server-reported workspace facts.
+- 2026-05-08: Added future command-execution-backed Git and GitHub actions through installed `git` and optional `gh`, scoped by explicit user-reviewed command intents and the app-access permission model.
