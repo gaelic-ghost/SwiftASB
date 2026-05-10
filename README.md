@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.3.0` is the current and latest release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.3.1` is the current and latest release.
 
 ### What This Project Is
 
@@ -38,7 +38,7 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.3.0"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.3.1"),
 ```
 
 Then add the library product to your target dependencies:
@@ -63,6 +63,12 @@ codex plugin marketplace add socket
 For copy-pasteable startup code, open the DocC getting-started guide:
 
 - `Sources/SwiftASB/SwiftASB.docc/GettingStartedWithSwiftASB.md`
+
+Most clients should start with `CodexAppServer.start(_:)`. The one-call startup
+API launches the local Codex app-server, verifies the selected Codex CLI against
+SwiftASB's reviewed compatibility window, initializes the session, and throws
+typed `CodexAppServerStartupError` values for missing, incompatible, or
+unparseable CLI installs.
 
 ## Usage
 

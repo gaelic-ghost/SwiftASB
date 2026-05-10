@@ -175,13 +175,39 @@ public actor CodexAppServer {
     /// diagnostics, thread events, and turn events.
     public func start() async throws {
         do {
-            try await transport.start()
-            hasStarted = true
-            hasCompletedInitializeHandshake = false
-            isStopping = false
-            startServerEventLoop()
+            try await startTransport()
         } catch {
             throw CodexAppServerError.wrap(error, operation: "start")
+        }
+    }
+
+    /// Launches the app-server, validates Codex CLI compatibility, and initializes.
+    ///
+    /// Use this one-call startup path for app clients that want a ready
+    /// app-server session or a typed startup error. The lower-level `start()`,
+    /// `cliExecutableDiagnostics()`, and `initialize(_:)` calls remain available
+    /// for clients that intentionally own each step.
+    public func start(_ request: StartupRequest) async throws -> StartupSession {
+        do {
+            try await startTransport()
+        } catch {
+            throw CodexAppServerStartupError.startFailure(from: error)
+        }
+
+        do {
+            let diagnostics = try await cliExecutableDiagnostics()
+            try validateStartupCompatibility(
+                diagnostics,
+                policy: request.compatibilityPolicy
+            )
+            let session = try await initialize(request.initializeRequest)
+            return .init(
+                cliExecutableDiagnostics: diagnostics,
+                initializeSession: session
+            )
+        } catch {
+            await stop()
+            throw CodexAppServerStartupError.initializeFailure(from: error)
         }
     }
 
@@ -217,6 +243,32 @@ public actor CodexAppServer {
         bufferedTerminalThreadEvents.removeAll()
         bufferedTerminalTurnEvents.removeAll()
         outstandingInteractiveRequests.removeAll()
+    }
+
+    private func startTransport() async throws {
+        try await transport.start()
+        hasStarted = true
+        hasCompletedInitializeHandshake = false
+        isStopping = false
+        startServerEventLoop()
+    }
+
+    private func validateStartupCompatibility(
+        _ diagnostics: CLIExecutableDiagnostics,
+        policy: StartupCompatibilityPolicy
+    ) throws {
+        switch (policy, diagnostics.compatibility) {
+        case (.allowOutsideReviewedSupportWindow, _), (.requireReviewedSupportWindow, .supported):
+            return
+        case (.requireReviewedSupportWindow, .outsideDocumentedWindow):
+            throw CodexAppServerStartupError.incompatibleCodexCLI(
+                diagnostics: diagnostics
+            )
+        case (.requireReviewedSupportWindow, .unknownVersionFormat):
+            throw CodexAppServerStartupError.unknownCodexCLIVersion(
+                diagnostics: diagnostics
+            )
+        }
     }
 
     /// Returns diagnostics for the Codex CLI executable selected at startup.

@@ -1,6 +1,60 @@
 import Foundation
 
 extension CodexAppServer {
+    /// Compatibility policy applied by the ergonomic startup call.
+    public enum StartupCompatibilityPolicy: Sendable, Equatable {
+        /// Require the selected Codex CLI version to be inside SwiftASB's
+        /// documented reviewed support window before initializing.
+        case requireReviewedSupportWindow
+
+        /// Start and initialize even when the selected Codex CLI version is
+        /// outside SwiftASB's documented reviewed support window.
+        case allowOutsideReviewedSupportWindow
+    }
+
+    /// One-call startup request for launching and initializing the app-server.
+    public struct StartupRequest: Sendable, Equatable {
+        public var compatibilityPolicy: StartupCompatibilityPolicy
+        public var initializeRequest: InitializeRequest
+
+        /// Creates a startup request.
+        ///
+        /// By default, SwiftASB requires the selected Codex CLI version to be
+        /// inside the documented reviewed support window before it sends the
+        /// initialize handshake.
+        public init(
+            compatibilityPolicy: StartupCompatibilityPolicy = .requireReviewedSupportWindow,
+            initializeRequest: InitializeRequest
+        ) {
+            self.compatibilityPolicy = compatibilityPolicy
+            self.initializeRequest = initializeRequest
+        }
+
+        /// Creates a startup request from client metadata.
+        ///
+        /// Omitting `capabilities` sends an empty capability set during the
+        /// initialize handshake.
+        public init(
+            compatibilityPolicy: StartupCompatibilityPolicy = .requireReviewedSupportWindow,
+            capabilities: InitializeCapabilities = .init(),
+            clientInfo: ClientInfo
+        ) {
+            self.init(
+                compatibilityPolicy: compatibilityPolicy,
+                initializeRequest: .init(
+                    capabilities: capabilities,
+                    clientInfo: clientInfo
+                )
+            )
+        }
+    }
+
+    /// Successful one-call startup result.
+    public struct StartupSession: Sendable, Equatable {
+        public let cliExecutableDiagnostics: CLIExecutableDiagnostics
+        public let initializeSession: InitializeSession
+    }
+
     /// Diagnostics for the local Codex executable selected at startup.
     public struct CLIExecutableDiagnostics: Sendable, Equatable {
         /// Local install location SwiftASB used to find the Codex executable.
