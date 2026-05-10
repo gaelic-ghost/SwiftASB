@@ -53,7 +53,7 @@ For most clients, call ``CodexAppServer/start(_:)`` with a ``CodexAppServer/Star
 
 If startup fails before the session is ready, SwiftASB throws ``CodexAppServerStartupError`` with a typed reason such as a missing Codex CLI executable, an incompatible CLI version, an unparseable CLI version string, a launch failure, or an initialize failure.
 
-Call ``CodexAppServer/start()`` and then ``CodexAppServer/initialize(_:)`` only when the client intentionally owns each startup step. This lower-level path is useful for custom compatibility policy, diagnostics-only startup screens, and tests that need to inspect the selected binary before deciding whether to initialize.
+Call ``CodexAppServer/start()`` and then ``CodexAppServer/initialize(_:)`` only when the client intentionally owns each startup step. For a custom compatibility policy that still fits one-call startup, configure the ``CodexAppServer/StartupRequest`` passed to ``CodexAppServer/start(_:)``. Use the lower-level path for diagnostics-only startup screens or tests that need to inspect the selected binary before deciding whether to call ``CodexAppServer/initialize(_:)``.
 
 ``CodexAppServer/cliExecutableDiagnostics()`` is available after startup and before initialization. Use it when a UI or command-line client needs to show which `codex` executable was launched and whether it is inside SwiftASB's reviewed compatibility window.
 
