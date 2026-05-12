@@ -23,7 +23,7 @@ Subagents were used where the Codex Security workflow suggested them. One transp
 ### C2: Unknown network-policy amendment actions fail open to `allow`
 
 - Instance key: `fail-open-policy:Sources/SwiftASB/Public/CodexAppServer+ProtocolPayloads.swift:229`
-- Affected location: `Sources/SwiftASB/Public/CodexAppServer+ProtocolPayloads.swift:226`
+- Affected location: `Sources/SwiftASB/Public/CodexAppServer+ProtocolPayloads.swift:229`
 - Source: app-server wire `action` value on a network-policy amendment proposal.
 - Broken control: `.init(rawValue: action) ?? .allow` maps unknown values to allow.
 - Sink: public `CodexNetworkPolicyAmendment` shown to downstream apps and used when applying network-policy amendments.

@@ -41,7 +41,7 @@ CWE: CWE-20, CWE-284
 
 Affected location:
 
-- `Sources/SwiftASB/Public/CodexAppServer+ProtocolPayloads.swift:226`
+- `Sources/SwiftASB/Public/CodexAppServer+ProtocolPayloads.swift:229`
 
 `CodexProtocolNetworkPolicyAmendment.publicValue` maps unknown wire action strings with `.init(rawValue: action) ?? .allow`. If the app-server sends a malformed or future action value, SwiftASB represents it to downstream apps as an allow action.
 
