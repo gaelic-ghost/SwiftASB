@@ -8,6 +8,7 @@
 - [Milestone Progress](#milestone-progress)
 - [Current Maintainer Priority](#current-maintainer-priority)
 - [V1 Readiness Checklist](#v1-readiness-checklist)
+- [Security Audit Follow-Up](#security-audit-follow-up)
 - [Live App-Server Findings](#live-app-server-findings)
 - [Live Testing Expansion Plan](#live-testing-expansion-plan)
 - [Previous V1 Release Slice](#previous-v1-release-slice)
@@ -113,6 +114,13 @@ against Codex-owned workspace, Git, file, and thread facts wherever possible,
 rather than making SwiftASB or a sandboxed client infer repository identity by
 walking the local filesystem.
 
+The 2026-05-11 repository-wide security audit adds two patch-sized hardening
+items that should land before broadening more protocol surface: preserve or
+reject out-of-range numeric JSON-RPC IDs instead of narrowing through
+`NSNumber.intValue`, and fail closed for unknown network-policy amendment
+actions instead of representing them as `allow`. See
+[`docs/security-audits/82ea49d_20260511T213956-0400/report.md`](docs/security-audits/82ea49d_20260511T213956-0400/report.md).
+
 The package can now:
 
 - start turns through `CodexThread`
@@ -136,7 +144,7 @@ The package can now:
 - document the supported lifecycle in the README without sending consumers into
   the tests
 
-That means the current priority order is:
+After those audit hardening items, the current broader priority order is:
 
 1. Implement the feature permission policy described in
    [`docs/maintainers/feature-permission-policy-plan.md`](docs/maintainers/feature-permission-policy-plan.md):
@@ -689,6 +697,41 @@ workflow earns them in a later feature release.
   if those become stronger public runtime guarantees.
 - Continue tuning recent companion cache calibration, richer file previews,
   archive-aware retention, and rollback forensic archival.
+
+## Security Audit Follow-Up
+
+The repository-wide Codex Security audit on 2026-05-11 found no critical or
+high-severity issues in the reviewed SwiftASB surfaces. It did identify two
+medium-severity protocol/policy hardening tasks and several deferred audit rows
+that should stay visible until closed.
+
+Audit bundle:
+[`docs/security-audits/82ea49d_20260511T213956-0400/report.md`](docs/security-audits/82ea49d_20260511T213956-0400/report.md).
+
+- [ ] Fix JSON-RPC numeric ID narrowing.
+  `CodexRPCEnvelope.parseRequestID(_:)` currently checks whole-number shape and
+  then uses `NSNumber.intValue`. Replace that with a range-preserving
+  conversion or explicit out-of-range rejection, then add boundary tests around
+  32-bit and platform `Int` limits.
+- [ ] Fix fail-open network-policy amendment mapping.
+  `CodexProtocolNetworkPolicyAmendment.publicValue` currently maps unknown
+  wire `action` strings to `.allow`. Preserve unknown values or fail closed so
+  approval UI and app logic cannot misrepresent malformed or future actions as
+  permission-widening approvals.
+- [ ] Add a focused resource-limit review for stdio line framing and JSON
+  materialization.
+  `LineDelimitedDataBuffer` and the JSON-RPC envelope path currently do not have
+  a documented line-size cap. The audit deferred this because the peer is the
+  local Codex app-server, but bounded framing would make the transport contract
+  clearer.
+- [ ] Complete a focused `ThreadHistoryStore` audit.
+  The audit identified local command, file, thread, and token history as
+  sensitive local metadata but did not close a full line-by-line persistence
+  review.
+- [ ] Complete generated-wire parser/codec review when the upstream wire layer
+  next changes materially.
+  Generated models remain internal, but schema refreshes should keep parser and
+  conversion assumptions visible before public mapping expands.
 
 ## Live App-Server Findings
 
@@ -1342,6 +1385,8 @@ Completed
   apps that want Codex-like repository operations through `git` and `gh` when
   those tools are installed and the app has the required access grant.
 - [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
+- [ ] Fix repository-wide security audit findings around JSON-RPC numeric ID
+  parsing and network-policy amendment fail-closed behavior.
 - [x] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
 - [x] Add a local-only startup mode for recent history observables when live upstream paging is unavailable because the thread is ephemeral or not yet materialized.
 - [x] Confirm the Swift Package Index listing after the package is publicly indexed and tagged.
@@ -1367,3 +1412,7 @@ Completed
 - 2026-05-08: Added a future optional macOS app-access layer for user-granted directory access and security-scoped bookmark handoff, keeping richer local repository and file-write enrichment separate from app-server-reported workspace facts.
 - 2026-05-08: Added future command-execution-backed Git and GitHub actions through installed `git` and optional `gh`, scoped by explicit user-reviewed command intents and the app-access permission model.
 - 2026-05-09: Added the feature permission policy implementation plan, shifting the next app-wide action work toward quiet read-only defaults, one-time mutation-category enablement, proactive Git observability, and human-readable mutation events.
+- 2026-05-11: Added the first repository-wide Codex Security audit bundle and
+  tracked follow-up hardening for JSON-RPC numeric ID parsing, network-policy
+  amendment fail-closed behavior, transport resource limits, history-store
+  sensitivity, and generated-wire parser review.
