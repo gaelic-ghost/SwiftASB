@@ -8,6 +8,7 @@
 - [Milestone Progress](#milestone-progress)
 - [Current Maintainer Priority](#current-maintainer-priority)
 - [V1 Readiness Checklist](#v1-readiness-checklist)
+- [Security Audit Follow-Up](#security-audit-follow-up)
 - [Live App-Server Findings](#live-app-server-findings)
 - [Live Testing Expansion Plan](#live-testing-expansion-plan)
 - [Previous V1 Release Slice](#previous-v1-release-slice)
@@ -77,7 +78,7 @@
 | Non-UI local history-reading helpers | `Partially shipped` | `CodexThread` now exposes a lightweight `HistoryWindow` page shape for recent local history, older or newer local windows around a known boundary turn id, centered `windowAroundTurn(...)` reads, centered `windowAroundItem(...)` reads, direct `ClosedTurn` reads for one turn, and convenience array helpers over those same windows. This gives non-UI callers an intentional path into the local history store without binding a UI-oriented observable, while still deferring a broader public cursor model, transcript search surface, and richer history-query helpers. |
 | Public API curation | `Shipped / ongoing` | The source-organization pass has split app-wide model, MCP, thread-management, history, and observable companion values into focused public files while preserving `CodexAppServer`, `CodexThread`, and `CodexTurnHandle` as the three real owners. The connected public-surface review closed the v1 ownership model; post-v1 curation now includes app-server-owned project identity and thread source facts for launcher UI without exposing generated wire models. Future curation should stay tied to concrete public API additions. |
 | DocC documentation | `Shipped / ongoing` | `Sources/SwiftASB/SwiftASB.docc/` contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, generated-wire boundary notes, and copy-pasteable walkthroughs for startup, progress/approval handling, diagnostics/history, and SwiftUI observable companions. The catalog is validated through Xcode `docbuild`; future work is ordinary stale-link, prose, and symbol-comment refinement as the public API grows. |
-| Swift Package Index readiness | `Shipped` | `.spi.yml` declares `SwiftASB` as the documentation target, and Swift Package Index lists `gaelic-ghost/SwiftASB` with a documentation link, compatibility/build results, Package ID `9B5839D9-9551-473F-A939-841534A3FC55`, and a 2026-05-06 update timestamp for the latest confirmed indexed release. Recheck SPI after the `v1.3.1` tag is published. |
+| Swift Package Index readiness | `Shipped` | `.spi.yml` declares `SwiftASB` as the documentation target, and Swift Package Index lists `gaelic-ghost/SwiftASB` with a documentation link, compatibility/build results, Package ID `9B5839D9-9551-473F-A939-841534A3FC55`, and a 2026-05-06 update timestamp for the latest confirmed indexed release. Recheck SPI after the `v1.3.2` tag is published. |
 | Contributor documentation split | `Shipped` | `README.md` is now focused on Swift and SwiftUI package users, while `CONTRIBUTING.md` owns contributor setup, validation, DocC, live-test flags, generated-wire refresh, and PR expectations. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `complete()` handoff into a caller-owned sealed turn snapshot. |
 | Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Raw command-output and file-change-output deltas now stay internal as transport detail but drive the shipped `RecentCommands` and `RecentFiles` companions, and streamed or patch-updated payloads are preserved when later completed snapshots are thinner. Richer MCP-progress detail still remains internal, while warning, guardian-warning, config-warning, deprecation, MCP-server-status, remote-control-status, model-reroute, and model-verification notifications now surface through hand-owned diagnostic events. |
@@ -105,13 +106,20 @@
 The next meaningful package step is no longer proving the v1 interactive
 lifecycle, SPI visibility, basic history hydration, first-pass reconciliation,
 or command-approval completion. Those slices now exist and shipped in the
-`v1.3.1` baseline.
+`v1.3.2` baseline.
 
 The next meaningful work is to widen the reviewed app-server schema and protocol
 coverage before adding more public query descriptors. Descriptors should compile
 against Codex-owned workspace, Git, file, and thread facts wherever possible,
 rather than making SwiftASB or a sandboxed client infer repository identity by
 walking the local filesystem.
+
+The 2026-05-11 repository-wide security audit adds two patch-sized hardening
+items that should land before broadening more protocol surface: preserve or
+reject out-of-range numeric JSON-RPC IDs instead of narrowing through
+`NSNumber.intValue`, and fail closed for unknown network-policy amendment
+actions instead of representing them as `allow`. See
+[`docs/security-audits/82ea49d_20260511T213956-0400/report.md`](docs/security-audits/82ea49d_20260511T213956-0400/report.md).
 
 The package can now:
 
@@ -136,7 +144,7 @@ The package can now:
 - document the supported lifecycle in the README without sending consumers into
   the tests
 
-That means the current priority order is:
+After those audit hardening items, the current broader priority order is:
 
 1. Implement the feature permission policy described in
    [`docs/maintainers/feature-permission-policy-plan.md`](docs/maintainers/feature-permission-policy-plan.md):
@@ -216,7 +224,7 @@ That means the current priority order is:
 
 ## V1 Readiness Checklist
 
-This checklist records the work that made `SwiftASB` ready for the `v1.3.1`
+This checklist records the work that made `SwiftASB` ready for the `v1.3.2`
 tag. The goal was not to make every possible app-server feature public before
 v1. The goal was to make the supported lifecycle honest, durable, well
 documented, and intentionally shaped.
@@ -416,8 +424,8 @@ workflow earns them in a later feature release.
 
 ### Documentation And Examples
 
-- [x] Update stale release references after the `v1.3.1` release.
-  Decision: README now names `v1.3.1` as the current released baseline and no
+- [x] Update stale release references after the `v1.3.2` release.
+  Decision: README now names `v1.3.2` as the current released baseline and no
   longer describes the package as early development.
 - [x] Finish DocC symbol comments for the supported lifecycle, not just the
   conceptual articles.
@@ -602,10 +610,10 @@ workflow earns them in a later feature release.
   the `release/v1.0.0` branch on 2026-05-02 and on the
   `release/v1.0.1-prep` branch on 2026-05-02.
 - [x] Decide whether another targeted `v0.9.x` patch release is needed before
-  `v1.3.1`, or whether the remaining work should go straight into the v1
+  `v1.3.2`, or whether the remaining work should go straight into the v1
   release branch.
   Decision: no additional `v0.9.x` patch is needed. The remaining work should go
-  straight into the `v1.3.1` release branch.
+  straight into the `v1.3.2` release branch.
 - [x] Prepare v1 release notes with explicit sections for public surface,
   intentionally internal surfaces, compatibility window, migration notes,
   validation performed, and known post-v1 work.
@@ -659,7 +667,7 @@ workflow earns them in a later feature release.
 #### Migration Notes
 
 - Existing `v0.9.x` consumers should update the SwiftPM dependency to
-  `from: "1.3.1"` once the tag is published.
+  `from: "1.3.2"` once the tag is published.
 - The v1 API surface has removed stale pre-v1 compatibility shims and phantom
   fields that no longer exist in the reviewed `v0.128.0` schema.
 - Same-thread overlapping turns are rejected client-side with
@@ -684,11 +692,46 @@ workflow earns them in a later feature release.
 
 - Keep an eye on future Swift Package Index builds after compatibility-window
   or DocC changes; the `v1.1.1` listing and documentation link are live, and
-  `v1.3.1` should be rechecked after the patch tag is indexed.
+  `v1.3.2` should be rechecked after the patch tag is indexed.
 - Add broader live server-request coverage for permissions and MCP elicitation
   if those become stronger public runtime guarantees.
 - Continue tuning recent companion cache calibration, richer file previews,
   archive-aware retention, and rollback forensic archival.
+
+## Security Audit Follow-Up
+
+The repository-wide Codex Security audit on 2026-05-11 found no critical or
+high-severity issues in the reviewed SwiftASB surfaces. It did identify two
+medium-severity protocol/policy hardening tasks and several deferred audit rows
+that should stay visible until closed.
+
+Audit bundle:
+[`docs/security-audits/82ea49d_20260511T213956-0400/report.md`](docs/security-audits/82ea49d_20260511T213956-0400/report.md).
+
+- [ ] Fix JSON-RPC numeric ID narrowing.
+  `CodexRPCEnvelope.parseRequestID(_:)` currently checks whole-number shape and
+  then uses `NSNumber.intValue`. Replace that with a range-preserving
+  conversion or explicit out-of-range rejection, then add boundary tests around
+  32-bit and platform `Int` limits.
+- [ ] Fix fail-open network-policy amendment mapping.
+  `CodexProtocolNetworkPolicyAmendment.publicValue` currently maps unknown
+  wire `action` strings to `.allow`. Preserve unknown values or fail closed so
+  approval UI and app logic cannot misrepresent malformed or future actions as
+  permission-widening approvals.
+- [ ] Add a focused resource-limit review for stdio line framing and JSON
+  materialization.
+  `LineDelimitedDataBuffer` and the JSON-RPC envelope path currently do not have
+  a documented line-size cap. The audit deferred this because the peer is the
+  local Codex app-server, but bounded framing would make the transport contract
+  clearer.
+- [ ] Complete a focused `ThreadHistoryStore` audit.
+  The audit identified local command, file, thread, and token history as
+  sensitive local metadata but did not close a full line-by-line persistence
+  review.
+- [ ] Complete generated-wire parser/codec review when the upstream wire layer
+  next changes materially.
+  Generated models remain internal, but schema refreshes should keep parser and
+  conversion assumptions visible before public mapping expands.
 
 ## Live App-Server Findings
 
@@ -1259,7 +1302,7 @@ Completed
 - [x] Add version-compatibility policy notes for the local Codex binary.
 - [x] Refresh the compatibility window and promoted generated snapshot against the current `v0.124.0` schema dump once the added endpoint, notification, and field families have been classified.
 - [x] Curate the public API before v1 by splitting large source files along existing responsibility boundaries where still helpful, tightening public names/defaults, and finishing targeted source-level symbol documentation for the supported lifecycle.
-  Decision: completed for the `v1.3.1` boundary through the public API audit,
+  Decision: completed for the `v1.3.2` boundary through the public API audit,
   symbol inventory, source-comment pass, and focused public file organization.
 - [x] Add the first DocC documentation catalog before v1, including a package landing page, public-handle topic groups, and conceptual articles for the interactive lifecycle, history companions, and generated-wire boundary.
 - [x] Validate the DocC catalog through Xcode `docbuild` and document the maintainer command.
@@ -1342,6 +1385,8 @@ Completed
   apps that want Codex-like repository operations through `git` and `gh` when
   those tools are installed and the app has the required access grant.
 - [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
+- [ ] Fix repository-wide security audit findings around JSON-RPC numeric ID
+  parsing and network-policy amendment fail-closed behavior.
 - [x] Add live rollback coverage once the disposable-thread path is reliable enough to assert explicit local rollback markers.
 - [x] Add a local-only startup mode for recent history observables when live upstream paging is unavailable because the thread is ephemeral or not yet materialized.
 - [x] Confirm the Swift Package Index listing after the package is publicly indexed and tagged.
@@ -1367,3 +1412,7 @@ Completed
 - 2026-05-08: Added a future optional macOS app-access layer for user-granted directory access and security-scoped bookmark handoff, keeping richer local repository and file-write enrichment separate from app-server-reported workspace facts.
 - 2026-05-08: Added future command-execution-backed Git and GitHub actions through installed `git` and optional `gh`, scoped by explicit user-reviewed command intents and the app-access permission model.
 - 2026-05-09: Added the feature permission policy implementation plan, shifting the next app-wide action work toward quiet read-only defaults, one-time mutation-category enablement, proactive Git observability, and human-readable mutation events.
+- 2026-05-11: Added the first repository-wide Codex Security audit bundle and
+  tracked follow-up hardening for JSON-RPC numeric ID parsing, network-policy
+  amendment fail-closed behavior, transport resource limits, history-store
+  sensitivity, and generated-wire parser review.

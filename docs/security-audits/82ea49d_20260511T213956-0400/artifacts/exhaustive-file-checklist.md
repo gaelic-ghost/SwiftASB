@@ -1,0 +1,53 @@
+# Exhaustive File Checklist
+
+The Codex Security workflow requires a file-by-file line review for every in-scope runtime file. This scan used subagents where available, but one transport subagent was blocked by the platform security classifier. Files marked checked were either read directly in this session or reported as fully read by a completed subagent. Deferred rows remain explicit coverage gaps rather than silently completed coverage.
+
+- [x] `Package.swift` - read for package graph and dependency provenance.
+- [x] `Sources/SwiftASB/Transport/CodexAppServerTransport.swift` - directly read.
+- [x] `Sources/SwiftASB/Transport/CodexCLIExecutableResolver.swift` - directly read.
+- [x] `Sources/SwiftASB/Transport/LineDelimitedDataBuffer.swift` - directly read.
+- [x] `Sources/SwiftASB/Transport/CodexTransportError.swift` - directly read.
+- [x] `Sources/SwiftASB/Transport/CodexRPCRequestID.swift` - directly read.
+- [x] `Sources/SwiftASB/Protocol/CodexAppServerProtocol.swift` - subagent reported full read, targeted validation directly read critical decode lines.
+- [x] `Sources/SwiftASB/Protocol/CodexAppServerProtocol+Types.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Protocol/CodexRPCEnvelope.swift` - subagent reported full read, targeted validation directly read full file.
+- [x] `Sources/SwiftASB/Protocol/CodexProtocolError.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer.swift` - subagent reported full read; critical areas directly read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexConfig.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexErrors.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+CommandExecution.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+TurnLifecycle.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexTurnHandle.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexInteractiveRequests.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+Library.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+LoadedThreads.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+ThreadManagement.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+GitObservability.swift` - subagent reported full read; critical command path directly read.
+- [x] `Sources/SwiftASB/Public/CodexWorkspace.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+MCP.swift` - subagent reported full read; critical resource request directly read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+Models.swift` - subagent reported full read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+Hooks.swift` - subagent reported full read; critical metadata path directly read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+CodexExtensions.swift` - subagent reported full read; critical metadata path directly read.
+- [x] `Sources/SwiftASB/Public/CodexAppServer+ProtocolPayloads.swift` - subagent reported full read; network-policy mapping directly read.
+- [x] `Sources/SwiftASB/Public/CodexFS.swift` - directly read.
+- [ ] `Sources/SwiftASB/Public/CodexThread.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/Public/CodexThread+Dashboard.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/Public/CodexDiagnostics.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/Public/SwiftASBFeaturePolicy.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/Public/SwiftASBFeatureOperationEvent.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/Public/CodexAppServer+WireMapping.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/History/ThreadHistoryStore.swift` - deferred full line-by-line review; covered by API/sink inventory only.
+- [ ] `Sources/SwiftASB/Generated/CodexWire/Latest/CodexLifecycleV2Batch+JSONValue.swift` - deferred generated internal code review.
+- [ ] `Sources/SwiftASB/Generated/CodexWire/Latest/CodexWireInitializeResponse.swift` - deferred generated/hand-owned wire code review.
+- [x] `scripts/dump-codex-schemas.sh` - directly read.
+- [x] `scripts/generate-wire-types.sh` - directly read.
+- [x] `scripts/repo-maintenance/release.sh` - directly read.
+- [x] `scripts/repo-maintenance/lib/common.sh` - directly read.
+- [x] `scripts/repo-maintenance/version-bump.sh` - directly read.
+- [ ] Remaining maintainer wrapper scripts under `scripts/` and `.github/workflows/` - deferred full line-by-line review; covered by sink inventory.
