@@ -399,6 +399,20 @@ public struct CodexThread: Sendable {
         try await appServer.compactThread(.init(threadID: id))
     }
 
+    /// Sends a user-level shell command string to this thread's configured shell.
+    ///
+    /// This wraps app-server `thread/shellCommand`, not SwiftASB's internal
+    /// `command/exec` helper path. The upstream app-server schema documents
+    /// `thread/shellCommand` as literal shell evaluation: it preserves shell
+    /// syntax such as pipes, redirects, and quoting, and it runs unsandboxed
+    /// with the user's full shell access instead of inheriting this thread's
+    /// sandbox policy. Host apps should present this as high-impact command
+    /// execution and enable ``SwiftASBFeatureCategory/ID/shellCommandExecution``
+    /// only after the user has explicitly opted in.
+    public func sendShellCommand(_ command: String) async throws {
+        try await appServer.sendThreadShellCommand(command: command, threadID: id)
+    }
+
     /// Rolls back trailing turns from this stored thread.
     ///
     /// The returned handle carries refreshed thread metadata and a fresh event

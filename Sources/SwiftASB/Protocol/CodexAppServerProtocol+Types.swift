@@ -55,6 +55,8 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 
 struct CodexProtocolThreadCompactStartResponse: Decodable, Equatable, Sendable {}
 
+struct CodexProtocolThreadShellCommandResponse: Decodable, Equatable, Sendable {}
+
 struct CodexProtocolThreadArchiveResponse: Decodable, Equatable, Sendable {}
 
 struct CodexProtocolThreadSetNameResponse: Decodable, Equatable, Sendable {}

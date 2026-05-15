@@ -395,6 +395,77 @@ public actor CodexAppServer {
         }
     }
 
+    /// Sends one user-level shell command string to a running thread.
+    ///
+    /// `thread/shellCommand` is intentionally different from `command/exec`.
+    /// `command/exec` runs argv-shaped SwiftASB helper commands through the
+    /// app-server command runner. `thread/shellCommand` sends literal shell
+    /// syntax to the thread's configured shell, preserving pipes, redirects,
+    /// quoting, and other shell behavior, and the upstream schema documents
+    /// that it runs unsandboxed with the user's full shell access.
+    internal func sendThreadShellCommand(
+        command: String,
+        threadID: String
+    ) async throws {
+        try requireInitialized(for: "thread/shellCommand")
+        try requireFeatureEnabled(.shellCommandExecution, for: "thread/shellCommand")
+
+        let trimmedCommand = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCommand.isEmpty else {
+            throw CodexAppServerError.invalidState(
+                reason: "SwiftASB cannot send thread/shellCommand with an empty shell command string."
+            )
+        }
+
+        let operationID = UUID().uuidString
+        let startedAt = Date()
+
+        do {
+            let requestID = CodexRPCRequestID.generated()
+            let requestPayload = try protocolLayer.makeThreadShellCommandRequest(
+                id: requestID,
+                params: .init(command: command, threadID: threadID)
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            _ = try protocolLayer.decodeThreadShellCommandResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            publishFeatureOperationEvent(
+                .init(
+                    categoryID: .shellCommandExecution,
+                    operationID: operationID,
+                    title: "Send shell command",
+                    summary: "Sent a user-level shell command to the Codex thread.",
+                    reason: "Shell command execution is enabled by the host app.",
+                    startedAt: startedAt,
+                    completedAt: Date(),
+                    appServerMethod: "thread/shellCommand",
+                    intentKind: "threadShellCommand",
+                    status: .succeeded
+                )
+            )
+        } catch {
+            publishFeatureOperationEvent(
+                .init(
+                    categoryID: .shellCommandExecution,
+                    operationID: operationID,
+                    title: "Send shell command",
+                    summary: "Failed to send a user-level shell command to the Codex thread.",
+                    reason: "Shell command execution is enabled by the host app.",
+                    startedAt: startedAt,
+                    completedAt: Date(),
+                    appServerMethod: "thread/shellCommand",
+                    intentKind: "threadShellCommand",
+                    status: .failed,
+                    diagnosticText: String(describing: error)
+                )
+            )
+            throw CodexAppServerError.wrap(error, operation: "thread/shellCommand")
+        }
+    }
+
     internal func codexCommandExecutablePath() async -> String {
         await transport.executableResolution()?.resolvedExecutableURL?.path ?? "codex"
     }

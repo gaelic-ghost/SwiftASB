@@ -31,6 +31,7 @@ Examples currently promoted through hand-owned public types include:
 - thread archive-state actions through ``CodexThread/archive()`` and ``CodexThread/unarchive()``
 - thread metadata patches through ``CodexThread/updateMetadata(gitInfo:)``
 - thread rollback through ``CodexThread/rollbackLastTurns(_:)``
+- thread shell commands through ``CodexThread/sendShellCommand(_:)`` with a high-impact feature-policy gate
 - file and command deltas as inputs to ``CodexThread/RecentFiles`` and ``CodexThread/RecentCommands``
 - passive diagnostics through ``CodexAppServer/diagnosticEvents()``
 

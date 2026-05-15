@@ -21,6 +21,7 @@ struct CodexAppServerProtocol {
         case threadGoalGet = "thread/goal/get"
         case threadGoalSet = "thread/goal/set"
         case threadGoalClear = "thread/goal/clear"
+        case threadShellCommand = "thread/shellCommand"
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
@@ -89,6 +90,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadCompactStart, params: params),
             method: .threadCompactStart
+        )
+    }
+
+    func makeThreadShellCommandRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadShellCommandParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadShellCommand, params: params),
+            method: .threadShellCommand
         )
     }
 
@@ -520,6 +531,18 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadCompactStart,
             resultType: CodexProtocolThreadCompactStartResponse.self
+        )
+    }
+
+    func decodeThreadShellCommandResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadShellCommandResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadShellCommand,
+            resultType: CodexProtocolThreadShellCommandResponse.self
         )
     }
 

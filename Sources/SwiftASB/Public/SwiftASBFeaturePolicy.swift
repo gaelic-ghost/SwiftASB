@@ -68,6 +68,7 @@ public struct SwiftASBFeatureCategory: Sendable, Equatable, Identifiable {
         public static let configMutation: Self = "configMutation"
         public static let extensionMutation: Self = "extensionMutation"
         public static let worktreeAutomation: Self = "worktreeAutomation"
+        public static let shellCommandExecution: Self = "shellCommandExecution"
     }
 
     public let id: ID
@@ -170,6 +171,15 @@ public struct SwiftASBFeatureCategory: Sendable, Equatable, Identifiable {
             defaultMode: .disabled,
             sensitivity: .mutation,
             eventPolicy: .notifyOnMutation
+        ),
+        .init(
+            id: .shellCommandExecution,
+            displayName: "Shell Command Execution",
+            description: "Send user-level shell command strings to a Codex thread for evaluation by the thread shell.",
+            permissionReason: "SwiftASB sends literal shell syntax to the thread shell only after this high-impact category is enabled, because these commands run with the user's full shell access.",
+            defaultMode: .disabled,
+            sensitivity: .highImpact,
+            eventPolicy: .requireExplicitAction
         ),
     ]
 

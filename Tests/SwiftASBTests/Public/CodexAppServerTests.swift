@@ -356,6 +356,76 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("sends thread shell commands only when high-impact shell execution is enabled")
+    func sendsThreadShellCommandsOnlyWhenHighImpactShellExecutionIsEnabled() async throws {
+        var featurePolicy = SwiftASBFeaturePolicy.defaults
+        featurePolicy.setMode(.enabled, for: .shellCommandExecution)
+
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport, featurePolicy: featurePolicy)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        try await thread.sendShellCommand("printf 'hi' | tee output.txt")
+
+        let methods = await transport.recordedMethods
+        #expect(methods.contains("thread/shellCommand"))
+        #expect(!methods.contains("command/exec"))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/shellCommand"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        #expect(params["command"] as? String == "printf 'hi' | tee output.txt")
+
+        let operationStream = await client.featureOperationEvents()
+        var iterator = operationStream.makeAsyncIterator()
+        let operation = try #require(await iterator.next())
+        #expect(operation.categoryID == .shellCommandExecution)
+        #expect(operation.appServerMethod == "thread/shellCommand")
+        #expect(operation.intentKind == "threadShellCommand")
+        #expect(operation.status == .succeeded)
+
+        await client.stop()
+    }
+
+    @Test("refuses thread shell commands by default")
+    func refusesThreadShellCommandsByDefault() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        await #expect(throws: CodexAppServerError.self) {
+            try await thread.sendShellCommand("printf 'blocked'")
+        }
+
+        let methods = await transport.recordedMethods
+        #expect(!methods.contains("thread/shellCommand"))
+
+        await client.stop()
+    }
+
     @Test("lists app-wide models through the public client")
     func listsAppWideModels() async throws {
         let transport = FakeCodexAppServerTransport()

@@ -108,6 +108,8 @@ build_batch \
   ThreadMetadataUpdateResponse \
   ThreadCompactStartParams \
   ThreadCompactStartResponse \
+  ThreadShellCommandParams \
+  ThreadShellCommandResponse \
   ThreadTurnsListParams \
   ThreadTurnsListResponse \
   ThreadTurnsItemsListParams \

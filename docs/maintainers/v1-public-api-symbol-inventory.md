@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, and on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.Library` worktree-group helpers, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.Library` worktree-group helpers, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names, and on 2026-05-15 for `CodexThread.sendShellCommand(_:)` plus the `shellCommandExecution` feature category. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1890
+- Public/open symbols: 1892
 - Public/open types: 294
 - Public/open initializers: 131
-- Public/open methods and type methods: 132
+- Public/open methods and type methods: 133
 - Public/open enum cases: 363
-- Public/open properties: 967
+- Public/open properties: 968
 
 ## Public Types
 
@@ -407,6 +407,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThread.respond(to:with:)` - `func respond(to request: CodexApprovalRequest, with response: CodexApprovalResponse) async throws` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.respond(to:with:)` - `func respond(to request: CodexElicitationRequest, with response: CodexElicitationResponse) async throws` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.rollbackLastTurns(_:)` - `func rollbackLastTurns(_ count: Int) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.sendShellCommand(_:)` - `func sendShellCommand(_ command: String) async throws` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.setName(_:)` - `func setName(_ name: String) async throws` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)` - `func startTextTurn(_ text: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, permissions: CodexWorkspace.PermissionSelection? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.startTurn(_:)` - `func startTurn(_ request: CodexThread.TurnStartRequest) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift

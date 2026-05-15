@@ -1165,6 +1165,11 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 id: id,
                 result: commandExecResult
             )
+        case "thread/shellCommand":
+            return responsePayload(
+                id: id,
+                result: [:]
+            )
         case "turn/start":
             let turnID = turnStartIDQueue.isEmpty ? "turn-123" : turnStartIDQueue.removeFirst()
             return responsePayload(

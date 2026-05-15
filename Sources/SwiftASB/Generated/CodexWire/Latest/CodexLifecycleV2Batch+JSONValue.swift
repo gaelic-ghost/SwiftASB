@@ -120,6 +120,8 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let threadRollbackResponse: CodexWireThreadRollbackResponse?
     let threadSetNameParams: CodexWireThreadSetNameParams?
     let threadSetNameResponse: [String: CodexWireJSONValue]?
+    let threadShellCommandParams: CodexWireThreadShellCommandParams?
+    let threadShellCommandResponse: [String: CodexWireJSONValue]?
     let threadStartedNotification: CodexWireThreadStartedNotification?
     let threadStartParams: CodexWireThreadStartParams?
     let threadStartResponse: CodexWireThreadStartResponse?
@@ -145,7 +147,7 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
         case agentMessageDeltaNotification, appListUpdatedNotification, appsListParams, appsListResponse, collaborationModeListParams, collaborationModeListResponse, commandExecOutputDeltaNotification, commandExecutionOutputDeltaNotification, configReadParams, configReadResponse, configRequirementsReadResponse, configWarningNotification, contextCompactedNotification, deprecationNoticeNotification, errorNotification, externalAgentConfigImportCompletedNotification, fileChangeOutputDeltaNotification, fileChangePatchUpdatedNotification, fsChangedNotification, fsGetMetadataParams, fsGetMetadataResponse, fsReadDirectoryParams, fsReadDirectoryResponse, fsReadFileParams, fsReadFileResponse, fsUnwatchParams, fsUnwatchResponse, fsWatchParams, fsWatchResponse, guardianWarningNotification, hookCompletedNotification, hookStartedNotification, initializeParams, itemCompletedNotification, itemGuardianApprovalReviewCompletedNotification, itemGuardianApprovalReviewStartedNotification, itemStartedNotification
         case listMCPServerStatusParams = "listMcpServerStatusParams"
         case listMCPServerStatusResponse = "listMcpServerStatusResponse"
-        case mcpResourceReadParams, mcpResourceReadResponse, mcpServerStatusUpdatedNotification, mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, pluginShareDeleteParams, pluginShareDeleteResponse, pluginShareListParams, pluginShareListResponse, pluginShareSaveParams, pluginShareSaveResponse, pluginShareUpdateTargetsParams, pluginShareUpdateTargetsResponse, pluginSkillReadParams, pluginSkillReadResponse, processExitedNotification, processKillParams, processKillResponse, processOutputDeltaNotification, processResizePtyParams, processResizePtyResponse, processSpawnParams, processSpawnResponse, processWriteStdinParams, processWriteStdinResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, remoteControlStatusChangedNotification, serverRequestResolvedNotification, skillsChangedNotification, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadArchiveParams, threadArchiveResponse, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsItemsListParams, threadTurnsItemsListResponse, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, threadUnarchiveParams, threadUnarchiveResponse, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification, windowsSandboxReadinessResponse
+        case mcpResourceReadParams, mcpResourceReadResponse, mcpServerStatusUpdatedNotification, mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, pluginShareDeleteParams, pluginShareDeleteResponse, pluginShareListParams, pluginShareListResponse, pluginShareSaveParams, pluginShareSaveResponse, pluginShareUpdateTargetsParams, pluginShareUpdateTargetsResponse, pluginSkillReadParams, pluginSkillReadResponse, processExitedNotification, processKillParams, processKillResponse, processOutputDeltaNotification, processResizePtyParams, processResizePtyResponse, processSpawnParams, processSpawnResponse, processWriteStdinParams, processWriteStdinResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, remoteControlStatusChangedNotification, serverRequestResolvedNotification, skillsChangedNotification, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadArchiveParams, threadArchiveResponse, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadShellCommandParams, threadShellCommandResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsItemsListParams, threadTurnsItemsListResponse, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, threadUnarchiveParams, threadUnarchiveResponse, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification, windowsSandboxReadinessResponse
     }
 }
 
@@ -4590,6 +4592,26 @@ struct CodexWireThreadSetNameParams: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case name
+        case threadID = "threadId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireThreadShellCommandParams
+struct CodexWireThreadShellCommandParams: Codable, Equatable, Sendable {
+    /// Shell command string evaluated by the thread's configured shell. Unlike `command/exec`,
+    /// this intentionally preserves shell syntax such as pipes, redirects, and quoting. This
+    /// runs unsandboxed with full access rather than inheriting the thread sandbox policy.
+    let command: String
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case command
         case threadID = "threadId"
     }
 }

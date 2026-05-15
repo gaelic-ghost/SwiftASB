@@ -110,6 +110,26 @@ struct CodexAppServerProtocolTests {
         #expect(notification.capReached == false)
     }
 
+    @Test("encodes thread/shellCommand as a thread-scoped shell string")
+    func encodesThreadShellCommandAsThreadScopedShellString() throws {
+        let payload = try protocolLayer.makeThreadShellCommandRequest(
+            id: .string("thread-shell-1"),
+            params: .init(
+                command: "printf 'hi' | tee output.txt",
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/shellCommand")
+        #expect(object["id"] as? String == "thread-shell-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["command"] as? String == "printf 'hi' | tee output.txt")
+        #expect(params["threadId"] as? String == "thread-123")
+    }
+
     @Test("encodes thread/start requests with the expected method and params payload")
     func encodesThreadStartRequest() throws {
         let payload = try protocolLayer.makeThreadStartRequest(
