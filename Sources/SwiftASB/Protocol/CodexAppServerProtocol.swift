@@ -40,6 +40,7 @@ struct CodexAppServerProtocol {
         case modelProviderCapabilitiesRead = "modelProvider/capabilities/read"
         case mcpServerStatusList = "mcpServerStatus/list"
         case mcpResourceRead = "mcpServer/resource/read"
+        case reviewStart = "review/start"
         case pluginList = "plugin/list"
         case pluginRead = "plugin/read"
         case skillsList = "skills/list"
@@ -100,6 +101,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadShellCommand, params: params),
             method: .threadShellCommand
+        )
+    }
+
+    func makeReviewStartRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireReviewStartParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .reviewStart, params: params),
+            method: .reviewStart
         )
     }
 
@@ -543,6 +554,18 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadShellCommand,
             resultType: CodexProtocolThreadShellCommandResponse.self
+        )
+    }
+
+    func decodeReviewStartResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireReviewStartResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .reviewStart,
+            resultType: CodexWireReviewStartResponse.self
         )
     }
 

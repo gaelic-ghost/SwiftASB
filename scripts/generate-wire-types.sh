@@ -110,6 +110,8 @@ build_batch \
   ThreadCompactStartResponse \
   ThreadShellCommandParams \
   ThreadShellCommandResponse \
+  ReviewStartParams \
+  ReviewStartResponse \
   ThreadTurnsListParams \
   ThreadTurnsListResponse \
   ThreadTurnsItemsListParams \

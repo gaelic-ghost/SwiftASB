@@ -91,6 +91,8 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let reasoningSummaryTextDeltaNotification: CodexWireReasoningSummaryTextDeltaNotification?
     let reasoningTextDeltaNotification: CodexWireReasoningTextDeltaNotification?
     let remoteControlStatusChangedNotification: CodexWireRemoteControlStatusChangedNotification?
+    let reviewStartParams: CodexWireReviewStartParams?
+    let reviewStartResponse: CodexWireReviewStartResponse?
     let serverRequestResolvedNotification: CodexWireServerRequestResolvedNotification?
     let skillsChangedNotification: [String: CodexWireJSONValue]?
     let skillsListParams: CodexWireSkillsListParams?
@@ -147,7 +149,7 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
         case agentMessageDeltaNotification, appListUpdatedNotification, appsListParams, appsListResponse, collaborationModeListParams, collaborationModeListResponse, commandExecOutputDeltaNotification, commandExecutionOutputDeltaNotification, configReadParams, configReadResponse, configRequirementsReadResponse, configWarningNotification, contextCompactedNotification, deprecationNoticeNotification, errorNotification, externalAgentConfigImportCompletedNotification, fileChangeOutputDeltaNotification, fileChangePatchUpdatedNotification, fsChangedNotification, fsGetMetadataParams, fsGetMetadataResponse, fsReadDirectoryParams, fsReadDirectoryResponse, fsReadFileParams, fsReadFileResponse, fsUnwatchParams, fsUnwatchResponse, fsWatchParams, fsWatchResponse, guardianWarningNotification, hookCompletedNotification, hookStartedNotification, initializeParams, itemCompletedNotification, itemGuardianApprovalReviewCompletedNotification, itemGuardianApprovalReviewStartedNotification, itemStartedNotification
         case listMCPServerStatusParams = "listMcpServerStatusParams"
         case listMCPServerStatusResponse = "listMcpServerStatusResponse"
-        case mcpResourceReadParams, mcpResourceReadResponse, mcpServerStatusUpdatedNotification, mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, pluginShareDeleteParams, pluginShareDeleteResponse, pluginShareListParams, pluginShareListResponse, pluginShareSaveParams, pluginShareSaveResponse, pluginShareUpdateTargetsParams, pluginShareUpdateTargetsResponse, pluginSkillReadParams, pluginSkillReadResponse, processExitedNotification, processKillParams, processKillResponse, processOutputDeltaNotification, processResizePtyParams, processResizePtyResponse, processSpawnParams, processSpawnResponse, processWriteStdinParams, processWriteStdinResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, remoteControlStatusChangedNotification, serverRequestResolvedNotification, skillsChangedNotification, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadArchiveParams, threadArchiveResponse, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadShellCommandParams, threadShellCommandResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsItemsListParams, threadTurnsItemsListResponse, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, threadUnarchiveParams, threadUnarchiveResponse, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification, windowsSandboxReadinessResponse
+        case mcpResourceReadParams, mcpResourceReadResponse, mcpServerStatusUpdatedNotification, mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, pluginShareDeleteParams, pluginShareDeleteResponse, pluginShareListParams, pluginShareListResponse, pluginShareSaveParams, pluginShareSaveResponse, pluginShareUpdateTargetsParams, pluginShareUpdateTargetsResponse, pluginSkillReadParams, pluginSkillReadResponse, processExitedNotification, processKillParams, processKillResponse, processOutputDeltaNotification, processResizePtyParams, processResizePtyResponse, processSpawnParams, processSpawnResponse, processWriteStdinParams, processWriteStdinResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, remoteControlStatusChangedNotification, reviewStartParams, reviewStartResponse, serverRequestResolvedNotification, skillsChangedNotification, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadArchiveParams, threadArchiveResponse, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSetNameParams, threadSetNameResponse, threadShellCommandParams, threadShellCommandResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsItemsListParams, threadTurnsItemsListResponse, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, threadUnarchiveParams, threadUnarchiveResponse, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification, windowsSandboxReadinessResponse
     }
 }
 
@@ -3797,6 +3799,132 @@ enum CodexWireRemoteControlConnectionStatus: String, Codable, Equatable, Sendabl
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
+// MARK: - CodexWireReviewStartParams
+struct CodexWireReviewStartParams: Codable, Equatable, Sendable {
+    /// Where to run the review: inline (default) on the current thread or detached on a new
+    /// thread (returned in `reviewThreadId`).
+    let delivery: CodexWireReviewDelivery?
+    let target: CodexWireReviewTarget
+    let threadID: String
+
+    enum CodingKeys: String, CodingKey {
+        case delivery, target
+        case threadID = "threadId"
+    }
+}
+
+enum CodexWireReviewDelivery: String, Codable, Equatable, Sendable {
+    case detached = "detached"
+    case inline = "inline"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+/// Review the working tree: staged, unstaged, and untracked files.
+///
+/// Review changes between the current branch and the given base branch.
+///
+/// Review the changes introduced by a specific commit.
+///
+/// Arbitrary instructions, equivalent to the old free-form prompt.
+// MARK: - CodexWireReviewTarget
+struct CodexWireReviewTarget: Codable, Equatable, Sendable {
+    let type: CodexWireReviewTargetType
+    let branch, sha: String?
+    /// Optional human-readable label (e.g., commit subject) for UIs.
+    let title: String?
+    let instructions: String?
+}
+
+enum CodexWireReviewTargetType: String, Codable, Equatable, Sendable {
+    case baseBranch = "baseBranch"
+    case commit = "commit"
+    case custom = "custom"
+    case uncommittedChanges = "uncommittedChanges"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireReviewStartResponse
+struct CodexWireReviewStartResponse: Codable, Equatable, Sendable {
+    /// Identifies the thread where the review runs.
+    ///
+    /// For inline reviews, this is the original thread id. For detached reviews, this is the id
+    /// of the new review thread.
+    let reviewThreadID: String
+    let turn: CodexWireTurn
+
+    enum CodingKeys: String, CodingKey {
+        case reviewThreadID = "reviewThreadId"
+        case turn
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireTurn
+struct CodexWireTurn: Codable, Equatable, Sendable {
+    /// Unix timestamp (in seconds) when the turn completed.
+    let completedAt: Int?
+    /// Duration between turn start and completion in milliseconds, if known.
+    let durationMS: Int?
+    /// Only populated when the Turn's status is failed.
+    let error: CodexWireTurnError?
+    let id: String
+    /// Thread items currently included in this turn payload.
+    let items: [CodexWireThreadItem]
+    /// Describes how much of `items` has been loaded for this turn.
+    let itemsView: CodexWireTurnItemsView?
+    /// Unix timestamp (in seconds) when the turn started.
+    let startedAt: Int?
+    let status: CodexWireTurnStatus
+
+    enum CodingKeys: String, CodingKey {
+        case completedAt
+        case durationMS = "durationMs"
+        case error, id, items, itemsView, startedAt, status
+    }
+}
+
+/// Describes how much of `items` has been loaded for this turn.
+///
+/// `items` was not loaded for this turn. The field is intentionally empty.
+///
+/// `items` contains only a display summary for this turn.
+///
+/// `items` contains every ThreadItem available from persisted app-server history for this
+/// turn.
+enum CodexWireTurnItemsView: String, Codable, Equatable, Sendable {
+    case full = "full"
+    case notLoaded = "notLoaded"
+    case summary = "summary"
+}
+
+enum CodexWireTurnStatus: String, Codable, Equatable, Sendable {
+    case completed = "completed"
+    case failed = "failed"
+    case inProgress = "inProgress"
+    case interrupted = "interrupted"
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
 // MARK: - CodexWireServerRequestResolvedNotification
 struct CodexWireServerRequestResolvedNotification: Codable, Equatable, Sendable {
     let requestID: CodexWireRequestID
@@ -4473,57 +4601,6 @@ enum CodexWireThreadSource: String, Codable, Equatable, Sendable {
     case memoryConsolidation = "memory_consolidation"
     case subagent = "subagent"
     case user = "user"
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWireTurn
-struct CodexWireTurn: Codable, Equatable, Sendable {
-    /// Unix timestamp (in seconds) when the turn completed.
-    let completedAt: Int?
-    /// Duration between turn start and completion in milliseconds, if known.
-    let durationMS: Int?
-    /// Only populated when the Turn's status is failed.
-    let error: CodexWireTurnError?
-    let id: String
-    /// Thread items currently included in this turn payload.
-    let items: [CodexWireThreadItem]
-    /// Describes how much of `items` has been loaded for this turn.
-    let itemsView: CodexWireTurnItemsView?
-    /// Unix timestamp (in seconds) when the turn started.
-    let startedAt: Int?
-    let status: CodexWireTurnStatus
-
-    enum CodingKeys: String, CodingKey {
-        case completedAt
-        case durationMS = "durationMs"
-        case error, id, items, itemsView, startedAt, status
-    }
-}
-
-/// Describes how much of `items` has been loaded for this turn.
-///
-/// `items` was not loaded for this turn. The field is intentionally empty.
-///
-/// `items` contains only a display summary for this turn.
-///
-/// `items` contains every ThreadItem available from persisted app-server history for this
-/// turn.
-enum CodexWireTurnItemsView: String, Codable, Equatable, Sendable {
-    case full = "full"
-    case notLoaded = "notLoaded"
-    case summary = "summary"
-}
-
-enum CodexWireTurnStatus: String, Codable, Equatable, Sendable {
-    case completed = "completed"
-    case failed = "failed"
-    case inProgress = "inProgress"
-    case interrupted = "interrupted"
 }
 
 //

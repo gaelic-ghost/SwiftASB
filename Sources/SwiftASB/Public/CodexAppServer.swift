@@ -1571,26 +1571,82 @@ public actor CodexAppServer {
             let turn = TurnInfo(wireValue: response.turn)
             markThreadTurnActive(threadID: request.threadID, turnID: turn.id)
             try await requireHistoryStore(for: "turn/start").recordTurnStarted(threadID: request.threadID, turn: turn)
-            let eventStream = makeTurnEventStream(turnID: turn.id)
-            let minimapStream = makeTurnEventStream(turnID: turn.id)
-            let minimap = await MainActor.run {
-                CodexTurnHandle.Minimap(
-                    threadID: request.threadID,
-                    initialTurn: turn,
-                    events: minimapStream
-                )
-            }
-            return CodexTurnHandle(
-                appServer: self,
-                threadID: request.threadID,
-                turn: turn,
-                events: eventStream,
-                minimap: minimap
-            )
+            return await makeTurnHandle(threadID: request.threadID, turn: turn)
         } catch {
             clearThreadTurnReservation(threadID: request.threadID)
             throw CodexAppServerError.wrap(error, operation: "turn/start")
         }
+    }
+
+    internal func startReview(
+        against subject: CodexThread.ReviewSubject,
+        placement: CodexThread.ReviewPlacement,
+        sourceThreadID: String
+    ) async throws -> CodexReviewHandle {
+        try requireInitialized(for: "review/start")
+        if placement == .inline {
+            try reserveThreadForTurnStart(threadID: sourceThreadID)
+        }
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeReviewStartRequest(
+                id: requestID,
+                params: .init(
+                    delivery: placement.wireValue,
+                    target: subject.wireValue,
+                    threadID: sourceThreadID
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeReviewStartResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+
+            let turn = TurnInfo(wireValue: response.turn)
+            if placement == .inline, response.reviewThreadID != sourceThreadID {
+                clearThreadTurnReservation(threadID: sourceThreadID)
+            }
+            markThreadTurnActive(threadID: response.reviewThreadID, turnID: turn.id)
+            try? await historyStore?.recordTurnStarted(threadID: response.reviewThreadID, turn: turn)
+
+            return CodexReviewHandle(
+                sourceThreadID: sourceThreadID,
+                reviewThreadID: response.reviewThreadID,
+                placement: placement,
+                subject: subject,
+                turn: await makeTurnHandle(threadID: response.reviewThreadID, turn: turn)
+            )
+        } catch {
+            if placement == .inline {
+                clearThreadTurnReservation(threadID: sourceThreadID)
+            }
+            throw CodexAppServerError.wrap(error, operation: "review/start")
+        }
+    }
+
+    private func makeTurnHandle(
+        threadID: String,
+        turn: TurnInfo
+    ) async -> CodexTurnHandle {
+        let eventStream = makeTurnEventStream(turnID: turn.id)
+        let minimapStream = makeTurnEventStream(turnID: turn.id)
+        let minimap = await MainActor.run {
+            CodexTurnHandle.Minimap(
+                threadID: threadID,
+                initialTurn: turn,
+                events: minimapStream
+            )
+        }
+        return CodexTurnHandle(
+            appServer: self,
+            threadID: threadID,
+            turn: turn,
+            events: eventStream,
+            minimap: minimap
+        )
     }
 
     internal func interruptTurn(

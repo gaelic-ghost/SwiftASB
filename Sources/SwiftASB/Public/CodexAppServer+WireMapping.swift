@@ -79,6 +79,56 @@ extension CodexThreadTokenUsageUpdated.Usage {
     }
 }
 
+extension CodexThread.ReviewPlacement {
+    var wireValue: CodexWireReviewDelivery {
+        switch self {
+        case .inline:
+            .inline
+        case .detached:
+            .detached
+        }
+    }
+}
+
+extension CodexThread.ReviewSubject {
+    var wireValue: CodexWireReviewTarget {
+        switch self {
+        case .uncommittedChanges:
+            CodexWireReviewTarget(
+                type: .uncommittedChanges,
+                branch: nil,
+                sha: nil,
+                title: nil,
+                instructions: nil
+            )
+        case let .baseBranch(branch):
+            CodexWireReviewTarget(
+                type: .baseBranch,
+                branch: branch,
+                sha: nil,
+                title: nil,
+                instructions: nil
+            )
+        case let .commit(sha, title):
+            CodexWireReviewTarget(
+                type: .commit,
+                branch: nil,
+                sha: sha,
+                title: title,
+                instructions: nil
+            )
+        case let .custom(instructions):
+            CodexWireReviewTarget(
+                type: .custom,
+                branch: nil,
+                sha: nil,
+                title: nil,
+                instructions: instructions
+            )
+        }
+    }
+}
+
 extension CodexAppServer.InitializeRequest {
     var wireValue: CodexWireInitializeParams {
         CodexWireInitializeParams(

@@ -130,6 +130,37 @@ struct CodexAppServerProtocolTests {
         #expect(params["threadId"] as? String == "thread-123")
     }
 
+    @Test("encodes review/start with subject and placement")
+    func encodesReviewStartWithSubjectAndPlacement() throws {
+        let payload = try protocolLayer.makeReviewStartRequest(
+            id: .string("review-start-1"),
+            params: .init(
+                delivery: .detached,
+                target: .init(
+                    type: .baseBranch,
+                    branch: "main",
+                    sha: nil,
+                    title: nil,
+                    instructions: nil
+                ),
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "review/start")
+        #expect(object["id"] as? String == "review-start-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["delivery"] as? String == "detached")
+        #expect(params["threadId"] as? String == "thread-123")
+
+        let target = try #require(params["target"] as? [String: Any])
+        #expect(target["type"] as? String == "baseBranch")
+        #expect(target["branch"] as? String == "main")
+    }
+
     @Test("encodes thread/start requests with the expected method and params payload")
     func encodesThreadStartRequest() throws {
         let payload = try protocolLayer.makeThreadStartRequest(

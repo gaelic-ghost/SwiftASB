@@ -426,6 +426,87 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("starts detached reviews against a base branch")
+    func startsDetachedReviewsAgainstBaseBranch() async throws {
+        let transport = FakeCodexAppServerTransport(turnStartIDQueue: ["review-turn-detached"])
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        let review = try await thread.startReview(
+            against: .baseBranch("main"),
+            placement: .detached
+        )
+
+        #expect(review.sourceThreadID == thread.id)
+        #expect(review.reviewThreadID == "review-thread-123")
+        #expect(review.placement == .detached)
+        #expect(review.subject == .baseBranch("main"))
+        #expect(review.turn.threadID == "review-thread-123")
+        #expect(review.turn.turn.id == "review-turn-detached")
+
+        let methods = await transport.recordedMethods
+        #expect(methods.contains("review/start"))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "review/start"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        #expect(params["delivery"] as? String == "detached")
+
+        let target = try #require(params["target"] as? [String: Any])
+        #expect(target["type"] as? String == "baseBranch")
+        #expect(target["branch"] as? String == "main")
+
+        await client.stop()
+    }
+
+    @Test("starts inline reviews against uncommitted changes")
+    func startsInlineReviewsAgainstUncommittedChanges() async throws {
+        let transport = FakeCodexAppServerTransport(turnStartIDQueue: ["review-turn-inline"])
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        let review = try await thread.startReview(against: .uncommittedChanges)
+
+        #expect(review.sourceThreadID == thread.id)
+        #expect(review.reviewThreadID == thread.id)
+        #expect(review.placement == .inline)
+        #expect(review.subject == .uncommittedChanges)
+        #expect(review.turn.threadID == thread.id)
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "review/start"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["delivery"] as? String == "inline")
+
+        let target = try #require(params["target"] as? [String: Any])
+        #expect(target["type"] as? String == "uncommittedChanges")
+
+        await client.stop()
+    }
+
     @Test("lists app-wide models through the public client")
     func listsAppWideModels() async throws {
         let transport = FakeCodexAppServerTransport()

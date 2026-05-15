@@ -1170,6 +1170,26 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 id: id,
                 result: [:]
             )
+        case "review/start":
+            let delivery = try requestParam("delivery", from: requestPayload) as? String
+            let sourceThreadID = try #require(requestParam("threadId", from: requestPayload) as? String)
+            let reviewThreadID = delivery == "detached" ? "review-thread-123" : sourceThreadID
+            let turnID = turnStartIDQueue.isEmpty ? "review-turn-123" : turnStartIDQueue.removeFirst()
+            return responsePayload(
+                id: id,
+                result: [
+                    "reviewThreadId": reviewThreadID,
+                    "turn": [
+                        "completedAt": NSNull(),
+                        "durationMs": NSNull(),
+                        "error": NSNull(),
+                        "id": turnID,
+                        "items": [],
+                        "startedAt": 1713350003,
+                        "status": "inProgress",
+                    ],
+                ]
+            )
         case "turn/start":
             let turnID = turnStartIDQueue.isEmpty ? "turn-123" : turnStartIDQueue.removeFirst()
             return responsePayload(

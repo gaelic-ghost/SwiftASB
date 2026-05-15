@@ -228,6 +228,26 @@ public struct CodexThread: Sendable {
         }
     }
 
+    /// What a code review should inspect.
+    public enum ReviewSubject: Sendable, Equatable {
+        /// Review staged, unstaged, and untracked working-tree changes.
+        case uncommittedChanges
+        /// Review changes between the current branch and `branch`.
+        case baseBranch(String)
+        /// Review changes introduced by one commit.
+        case commit(sha: String, title: String? = nil)
+        /// Review arbitrary instructions.
+        case custom(instructions: String)
+    }
+
+    /// Where the review turn should run.
+    public enum ReviewPlacement: Sendable, Equatable {
+        /// Run the review on the current thread.
+        case inline
+        /// Run the review on a new review thread returned by the app-server.
+        case detached
+    }
+
     /// Goal state stored by the app-server for this thread.
     public struct Goal: Sendable, Equatable {
         /// App-server goal status.
@@ -368,6 +388,21 @@ public struct CodexThread: Sendable {
                 serviceTier: serviceTier,
                 summary: summary
             )
+        )
+    }
+
+    /// Starts a code review against this thread's repository state.
+    ///
+    /// Inline reviews run on this thread. Detached reviews run on a new review
+    /// thread and return that review thread id in the handle.
+    public func startReview(
+        against subject: ReviewSubject,
+        placement: ReviewPlacement = .inline
+    ) async throws -> CodexReviewHandle {
+        try await appServer.startReview(
+            against: subject,
+            placement: placement,
+            sourceThreadID: id
         )
     }
 

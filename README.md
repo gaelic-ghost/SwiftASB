@@ -80,6 +80,8 @@ Use `CodexAppServer.fs` when a sandboxed client needs filesystem metadata, direc
 
 Use `CodexAppServer.ThreadListQD`, `CodexFS.FileDiscoveryQD`, `CodexThread.HistoryWindowQD`, `CodexThread.RecentFilesQD`, and `CodexThread.RecentCommandsQD` when a client needs to preserve repeatable list, file-discovery, history-window, or recent-activity intent without depending on Core Data, SwiftData, direct filesystem reads, or raw app-server paging details.
 
+Use `CodexThread.startReview(against:placement:)` to start app-server code reviews from a thread. The public API uses hand-owned Swift subjects such as `.uncommittedChanges`, `.baseBranch("main")`, `.commit(sha:title:)`, and `.custom(instructions:)`; `placement: .inline` runs the review turn on the current thread, while `.detached` runs it on a returned review thread.
+
 Use `CodexThread.sendShellCommand(_:)` only for explicit user-level shell access. It sends a literal shell command string through app-server `thread/shellCommand`, preserves shell syntax such as pipes and redirects, and is documented upstream as unsandboxed full-user shell execution. SwiftASB keeps its internal `command/exec` helper path separate because that path is argv-shaped app-server command execution for SwiftASB-owned helper intents. `sendShellCommand(_:)` is gated by the disabled-by-default `shellCommandExecution` feature category.
 
 The generated Codex wire models are internal to this package. App code should use SwiftASB's public Swift types instead.
