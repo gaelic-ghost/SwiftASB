@@ -134,7 +134,8 @@ extension CodexAppServer.InitializeRequest {
         CodexWireInitializeParams(
             capabilities: CodexWireInitializeCapabilities(
                 experimentalAPI: capabilities.experimentalAPI,
-                optOutNotificationMethods: capabilities.optOutNotificationMethods
+                optOutNotificationMethods: capabilities.optOutNotificationMethods,
+                requestAttestation: nil
             ),
             clientInfo: CodexWireClientInfo(
                 name: clientInfo.name,
@@ -164,6 +165,7 @@ extension CodexAppServer.ThreadStartRequest {
             permissions: permissions?.wireValue,
             persistExtendedHistory: nil,
             personality: personality?.wireValue,
+            runtimeWorkspaceRoots: nil,
             sandbox: sandboxMode?.wireValue,
             serviceName: serviceName,
             serviceTier: serviceTier?.wireValue,
@@ -233,6 +235,7 @@ extension CodexAppServer.TurnStartRequest {
             permissions: permissions?.wireValue,
             personality: personality?.wireValue,
             responsesapiClientMetadata: nil,
+            runtimeWorkspaceRoots: nil,
             sandboxPolicy: nil,
             serviceTier: serviceTier?.wireValue,
             summary: summary?.wireValue,
@@ -247,6 +250,7 @@ extension CodexAppServer.TurnInput {
             text: text,
             textElements: nil,
             type: kind.wireValue,
+            detail: nil,
             url: url,
             path: path,
             name: name
@@ -577,7 +581,7 @@ extension CodexAppServer.ThreadSession {
             instructionSources: wireValue.instructionSources ?? [],
             model: wireValue.model,
             modelProvider: wireValue.modelProvider,
-            permissionProfile: wireValue.permissionProfile.map(CodexWorkspace.PermissionProfile.init),
+            permissionProfile: nil,
             reasoningEffort: .init(wireValue: wireValue.reasoningEffort),
             sandboxPolicy: .init(wireValue: wireValue.sandbox),
             serviceTier: .init(wireValue: wireValue.serviceTier),

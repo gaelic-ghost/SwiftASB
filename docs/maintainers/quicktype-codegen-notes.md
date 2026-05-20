@@ -71,18 +71,20 @@ inspecting upstream schema changes or quicktype regressions.
 ## Current generated batch
 
 The default generated batch currently stages against the local experimental
-`v0.130.0` schema dump:
+`v0.132.0` schema dump:
 
-- `SCHEMA_VERSION=v0.130.0`
+- `SCHEMA_VERSION=v0.132.0`
 - promoted output:
   `Sources/SwiftASB/Generated/CodexWire/Latest/CodexLifecycleV2Batch+JSONValue.swift`
 
 The promoted `Latest` snapshot is intentionally not swapped blindly just
-because staging generation succeeds. The v0.130 experimental dump removes the
-device-key request families, adds `thread/turns/items/list`, adds approval and
-guardian-review timing fields, changes plugin sharing/detail shapes, and removes
-per-cwd extra user roots from `skills/list`. Promote generated changes only
-after classifying public, observable-only, and internal effects.
+because staging generation succeeds. The v0.132 experimental dump changes
+request-side permissions from a structured profile selection to a named profile
+id string, removes the full runtime `permissionProfile` response from thread
+session responses, adds image-detail hints on user input, expands remote-control
+diagnostic identity, and adds environment, remote-control action, plugin
+checkout, plugin-installed, and attestation endpoints. Promote generated changes
+only after classifying public, observable-only, and internal effects.
 
 ## Compatibility Shim Policy
 
@@ -265,8 +267,8 @@ still concentrated in a small number of fields:
 
 Those are now patched to `CodexWireJSONValue`.
 
-The same patch step also keeps a few v0.130-required fields optional in the
-promoted Swift so the v0.128 drift-guard tests still decode older payloads:
+The same patch step also keeps a few formerly required fields optional in the
+promoted Swift so older drift-guard payloads still decode:
 
 - `CodexWireThread.sessionID`
 - `CodexWireItemStartedNotification.startedAtMS`

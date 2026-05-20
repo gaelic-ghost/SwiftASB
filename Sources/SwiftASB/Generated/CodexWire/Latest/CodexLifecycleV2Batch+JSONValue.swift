@@ -476,7 +476,10 @@ struct CodexWireConfig: Codable, Equatable, Sendable {
     /// [UNSTABLE] Optional default for where approval requests are routed for review.
     let approvalsReviewer: CodexWireApprovalsReviewer?
     let apps: CodexWireAppsConfig?
-    let compactPrompt, developerInstructions, forcedChatgptWorkspaceID: String?
+    let compactPrompt: String?
+    let desktop: [String: CodexWireJSONValue]?
+    let developerInstructions: String?
+    let forcedChatgptWorkspaceID: CodexWireForcedChatgptWorkspaceIDS?
     let forcedLoginMethod: CodexWireForcedLoginMethod?
     let instructions, model: String?
     let modelAutoCompactTokenLimit, modelContextWindow: Int?
@@ -499,6 +502,7 @@ struct CodexWireConfig: Codable, Equatable, Sendable {
         case approvalsReviewer = "approvals_reviewer"
         case apps
         case compactPrompt = "compact_prompt"
+        case desktop
         case developerInstructions = "developer_instructions"
         case forcedChatgptWorkspaceID = "forced_chatgpt_workspace_id"
         case forcedLoginMethod = "forced_login_method"
@@ -650,6 +654,41 @@ struct CodexWireAppsDefaultConfig: Codable, Equatable, Sendable {
     }
 }
 
+enum CodexWireForcedChatgptWorkspaceIDS: Codable, Equatable, Sendable {
+    case string(String)
+    case stringArray([String])
+    case null
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let x = try? container.decode([String].self) {
+            self = .stringArray(x)
+            return
+        }
+        if let x = try? container.decode(String.self) {
+            self = .string(x)
+            return
+        }
+        if container.decodeNil() {
+            self = .null
+            return
+        }
+        throw DecodingError.typeMismatch(CodexWireForcedChatgptWorkspaceIDS.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for CodexWireForcedChatgptWorkspaceIDS"))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let x):
+            try container.encode(x)
+        case .stringArray(let x):
+            try container.encode(x)
+        case .null:
+            try container.encodeNil()
+        }
+    }
+}
+
 enum CodexWireForcedLoginMethod: String, Codable, Equatable, Sendable {
     case api = "api"
     case chatgpt = "chatgpt"
@@ -714,11 +753,9 @@ struct CodexWireProfileV2: Codable, Equatable, Sendable {
 
 // MARK: - CodexWireToolsV2
 struct CodexWireToolsV2: Codable, Equatable, Sendable {
-    let viewImage: Bool?
     let webSearch: CodexWireWebSearchToolConfig?
 
     enum CodingKeys: String, CodingKey {
-        case viewImage = "view_image"
         case webSearch = "web_search"
     }
 }
@@ -828,6 +865,9 @@ struct CodexWireConfigLayerSource: Codable, Equatable, Sendable {
     ///
     /// This is the path to the user's config.toml file, though it is not guaranteed to exist.
     let file: String?
+    /// Name of the selected profile-v2 config layered on top of the base user config, when this
+    /// layer represents one.
+    let profile: String?
     let dotCodexFolder: String?
 }
 
@@ -877,6 +917,7 @@ struct CodexWireConfigRequirements: Codable, Equatable, Sendable {
     let allowedApprovalsReviewers: [CodexWireApprovalsReviewer]?
     let allowedSandboxModes: [CodexWireSandboxMode]?
     let allowedWebSearchModes: [CodexWireWebSearchMode]?
+    let allowManagedHooksOnly: Bool?
     let enforceResidency: CodexWireResidencyRequirement?
     let featureRequirements: [String: Bool]?
     let hooks: CodexWireManagedHooksRequirements?
@@ -964,12 +1005,12 @@ struct CodexWireConfiguredHookMatcherGroup: Codable, Equatable, Sendable {
 struct CodexWireConfiguredHookHandler: Codable, Equatable, Sendable {
     let async: Bool?
     let command: String?
-    let statusMessage: String?
+    let commandWindows, statusMessage: String?
     let timeoutSEC: Int?
     let type: CodexWireHookHandlerType
 
     enum CodingKeys: String, CodingKey {
-        case async, command, statusMessage
+        case async, command, commandWindows, statusMessage
         case timeoutSEC = "timeoutSec"
         case type
     }
@@ -1687,10 +1728,12 @@ struct CodexWireInitializeCapabilities: Codable, Equatable, Sendable {
     /// Exact notification method names that should be suppressed for this connection (for
     /// example `thread/started`).
     let optOutNotificationMethods: [String]?
+    /// Opt into `attestation/generate` requests for upstream `x-oai-attestation`.
+    let requestAttestation: Bool?
 
     enum CodingKeys: String, CodingKey {
         case experimentalAPI = "experimentalApi"
-        case optOutNotificationMethods
+        case optOutNotificationMethods, requestAttestation
     }
 }
 
@@ -1918,13 +1961,19 @@ struct CodexWireUserInput: Codable, Equatable, Sendable {
     /// UI-defined spans within `text` used to render or persist special elements.
     let textElements: [CodexWireTextElement]?
     let type: CodexWireUserInputType
+    let detail: CodexWireImageDetail?
     let url, path, name: String?
 
     enum CodingKeys: String, CodingKey {
         case text
         case textElements = "text_elements"
-        case type, url, path, name
+        case type, detail, url, path, name
     }
+}
+
+enum CodexWireImageDetail: String, Codable, Equatable, Sendable {
+    case high = "high"
+    case original = "original"
 }
 
 //
@@ -2918,10 +2967,20 @@ struct CodexWirePluginSummary: Codable, Equatable, Sendable {
     let installPolicy: CodexWirePluginInstallPolicy
     let interface: CodexWirePluginInterface?
     let keywords: [String]?
+    /// Version of the locally materialized plugin package when available.
+    let localVersion: String?
     let name: String
+    /// Backend remote plugin identifier when available.
+    let remotePluginID: String?
     /// Remote sharing context associated with this plugin when available.
     let shareContext: CodexWirePluginShareContext?
     let source: CodexWirePluginSource
+
+    enum CodingKeys: String, CodingKey {
+        case authPolicy, availability, enabled, id, installed, installPolicy, interface, keywords, localVersion, name
+        case remotePluginID = "remotePluginId"
+        case shareContext, source
+    }
 }
 
 enum CodexWirePluginAuthPolicy: String, Codable, Equatable, Sendable {
@@ -2997,17 +3056,26 @@ struct CodexWirePluginInterface: Codable, Equatable, Sendable {
 // MARK: - CodexWirePluginShareContext
 struct CodexWirePluginShareContext: Codable, Equatable, Sendable {
     let creatorAccountUserID, creatorName: String?
+    let discoverability: CodexWirePluginShareDiscoverability?
     let remotePluginID: String
-    let shareTargets: [CodexWirePluginSharePrincipal]?
+    /// Version of the remote shared plugin release when available.
+    let remoteVersion: String?
+    let sharePrincipals: [CodexWirePluginSharePrincipal]?
     let shareURL: String?
 
     enum CodingKeys: String, CodingKey {
         case creatorAccountUserID = "creatorAccountUserId"
-        case creatorName
+        case creatorName, discoverability
         case remotePluginID = "remotePluginId"
-        case shareTargets
+        case remoteVersion, sharePrincipals
         case shareURL = "shareUrl"
     }
+}
+
+enum CodexWirePluginShareDiscoverability: String, Codable, Equatable, Sendable {
+    case listed = "LISTED"
+    case pluginShareDiscoverabilityPRIVATE = "PRIVATE"
+    case unlisted = "UNLISTED"
 }
 
 //
@@ -3020,11 +3088,12 @@ struct CodexWirePluginShareContext: Codable, Equatable, Sendable {
 struct CodexWirePluginSharePrincipal: Codable, Equatable, Sendable {
     let name, principalID: String
     let principalType: CodexWirePluginSharePrincipalType
+    let role: CodexWirePluginSharePrincipalRole
 
     enum CodingKeys: String, CodingKey {
         case name
         case principalID = "principalId"
-        case principalType
+        case principalType, role
     }
 }
 
@@ -3032,6 +3101,12 @@ enum CodexWirePluginSharePrincipalType: String, Codable, Equatable, Sendable {
     case group = "group"
     case user = "user"
     case workspace = "workspace"
+}
+
+enum CodexWirePluginSharePrincipalRole: String, Codable, Equatable, Sendable {
+    case editor = "editor"
+    case owner = "owner"
+    case reader = "reader"
 }
 
 //
@@ -3195,12 +3270,6 @@ struct CodexWirePluginShareListResponse: Codable, Equatable, Sendable {
 struct CodexWirePluginShareListItem: Codable, Equatable, Sendable {
     let localPluginPath: String?
     let plugin: CodexWirePluginSummary
-    let shareURL: String
-
-    enum CodingKeys: String, CodingKey {
-        case localPluginPath, plugin
-        case shareURL = "shareUrl"
-    }
 }
 
 //
@@ -3223,12 +3292,6 @@ struct CodexWirePluginShareSaveParams: Codable, Equatable, Sendable {
     }
 }
 
-enum CodexWirePluginShareDiscoverability: String, Codable, Equatable, Sendable {
-    case listed = "LISTED"
-    case pluginShareDiscoverabilityPRIVATE = "PRIVATE"
-    case unlisted = "UNLISTED"
-}
-
 //
 // Hashable or Equatable:
 // The compiler will not be able to synthesize the implementation of Hashable or Equatable
@@ -3239,11 +3302,17 @@ enum CodexWirePluginShareDiscoverability: String, Codable, Equatable, Sendable {
 struct CodexWirePluginShareTarget: Codable, Equatable, Sendable {
     let principalID: String
     let principalType: CodexWirePluginSharePrincipalType
+    let role: CodexWirePluginShareTargetRole
 
     enum CodingKeys: String, CodingKey {
         case principalID = "principalId"
-        case principalType
+        case principalType, role
     }
+}
+
+enum CodexWirePluginShareTargetRole: String, Codable, Equatable, Sendable {
+    case editor = "editor"
+    case reader = "reader"
 }
 
 //
@@ -3606,13 +3675,6 @@ struct CodexWireContentItem: Codable, Equatable, Sendable {
     }
 }
 
-enum CodexWireImageDetail: String, Codable, Equatable, Sendable {
-    case auto = "auto"
-    case high = "high"
-    case low = "low"
-    case original = "original"
-}
-
 enum CodexWireType: String, Codable, Equatable, Sendable {
     case inputImage = "input_image"
     case inputText = "input_text"
@@ -3693,6 +3755,7 @@ enum CodexWireSummaryTextReasoningItemReasoningSummaryType: String, Codable, Equ
 
 enum CodexWireResponseItemType: String, Codable, Equatable, Sendable {
     case compaction = "compaction"
+    case compactionTrigger = "compaction_trigger"
     case contextCompaction = "context_compaction"
     case customToolCall = "custom_tool_call"
     case customToolCallOutput = "custom_tool_call_output"
@@ -3774,15 +3837,17 @@ struct CodexWireReasoningTextDeltaNotification: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
-/// Current remote-control connection status and environment id exposed to clients.
+/// Current remote-control connection status and remote identity exposed to clients.
 // MARK: - CodexWireRemoteControlStatusChangedNotification
 struct CodexWireRemoteControlStatusChangedNotification: Codable, Equatable, Sendable {
     let environmentID: String?
+    let installationID, serverName: String
     let status: CodexWireRemoteControlConnectionStatus
 
     enum CodingKeys: String, CodingKey {
         case environmentID = "environmentId"
-        case status
+        case installationID = "installationId"
+        case serverName, status
     }
 }
 
@@ -4233,9 +4298,11 @@ struct CodexWireThreadGoal: Codable, Equatable, Sendable {
 
 enum CodexWireThreadGoalStatus: String, Codable, Equatable, Sendable {
     case active = "active"
+    case blocked = "blocked"
     case budgetLimited = "budgetLimited"
     case complete = "complete"
     case paused = "paused"
+    case usageLimited = "usageLimited"
 }
 
 //
@@ -4723,14 +4790,15 @@ struct CodexWireThreadStartParams: Codable, Equatable, Sendable {
     /// behavior in a stable way.
     let mockExperimentalField: String?
     let model, modelProvider: String?
-    /// Named profile selection for this thread. Cannot be combined with `sandbox`. Use bounded
-    /// `modifications` for supported turn/thread adjustments instead of replacing the full
-    /// permissions profile.
-    let permissions: CodexWirePermissionProfileSelectionParams?
+    /// Named profile id for this thread. Cannot be combined with `sandbox`.
+    let permissions: String?
     /// Deprecated and ignored by app-server. Kept only so older clients can continue sending the
     /// field while rollout persistence always uses the limited history policy.
     let persistExtendedHistory: Bool?
     let personality: CodexWirePersonality?
+    /// Replace the thread's runtime workspace roots. Relative paths are resolved against the
+    /// effective cwd for the thread.
+    let runtimeWorkspaceRoots: [String]?
     let sandbox: CodexWireSandboxMode?
     let serviceName, serviceTier: String?
     let sessionStartSource: CodexWireThreadStartSource?
@@ -4769,42 +4837,6 @@ struct CodexWireTurnEnvironmentParams: Codable, Equatable, Sendable {
     }
 }
 
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-/// Select a named built-in or user-defined profile and optionally apply bounded
-/// modifications that Codex knows how to validate.
-// MARK: - CodexWirePermissionProfileSelectionParams
-struct CodexWirePermissionProfileSelectionParams: Codable, Equatable, Sendable {
-    let id: String
-    let modifications: [CodexWirePermissionProfileModificationParams]?
-    let type: CodexWireProfilePermissionProfileSelectionParamsType
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-/// Additional concrete directory that should be writable.
-// MARK: - CodexWirePermissionProfileModificationParams
-struct CodexWirePermissionProfileModificationParams: Codable, Equatable, Sendable {
-    let path: String
-    let type: CodexWireAdditionalWritableRootType
-}
-
-enum CodexWireAdditionalWritableRootType: String, Codable, Equatable, Sendable {
-    case additionalWritableRoot = "additionalWritableRoot"
-}
-
-enum CodexWireProfilePermissionProfileSelectionParamsType: String, Codable, Equatable, Sendable {
-    case profile = "profile"
-}
-
 enum CodexWirePersonality: String, Codable, Equatable, Sendable {
     case friendly = "friendly"
     case none = "none"
@@ -4833,12 +4865,11 @@ struct CodexWireThreadStartResponse: Codable, Equatable, Sendable {
     /// Instruction source files currently loaded for this thread.
     let instructionSources: [String]?
     let model, modelProvider: String
-    /// Full active permissions for this thread. `activePermissionProfile` carries
-    /// display/provenance metadata for this runtime profile.
-    let permissionProfile: CodexWirePermissionProfile?
     let reasoningEffort: CodexWireReasoningEffort?
+    /// Thread-scoped runtime workspace roots used to materialize `:workspace_roots`.
+    let runtimeWorkspaceRoots: [String]?
     /// Legacy sandbox policy retained for compatibility. Experimental clients should prefer
-    /// `permissionProfile` when they need exact runtime permissions.
+    /// `activePermissionProfile` for profile provenance.
     let sandbox: CodexWireSandboxPolicy
     let serviceTier: String?
     let thread: CodexWireThread
@@ -4858,74 +4889,6 @@ struct CodexWireActivePermissionProfile: Codable, Equatable, Sendable {
     /// Identifier from `default_permissions` or the implicit built-in default, such as
     /// `:workspace` or a user-defined `[permissions.<id>]` profile.
     let id: String
-    /// Bounded user-requested modifications applied on top of the named profile, if any.
-    let modifications: [CodexWireActivePermissionProfileModification]?
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-/// Additional concrete directory that should be writable.
-// MARK: - CodexWireActivePermissionProfileModification
-struct CodexWireActivePermissionProfileModification: Codable, Equatable, Sendable {
-    let path: String
-    let type: CodexWireAdditionalWritableRootType
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-/// Codex owns sandbox construction for this profile.
-///
-/// Do not apply an outer sandbox.
-///
-/// Filesystem isolation is enforced by an external caller.
-// MARK: - CodexWirePermissionProfile
-struct CodexWirePermissionProfile: Codable, Equatable, Sendable {
-    let fileSystem: CodexWirePermissionProfileFileSystemPermissions?
-    let network: CodexWirePermissionProfileNetworkPermissions?
-    let type: CodexWirePermissionProfileType
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWirePermissionProfileFileSystemPermissions
-struct CodexWirePermissionProfileFileSystemPermissions: Codable, Equatable, Sendable {
-    let entries: [CodexWireFileSystemSandboxEntry]?
-    let globScanMaxDepth: Int?
-    let type: CodexWireRestrictedPermissionProfileFileSystemPermissionsType
-}
-
-enum CodexWireRestrictedPermissionProfileFileSystemPermissionsType: String, Codable, Equatable, Sendable {
-    case restricted = "restricted"
-    case unrestricted = "unrestricted"
-}
-
-//
-// Hashable or Equatable:
-// The compiler will not be able to synthesize the implementation of Hashable or Equatable
-// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
-// synthesized for types that have collections (such as arrays or dictionaries).
-
-// MARK: - CodexWirePermissionProfileNetworkPermissions
-struct CodexWirePermissionProfileNetworkPermissions: Codable, Equatable, Sendable {
-    let enabled: Bool
-}
-
-enum CodexWirePermissionProfileType: String, Codable, Equatable, Sendable {
-    case disabled = "disabled"
-    case external = "external"
-    case managed = "managed"
 }
 
 //
@@ -4935,7 +4898,7 @@ enum CodexWirePermissionProfileType: String, Codable, Equatable, Sendable {
 // synthesized for types that have collections (such as arrays or dictionaries).
 
 /// Legacy sandbox policy retained for compatibility. Experimental clients should prefer
-/// `permissionProfile` when they need exact runtime permissions.
+/// `activePermissionProfile` for profile provenance.
 // MARK: - CodexWireSandboxPolicy
 struct CodexWireSandboxPolicy: Codable, Equatable, Sendable {
     let type: CodexWireSandboxPolicyType
@@ -5290,14 +5253,16 @@ struct CodexWireTurnStartParams: Codable, Equatable, Sendable {
     let model: String?
     /// Optional JSON Schema used to constrain the final assistant message for this turn.
     let outputSchema: CodexWireJSONValue?
-    /// Select a named permissions profile for this turn and subsequent turns. Cannot be combined
-    /// with `sandboxPolicy`. Use bounded `modifications` for supported turn adjustments instead
-    /// of replacing the full permissions profile.
-    let permissions: CodexWirePermissionProfileSelectionParams?
+    /// Select a named permissions profile id for this turn and subsequent turns. Cannot be
+    /// combined with `sandboxPolicy`.
+    let permissions: String?
     /// Override the personality for this turn and subsequent turns.
     let personality: CodexWirePersonality?
     /// Optional turn-scoped Responses API client metadata.
     let responsesapiClientMetadata: [String: String]?
+    /// Replace the thread's runtime workspace roots for this turn and subsequent turns. Relative
+    /// paths are resolved against the effective cwd for the turn.
+    let runtimeWorkspaceRoots: [String]?
     /// Override the sandbox policy for this turn and subsequent turns.
     let sandboxPolicy: CodexWireDangerFullAccessSandboxPolicyClass?
     /// Override the service tier for this turn and subsequent turns.
@@ -5307,7 +5272,7 @@ struct CodexWireTurnStartParams: Codable, Equatable, Sendable {
     let threadID: String
 
     enum CodingKeys: String, CodingKey {
-        case approvalPolicy, approvalsReviewer, collaborationMode, cwd, effort, environments, input, model, outputSchema, permissions, personality, responsesapiClientMetadata, sandboxPolicy, serviceTier, summary
+        case approvalPolicy, approvalsReviewer, collaborationMode, cwd, effort, environments, input, model, outputSchema, permissions, personality, responsesapiClientMetadata, runtimeWorkspaceRoots, sandboxPolicy, serviceTier, summary
         case threadID = "threadId"
     }
 }

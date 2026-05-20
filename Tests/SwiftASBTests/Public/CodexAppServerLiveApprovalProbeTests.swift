@@ -282,6 +282,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/started",
                             "mcpServer/startupStatus/updated",
                         ]
+                    ,
+                        requestAttestation: nil
                     ),
                     clientInfo: .init(
                         name: "SwiftASBDeterministicApprovalTests",
@@ -326,6 +328,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     persistExtendedHistory: nil,
                     personality: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
                     serviceName: nil,
                     serviceTier: nil,
@@ -359,6 +362,7 @@ extension CodexAppServerLiveIntegrationTests {
                             text: "Run the provided command, then report completion.",
                             textElements: nil,
                             type: .text,
+                            detail: nil,
                             url: nil,
                             path: nil,
                             name: nil
@@ -369,6 +373,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     personality: nil,
                     responsesapiClientMetadata: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandboxPolicy: nil,
                     serviceTier: nil,
                     summary: CodexWireReasoningSummary.none,
@@ -466,6 +471,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/started",
                             "mcpServer/startupStatus/updated",
                         ]
+                    ,
+                        requestAttestation: nil
                     ),
                     clientInfo: .init(
                         name: "SwiftASBDeterministicPermissionsTests",
@@ -510,6 +517,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     persistExtendedHistory: nil,
                     personality: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
                     serviceName: nil,
                     serviceTier: nil,
@@ -543,6 +551,7 @@ extension CodexAppServerLiveIntegrationTests {
                             text: "Request the provided permissions, then report completion.",
                             textElements: nil,
                             type: .text,
+                            detail: nil,
                             url: nil,
                             path: nil,
                             name: nil
@@ -553,6 +562,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     personality: nil,
                     responsesapiClientMetadata: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandboxPolicy: nil,
                     serviceTier: nil,
                     summary: CodexWireReasoningSummary.none,

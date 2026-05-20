@@ -13,8 +13,10 @@ public enum CodexWorkspace {
 
         /// Creates a named permissions profile selection.
         ///
-        /// `modifications` defaults to no bounded permission changes on top of
-        /// the selected app-server profile.
+        /// `modifications` is retained as source-compatible local metadata for
+        /// callers that still construct older selections. Codex CLI v0.132.0
+        /// accepts the selected profile id on thread and turn starts, but no
+        /// longer accepts request-side bounded permission modifications.
         public init(
             id: String,
             modifications: [PermissionSelectionModification] = []
@@ -39,10 +41,15 @@ public enum CodexWorkspace {
         }
     }
 
-    /// Named profile and bounded modifications currently active for a session.
+    /// Named profile currently active for a session.
     public struct ActivePermissionProfile: Sendable, Equatable {
         public let id: String
         public let extends: String?
+        /// Bounded modifications reported by older app-server schemas.
+        ///
+        /// Codex CLI v0.132 no longer reports these in the active profile
+        /// payload, so SwiftASB surfaces an empty collection for v0.132
+        /// sessions.
         public let modifications: [ActivePermissionModification]
     }
 
@@ -368,18 +375,8 @@ public enum CodexWorkspace {
 }
 
 extension CodexWorkspace.PermissionSelection {
-    var wireValue: CodexWirePermissionProfileSelectionParams {
-        .init(
-            id: id,
-            modifications: modifications.isEmpty ? nil : modifications.map(\.wireValue),
-            type: .profile
-        )
-    }
-}
-
-extension CodexWorkspace.PermissionSelectionModification {
-    var wireValue: CodexWirePermissionProfileModificationParams {
-        .init(path: path, type: .additionalWritableRoot)
+    var wireValue: String {
+        id
     }
 }
 
@@ -388,72 +385,8 @@ extension CodexWorkspace.ActivePermissionProfile {
         self.init(
             id: wireValue.id,
             extends: wireValue.extends,
-            modifications: (wireValue.modifications ?? []).map(
-                CodexWorkspace.ActivePermissionModification.init(wireValue:)
-            )
+            modifications: []
         )
-    }
-}
-
-extension CodexWorkspace.ActivePermissionModification {
-    init(wireValue: CodexWireActivePermissionProfileModification) {
-        self.init(
-            kind: .init(wireValue.type),
-            path: wireValue.path
-        )
-    }
-}
-
-extension CodexWorkspace.ActivePermissionModification.Kind {
-    init(_ wireValue: CodexWireAdditionalWritableRootType) {
-        switch wireValue {
-        case .additionalWritableRoot:
-            self = .additionalWritableRoot
-        }
-    }
-}
-
-extension CodexWorkspace.PermissionProfile {
-    init(wireValue: CodexWirePermissionProfile) {
-        self.init(
-            fileSystem: wireValue.fileSystem.map(CodexWorkspace.FileSystemPermissions.init(wireValue:)),
-            kind: .init(wireValue.type),
-            network: wireValue.network.map(CodexWorkspace.NetworkPermissions.init(wireValue:))
-        )
-    }
-}
-
-extension CodexWorkspace.PermissionProfile.Kind {
-    init(_ wireValue: CodexWirePermissionProfileType) {
-        switch wireValue {
-        case .disabled:
-            self = .disabled
-        case .external:
-            self = .external
-        case .managed:
-            self = .managed
-        }
-    }
-}
-
-extension CodexWorkspace.FileSystemPermissions {
-    init(wireValue: CodexWirePermissionProfileFileSystemPermissions) {
-        self.init(
-            entries: (wireValue.entries ?? []).map(CodexWorkspace.FileSystemSandboxEntry.init(wireValue:)),
-            globScanMaxDepth: wireValue.globScanMaxDepth,
-            kind: .init(wireValue.type)
-        )
-    }
-}
-
-extension CodexWorkspace.FileSystemPermissions.Kind {
-    init(_ wireValue: CodexWireRestrictedPermissionProfileFileSystemPermissionsType) {
-        switch wireValue {
-        case .restricted:
-            self = .restricted
-        case .unrestricted:
-            self = .unrestricted
-        }
     }
 }
 
@@ -518,12 +451,6 @@ extension CodexWorkspace.FileSystemSpecialPath.Kind {
         case .unknown:
             self = .unknown
         }
-    }
-}
-
-extension CodexWorkspace.NetworkPermissions {
-    init(wireValue: CodexWirePermissionProfileNetworkPermissions) {
-        self.init(enabled: wireValue.enabled)
     }
 }
 

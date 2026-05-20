@@ -102,6 +102,8 @@ struct CodexAppServerLiveIntegrationTests {
                             "hook/started",
                             "mcpServer/startupStatus/updated",
                         ]
+                    ,
+                        requestAttestation: nil
                     ),
                     clientInfo: .init(
                         name: "SwiftASBLiveTests",
@@ -149,6 +151,7 @@ struct CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     persistExtendedHistory: nil,
                     personality: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandbox: .workspaceWrite,
                     serviceName: nil,
                     serviceTier: nil,
@@ -198,7 +201,7 @@ struct CodexAppServerLiveIntegrationTests {
             let diagnostics = try await client.cliExecutableDiagnostics()
             #expect(diagnostics.resolvedExecutablePath == harness.codexExecutableURL.path)
             #expect(diagnostics.versionString.contains("codex-cli"))
-            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.130.x"))
+            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.132.x"))
 
             await client.stop()
         } catch {
@@ -246,6 +249,8 @@ struct CodexAppServerLiveIntegrationTests {
                             "hook/started",
                             "mcpServer/startupStatus/updated",
                         ]
+                    ,
+                        requestAttestation: nil
                     ),
                     clientInfo: .init(
                         name: "SwiftASBLiveTests",
@@ -293,6 +298,7 @@ struct CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     persistExtendedHistory: nil,
                     personality: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandbox: .workspaceWrite,
                     serviceName: nil,
                     serviceTier: nil,
@@ -326,6 +332,7 @@ struct CodexAppServerLiveIntegrationTests {
                             text: prompt(label: "RAW_SINGLE_TURN_DONE"),
                             textElements: nil,
                             type: .text,
+                            detail: nil,
                             url: nil,
                             path: nil,
                             name: nil
@@ -336,6 +343,7 @@ struct CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     personality: nil,
                     responsesapiClientMetadata: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandboxPolicy: nil,
                     serviceTier: nil,
                     summary: CodexWireReasoningSummary.none,

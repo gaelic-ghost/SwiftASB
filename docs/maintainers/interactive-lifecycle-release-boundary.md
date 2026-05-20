@@ -50,7 +50,7 @@ runtime while the app-server schema is moving quickly before v1.
 Current policy:
 
 - support the latest reviewed public Codex CLI minor release
-- current reviewed minor release: `0.130.x`
+- current reviewed minor release: `0.132.x`
 - widen back to a rolling window only after the latest generated-wire and public
   API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
@@ -270,13 +270,12 @@ notification families at all:
 - `ThreadResumeRequest.excludeTurns` and `ThreadForkRequest.excludeTurns` are
   public because they let callers request lightweight resume/fork metadata when
   they plan to hydrate turn history through `thread/turns/list`
-- `permissionProfile` is generated and decoded internally, but the public API
-  still accepts the existing hand-owned sandbox and approval settings until a
-  deliberate permission-profile model is designed. The v0.128 experimental
-  schema keeps `permissionProfile`, adds `activePermissionProfile`, and moves
-  request-side overrides toward named `permissions` profile selection; SwiftASB
-  keeps those generated shapes internal until the public model is deliberately
-  designed.
+- v0.132 request-side `permissions` is a named profile id string. SwiftASB
+  keeps the public `CodexWorkspace.PermissionSelection` wrapper as the caller
+  vocabulary, but encodes only the selected profile id because upstream removed
+  bounded request-side permission modifications. Runtime `activePermissionProfile`
+  provenance remains public; older full `permissionProfile` response details are
+  no longer part of the promoted v0.132 generated response shape.
 - device-key, marketplace-removal, marketplace-upgrade, account-provider, and
   add-credits email endpoints remain outside the first lifecycle boundary
 
@@ -331,10 +330,9 @@ The current remaining promotion questions are therefore narrower than before:
 2. should `FileChangePatchUpdatedNotification` graduate from text-preview
    enrichment into structured patch previews, and if so, what stable file-diff
    model should the package own instead of leaking generated wire shapes?
-3. should permission profiles become a public request/defaults model, or stay
-   internal while the current sandbox and approval request models are enough?
-   The next design should account for both the full active runtime
-   `permissionProfile` and the named/provenance-oriented `activePermissionProfile`.
+3. should runtime workspace roots or richer permission profile provenance become
+   a public request/defaults model, or stay internal while the current named
+   profile selection, sandbox, and approval request models are enough?
 4. diagnostics and control flows stay separate. Warning, guardian-warning,
    config-warning, deprecation, MCP-server-status, remote-control-status,
    model-reroute, and model-verification families are passive public diagnostic

@@ -76,7 +76,7 @@ struct CodexProtocolCommandExecParams: Encodable, Equatable, Sendable {
     let disableTimeout: Bool?
     let env: [String: String?]?
     let outputBytesCap: Int?
-    let permissionProfile: CodexWirePermissionProfile?
+    let permissionProfile: CodexWireActivePermissionProfile?
     let processID: String?
     let sandboxPolicy: CodexWireSandboxPolicy?
     let size: TerminalSize?
@@ -192,7 +192,7 @@ struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
     let excludeTurns: Bool?
     let model: String?
     let modelProvider: String?
-    let permissions: CodexWirePermissionProfileSelectionParams?
+    let permissions: String?
     let personality: CodexWirePersonality?
     let sandbox: CodexWireSandboxMode?
     let serviceName: String?
@@ -229,7 +229,7 @@ struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
     let excludeTurns: Bool?
     let model: String?
     let modelProvider: String?
-    let permissions: CodexWirePermissionProfileSelectionParams?
+    let permissions: String?
     let personality: CodexWirePersonality?
     let sandbox: CodexWireSandboxMode?
     let serviceName: String?

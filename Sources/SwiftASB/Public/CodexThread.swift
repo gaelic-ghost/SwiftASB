@@ -253,9 +253,11 @@ public struct CodexThread: Sendable {
         /// App-server goal status.
         public enum Status: String, Sendable, Equatable {
             case active
+            case blocked
             case budgetLimited
             case complete
             case paused
+            case usageLimited
         }
 
         public let createdAt: Int
@@ -931,12 +933,16 @@ extension CodexThread.Goal.Status {
         switch wireValue {
         case .active:
             self = .active
+        case .blocked:
+            self = .blocked
         case .budgetLimited:
             self = .budgetLimited
         case .complete:
             self = .complete
         case .paused:
             self = .paused
+        case .usageLimited:
+            self = .usageLimited
         }
     }
 
@@ -944,12 +950,16 @@ extension CodexThread.Goal.Status {
         switch self {
         case .active:
             .active
+        case .blocked:
+            .blocked
         case .budgetLimited:
             .budgetLimited
         case .complete:
             .complete
         case .paused:
             .paused
+        case .usageLimited:
+            .usageLimited
         }
     }
 }
