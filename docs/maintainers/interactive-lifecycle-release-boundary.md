@@ -50,7 +50,7 @@ runtime while the app-server schema is moving quickly before v1.
 Current policy:
 
 - support the latest reviewed public Codex CLI minor release
-- current reviewed minor release: `0.132.x`
+- current reviewed minor release: `0.133.x`
 - widen back to a rolling window only after the latest generated-wire and public
   API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
@@ -270,12 +270,12 @@ notification families at all:
 - `ThreadResumeRequest.excludeTurns` and `ThreadForkRequest.excludeTurns` are
   public because they let callers request lightweight resume/fork metadata when
   they plan to hydrate turn history through `thread/turns/list`
-- v0.132 request-side `permissions` is a named profile id string. SwiftASB
+- v0.133 request-side `permissions` is a named profile id string. SwiftASB
   keeps the public `CodexWorkspace.PermissionSelection` wrapper as the caller
   vocabulary, but encodes only the selected profile id because upstream removed
   bounded request-side permission modifications. Runtime `activePermissionProfile`
   provenance remains public; older full `permissionProfile` response details are
-  no longer part of the promoted v0.132 generated response shape.
+  no longer part of the promoted v0.133 generated response shape.
 - device-key, marketplace-removal, marketplace-upgrade, account-provider, and
   add-credits email endpoints remain outside the first lifecycle boundary
 

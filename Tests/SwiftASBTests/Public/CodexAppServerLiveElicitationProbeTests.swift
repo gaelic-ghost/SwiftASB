@@ -608,7 +608,8 @@ extension CodexAppServerLiveIntegrationTests {
             #expect(elicitationResult.sawServerRequestResolved)
             #expect(elicitationResult.completion.turn.status == .completed)
             #expect(mockResponses.requestCount >= 3)
-            #expect(appsServer.directoryRequestCount >= 1)
+            // Codex CLI v0.133 can route the mentioned app connector directly
+            // to the MCP event stream without first reading the app directory.
             #expect(appsServer.toolCallRequestCount >= 1)
 
             await transport.stop()

@@ -14,7 +14,7 @@ public enum CodexWorkspace {
         /// Creates a named permissions profile selection.
         ///
         /// `modifications` is retained as source-compatible local metadata for
-        /// callers that still construct older selections. Codex CLI v0.132.0
+        /// callers that still construct older selections. Codex CLI v0.133.0
         /// accepts the selected profile id on thread and turn starts, but no
         /// longer accepts request-side bounded permission modifications.
         public init(
@@ -47,8 +47,8 @@ public enum CodexWorkspace {
         public let extends: String?
         /// Bounded modifications reported by older app-server schemas.
         ///
-        /// Codex CLI v0.132 no longer reports these in the active profile
-        /// payload, so SwiftASB surfaces an empty collection for v0.132
+        /// Codex CLI v0.133 no longer reports these in the active profile
+        /// payload, so SwiftASB surfaces an empty collection for v0.133
         /// sessions.
         public let modifications: [ActivePermissionModification]
     }
@@ -402,7 +402,7 @@ extension CodexWorkspace.FileSystemSandboxEntry {
 extension CodexWorkspace.FileSystemAccessMode {
     init(_ wireValue: CodexWireFileSystemAccessMode) {
         switch wireValue {
-        case .none:
+        case .deny:
             self = .none
         case .read:
             self = .read

@@ -807,6 +807,10 @@ extension CodexThread.Dashboard.HookRun.EventName {
             self = .sessionStart
         case .stop:
             self = .stop
+        case .subagentStart:
+            self = .subagentStart
+        case .subagentStop:
+            self = .subagentStop
         case .userPromptSubmit:
             self = .userPromptSubmit
         }

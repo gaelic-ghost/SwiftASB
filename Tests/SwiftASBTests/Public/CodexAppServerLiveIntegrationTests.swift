@@ -201,7 +201,7 @@ struct CodexAppServerLiveIntegrationTests {
             let diagnostics = try await client.cliExecutableDiagnostics()
             #expect(diagnostics.resolvedExecutablePath == harness.codexExecutableURL.path)
             #expect(diagnostics.versionString.contains("codex-cli"))
-            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.132.x"))
+            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.133.x"))
 
             await client.stop()
         } catch {

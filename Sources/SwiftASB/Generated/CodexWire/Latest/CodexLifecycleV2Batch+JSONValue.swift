@@ -482,7 +482,9 @@ struct CodexWireConfig: Codable, Equatable, Sendable {
     let forcedChatgptWorkspaceID: CodexWireForcedChatgptWorkspaceIDS?
     let forcedLoginMethod: CodexWireForcedLoginMethod?
     let instructions, model: String?
-    let modelAutoCompactTokenLimit, modelContextWindow: Int?
+    let modelAutoCompactTokenLimit: Int?
+    let modelAutoCompactTokenLimitScope: CodexWireAutoCompactTokenLimitScope?
+    let modelContextWindow: Int?
     let modelProvider: String?
     let modelReasoningEffort: CodexWireReasoningEffort?
     let modelReasoningSummary: CodexWireReasoningSummary?
@@ -508,6 +510,7 @@ struct CodexWireConfig: Codable, Equatable, Sendable {
         case forcedLoginMethod = "forced_login_method"
         case instructions, model
         case modelAutoCompactTokenLimit = "model_auto_compact_token_limit"
+        case modelAutoCompactTokenLimitScope = "model_auto_compact_token_limit_scope"
         case modelContextWindow = "model_context_window"
         case modelProvider = "model_provider"
         case modelReasoningEffort = "model_reasoning_effort"
@@ -692,6 +695,14 @@ enum CodexWireForcedChatgptWorkspaceIDS: Codable, Equatable, Sendable {
 enum CodexWireForcedLoginMethod: String, Codable, Equatable, Sendable {
     case api = "api"
     case chatgpt = "chatgpt"
+}
+
+/// Count the full active context against the limit.
+///
+/// Count sampled output and later growth after the carried window prefix.
+enum CodexWireAutoCompactTokenLimitScope: String, Codable, Equatable, Sendable {
+    case bodyAfterPrefix = "body_after_prefix"
+    case total = "total"
 }
 
 /// Option to disable reasoning summaries.
@@ -915,9 +926,11 @@ struct CodexWireConfigRequirementsReadResponse: Codable, Equatable, Sendable {
 struct CodexWireConfigRequirements: Codable, Equatable, Sendable {
     let allowedApprovalPolicies: [CodexWireAskForApproval]?
     let allowedApprovalsReviewers: [CodexWireApprovalsReviewer]?
+    let allowedPermissions: [String]?
     let allowedSandboxModes: [CodexWireSandboxMode]?
     let allowedWebSearchModes: [CodexWireWebSearchMode]?
     let allowManagedHooksOnly: Bool?
+    let computerUse: CodexWireComputerUseRequirements?
     let enforceResidency: CodexWireResidencyRequirement?
     let featureRequirements: [String: Bool]?
     let hooks: CodexWireManagedHooksRequirements?
@@ -952,6 +965,17 @@ enum CodexWireAskForApproval: Codable, Equatable, Sendable {
     }
 }
 
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireComputerUseRequirements
+struct CodexWireComputerUseRequirements: Codable, Equatable, Sendable {
+    let allowLockedComputerUse: Bool?
+}
+
 enum CodexWireResidencyRequirement: String, Codable, Equatable, Sendable {
     case us = "us"
 }
@@ -966,7 +990,8 @@ enum CodexWireResidencyRequirement: String, Codable, Equatable, Sendable {
 struct CodexWireManagedHooksRequirements: Codable, Equatable, Sendable {
     let managedDir: String?
     let permissionRequest, postCompact, postToolUse, preCompact: [CodexWireConfiguredHookMatcherGroup]
-    let preToolUse, sessionStart, stop, userPromptSubmit: [CodexWireConfiguredHookMatcherGroup]
+    let preToolUse, sessionStart, stop, subagentStart: [CodexWireConfiguredHookMatcherGroup]
+    let subagentStop, userPromptSubmit: [CodexWireConfiguredHookMatcherGroup]
     let windowsManagedDir: String?
 
     enum CodingKeys: String, CodingKey {
@@ -978,6 +1003,8 @@ struct CodexWireManagedHooksRequirements: Codable, Equatable, Sendable {
         case preToolUse = "PreToolUse"
         case sessionStart = "SessionStart"
         case stop = "Stop"
+        case subagentStart = "SubagentStart"
+        case subagentStop = "SubagentStop"
         case userPromptSubmit = "UserPromptSubmit"
         case windowsManagedDir
     }
@@ -1649,6 +1676,8 @@ enum CodexWireHookEventName: String, Codable, Equatable, Sendable {
     case preToolUse = "preToolUse"
     case sessionStart = "sessionStart"
     case stop = "stop"
+    case subagentStart = "subagentStart"
+    case subagentStop = "subagentStop"
     case userPromptSubmit = "userPromptSubmit"
 }
 
@@ -1816,7 +1845,7 @@ struct CodexWireThreadItem: Codable, Equatable, Sendable {
     let changes: [CodexWireFileUpdateChange]?
     let arguments: CodexWireJSONValue?
     let error: CodexWireMCPToolCallError?
-    let mcpAppResourceURI: String?
+    let mcpAppResourceURI, pluginID: String?
     let result: CodexWireResult?
     let server: String?
     /// Name of the collab tool that was invoked.
@@ -1849,6 +1878,7 @@ struct CodexWireThreadItem: Codable, Equatable, Sendable {
         case processID = "processId"
         case source, status, changes, arguments, error
         case mcpAppResourceURI = "mcpAppResourceUri"
+        case pluginID = "pluginId"
         case result, server, tool, contentItems, namespace, success, agentsStates, model, prompt, reasoningEffort
         case receiverThreadIDS = "receiverThreadIds"
         case senderThreadID = "senderThreadId"
@@ -2304,7 +2334,7 @@ struct CodexWireFileSystemSandboxEntry: Codable, Equatable, Sendable {
 }
 
 enum CodexWireFileSystemAccessMode: String, Codable, Equatable, Sendable {
-    case none = "none"
+    case deny = "deny"
     case read = "read"
     case write = "write"
 }
@@ -2736,6 +2766,8 @@ struct CodexWireModel: Codable, Equatable, Sendable {
     let additionalSpeedTiers: [String]?
     let availabilityNux: CodexWireModelAvailabilityNux?
     let defaultReasoningEffort: CodexWireReasoningEffort
+    /// Catalog default service tier id for this model, when one is configured.
+    let defaultServiceTier: String?
     let description, displayName: String
     let hidden: Bool
     let id: String
@@ -2891,6 +2923,7 @@ struct CodexWirePluginListParams: Codable, Equatable, Sendable {
 enum CodexWirePluginListMarketplaceKind: String, Codable, Equatable, Sendable {
     case local = "local"
     case sharedWithMe = "shared-with-me"
+    case vertical = "vertical"
     case workspaceDirectory = "workspace-directory"
 }
 
@@ -3722,17 +3755,19 @@ enum CodexWireFunctionCallOutputBody: Codable, Equatable, Sendable {
 // MARK: - CodexWireFunctionCallOutputContentItem
 struct CodexWireFunctionCallOutputContentItem: Codable, Equatable, Sendable {
     let text: String?
-    let type: CodexWireInputFunctionCallOutputContentItemType
+    let type: CodexWireFunctionCallOutputContentItemType
     let detail: CodexWireImageDetail?
-    let imageURL: String?
+    let imageURL, encryptedContent: String?
 
     enum CodingKeys: String, CodingKey {
         case text, type, detail
         case imageURL = "image_url"
+        case encryptedContent = "encrypted_content"
     }
 }
 
-enum CodexWireInputFunctionCallOutputContentItemType: String, Codable, Equatable, Sendable {
+enum CodexWireFunctionCallOutputContentItemType: String, Codable, Equatable, Sendable {
+    case encryptedContent = "encrypted_content"
     case inputImage = "input_image"
     case inputText = "input_text"
 }
@@ -4883,8 +4918,8 @@ struct CodexWireThreadStartResponse: Codable, Equatable, Sendable {
 
 // MARK: - CodexWireActivePermissionProfile
 struct CodexWireActivePermissionProfile: Codable, Equatable, Sendable {
-    /// Parent profile identifier once permissions profiles support inheritance. This is
-    /// currently always `null`.
+    /// Parent profile identifier from the selected permissions profile's `extends` setting, when
+    /// present.
     let extends: String?
     /// Identifier from `default_permissions` or the implicit built-in default, such as
     /// `:workspace` or a user-defined `[permissions.<id>]` profile.

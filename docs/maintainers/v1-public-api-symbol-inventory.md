@@ -1,14 +1,14 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.Library` worktree-group helpers, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names, on 2026-05-15 for `CodexThread.sendShellCommand(_:)`, the `shellCommandExecution` feature category, and `CodexThread.startReview(against:placement:)`, and on 2026-05-20 for the v0.132 schema compatibility refresh. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.Library` worktree-group helpers, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names, on 2026-05-15 for `CodexThread.sendShellCommand(_:)`, the `shellCommandExecution` feature category, and `CodexThread.startReview(against:placement:)`, and on 2026-05-20 for the v0.133 schema compatibility refresh. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 2104
+- Public/open symbols: 2108
 - Public/open types: 324
 - Public/open initializers: 151
 - Public/open methods and type methods: 144
-- Public/open enum cases: 412
+- Public/open enum cases: 416
 - Public/open properties: 1073
 
 ## Public Types
@@ -775,7 +775,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexAppServer.CodexExtensions` owns app-server extension inventory: `AppListRequest`, `AppListPage`, `AppInfo`, `SkillListRequest`, `SkillListSnapshot`, `PluginListRequest`, `PluginListSnapshot`, `PluginReadRequest`, `PluginDetail`, `PluginHookSummary`, `CollaborationModeList`, `listApps(_:)`, `listSkills(_:)`, `listPlugins(_:)`, `readPlugin(_:)`, and `listCollaborationModes()`.
 - `CodexAppServer.CodexExtensions` also owns the first extension-maintenance mutation: `MarketplaceUpgradeRequest`, `MarketplaceUpgradeResult`, and `upgradeMarketplace(_:)` for already-configured plugin marketplaces.
 - `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
-- The v0.132 compatibility refresh adds `CodexThread.Goal.Status.blocked`, `CodexThread.Goal.Status.usageLimited`, `CodexRemoteControlStatusDiagnostic.installationID`, and `CodexRemoteControlStatusDiagnostic.serverName`.
+- The v0.133 compatibility refresh adds `CodexThread.Goal.Status.blocked`, `CodexThread.Goal.Status.usageLimited`, `CodexRemoteControlStatusDiagnostic.installationID`, `CodexRemoteControlStatusDiagnostic.serverName`, and the `subagentStart` / `subagentStop` hook event cases on app-wide hook metadata and thread dashboard hook runs.
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
 - `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by `CodexWorkspace.ProjectInfo` identity: app-server Git origin metadata with cwd fallback.
