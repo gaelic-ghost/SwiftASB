@@ -220,10 +220,7 @@ extension CodexAppServerTests {
         let turnStartPayload = try #require(await transport.recordedRequestPayload(for: "turn/start"))
         let turnStartRequest = try #require(try JSONSerialization.jsonObject(with: turnStartPayload) as? [String: Any])
         let turnStartParams = try #require(turnStartRequest["params"] as? [String: Any])
-        let permissions = try #require(turnStartParams["permissions"] as? [String: Any])
-        #expect(permissions["id"] as? String == ":workspace")
-        let modifications = try #require(permissions["modifications"] as? [[String: Any]])
-        #expect(modifications.first?["path"] as? String == "/tmp/turn-fixtures")
+        #expect(turnStartParams["permissions"] as? String == ":workspace")
 
         await client.stop()
     }

@@ -21,6 +21,7 @@ struct CodexAppServerProtocol {
         case threadGoalGet = "thread/goal/get"
         case threadGoalSet = "thread/goal/set"
         case threadGoalClear = "thread/goal/clear"
+        case threadShellCommand = "thread/shellCommand"
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
@@ -39,6 +40,7 @@ struct CodexAppServerProtocol {
         case modelProviderCapabilitiesRead = "modelProvider/capabilities/read"
         case mcpServerStatusList = "mcpServerStatus/list"
         case mcpResourceRead = "mcpServer/resource/read"
+        case reviewStart = "review/start"
         case pluginList = "plugin/list"
         case pluginRead = "plugin/read"
         case skillsList = "skills/list"
@@ -89,6 +91,26 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadCompactStart, params: params),
             method: .threadCompactStart
+        )
+    }
+
+    func makeThreadShellCommandRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadShellCommandParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadShellCommand, params: params),
+            method: .threadShellCommand
+        )
+    }
+
+    func makeReviewStartRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireReviewStartParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .reviewStart, params: params),
+            method: .reviewStart
         )
     }
 
@@ -520,6 +542,30 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadCompactStart,
             resultType: CodexProtocolThreadCompactStartResponse.self
+        )
+    }
+
+    func decodeThreadShellCommandResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadShellCommandResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadShellCommand,
+            resultType: CodexProtocolThreadShellCommandResponse.self
+        )
+    }
+
+    func decodeReviewStartResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexWireReviewStartResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .reviewStart,
+            resultType: CodexWireReviewStartResponse.self
         )
     }
 

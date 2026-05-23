@@ -53,6 +53,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/started",
                             "mcpServer/startupStatus/updated",
                         ]
+                    ,
+                        requestAttestation: nil
                     ),
                     clientInfo: .init(
                         name: "SwiftASBDeterministicToolInputTests",
@@ -97,6 +99,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     persistExtendedHistory: nil,
                     personality: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
                     serviceName: nil,
                     serviceTier: nil,
@@ -137,6 +140,7 @@ extension CodexAppServerLiveIntegrationTests {
                             text: "Ask the provided question, then report completion.",
                             textElements: nil,
                             type: .text,
+                            detail: nil,
                             url: nil,
                             path: nil,
                             name: nil
@@ -147,6 +151,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     personality: nil,
                     responsesapiClientMetadata: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandboxPolicy: nil,
                     serviceTier: nil,
                     summary: CodexWireReasoningSummary.none,
@@ -236,6 +241,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/started",
                             "mcpServer/startupStatus/updated",
                         ]
+                    ,
+                        requestAttestation: nil
                     ),
                     clientInfo: .init(
                         name: "SwiftASBDeterministicMcpElicitationTests",
@@ -280,6 +287,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     persistExtendedHistory: nil,
                     personality: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
                     serviceName: nil,
                     serviceTier: nil,
@@ -313,6 +321,7 @@ extension CodexAppServerLiveIntegrationTests {
                             text: "Call the provided MCP tool, then report completion.",
                             textElements: nil,
                             type: .text,
+                            detail: nil,
                             url: nil,
                             path: nil,
                             name: nil
@@ -323,6 +332,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     personality: nil,
                     responsesapiClientMetadata: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandboxPolicy: nil,
                     serviceTier: nil,
                     summary: CodexWireReasoningSummary.none,
@@ -418,6 +428,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/started",
                             "mcpServer/startupStatus/updated",
                         ]
+                    ,
+                        requestAttestation: nil
                     ),
                     clientInfo: .init(
                         name: "SwiftASBDeterministicAppConnectorMcpTests",
@@ -462,6 +474,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     persistExtendedHistory: nil,
                     personality: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
                     serviceName: nil,
                     serviceTier: nil,
@@ -495,6 +508,7 @@ extension CodexAppServerLiveIntegrationTests {
                             text: "Warm up connectors.",
                             textElements: nil,
                             type: .text,
+                            detail: nil,
                             url: nil,
                             path: nil,
                             name: nil
@@ -505,6 +519,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     personality: nil,
                     responsesapiClientMetadata: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandboxPolicy: nil,
                     serviceTier: nil,
                     summary: CodexWireReasoningSummary.none,
@@ -545,6 +560,7 @@ extension CodexAppServerLiveIntegrationTests {
                             text: "Use [$calendar](app://calendar) to run the calendar tool.",
                             textElements: nil,
                             type: .text,
+                            detail: nil,
                             url: nil,
                             path: nil,
                             name: nil
@@ -555,6 +571,7 @@ extension CodexAppServerLiveIntegrationTests {
                     permissions: nil,
                     personality: nil,
                     responsesapiClientMetadata: nil,
+                    runtimeWorkspaceRoots: nil,
                     sandboxPolicy: nil,
                     serviceTier: nil,
                     summary: CodexWireReasoningSummary.none,
@@ -591,7 +608,8 @@ extension CodexAppServerLiveIntegrationTests {
             #expect(elicitationResult.sawServerRequestResolved)
             #expect(elicitationResult.completion.turn.status == .completed)
             #expect(mockResponses.requestCount >= 3)
-            #expect(appsServer.directoryRequestCount >= 1)
+            // Codex CLI v0.133 can route the mentioned app connector directly
+            // to the MCP event stream without first reading the app directory.
             #expect(appsServer.toolCallRequestCount >= 1)
 
             await transport.stop()

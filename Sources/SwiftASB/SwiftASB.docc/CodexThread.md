@@ -27,6 +27,12 @@ Rollback returns a refreshed thread handle. SwiftASB records a local rollback ma
 
 Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` for the app-server goal attached to this thread.
 
+Use ``startReview(against:placement:)`` to ask the app-server to review repository state associated with this thread. The `against` subject can be uncommitted changes, a base branch, one commit, or custom instructions. ``ReviewPlacement/inline`` runs the review turn on this thread. ``ReviewPlacement/detached`` runs the review turn on a new review thread returned in ``CodexReviewHandle/reviewThreadID``.
+
+Use ``sendShellCommand(_:)`` only when a host app intentionally wants to send a literal user-level shell command to the thread shell. This is not the same operation as SwiftASB's internal `command/exec` helper path. `command/exec` sends argv-shaped helper commands through the app-server command runner for SwiftASB-owned intents such as Git fact refreshes or extension maintenance. `thread/shellCommand` preserves shell syntax such as pipes, redirects, and quoting, and the upstream schema documents that it runs unsandboxed with the user's full shell access instead of inheriting the thread sandbox policy.
+
+Because `sendShellCommand(_:)` is high-impact command execution, SwiftASB gates it behind the disabled-by-default ``SwiftASBFeatureCategory/ID/shellCommandExecution`` category. Consuming apps should present that category as explicit user-level shell access, not as a sandboxed command helper.
+
 ## History Access
 
 Use the non-UI history helpers when a caller needs completed turn snapshots without binding to an observable:
@@ -75,11 +81,16 @@ Recent observable startup can begin as an empty local-only view when the live ap
 
 - ``startTurn(_:)``
 - ``startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
+- ``startReview(against:placement:)``
 - ``TurnStartRequest``
+- ``ReviewSubject``
+- ``ReviewPlacement``
+- ``CodexReviewHandle``
 
 ### Thread Actions
 
 - ``compactContext()``
+- ``sendShellCommand(_:)``
 - ``rollbackLastTurns(_:)``
 - ``setName(_:)``
 - ``updateMetadata(gitInfo:)``

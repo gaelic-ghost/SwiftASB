@@ -83,8 +83,8 @@ struct CodexAppServerTests {
                 launchArgumentsPrefix: [],
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
-                versionString: "codex-cli 0.130.0",
-                compatibility: .supported(documentedWindow: "0.130.x")
+                versionString: "codex-cli 0.133.0",
+                compatibility: .supported(documentedWindow: "0.133.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -94,8 +94,8 @@ struct CodexAppServerTests {
         let diagnostics = try await client.cliExecutableDiagnostics()
         #expect(diagnostics.source == .homebrewAppleSilicon)
         #expect(diagnostics.resolvedExecutablePath == "/opt/homebrew/bin/codex")
-        #expect(diagnostics.versionString == "codex-cli 0.130.0")
-        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.130.x"))
+        #expect(diagnostics.versionString == "codex-cli 0.133.0")
+        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.133.x"))
 
         await client.stop()
     }
@@ -108,8 +108,8 @@ struct CodexAppServerTests {
                 launchArgumentsPrefix: [],
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
-                versionString: "codex-cli 0.130.0",
-                compatibility: .supported(documentedWindow: "0.130.x")
+                versionString: "codex-cli 0.133.0",
+                compatibility: .supported(documentedWindow: "0.133.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -124,7 +124,7 @@ struct CodexAppServerTests {
             )
         )
 
-        #expect(startup.cliExecutableDiagnostics.versionString == "codex-cli 0.130.0")
+        #expect(startup.cliExecutableDiagnostics.versionString == "codex-cli 0.133.0")
         #expect(startup.initializeSession.codexHome == "/Users/galew/.codex")
         #expect(await transport.recordedMethods == ["initialize", "initialized"])
 
@@ -140,7 +140,7 @@ struct CodexAppServerTests {
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.130.x")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.133.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -150,7 +150,7 @@ struct CodexAppServerTests {
                 source: .homebrewAppleSilicon,
                 resolvedExecutablePath: "/opt/homebrew/bin/codex",
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.130.x")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.133.x")
             )
         )) {
             try await client.start(
@@ -177,7 +177,7 @@ struct CodexAppServerTests {
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.130.x")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.133.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -352,6 +352,157 @@ struct CodexAppServerTests {
         #expect(params["cwd"] as? String == "/tmp/project")
         #expect(params["permissionProfile"] == nil)
         #expect(params["sandboxPolicy"] == nil)
+
+        await client.stop()
+    }
+
+    @Test("sends thread shell commands only when high-impact shell execution is enabled")
+    func sendsThreadShellCommandsOnlyWhenHighImpactShellExecutionIsEnabled() async throws {
+        var featurePolicy = SwiftASBFeaturePolicy.defaults
+        featurePolicy.setMode(.enabled, for: .shellCommandExecution)
+
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport, featurePolicy: featurePolicy)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        try await thread.sendShellCommand("printf 'hi' | tee output.txt")
+
+        let methods = await transport.recordedMethods
+        #expect(methods.contains("thread/shellCommand"))
+        #expect(!methods.contains("command/exec"))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/shellCommand"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        #expect(params["command"] as? String == "printf 'hi' | tee output.txt")
+
+        let operationStream = await client.featureOperationEvents()
+        var iterator = operationStream.makeAsyncIterator()
+        let operation = try #require(await iterator.next())
+        #expect(operation.categoryID == .shellCommandExecution)
+        #expect(operation.appServerMethod == "thread/shellCommand")
+        #expect(operation.intentKind == "threadShellCommand")
+        #expect(operation.status == .succeeded)
+
+        await client.stop()
+    }
+
+    @Test("refuses thread shell commands by default")
+    func refusesThreadShellCommandsByDefault() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        await #expect(throws: CodexAppServerError.self) {
+            try await thread.sendShellCommand("printf 'blocked'")
+        }
+
+        let methods = await transport.recordedMethods
+        #expect(!methods.contains("thread/shellCommand"))
+
+        await client.stop()
+    }
+
+    @Test("starts detached reviews against a base branch")
+    func startsDetachedReviewsAgainstBaseBranch() async throws {
+        let transport = FakeCodexAppServerTransport(turnStartIDQueue: ["review-turn-detached"])
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        let review = try await thread.startReview(
+            against: .baseBranch("main"),
+            placement: .detached
+        )
+
+        #expect(review.sourceThreadID == thread.id)
+        #expect(review.reviewThreadID == "review-thread-123")
+        #expect(review.placement == .detached)
+        #expect(review.subject == .baseBranch("main"))
+        #expect(review.turn.threadID == "review-thread-123")
+        #expect(review.turn.turn.id == "review-turn-detached")
+
+        let methods = await transport.recordedMethods
+        #expect(methods.contains("review/start"))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "review/start"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        #expect(params["delivery"] as? String == "detached")
+
+        let target = try #require(params["target"] as? [String: Any])
+        #expect(target["type"] as? String == "baseBranch")
+        #expect(target["branch"] as? String == "main")
+
+        await client.stop()
+    }
+
+    @Test("starts inline reviews against uncommitted changes")
+    func startsInlineReviewsAgainstUncommittedChanges() async throws {
+        let transport = FakeCodexAppServerTransport(turnStartIDQueue: ["review-turn-inline"])
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+
+        let review = try await thread.startReview(against: .uncommittedChanges)
+
+        #expect(review.sourceThreadID == thread.id)
+        #expect(review.reviewThreadID == thread.id)
+        #expect(review.placement == .inline)
+        #expect(review.subject == .uncommittedChanges)
+        #expect(review.turn.threadID == thread.id)
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "review/start"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params["delivery"] as? String == "inline")
+
+        let target = try #require(params["target"] as? [String: Any])
+        #expect(target["type"] as? String == "uncommittedChanges")
 
         await client.stop()
     }

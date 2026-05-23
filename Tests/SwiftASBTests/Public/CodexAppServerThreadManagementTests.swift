@@ -231,30 +231,17 @@ extension CodexAppServerTests {
         )
 
         #expect(thread.activePermissionProfile?.id == ":workspace")
-        #expect(thread.activePermissionProfile?.modifications.first?.path == "/tmp/project-fixtures")
-        #expect(thread.permissionProfile?.kind == .managed)
-        #expect(thread.permissionProfile?.network?.enabled == true)
-        #expect(thread.permissionProfile?.fileSystem?.kind == .restricted)
-        #expect(thread.permissionProfile?.fileSystem?.globScanMaxDepth == 4)
+        #expect(thread.activePermissionProfile?.modifications.isEmpty == true)
+        #expect(thread.permissionProfile == nil)
         #expect(thread.workspace.currentDirectoryPath == "/tmp/project")
         #expect(thread.workspace.projectInfo == thread.info.projectInfo)
         #expect(thread.workspace.projectInfo.currentDirectoryPath == "/tmp/project")
         #expect(thread.info.source == .cli)
 
-        let entries = try #require(thread.permissionProfile?.fileSystem?.entries)
-        #expect(entries.first?.access == .write)
-        #expect(entries.first?.path == .special(.init(kind: .projectRoots, path: nil, subpath: nil)))
-        #expect(entries.dropFirst().first?.path == .path("/tmp/project"))
-
         let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/start"))
         let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
         let params = try #require(request["params"] as? [String: Any])
-        let permissions = try #require(params["permissions"] as? [String: Any])
-        #expect(permissions["id"] as? String == ":workspace")
-        #expect(permissions["type"] as? String == "profile")
-        let modifications = try #require(permissions["modifications"] as? [[String: Any]])
-        #expect(modifications.first?["path"] as? String == "/tmp/project-fixtures")
-        #expect(modifications.first?["type"] as? String == "additionalWritableRoot")
+        #expect(params["permissions"] as? String == ":workspace")
 
         await client.stop()
     }

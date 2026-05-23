@@ -1,15 +1,15 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, and on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.Library` worktree-group helpers, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.Library` worktree-group helpers, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names, on 2026-05-15 for `CodexThread.sendShellCommand(_:)`, the `shellCommandExecution` feature category, and `CodexThread.startReview(against:placement:)`, and on 2026-05-20 for the v0.133 schema compatibility refresh. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Summary
 
-- Public/open symbols: 1890
-- Public/open types: 294
-- Public/open initializers: 131
-- Public/open methods and type methods: 132
-- Public/open enum cases: 363
-- Public/open properties: 967
+- Public/open symbols: 2108
+- Public/open types: 324
+- Public/open initializers: 151
+- Public/open methods and type methods: 144
+- Public/open enum cases: 416
+- Public/open properties: 1073
 
 ## Public Types
 
@@ -173,6 +173,8 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThread.RecentTurns.TurnSnapshot` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
 - `CodexThread.RecentTurns.TurnSnapshot.Item` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
 - `CodexThread.RecentTurns.TurnSnapshot.TokenUsage` (`struct`) - Sources/SwiftASB/Public/CodexThread+RecentTurns.swift
+- `CodexThread.ReviewPlacement` (`enum`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.ReviewSubject` (`enum`) - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.TurnStartRequest` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadArchived` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadClosed` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
@@ -183,6 +185,7 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThreadTokenUsageUpdated` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadTokenUsageUpdated.Usage` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadUnarchived` (`struct`) - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexReviewHandle` (`struct`) - Sources/SwiftASB/Public/CodexReviewHandle.swift
 - `CodexToolUserInputRequest` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
 - `CodexToolUserInputRequest.Question` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
 - `CodexToolUserInputRequest.Question.Option` (`struct`) - Sources/SwiftASB/Public/CodexInteractiveRequests.swift
@@ -407,7 +410,9 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThread.respond(to:with:)` - `func respond(to request: CodexApprovalRequest, with response: CodexApprovalResponse) async throws` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.respond(to:with:)` - `func respond(to request: CodexElicitationRequest, with response: CodexElicitationResponse) async throws` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.rollbackLastTurns(_:)` - `func rollbackLastTurns(_ count: Int) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.sendShellCommand(_:)` - `func sendShellCommand(_ command: String) async throws` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.setName(_:)` - `func setName(_ name: String) async throws` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.startReview(against:placement:)` - `func startReview(against subject: CodexThread.ReviewSubject, placement: CodexThread.ReviewPlacement = .inline) async throws -> CodexReviewHandle` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)` - `func startTextTurn(_ text: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, currentDirectoryPath: String? = nil, effort: CodexAppServer.ReasoningEffort? = nil, model: String? = nil, outputSchema: CodexAppServer.JSONValue? = nil, permissions: CodexWorkspace.PermissionSelection? = nil, personality: CodexAppServer.Personality? = nil, serviceTier: CodexAppServer.ServiceTier? = nil, summary: CodexAppServer.ReasoningSummary? = nil) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.startTurn(_:)` - `func startTurn(_ request: CodexThread.TurnStartRequest) async throws -> CodexTurnHandle` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.updateMetadata(gitInfo:)` - `func updateMetadata(gitInfo: CodexAppServer.ThreadMetadataGitInfoUpdate) async throws -> CodexAppServer.ThreadInfo` - Sources/SwiftASB/Public/CodexThread.swift
@@ -700,6 +705,12 @@ Generated from `swift package dump-symbol-graph --minimum-access-level public --
 - `CodexThread.HistoryWindowQD.Anchor.newerThanTurn(_:)` - `case newerThanTurn(String)` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.HistoryWindowQD.Anchor.aroundTurn(_:)` - `case aroundTurn(String)` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThread.HistoryWindowQD.Anchor.aroundItem(_:)` - `case aroundItem(String)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.ReviewPlacement.inline` - `case inline` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.ReviewPlacement.detached` - `case detached` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.ReviewSubject.uncommittedChanges` - `case uncommittedChanges` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.ReviewSubject.baseBranch(_:)` - `case baseBranch(String)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.ReviewSubject.commit(sha:title:)` - `case commit(sha: String, title: String? = nil)` - Sources/SwiftASB/Public/CodexThread.swift
+- `CodexThread.ReviewSubject.custom(instructions:)` - `case custom(instructions: String)` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadEvent.approvalRequested(_:)` - `case approvalRequested(CodexApprovalRequest)` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadEvent.archived(_:)` - `case archived(CodexThreadArchived)` - Sources/SwiftASB/Public/CodexThread.swift
 - `CodexThreadEvent.closed(_:)` - `case closed(CodexThreadClosed)` - Sources/SwiftASB/Public/CodexThread.swift
@@ -764,6 +775,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexAppServer.CodexExtensions` owns app-server extension inventory: `AppListRequest`, `AppListPage`, `AppInfo`, `SkillListRequest`, `SkillListSnapshot`, `PluginListRequest`, `PluginListSnapshot`, `PluginReadRequest`, `PluginDetail`, `PluginHookSummary`, `CollaborationModeList`, `listApps(_:)`, `listSkills(_:)`, `listPlugins(_:)`, `readPlugin(_:)`, and `listCollaborationModes()`.
 - `CodexAppServer.CodexExtensions` also owns the first extension-maintenance mutation: `MarketplaceUpgradeRequest`, `MarketplaceUpgradeResult`, and `upgradeMarketplace(_:)` for already-configured plugin marketplaces.
 - `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
+- The v0.133 compatibility refresh adds `CodexThread.Goal.Status.blocked`, `CodexThread.Goal.Status.usageLimited`, `CodexRemoteControlStatusDiagnostic.installationID`, `CodexRemoteControlStatusDiagnostic.serverName`, and the `subagentStart` / `subagentStop` hook event cases on app-wide hook metadata and thread dashboard hook runs.
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
 - `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by `CodexWorkspace.ProjectInfo` identity: app-server Git origin metadata with cwd fallback.
@@ -774,6 +786,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexAppServer.ThreadInfo` and `CodexAppServer.Library.ThreadSnapshot` now expose `CodexAppServer.ThreadSource` so launcher UIs can badge CLI, app-server, editor, custom, and sub-agent threads without reading generated wire values.
 - `SwiftASBFeaturePolicy`, `SwiftASBFeatureCategory`, `SwiftASBFeatureMode`, `SwiftASBFeatureSensitivity`, `SwiftASBFeatureEventPolicy`, and `SwiftASBHostAccess` now describe SwiftASB-owned convenience-feature policy, built-in category defaults, and host access declarations without replacing Codex app-server sandboxing.
 - `SwiftASBFeatureOperationEvent`, `SwiftASBFeatureOperationEvent.Status`, `SwiftASBFeatureOperationEvent.Command`, and `SwiftASBFeatureOperationEvent.Rollback` now describe human-readable SwiftASB-owned mutation records for the app-wide feature-operation event stream.
+- `CodexThread.startReview(against:placement:)`, `CodexThread.ReviewSubject`, `CodexThread.ReviewPlacement`, and `CodexReviewHandle` now expose app-server `review/start` without leaking the generated `target` and `delivery` wire names into the public API.
 
 ## Public Property Counts By Source File
 
@@ -793,6 +806,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexErrors.swift`: 1 public properties
 - `Sources/SwiftASB/Public/CodexFS.swift`: 44 public properties
 - `Sources/SwiftASB/Public/CodexInteractiveRequests.swift`: 74 public properties
+- `Sources/SwiftASB/Public/CodexReviewHandle.swift`: 5 public properties
 - `Sources/SwiftASB/Public/CodexThread+Dashboard.swift`: 29 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift`: 25 public properties

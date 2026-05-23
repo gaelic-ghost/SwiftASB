@@ -105,6 +105,8 @@ public extension CodexAppServer {
             case preToolUse
             case sessionStart
             case stop
+            case subagentStart
+            case subagentStop
             case userPromptSubmit
         }
 

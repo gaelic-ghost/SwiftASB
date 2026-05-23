@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.3.2` is the current and latest release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.4.0` is the current and latest release.
 
 ### What This Project Is
 
@@ -38,7 +38,7 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.3.2"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.4.0"),
 ```
 
 Then add the library product to your target dependencies:
@@ -52,7 +52,7 @@ Check your Codex version:
 ```bash
 codex --version
 ```
-*Note: SwiftASB supports the latest version of Codex CLI, as well as the prior two minor versions. This policy will be revised once Codex CLI reaches a v1.x.x release.*
+*Note: SwiftASB currently supports the latest reviewed Codex CLI minor release, `0.133.x`. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
 
 Add the Socket Marketplace to Codex and enable the SwiftASB Skills Plugin:
 
@@ -79,6 +79,10 @@ For app-wide sidebars and launchers, `CodexAppServer.makeLibrary()` provides obs
 Use `CodexAppServer.fs` when a sandboxed client needs filesystem metadata, directory listings, file bytes, file discovery, fuzzy file lookup, or file-change watches through the Codex app-server instead of reading local disk directly. File-discovery hits include match kind, matched character ranges, and ranking reasons for picker highlighting and result explanations. `CodexWorkspace` carries app-server-owned worktree, Git, workspace permission selection, active permission-profile provenance, and runtime filesystem/network permission facts for started threads and turns. Use `CodexAppServer.config` for effective config reads, and `CodexAppServer.extensions` for app, skill, plugin, collaboration-mode inventory, and configured plugin-marketplace upgrades.
 
 Use `CodexAppServer.ThreadListQD`, `CodexFS.FileDiscoveryQD`, `CodexThread.HistoryWindowQD`, `CodexThread.RecentFilesQD`, and `CodexThread.RecentCommandsQD` when a client needs to preserve repeatable list, file-discovery, history-window, or recent-activity intent without depending on Core Data, SwiftData, direct filesystem reads, or raw app-server paging details.
+
+Use `CodexThread.startReview(against:placement:)` to start app-server code reviews from a thread. The public API uses hand-owned Swift subjects such as `.uncommittedChanges`, `.baseBranch("main")`, `.commit(sha:title:)`, and `.custom(instructions:)`; `placement: .inline` runs the review turn on the current thread, while `.detached` runs it on a returned review thread.
+
+Use `CodexThread.sendShellCommand(_:)` only for explicit user-level shell access. It sends a literal shell command string through app-server `thread/shellCommand`, preserves shell syntax such as pipes and redirects, and is documented upstream as unsandboxed full-user shell execution. SwiftASB keeps its internal `command/exec` helper path separate because that path is argv-shaped app-server command execution for SwiftASB-owned helper intents. `sendShellCommand(_:)` is gated by the disabled-by-default `shellCommandExecution` feature category.
 
 The generated Codex wire models are internal to this package. App code should use SwiftASB's public Swift types instead.
 

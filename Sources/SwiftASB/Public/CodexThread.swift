@@ -228,14 +228,36 @@ public struct CodexThread: Sendable {
         }
     }
 
+    /// What a code review should inspect.
+    public enum ReviewSubject: Sendable, Equatable {
+        /// Review staged, unstaged, and untracked working-tree changes.
+        case uncommittedChanges
+        /// Review changes between the current branch and `branch`.
+        case baseBranch(String)
+        /// Review changes introduced by one commit.
+        case commit(sha: String, title: String? = nil)
+        /// Review arbitrary instructions.
+        case custom(instructions: String)
+    }
+
+    /// Where the review turn should run.
+    public enum ReviewPlacement: Sendable, Equatable {
+        /// Run the review on the current thread.
+        case inline
+        /// Run the review on a new review thread returned by the app-server.
+        case detached
+    }
+
     /// Goal state stored by the app-server for this thread.
     public struct Goal: Sendable, Equatable {
         /// App-server goal status.
         public enum Status: String, Sendable, Equatable {
             case active
+            case blocked
             case budgetLimited
             case complete
             case paused
+            case usageLimited
         }
 
         public let createdAt: Int
@@ -371,6 +393,21 @@ public struct CodexThread: Sendable {
         )
     }
 
+    /// Starts a code review against this thread's repository state.
+    ///
+    /// Inline reviews run on this thread. Detached reviews run on a new review
+    /// thread and return that review thread id in the handle.
+    public func startReview(
+        against subject: ReviewSubject,
+        placement: ReviewPlacement = .inline
+    ) async throws -> CodexReviewHandle {
+        try await appServer.startReview(
+            against: subject,
+            placement: placement,
+            sourceThreadID: id
+        )
+    }
+
     /// Creates an observable dashboard for this thread.
     ///
     /// The dashboard consumes the thread event stream plus live aggregate
@@ -397,6 +434,20 @@ public struct CodexThread: Sendable {
     /// runtime emits item lifecycle events for that work.
     public func compactContext() async throws {
         try await appServer.compactThread(.init(threadID: id))
+    }
+
+    /// Sends a user-level shell command string to this thread's configured shell.
+    ///
+    /// This wraps app-server `thread/shellCommand`, not SwiftASB's internal
+    /// `command/exec` helper path. The upstream app-server schema documents
+    /// `thread/shellCommand` as literal shell evaluation: it preserves shell
+    /// syntax such as pipes, redirects, and quoting, and it runs unsandboxed
+    /// with the user's full shell access instead of inheriting this thread's
+    /// sandbox policy. Host apps should present this as high-impact command
+    /// execution and enable ``SwiftASBFeatureCategory/ID/shellCommandExecution``
+    /// only after the user has explicitly opted in.
+    public func sendShellCommand(_ command: String) async throws {
+        try await appServer.sendThreadShellCommand(command: command, threadID: id)
     }
 
     /// Rolls back trailing turns from this stored thread.
@@ -882,12 +933,16 @@ extension CodexThread.Goal.Status {
         switch wireValue {
         case .active:
             self = .active
+        case .blocked:
+            self = .blocked
         case .budgetLimited:
             self = .budgetLimited
         case .complete:
             self = .complete
         case .paused:
             self = .paused
+        case .usageLimited:
+            self = .usageLimited
         }
     }
 
@@ -895,12 +950,16 @@ extension CodexThread.Goal.Status {
         switch self {
         case .active:
             .active
+        case .blocked:
+            .blocked
         case .budgetLimited:
             .budgetLimited
         case .complete:
             .complete
         case .paused:
             .paused
+        case .usageLimited:
+            .usageLimited
         }
     }
 }

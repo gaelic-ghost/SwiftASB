@@ -11,17 +11,14 @@ Use ``PermissionSelection`` when a caller wants a named app-server permissions p
 ```swift
 let thread = try await appServer.startThread(
     .init(
-        permissions: .init(
-            id: ":workspace",
-            modifications: [
-                .init(additionalWritableRoot: "/tmp/project-fixtures"),
-            ]
-        )
+        permissions: .workspace
     )
 )
 ```
 
-Use ``SessionSnapshot`` or the workspace values on ``CodexThread`` when a UI needs to show what Codex actually activated for the session: current directory, Git metadata, instruction sources, legacy sandbox policy, active profile id, and exact filesystem/network permissions.
+Codex CLI v0.133 accepts the selected profile id for new thread, resumed thread, fork, and turn requests. ``PermissionSelection/modifications`` is retained as source-compatible local metadata for older callers, but SwiftASB does not send those modifications to the v0.133 app-server because the upstream schema no longer accepts them.
+
+Use ``SessionSnapshot`` or the workspace values on ``CodexThread`` when a UI needs to show what Codex actually activated for the session: current directory, Git metadata, instruction sources, legacy sandbox policy, and active profile id.
 
 Use ``GitStatusSnapshot`` through ``CodexAppServer/Library/selectedGitStatus`` when a library UI wants live selected-worktree Git facts. SwiftASB starts from Codex-reported repository metadata, then uses sandboxed app-server `command/exec` for repository root, remotes, and porcelain status details that are not attached to stored thread metadata yet.
 

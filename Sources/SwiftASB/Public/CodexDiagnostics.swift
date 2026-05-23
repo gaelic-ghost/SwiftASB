@@ -140,6 +140,8 @@ public struct CodexMcpServerStatusDiagnostic: Sendable, Equatable {
 
 public struct CodexRemoteControlStatusDiagnostic: Sendable, Equatable {
     public let environmentID: String?
+    public let installationID: String
+    public let serverName: String
     public let status: Status
 
     public enum Status: String, Sendable, Equatable {
@@ -222,6 +224,8 @@ extension CodexDiagnosticEvent {
         self = .remoteControlStatusChanged(
             .init(
                 environmentID: wireValue.environmentID,
+                installationID: wireValue.installationID,
+                serverName: wireValue.serverName,
                 status: .init(wireValue: wireValue.status)
             )
         )

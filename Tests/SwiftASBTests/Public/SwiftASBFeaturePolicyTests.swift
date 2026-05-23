@@ -18,6 +18,7 @@ struct SwiftASBFeaturePolicyTests {
             .configMutation,
             .extensionMutation,
             .worktreeAutomation,
+            .shellCommandExecution,
         ])
 
         #expect(SwiftASBFeatureCategory.builtInCategory(id: .gitObservability)?.defaultMode == .enabled)
@@ -28,6 +29,8 @@ struct SwiftASBFeaturePolicyTests {
         #expect(SwiftASBFeatureCategory.builtInCategory(id: .configMutation)?.defaultMode == .disabled)
         #expect(SwiftASBFeatureCategory.builtInCategory(id: .extensionMutation)?.defaultMode == .disabled)
         #expect(SwiftASBFeatureCategory.builtInCategory(id: .worktreeAutomation)?.defaultMode == .disabled)
+        #expect(SwiftASBFeatureCategory.builtInCategory(id: .shellCommandExecution)?.defaultMode == .disabled)
+        #expect(SwiftASBFeatureCategory.builtInCategory(id: .shellCommandExecution)?.sensitivity == .highImpact)
     }
 
     @Test("policy defaults allow quiet reads and disable repo mutations")
@@ -42,6 +45,7 @@ struct SwiftASBFeaturePolicyTests {
         #expect(policy.mode(for: .configMutation) == .disabled)
         #expect(policy.mode(for: .extensionMutation) == .disabled)
         #expect(policy.mode(for: .worktreeAutomation) == .disabled)
+        #expect(policy.mode(for: .shellCommandExecution) == .disabled)
         #expect(policy.hostAccess == .unknown)
     }
 

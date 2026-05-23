@@ -50,7 +50,7 @@ runtime while the app-server schema is moving quickly before v1.
 Current policy:
 
 - support the latest reviewed public Codex CLI minor release
-- current reviewed minor release: `0.130.x`
+- current reviewed minor release: `0.133.x`
 - widen back to a rolling window only after the latest generated-wire and public
   API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
@@ -117,6 +117,8 @@ belongs in the release boundary:
 | Thread archive-state actions | `CodexThread.archive()`, `CodexThread.unarchive()` | `thread/archive` and `thread/unarchive` are public because stored-thread sidebars need explicit archive-state control in the same model as archive notifications and list reconciliation. |
 | Thread name setting | `CodexThread.setName(...)` | `thread/name/set` is a straightforward thread-scoped action. The method records the local name update after the app-server accepts the request and still allows server-sent `thread/name/updated` notifications to flow normally. |
 | Thread metadata patching | `CodexThread.updateMetadata(...)` | `thread/metadata/update` is public with a hand-owned replace/clear/unchanged patch model so callers can express the upstream null-vs-omitted semantics without generated wire types. |
+| Thread shell command execution | `CodexThread.sendShellCommand(_:)` | `thread/shellCommand` is public as an explicitly gated, high-impact thread action. It stays separate from internal `command/exec` helper usage because it sends literal shell syntax to the thread shell and upstream documents it as unsandboxed full-user shell access. |
+| Code review start | `CodexThread.startReview(against:placement:)` | `review/start` is public as a thread-scoped review action. SwiftASB exposes hand-owned review subjects and placement names instead of the upstream `target` and `delivery` field names, and returns `CodexReviewHandle` so detached reviews can surface the returned review thread id. |
 | App-wide model listing | `CodexAppServer.listModels(...)` | `model/list` describes shared runtime capabilities rather than one conversation thread, so the public API belongs on the connection-owning app-server actor. |
 | App-wide MCP-server status listing | `CodexAppServer.listMcpServerStatuses(...)` | `mcpServerStatus/list` is a connection-wide server capability snapshot, so it is public on `CodexAppServer` rather than `CodexThread` or `CodexTurnHandle`. |
 | App-wide MCP resource reads | `CodexAppServer.readMcpResource(...)` | `mcpServer/resource/read` is public as a read-only capability/resource inspection action. It stays app-server-owned because the resource may be connection-wide, with optional thread context only when the app-server needs it. |
@@ -268,13 +270,12 @@ notification families at all:
 - `ThreadResumeRequest.excludeTurns` and `ThreadForkRequest.excludeTurns` are
   public because they let callers request lightweight resume/fork metadata when
   they plan to hydrate turn history through `thread/turns/list`
-- `permissionProfile` is generated and decoded internally, but the public API
-  still accepts the existing hand-owned sandbox and approval settings until a
-  deliberate permission-profile model is designed. The v0.128 experimental
-  schema keeps `permissionProfile`, adds `activePermissionProfile`, and moves
-  request-side overrides toward named `permissions` profile selection; SwiftASB
-  keeps those generated shapes internal until the public model is deliberately
-  designed.
+- v0.133 request-side `permissions` is a named profile id string. SwiftASB
+  keeps the public `CodexWorkspace.PermissionSelection` wrapper as the caller
+  vocabulary, but encodes only the selected profile id because upstream removed
+  bounded request-side permission modifications. Runtime `activePermissionProfile`
+  provenance remains public; older full `permissionProfile` response details are
+  no longer part of the promoted v0.133 generated response shape.
 - device-key, marketplace-removal, marketplace-upgrade, account-provider, and
   add-credits email endpoints remain outside the first lifecycle boundary
 
@@ -329,10 +330,9 @@ The current remaining promotion questions are therefore narrower than before:
 2. should `FileChangePatchUpdatedNotification` graduate from text-preview
    enrichment into structured patch previews, and if so, what stable file-diff
    model should the package own instead of leaking generated wire shapes?
-3. should permission profiles become a public request/defaults model, or stay
-   internal while the current sandbox and approval request models are enough?
-   The next design should account for both the full active runtime
-   `permissionProfile` and the named/provenance-oriented `activePermissionProfile`.
+3. should runtime workspace roots or richer permission profile provenance become
+   a public request/defaults model, or stay internal while the current named
+   profile selection, sandbox, and approval request models are enough?
 4. diagnostics and control flows stay separate. Warning, guardian-warning,
    config-warning, deprecation, MCP-server-status, remote-control-status,
    model-reroute, and model-verification families are passive public diagnostic

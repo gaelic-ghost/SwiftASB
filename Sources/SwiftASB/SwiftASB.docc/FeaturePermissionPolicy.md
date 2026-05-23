@@ -39,6 +39,15 @@ The initial built-in categories are:
 - ``SwiftASBFeatureCategory/ID/configMutation``
 - ``SwiftASBFeatureCategory/ID/extensionMutation``
 - ``SwiftASBFeatureCategory/ID/worktreeAutomation``
+- ``SwiftASBFeatureCategory/ID/shellCommandExecution``
+
+``SwiftASBFeatureCategory/ID/shellCommandExecution`` is disabled by default and
+high impact. It gates ``CodexThread/sendShellCommand(_:)``, which sends a
+literal user-level shell command to app-server `thread/shellCommand`. That
+endpoint is different from SwiftASB's internal `command/exec` helper path:
+`command/exec` sends argv-shaped helper commands through the app-server command
+runner, while `thread/shellCommand` preserves shell syntax and is documented by
+the upstream schema as unsandboxed full-user shell access.
 
 Use ``SwiftASBHostAccess`` to describe broad filesystem access the host app has
 already arranged, such as unsandboxed access or sandboxed home-directory access

@@ -13,7 +13,8 @@ struct CodexAppServerProtocolTests {
             params: CodexWireInitializeParams(
                 capabilities: CodexWireInitializeCapabilities(
                     experimentalAPI: true,
-                    optOutNotificationMethods: ["thread/started"]
+                    optOutNotificationMethods: ["thread/started"],
+                    requestAttestation: nil
                 ),
                 clientInfo: CodexWireClientInfo(
                     name: "SwiftASBTests",
@@ -110,6 +111,57 @@ struct CodexAppServerProtocolTests {
         #expect(notification.capReached == false)
     }
 
+    @Test("encodes thread/shellCommand as a thread-scoped shell string")
+    func encodesThreadShellCommandAsThreadScopedShellString() throws {
+        let payload = try protocolLayer.makeThreadShellCommandRequest(
+            id: .string("thread-shell-1"),
+            params: .init(
+                command: "printf 'hi' | tee output.txt",
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/shellCommand")
+        #expect(object["id"] as? String == "thread-shell-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["command"] as? String == "printf 'hi' | tee output.txt")
+        #expect(params["threadId"] as? String == "thread-123")
+    }
+
+    @Test("encodes review/start with subject and placement")
+    func encodesReviewStartWithSubjectAndPlacement() throws {
+        let payload = try protocolLayer.makeReviewStartRequest(
+            id: .string("review-start-1"),
+            params: .init(
+                delivery: .detached,
+                target: .init(
+                    type: .baseBranch,
+                    branch: "main",
+                    sha: nil,
+                    title: nil,
+                    instructions: nil
+                ),
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "review/start")
+        #expect(object["id"] as? String == "review-start-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["delivery"] as? String == "detached")
+        #expect(params["threadId"] as? String == "thread-123")
+
+        let target = try #require(params["target"] as? [String: Any])
+        #expect(target["type"] as? String == "baseBranch")
+        #expect(target["branch"] as? String == "main")
+    }
+
     @Test("encodes thread/start requests with the expected method and params payload")
     func encodesThreadStartRequest() throws {
         let payload = try protocolLayer.makeThreadStartRequest(
@@ -128,15 +180,10 @@ struct CodexAppServerProtocolTests {
                 mockExperimentalField: nil,
                 model: "gpt-5.4",
                 modelProvider: "openai",
-                permissions: .init(
-                    id: ":workspace",
-                    modifications: [
-                        .init(path: "/tmp/project-fixtures", type: .additionalWritableRoot),
-                    ],
-                    type: .profile
-                ),
+                permissions: ":workspace",
                 persistExtendedHistory: nil,
                 personality: .friendly,
+                runtimeWorkspaceRoots: nil,
                 sandbox: .workspaceWrite,
                 serviceName: "codex",
                 serviceTier: "fast",
@@ -162,12 +209,7 @@ struct CodexAppServerProtocolTests {
         let config = try #require(params["config"] as? [String: Any])
         #expect(config["temperature"] as? Double == 0.25)
 
-        let permissions = try #require(params["permissions"] as? [String: Any])
-        #expect(permissions["id"] as? String == ":workspace")
-        #expect(permissions["type"] as? String == "profile")
-        let modifications = try #require(permissions["modifications"] as? [[String: Any]])
-        #expect(modifications.first?["type"] as? String == "additionalWritableRoot")
-        #expect(modifications.first?["path"] as? String == "/tmp/project-fixtures")
+        #expect(params["permissions"] as? String == ":workspace")
     }
 
     @Test("encodes thread/list requests with the expected method and params payload")
@@ -718,6 +760,7 @@ struct CodexAppServerProtocolTests {
                         text: "Hello from SwiftASB",
                         textElements: nil,
                         type: .text,
+                        detail: nil,
                         url: nil,
                         path: nil,
                         name: nil
@@ -728,6 +771,7 @@ struct CodexAppServerProtocolTests {
                 permissions: nil,
                 personality: .pragmatic,
                 responsesapiClientMetadata: nil,
+                runtimeWorkspaceRoots: nil,
                 sandboxPolicy: nil,
                 serviceTier: "flex",
                 summary: .concise,
@@ -786,6 +830,7 @@ struct CodexAppServerProtocolTests {
                         text: "Please summarize the answer more briefly.",
                         textElements: nil,
                         type: .text,
+                        detail: nil,
                         url: nil,
                         path: nil,
                         name: nil
@@ -863,64 +908,6 @@ struct CodexAppServerProtocolTests {
         #expect(response.thread.id == "thread-123")
         #expect(response.thread.preview == "Hello")
         #expect(response.thread.turns.isEmpty)
-    }
-
-    @Test("decodes v0.128 managed permission profiles")
-    func decodesManagedPermissionProfile() throws {
-        let payload = threadStartResponsePayload(
-            permissionProfile:
-                #"""
-                {"type":"managed","fileSystem":{"type":"restricted","entries":[{"access":"write","path":{"type":"path","path":"/tmp/project"}}],"globScanMaxDepth":4},"network":{"enabled":true}}
-                """#
-        )
-
-        let response = try protocolLayer.decodeThreadStartResponse(payload, expectedID: .string("thread-1"))
-
-        #expect(response.permissionProfile?.fileSystem?.entries?.count == 1)
-        #expect(response.permissionProfile?.fileSystem?.globScanMaxDepth == 4)
-        #expect(response.permissionProfile?.network?.enabled == true)
-    }
-
-    @Test("decodes v0.128 managed unrestricted permission profiles")
-    func decodesManagedUnrestrictedPermissionProfile() throws {
-        let payload = threadStartResponsePayload(
-            permissionProfile:
-                #"""
-                {"type":"managed","fileSystem":{"type":"unrestricted"},"network":{"enabled":true}}
-                """#
-        )
-
-        let response = try protocolLayer.decodeThreadStartResponse(payload, expectedID: .string("thread-1"))
-
-        #expect(response.permissionProfile?.fileSystem?.entries == nil)
-        #expect(response.permissionProfile?.fileSystem?.globScanMaxDepth == nil)
-        #expect(response.permissionProfile?.network?.enabled == true)
-    }
-
-    @Test("decodes v0.128 disabled permission profiles")
-    func decodesDisabledPermissionProfile() throws {
-        let payload = threadStartResponsePayload(permissionProfile: #"{"type":"disabled"}"#)
-
-        let response = try protocolLayer.decodeThreadStartResponse(payload, expectedID: .string("thread-1"))
-
-        #expect(response.permissionProfile != nil)
-        #expect(response.permissionProfile?.fileSystem == nil)
-        #expect(response.permissionProfile?.network == nil)
-    }
-
-    @Test("decodes v0.128 external permission profiles")
-    func decodesExternalPermissionProfile() throws {
-        let payload = threadStartResponsePayload(
-            permissionProfile:
-                #"""
-                {"type":"external","network":{"enabled":false}}
-                """#
-        )
-
-        let response = try protocolLayer.decodeThreadStartResponse(payload, expectedID: .string("thread-1"))
-
-        #expect(response.permissionProfile?.fileSystem == nil)
-        #expect(response.permissionProfile?.network?.enabled == false)
     }
 
     @Test("decodes thread/compact/start responses and honors the expected request ID")
@@ -1195,12 +1182,14 @@ struct CodexAppServerProtocolTests {
         let remoteStatusEvent = try #require(
             try decodeEvent(
                 method: "remoteControl/status/changed",
-                payload: Data(#"{"environmentId":"env-123","status":"connected"}"#.utf8)
+                payload: Data(#"{"environmentId":"env-123","installationId":"install-123","serverName":"desktop","status":"connected"}"#.utf8)
             )
         )
         switch remoteStatusEvent {
         case let .remoteControlStatusChanged(notification):
             #expect(notification.environmentID == "env-123")
+            #expect(notification.installationID == "install-123")
+            #expect(notification.serverName == "desktop")
             #expect(notification.status == .connected)
         default:
             Issue.record("Expected remoteControl/status/changed to decode into .remoteControlStatusChanged.")
@@ -1850,11 +1839,4 @@ struct CodexAppServerProtocolTests {
         try protocolLayer.decodeServerEvent(.notification(method: method, payload: payload))
     }
 
-    private func threadStartResponsePayload(permissionProfile: String) -> Data {
-        Data(
-            """
-            {"id":"thread-1","result":{"approvalPolicy":"on-request","approvalsReviewer":"user","cwd":"/tmp/project","instructionSources":["AGENTS.md"],"model":"gpt-5.4","modelProvider":"openai","permissionProfile":\(permissionProfile),"reasoningEffort":"medium","sandbox":{"type":"workspaceWrite","networkAccess":"enabled","writableRoots":["/tmp/project"]},"serviceTier":"fast","thread":{"cliVersion":"0.128.0","createdAt":1713350000,"cwd":"/tmp/project","ephemeral":false,"id":"thread-123","modelProvider":"openai","preview":"Hello","source":"cli","status":{"type":"active"},"turns":[],"updatedAt":1713350001}}}
-            """.utf8
-        )
-    }
 }
