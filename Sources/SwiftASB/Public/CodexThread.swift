@@ -420,6 +420,7 @@ public struct CodexThread: Sendable {
     @MainActor
     public func makeDashboard() async -> Dashboard {
         let events = await appServer.threadEventStream(threadID: id)
+        let turnEvents = await appServer.threadTurnEventStream(threadID: id)
         let initialActivityState = await appServer.threadObservableActivityState(threadID: id)
         let activityUpdates = await appServer.threadObservableActivityStream(threadID: id)
         return Dashboard(
@@ -427,8 +428,27 @@ public struct CodexThread: Sendable {
             initialInfo: info,
             initialMcpServers: mcpServers,
             events: events,
+            turnEvents: turnEvents,
             initialActivityState: initialActivityState,
             activityUpdates: activityUpdates
+        )
+    }
+
+    /// Creates an observable agenda for this thread.
+    ///
+    /// The agenda owns current goal hydration plus live goal and plan updates.
+    /// Use it for plan and goal UI instead of assembling raw turn-plan deltas
+    /// or manually reconciling goal reads with thread events.
+    @MainActor
+    public func makeAgenda() async throws -> Agenda {
+        let threadEvents = await appServer.threadEventStream(threadID: id)
+        let turnEvents = await appServer.threadTurnEventStream(threadID: id)
+        let initialGoal = try await appServer.readThreadGoal(threadID: id)
+        return Agenda(
+            threadID: id,
+            initialGoal: initialGoal,
+            threadEvents: threadEvents,
+            turnEvents: turnEvents
         )
     }
 

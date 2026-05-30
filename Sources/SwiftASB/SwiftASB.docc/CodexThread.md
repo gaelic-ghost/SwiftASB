@@ -25,7 +25,7 @@ Use ``setName(_:)`` for a human-readable title, ``updateMetadata(gitInfo:)`` for
 
 Rollback returns a refreshed thread handle. SwiftASB records a local rollback marker and trims visible local history to match the app-server response. It does not preserve the full removed-turn payload archive yet.
 
-Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` for the app-server goal attached to this thread.
+Use ``makeAgenda()`` when a UI wants current goal and plan state for this thread. Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` when a non-UI caller needs direct goal reads or mutation.
 
 Use ``startReview(against:placement:)`` to ask the app-server to review repository state associated with this thread. The `against` subject can be uncommitted changes, a base branch, one commit, or custom instructions. ``ReviewPlacement/inline`` runs the review turn on this thread. ``ReviewPlacement/detached`` runs the review turn on a new review thread returned in ``CodexReviewHandle/reviewThreadID``.
 
@@ -43,7 +43,7 @@ Use the non-UI history helpers when a caller needs completed turn snapshots with
 
 ## Observable Companions
 
-Use ``makeDashboard()`` for thread-level current state, ``makeRecentTurns(limit:cachePolicy:)`` for a turn-centric view, ``makeRecentFiles(limit:cachePolicy:)`` or ``makeRecentFiles(_:)`` for a file-change view, and ``makeRecentCommands(limit:cachePolicy:)`` or ``makeRecentCommands(_:)`` for a command-output view.
+Use ``makeDashboard()`` for thread-level current status, ``makeAgenda()`` for current goal and plan state, ``makeRecentTurns(limit:cachePolicy:)`` for a turn-centric view, ``makeRecentFiles(limit:cachePolicy:)`` or ``makeRecentFiles(_:)`` for a file-change view, and ``makeRecentCommands(limit:cachePolicy:)`` or ``makeRecentCommands(_:)`` for a command-output view.
 
 These companions are separate on purpose. `RecentTurns`, `RecentFiles`, and `RecentCommands` preserve domain-specific behavior that a mixed activity feed would flatten too early.
 
@@ -121,6 +121,8 @@ Recent observable startup can begin as an empty local-only view when the live ap
 
 - ``makeDashboard()``
 - ``Dashboard``
+- ``makeAgenda()``
+- ``Agenda``
 - ``makeRecentTurns(limit:cachePolicy:)``
 - ``RecentTurns``
 - ``makeRecentFiles(limit:cachePolicy:)``

@@ -1,12 +1,12 @@
 # SwiftUI Observable Companions
 
-Use dashboard, minimap, recent-file, and recent-command companions as current-state UI models.
+Use dashboard, agenda, minimap, recent-file, and recent-command companions as current-state UI models.
 
 ## Overview
 
 SwiftASB's observable companions are ready-made `@Observable` state objects for SwiftUI surfaces. They are current-state mirrors over live streams and local history; they are not replayable protocol logs.
 
-Use ``CodexAppServer/makeInventory(configuration:)`` for app-wide capability and extension inventory, ``CodexAppServer/makeLibrary(configuration:)`` for app-wide stored-thread lists, ``CodexThread/makeDashboard()`` for thread-level state, ``CodexTurnHandle/minimap`` for one active turn, and the recent companions for completed turn, file, and command views.
+Use ``CodexAppServer/makeInventory(configuration:)`` for app-wide capability and extension inventory, ``CodexAppServer/makeLibrary(configuration:)`` for app-wide stored-thread lists, ``CodexThread/makeDashboard()`` for thread-level status, ``CodexThread/makeAgenda()`` for goal and plan state, ``CodexTurnHandle/minimap`` for one active turn, and the recent companions for completed turn, file, and command views.
 
 ```swift
 import Observation
@@ -21,6 +21,7 @@ final class ThreadInspectorModel {
     var inventory: CodexAppServer.Inventory?
     var library: CodexAppServer.Library?
     var dashboard: CodexThread.Dashboard?
+    var agenda: CodexThread.Agenda?
     var recentFiles: CodexThread.RecentFiles?
     var recentCommands: CodexThread.RecentCommands?
     var currentMinimap: CodexTurnHandle.Minimap?
@@ -43,6 +44,7 @@ final class ThreadInspectorModel {
             )
             library?.sortedBy = .selectedNewestFirst
             dashboard = await thread.makeDashboard()
+            agenda = try await thread.makeAgenda()
             recentFiles = try await thread.makeRecentFiles(
                 limit: 20,
                 cachePolicy: .automatic(pageSize: 20)
@@ -98,6 +100,8 @@ When `gitObservability` is enabled in ``SwiftASBFeaturePolicy``, selecting a lib
 
 Use ``CodexAppServer/Inventory`` when an app-wide UI needs model capabilities, MCP server summaries, hook diagnostics, apps, skills, plugins, and collaboration modes without also needing stored-thread lists. Use ``CodexAppServer/Library/refreshAppSnapshots()`` when model, MCP, and hook snapshots should sit beside the thread library. SwiftASB owns MCP status refresh and keeps summary lists current from startup and app-server status-change notifications.
 
+Use ``CodexThread/Agenda`` when a UI wants to show the thread's current task target, current accepted plan, and proposed plan text while Codex is still shaping it. SwiftASB reads the current goal, listens for goal changes, accepts authoritative plan snapshots, and treats experimental plan deltas as agenda state instead of making app code assemble them.
+
 Recent companions keep caller-owned UI inputs mutable. For example, views can update selected file or command identifiers and visible item identifiers. SwiftASB uses that information to protect visible or selected payloads while slimming older low-value entries when the resident cache exceeds its budget.
 
 Start with automatic cache policies unless the UI has known density requirements. Use the named presets for ``CodexThread/RecentTurns`` and automatic policies for file and command companions when the initial page size is enough guidance.
@@ -116,6 +120,8 @@ Store the companion object itself in your view model. Do not copy its arrays int
 - ``CodexAppServer/Inventory``
 - ``CodexThread/makeDashboard()``
 - ``CodexThread/Dashboard``
+- ``CodexThread/makeAgenda()``
+- ``CodexThread/Agenda``
 
 ### Active Turn State
 

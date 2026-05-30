@@ -69,6 +69,8 @@ extension CodexAppServerTests {
         #expect(dashboard.status.type == .active)
         #expect(dashboard.isArchived == false)
         #expect(dashboard.isClosed == false)
+        #expect(dashboard.goalTitle == "")
+        #expect(dashboard.planTitle == "")
         #expect(dashboard.latestTokenUsage == nil)
 
         await transport.emitHookStarted(
@@ -147,6 +149,8 @@ extension CodexAppServerTests {
         await transport.emitThreadStarted(threadID: thread.id)
         await transport.emitThreadStatusChanged(threadID: thread.id)
         await transport.emitThreadNameUpdated(threadID: thread.id)
+        await transport.emitThreadGoalUpdated(threadID: thread.id)
+        await transport.emitTurnPlanUpdated(threadID: thread.id, turnID: turnHandle.turn.id)
         await transport.emitThreadArchived(threadID: thread.id)
         await transport.emitThreadTokenUsageUpdated(threadID: thread.id, turnID: "turn-123")
         await transport.emitThreadClosed(threadID: thread.id)
@@ -155,6 +159,8 @@ extension CodexAppServerTests {
             dashboard.name == "Planning Thread"
                 && dashboard.isArchived
                 && dashboard.isClosed
+                && dashboard.goalTitle == "Promote schemas"
+                && dashboard.planTitle == "Promote protocol events into CodexTurnEvent"
                 && dashboard.latestTokenUsage?.turnID == "turn-123"
         }
 
@@ -164,6 +170,8 @@ extension CodexAppServerTests {
         #expect(dashboard.status.activeFlags == [.waitingOnApproval])
         #expect(dashboard.isArchived == true)
         #expect(dashboard.isClosed == true)
+        #expect(dashboard.goalTitle == "Promote schemas")
+        #expect(dashboard.planTitle == "Promote protocol events into CodexTurnEvent")
         #expect(dashboard.isCompactingThreadContext == false)
         #expect(dashboard.hookRuns.count == 1)
         #expect(dashboard.hookRuns[0].status == .completed)
@@ -172,6 +180,101 @@ extension CodexAppServerTests {
         #expect(dashboard.latestTokenUsage?.total.totalTokens == 650)
         #expect(dashboard.toolCallingStatus == .errored)
         #expect(dashboard.mcpCallingStatus == .idle)
+
+        await client.stop()
+    }
+
+    @MainActor
+    @Test("builds an agenda that owns thread goals and plan state")
+    func buildsThreadAgenda() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+        let turnHandle = try await thread.startTextTurn("Shape agenda state")
+
+        let agenda = try await thread.makeAgenda()
+
+        #expect(agenda.threadID == thread.id)
+        #expect(agenda.goal?.objective == "Promote schemas")
+        #expect(agenda.goalStatus == .active)
+        #expect(agenda.goalTitle == "Promote schemas")
+        #expect(agenda.updatedAt == 1_713_350_010)
+        #expect(agenda.currentPlan == nil)
+        #expect(agenda.proposedPlan == nil)
+        #expect(agenda.planTitle == "")
+
+        await transport.emitPlanDelta(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-plan-1"
+        )
+        await transport.emitPlanDelta(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-plan-1"
+        )
+
+        await waitForObservableState {
+            agenda.proposedPlan?.items.first?.text == "Stream partial plan textStream partial plan text"
+        }
+
+        #expect(agenda.proposedPlan?.turnID == turnHandle.turn.id)
+        #expect(agenda.proposedPlan?.items.first?.id == "item-plan-1")
+        #expect(agenda.planTitle == "Stream partial plan textStream partial plan text")
+
+        await transport.emitTurnPlanUpdated(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id
+        )
+
+        await waitForObservableState {
+            agenda.currentPlan?.steps.count == 2
+                && agenda.proposedPlan == nil
+        }
+
+        #expect(agenda.currentPlan?.turnID == turnHandle.turn.id)
+        #expect(agenda.currentPlan?.explanation == "Map richer progress notifications.")
+        #expect(agenda.currentPlan?.steps[0].id == "\(turnHandle.turn.id):0")
+        #expect(agenda.currentPlan?.steps[0].status == .inProgress)
+        #expect(agenda.currentPlan?.steps[0].title == "Promote protocol events into CodexTurnEvent")
+        #expect(agenda.currentPlan?.steps[1].status == .pending)
+        #expect(agenda.planTitle == "Promote protocol events into CodexTurnEvent")
+
+        await transport.emitThreadGoalUpdated(threadID: thread.id)
+
+        await waitForObservableState {
+            agenda.goalStatus == .complete
+                && agenda.updatedAt == 1_713_350_030
+        }
+
+        #expect(agenda.goalTitle == "Promote schemas")
+
+        await transport.emitThreadGoalCleared(threadID: thread.id)
+
+        await waitForObservableState {
+            agenda.goal == nil
+                && agenda.goalStatus == nil
+                && agenda.goalTitle == ""
+                && agenda.updatedAt == nil
+        }
 
         await client.stop()
     }

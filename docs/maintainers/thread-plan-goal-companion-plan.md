@@ -1,9 +1,13 @@
 # Thread Plan And Goal Companion Plan
 
-This note maps the next SwiftASB cleanup pass for Codex plans and goals. The
-goal is to make plan and goal state easy for SwiftUI clients to consume without
-asking app code to assemble experimental deltas, manually refresh current goals,
-or depend on every raw notification as public API.
+This note maps the SwiftASB cleanup pass for Codex plans and goals. The goal is
+to make plan and goal state easy for SwiftUI clients to consume without asking
+app code to assemble experimental deltas, manually refresh current goals, or
+depend on every raw notification as public API.
+
+Status: the first implementation pass shipped `CodexThread.Agenda`,
+`CodexThread.makeAgenda()`, and dashboard title summaries on
+`feature/plans-goals-api`.
 
 ## Current Facts
 
@@ -36,7 +40,7 @@ The current public SwiftASB API already exposes:
 - `CodexThreadEvent.goalCleared`
 - `CodexTurnEvent.planUpdated`
 - `CodexTurnEvent.planDelta`
-- `CodexThread.Dashboard.goal`
+- `CodexThread.Dashboard.goal` before the first implementation pass
 - `CodexTurnHandle.Minimap.latestPlanUpdate`
 - `CodexTurnHandle.Minimap.latestPlanDelta`
 
@@ -141,11 +145,10 @@ Recommended dashboard fields:
 - `goalTitle: String`
 - `planTitle: String`
 
-Open question:
+Decision:
 
-- Keep `Dashboard.goal` deprecated for one minor release, or remove it in the
-  same public-surface simplification pass if the next release is allowed to
-  carry a source break.
+- Remove `Dashboard.goal` in the same simplification pass and expose
+  `Dashboard.goalTitle` plus `Dashboard.planTitle`.
 
 The practical effect is that dashboard stays the broad thread status strip,
 while agenda becomes the detailed task-progress model.
@@ -190,11 +193,12 @@ Those should be deliberate convenience APIs, not thin slash-command replicas.
 
 ## Implementation Slices
 
-1. Add `CodexThread.Agenda` and `makeAgenda()`.
+1. Add `CodexThread.Agenda` and `makeAgenda()`. Shipped.
 2. Hydrate the current goal on construction and apply thread goal events.
-3. Feed turn plan updates and plan deltas into agenda state.
-4. Add dashboard `goalTitle` and `planTitle` summaries.
-5. Update DocC to recommend agenda for plan/goal UI.
+   Shipped.
+3. Feed turn plan updates and plan deltas into agenda state. Shipped.
+4. Add dashboard `goalTitle` and `planTitle` summaries. Shipped.
+5. Update DocC to recommend agenda for plan/goal UI. Shipped.
 6. Revisit public event deprecations after tests prove agenda covers routine UI.
 
 ## Validation

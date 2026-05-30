@@ -1,6 +1,6 @@
 # V1 Public API Symbol Inventory
 
-Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.Library` worktree-group helpers, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names, on 2026-05-15 for `CodexThread.sendShellCommand(_:)`, the `shellCommandExecution` feature category, and `CodexThread.startReview(against:placement:)`, on 2026-05-20 for the v0.133 schema compatibility refresh, and on 2026-05-30 for `CodexAppServer.Inventory`, `CodexMCP.statusSnapshot()`, and `CodexMCP.readResource(...)`. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
+Generated from `swift package dump-symbol-graph --minimum-access-level public --skip-synthesized-members` on 2026-05-02 after the v0.128 generated-wire promotion and final pre-v1 public-surface tightening, then updated on 2026-05-05 for the post-v1 app-wide library snapshot, on 2026-05-06 for the public query descriptor, filesystem, config, extension-inventory, thread-goal, recent-activity descriptor, repository-grouping, workspace permission-profile, and file-discovery slices, on 2026-05-08 for the `CodexWorkspace.ProjectInfo` cleanup, `CodexWorkspace.WorktreeSnapshot` promotion, `CodexAppServer.Library` worktree-group helpers, `CodexAppServer.ThreadSource` promotion, and v0.129 hook compact event names, on 2026-05-15 for `CodexThread.sendShellCommand(_:)`, the `shellCommandExecution` feature category, and `CodexThread.startReview(against:placement:)`, on 2026-05-20 for the v0.133 schema compatibility refresh, and on 2026-05-30 for `CodexAppServer.Inventory`, `CodexMCP.statusSnapshot()`, `CodexMCP.readResource(...)`, and `CodexThread.Agenda`. This is a maintainer ledger for the v1 public API freeze plus accepted post-v1 app-wide additions; it records public/open declarations visible through the `SwiftASB` library product, excluding synthesized members.
 
 ## Last Full Snapshot Summary
 
@@ -782,6 +782,8 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexAppServer.Inventory` now owns routine app-wide observable inventory: `Configuration`, `Phase`, `appListPage`, `apps`, `modelCapabilities`, `mcpServers`, `hookListSnapshot`, `skillListSnapshot`, `skillEntries`, `skills`, `pluginListSnapshot`, `pluginMarketplaces`, `collaborationModes`, `collaborationModeEntries`, `refresh()`, and `makeInventory(configuration:)`.
 - `CodexMCP` now owns detail-oriented MCP helpers beside installs: `statusSnapshot()`, `readResource(_:)`, and `readResource(server:uri:threadID:)`.
 - `CodexThread` now exposes thread goals: `Goal`, `Goal.Status`, `GoalSetRequest`, `readGoal()`, `setGoal(_:)`, and `clearGoal()`.
+- `CodexThread.Agenda` now owns thread plan and goal presentation state: `Plan`, `Plan.Step`, `Plan.Step.Status`, `ProposedPlan`, `ProposedPlan.Item`, `threadID`, `goal`, `goalStatus`, `goalTitle`, `currentPlan`, `proposedPlan`, `planTitle`, `updatedAt`, and `CodexThread.makeAgenda()`.
+- `CodexThread.Dashboard` now exposes `goalTitle` and `planTitle` summaries instead of the previous full `goal` value.
 - The v0.133 compatibility refresh adds `CodexThread.Goal.Status.blocked`, `CodexThread.Goal.Status.usageLimited`, `CodexRemoteControlStatusDiagnostic.installationID`, `CodexRemoteControlStatusDiagnostic.serverName`, and the `subagentStart` / `subagentStop` hook event cases on app-wide hook metadata and thread dashboard hook runs.
 - `CodexThreadEvent` now includes `.goalUpdated(_:)` and `.goalCleared(_:)` for app-server goal notifications.
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
@@ -814,7 +816,8 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `Sources/SwiftASB/Public/CodexFS.swift`: 44 public properties
 - `Sources/SwiftASB/Public/CodexInteractiveRequests.swift`: 74 public properties
 - `Sources/SwiftASB/Public/CodexReviewHandle.swift`: 5 public properties
-- `Sources/SwiftASB/Public/CodexThread+Dashboard.swift`: 29 public properties
+- `Sources/SwiftASB/Public/CodexThread+Agenda.swift`: 18 public properties
+- `Sources/SwiftASB/Public/CodexThread+Dashboard.swift`: 30 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentCommands.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentFiles.swift`: 25 public properties
 - `Sources/SwiftASB/Public/CodexThread+RecentTurns.swift`: 54 public properties

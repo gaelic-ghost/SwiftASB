@@ -62,11 +62,11 @@ Use the named cache-policy presets first:
 
 ## Dashboard And Minimap
 
-``CodexThread/Dashboard`` summarizes thread-level current state such as active tool, MCP, hook, and compaction activity. ``CodexTurnHandle/Minimap`` summarizes one active turn's command, file-edit, MCP, dynamic-tool, and collab-tool activity.
+``CodexThread/Dashboard`` summarizes thread-level current state such as active tool, MCP, hook, compaction activity, and plan or goal title text. ``CodexThread/Agenda`` owns the detailed goal and plan state for a thread, including the current goal, latest accepted plan, and proposed plan text assembled from live deltas. ``CodexTurnHandle/Minimap`` summarizes one active turn's command, file-edit, MCP, dynamic-tool, and collab-tool activity.
 
 Use these for "what is happening now" UI. Use history windows or closed turns for completed transcript data.
 
-These companions are not alternate event logs. `Dashboard` starts from the current thread snapshot and aggregate activity state, then mirrors later thread and activity updates. `Minimap`, `RecentTurns`, `RecentFiles`, and `RecentCommands` listen to live feeds after they are created; command-output and file-output deltas that arrive before a recent companion exists are not replayed as delta events, though completed history can still be rehydrated from the local history store.
+These companions are not alternate event logs. `Dashboard` starts from the current thread snapshot and aggregate activity state, then mirrors later thread and activity updates. `Agenda` reads the current goal when it starts, then mirrors later goal and plan changes. `Minimap`, `RecentTurns`, `RecentFiles`, and `RecentCommands` listen to live feeds after they are created; command-output and file-output deltas that arrive before a recent companion exists are not replayed as delta events, though completed history can still be rehydrated from the local history store.
 
 ## Topics
 
@@ -93,6 +93,7 @@ These companions are not alternate event logs. `Dashboard` starts from the curre
 
 - ``CodexAppServer/Library``
 - ``CodexThread/Dashboard``
+- ``CodexThread/Agenda``
 - ``CodexThread/RecentTurns``
 - ``CodexThread/RecentFiles``
 - ``CodexThread/RecentCommands``
