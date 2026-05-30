@@ -97,6 +97,8 @@ public actor CodexAppServer {
     private let historyStoreInitializationError: Error?
     private var serverEventTask: Task<Void, Never>?
     private var threadStatuses: [String: ThreadStatus] = [:]
+    private var globalMcpServerStatusPage = McpServerStatusPage(nextCursor: nil, servers: [])
+    private var threadMcpServerStatusPages: [String: McpServerStatusPage] = [:]
     private var threadEventContinuations: [String: [UUID: AsyncThrowingStream<CodexThreadEvent, Error>.Continuation]] = [:]
     private var diagnosticEventContinuations: [UUID: AsyncThrowingStream<CodexDiagnosticEvent, Error>.Continuation] = [:]
     private var libraryEventContinuations: [UUID: AsyncStream<LibraryEvent>.Continuation] = [:]
@@ -233,6 +235,8 @@ public actor CodexAppServer {
         hasStarted = false
         hasCompletedInitializeHandshake = false
         threadStatuses.removeAll()
+        globalMcpServerStatusPage = .init(nextCursor: nil, servers: [])
+        threadMcpServerStatusPages.removeAll()
         threadTurnActivities.removeAll()
         threadObservableActivityStates.removeAll()
         turnThreadIDs.removeAll()
@@ -338,6 +342,7 @@ public actor CodexAppServer {
             try await transport.sendNotification(initializedPayload, method: "initialized")
 
             hasCompletedInitializeHandshake = true
+            _ = try? await refreshGlobalMcpServerStatusSnapshot()
             return InitializeSession(wireValue: response)
         } catch {
             throw CodexAppServerError.wrap(error, operation: "initialize")
@@ -572,12 +577,50 @@ public actor CodexAppServer {
         }
     }
 
+    /// Returns SwiftASB's latest app-wide MCP server status snapshot.
+    ///
+    /// SwiftASB refreshes this during initialization, when the app-server
+    /// reports MCP status changes, and when observable companions refresh their
+    /// app snapshot state.
+    public func mcpServerStatusSnapshot() -> McpServerStatusPage {
+        globalMcpServerStatusPage
+    }
+
     /// Reads the app-server's current MCP server status snapshots.
     ///
     /// Omitting `request` sends an empty status-list request, leaving
     /// pagination and detail level to the app-server defaults.
+    @available(
+        *,
+        deprecated,
+        message: "Use SwiftASB-owned MCP status snapshots instead of issuing raw MCP status list requests."
+    )
     public func listMcpServerStatuses(
         _ request: McpServerStatusListRequest = .init()
+    ) async throws -> McpServerStatusPage {
+        let page = try await readMcpServerStatusPage(request)
+        updateMcpServerStatusCache(page, threadID: request.threadID)
+        return page
+    }
+
+    internal func refreshGlobalMcpServerStatusSnapshot() async throws -> McpServerStatusPage {
+        let page = try await readMcpServerStatusPage(.init())
+        globalMcpServerStatusPage = page
+        return page
+    }
+
+    internal func hydrateMcpServerStatuses(threadID: String) async -> [McpServerStatus] {
+        do {
+            let page = try await readMcpServerStatusPage(.init(threadID: threadID))
+            threadMcpServerStatusPages[threadID] = page
+            return page.servers
+        } catch {
+            return threadMcpServerStatusPages[threadID]?.servers ?? []
+        }
+    }
+
+    private func readMcpServerStatusPage(
+        _ request: McpServerStatusListRequest
     ) async throws -> McpServerStatusPage {
         try requireInitialized(for: "mcpServerStatus/list")
 
@@ -590,7 +633,7 @@ public actor CodexAppServer {
                     cursor: request.cursor,
                     detail: request.detail?.wireValue,
                     limit: request.limit,
-                    threadID: nil
+                    threadID: request.threadID
                 )
             )
             let responsePayload = try await transport.send(requestPayload, id: requestID)
@@ -605,6 +648,14 @@ public actor CodexAppServer {
             )
         } catch {
             throw CodexAppServerError.wrap(error, operation: "mcpServerStatus/list")
+        }
+    }
+
+    private func updateMcpServerStatusCache(_ page: McpServerStatusPage, threadID: String?) {
+        if let threadID {
+            threadMcpServerStatusPages[threadID] = page
+        } else {
+            globalMcpServerStatusPage = page
         }
     }
 
@@ -657,11 +708,13 @@ public actor CodexAppServer {
             let session = ThreadSession(wireValue: response)
             threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
             try await requireHistoryStore(for: "thread/start").recordThreadStarted(session: session)
+            let mcpServers = await hydrateMcpServerStatuses(threadID: response.thread.id)
             publishLibraryEvent(.threadChanged(threadID: response.thread.id))
 
             return CodexThread(
                 appServer: self,
                 session: session,
+                mcpServers: mcpServers,
                 events: makeThreadEventStream(threadID: response.thread.id)
             )
         } catch {
@@ -703,11 +756,13 @@ public actor CodexAppServer {
                 }
             )
             try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
+            let mcpServers = await hydrateMcpServerStatuses(threadID: response.thread.id)
             publishLibraryEvent(.threadChanged(threadID: response.thread.id))
 
             return CodexThread(
                 appServer: self,
                 session: session,
+                mcpServers: mcpServers,
                 events: makeThreadEventStream(threadID: response.thread.id)
             )
         } catch {
@@ -748,11 +803,13 @@ public actor CodexAppServer {
                 }
             )
             try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
+            let mcpServers = await hydrateMcpServerStatuses(threadID: response.thread.id)
             publishLibraryEvent(.threadChanged(threadID: response.thread.id))
 
             return CodexThread(
                 appServer: self,
                 session: session,
+                mcpServers: mcpServers,
                 events: makeThreadEventStream(threadID: response.thread.id)
             )
         } catch {
@@ -2746,6 +2803,10 @@ public actor CodexAppServer {
             publishLibraryEvent(.appSnapshotsChanged)
         case let .mcpServerStatusUpdated(notification):
             handleDiagnosticEvent(.init(wireValue: notification))
+            _ = try? await refreshGlobalMcpServerStatusSnapshot()
+            for threadID in Array(threadMcpServerStatusPages.keys) {
+                _ = await hydrateMcpServerStatuses(threadID: threadID)
+            }
             publishLibraryEvent(.appSnapshotsChanged)
         case let .configWarning(notification):
             handleDiagnosticEvent(.init(wireValue: notification))

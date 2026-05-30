@@ -1012,7 +1012,7 @@ history store. They are UI state over the existing thread value snapshots.
 state next to stored threads:
 
 - model capabilities from `CodexAppServer.readModelCapabilities()`
-- MCP server status from `CodexAppServer.listMcpServerStatuses(...)`
+- MCP server status from SwiftASB's owned `CodexAppServer.mcpServerStatusSnapshot()`
 - hook diagnostics from `CodexAppServer.listHooks(...)`
 
 These snapshots are read-through app-server state. They do not go through Core

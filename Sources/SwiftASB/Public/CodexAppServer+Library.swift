@@ -244,7 +244,6 @@ public extension CodexAppServer {
             public var hookListCurrentDirectoryPaths: [String]?
             public var loadsAppSnapshotsOnCreation: Bool
             public var maxPagesPerArchiveState: Int
-            public var mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest
             public var pageSize: Int
             public var query: CodexAppServer.ThreadListQD
             public var reconcilesOnCreation: Bool
@@ -259,8 +258,7 @@ public extension CodexAppServer {
                 featurePolicy: SwiftASBFeaturePolicy = .defaults,
                 reconcilesOnCreation: Bool = true,
                 loadsAppSnapshotsOnCreation: Bool = true,
-                hookListCurrentDirectoryPaths: [String]? = nil,
-                mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest = .init()
+                hookListCurrentDirectoryPaths: [String]? = nil
             ) {
                 let normalizedPageSize = max(1, pageSize)
                 self.pageSize = normalizedPageSize
@@ -270,7 +268,6 @@ public extension CodexAppServer {
                 self.featurePolicy = featurePolicy
                 self.loadsAppSnapshotsOnCreation = loadsAppSnapshotsOnCreation
                 self.hookListCurrentDirectoryPaths = hookListCurrentDirectoryPaths
-                self.mcpServerStatusRequest = mcpServerStatusRequest
                 self.query = .init(
                     archived: query.archived,
                     currentDirectoryPath: query.currentDirectoryPath,
@@ -462,9 +459,6 @@ public extension CodexAppServer {
         private let configuredHookListCurrentDirectoryPaths: [String]?
 
         @ObservationIgnored
-        private let mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest
-
-        @ObservationIgnored
         private var pendingEventReload = false
 
         @ObservationIgnored
@@ -514,7 +508,6 @@ public extension CodexAppServer {
             self.maxPagesPerArchiveState = configuration.maxPagesPerArchiveState
             self.mcpServers = []
             self.mcpServerNextCursor = nil
-            self.mcpServerStatusRequest = configuration.mcpServerStatusRequest
             self.modelCapabilities = nil
             self.phase = .idle
             self.query = configuration.query
@@ -613,7 +606,7 @@ public extension CodexAppServer {
                 try await appServer.readModelCapabilities()
             }
             async let mcpResult = snapshotResult {
-                try await appServer.listMcpServerStatuses(mcpServerStatusRequest)
+                try await appServer.refreshGlobalMcpServerStatusSnapshot()
             }
             async let hooksResult = snapshotResult {
                 try await appServer.listHooks(

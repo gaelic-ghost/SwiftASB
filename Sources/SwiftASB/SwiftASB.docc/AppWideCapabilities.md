@@ -4,11 +4,11 @@ Discover model, MCP-server, MCP-resource, hook diagnostics, and model-capability
 
 ## Overview
 
-Some app-server operations describe the connection rather than one conversation thread. SwiftASB exposes those operations on ``CodexAppServer`` so consumers can populate settings screens, model pickers, feature gates, MCP inspectors, hook diagnostics, and other app-wide views without needing a thread handle.
+Some app-server operations describe the connection rather than one conversation thread. SwiftASB exposes opinionated snapshots on ``CodexAppServer`` and observable companions so consumers can populate settings screens, model pickers, feature gates, MCP inspectors, hook diagnostics, and other app-wide views without orchestrating every app-server read.
 
-Use ``CodexAppServer/listModels(_:)`` to read the currently visible model catalog. Use ``CodexAppServer/readModelCapabilities()`` to decide whether the current model provider supports web search, image generation, or namespace tools. Use ``CodexAppServer/listMcpServerStatuses(_:)`` to inspect configured MCP servers, their auth status, and their resource, resource-template, and tool metadata. Use ``CodexAppServer/readMcpResource(_:)`` to read one advertised MCP resource. Use ``CodexAppServer/listHooks(_:)`` to inspect configured hooks, warnings, and load errors for one or more working directories before a turn runs.
+Use ``CodexAppServer/listModels(_:)`` to read the currently visible model catalog. Use ``CodexAppServer/readModelCapabilities()`` to decide whether the current model provider supports web search, image generation, or namespace tools. Use ``CodexAppServer/mcpServerStatusSnapshot()`` or ``CodexAppServer/Library/mcpServers`` to inspect SwiftASB's latest configured MCP server snapshot, including auth status, resources, resource templates, and tools. Use ``CodexAppServer/readMcpResource(_:)`` to read one advertised MCP resource. Use ``CodexAppServer/listHooks(_:)`` to inspect configured hooks, warnings, and load errors for one or more working directories before a turn runs.
 
-Use ``CodexAppServer/makeLibrary(configuration:)`` when these same model, MCP, and hook snapshots should live beside observable stored-thread lists. ``CodexAppServer/Library/refreshAppSnapshots()`` reads the current app-wide snapshots and publishes them as Library state; hook diagnostics use Library thread `cwd` values unless configuration passes explicit hook current-directory paths.
+Use ``CodexAppServer/makeLibrary(configuration:)`` when these same model, MCP, and hook snapshots should live beside observable stored-thread lists. ``CodexAppServer/Library/refreshAppSnapshots()`` reads the current app-wide snapshots and publishes them as Library state; MCP status uses SwiftASB's owned cache, and hook diagnostics use Library thread `cwd` values unless configuration passes explicit hook current-directory paths.
 
 Use ``CodexAppServer/extensions`` for app, skill, plugin, and collaboration-mode inventory. ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` is the narrow maintenance mutation in this app-wide family: it upgrades an already-configured plugin marketplace through app-server `command/exec` and reports the operation through ``CodexAppServer/featureOperationEvents()``.
 
@@ -19,9 +19,7 @@ let models = try await appServer.listModels(
 
 let modelCapabilities = try await appServer.readModelCapabilities()
 
-let statuses = try await appServer.listMcpServerStatuses(
-    .init(detail: .toolsAndAuthOnly)
-)
+let statuses = await appServer.mcpServerStatusSnapshot()
 
 let resource = try await appServer.readMcpResource(
     .init(server: "docs", uri: "docs://swiftasb/current")
@@ -32,7 +30,7 @@ let hooks = try await appServer.listHooks(
 )
 ```
 
-These requests are snapshots. If your UI needs refresh behavior, keep that refresh policy in the caller and ask the app-server for a new snapshot or page when needed.
+These requests are snapshots. If your UI needs refresh behavior, prefer ``CodexAppServer/Library`` so SwiftASB owns the refresh path and notification handling.
 
 ## Model Capabilities
 
@@ -90,7 +88,7 @@ These types are public because a consumer can use them directly today. Other gen
 
 ### MCP Servers
 
-- ``CodexAppServer/listMcpServerStatuses(_:)``
+- ``CodexAppServer/mcpServerStatusSnapshot()``
 - ``CodexAppServer/readMcpResource(_:)``
 - ``CodexAppServer/McpServerStatusListRequest``
 - ``CodexAppServer/McpServerStatusPage``

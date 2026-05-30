@@ -578,8 +578,43 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
-    @Test("lists app-wide MCP server status through the public client")
-    func listsAppWideMcpServerStatus() async throws {
+    @Test("hydrates app-wide MCP server status during initialization")
+    func hydratesAppWideMcpServerStatusDuringInitialization() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let page = await client.mcpServerStatusSnapshot()
+
+        #expect(page.nextCursor == nil)
+        #expect(page.servers.count == 1)
+        #expect(page.servers[0].name == "calendar")
+        #expect(page.servers[0].authStatus == .oAuth)
+        #expect(page.servers[0].resources[0].uri == "calendar://events/today")
+        #expect(page.servers[0].resourceTemplates[0].uriTemplate == "calendar://events/{date}")
+        #expect(page.servers[0].tools["list_events"]?.title == "List Events")
+        #expect(page.servers[0].tools["list_events"]?.inputSchema == .object(["type": .string("object")]))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "mcpServerStatus/list"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params.isEmpty)
+
+        await client.stop()
+    }
+
+    @Test("lists app-wide MCP server status through the compatibility request")
+    func listsAppWideMcpServerStatusThroughCompatibilityRequest() async throws {
         let transport = FakeCodexAppServerTransport()
         let client = CodexAppServer(transport: transport)
 

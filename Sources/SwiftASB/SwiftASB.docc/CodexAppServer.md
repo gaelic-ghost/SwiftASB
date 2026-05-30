@@ -39,7 +39,7 @@ Use ``featureOperationEvents()`` to observe human-readable SwiftASB feature-oper
 
 ## App-Wide Capabilities
 
-Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, ``readMcpResource(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, MCP server surface, MCP resource contents, and configured hook diagnostics.
+Use ``listModels(_:)``, ``mcpServerStatusSnapshot()``, ``readMcpResource(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, SwiftASB's latest MCP server surface, MCP resource contents, and configured hook diagnostics.
 
 Use ``fs`` when a client needs filesystem metadata, direct directory entries, file bytes, or file-change watches through the app-server. This keeps sandboxed apps dependent on Codex-owned permissions and path handling instead of requiring the Swift process to read local disk directly.
 
@@ -123,7 +123,7 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``HookDiagnostic``
 - ``HookError``
 - ``HookMetadata``
-- ``listMcpServerStatuses(_:)``
+- ``mcpServerStatusSnapshot()``
 - ``McpServerStatusListRequest``
 - ``McpServerStatusPage``
 - ``McpServerStatus``

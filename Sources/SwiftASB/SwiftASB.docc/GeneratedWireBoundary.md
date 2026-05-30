@@ -24,7 +24,7 @@ Generated types are promoted to public wrappers only when there is a clear suppo
 Examples currently promoted through hand-owned public types include:
 
 - model catalog snapshots through ``CodexAppServer/listModels(_:)``
-- MCP server status snapshots through ``CodexAppServer/listMcpServerStatuses(_:)``
+- MCP server status snapshots through ``CodexAppServer/mcpServerStatusSnapshot()``
 - MCP resource reads through ``CodexAppServer/readMcpResource(_:)``
 - hook diagnostics snapshots through ``CodexAppServer/listHooks(_:)``
 - thread naming through ``CodexThread/setName(_:)``

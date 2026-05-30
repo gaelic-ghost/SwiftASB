@@ -24,7 +24,7 @@ Use ``CodexAppServer/Library/selectedThreadID`` and ``CodexAppServer/Library/sel
 
 `cwd` is the session working directory that app-server stores on `ThreadInfo` and matches exactly through `thread/list` cwd filters. ``CodexWorkspace/ProjectInfo`` is the public project identity value built from app-server-owned cwd and optional Git origin, branch, and SHA facts. ``CodexAppServer/ThreadSource`` is the public thread-origin value for launchers that need to distinguish CLI, app-server, editor, exec, custom, sub-agent, and unknown-source threads. SwiftASB does not inspect the filesystem to discover repository roots.
 
-The library can also publish app-wide read snapshots through ``CodexAppServer/Library/refreshAppSnapshots()``. Those snapshots reuse ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listMcpServerStatuses(_:)``, and ``CodexAppServer/listHooks(_:)`` so model feature gates, MCP surfaces, and hook diagnostics are observable next to the stored-thread lists without becoming Core Data state. App-list, skill-change, and MCP-server-status notifications trigger this app-snapshot refresh path.
+The library can also publish app-wide read snapshots through ``CodexAppServer/Library/refreshAppSnapshots()``. Those snapshots reuse ``CodexAppServer/readModelCapabilities()``, SwiftASB's owned MCP status cache, and ``CodexAppServer/listHooks(_:)`` so model feature gates, MCP surfaces, and hook diagnostics are observable next to the stored-thread lists without becoming Core Data state. App-list, skill-change, and MCP-server-status notifications trigger this app-snapshot refresh path.
 
 ## Local History Windows
 

@@ -628,8 +628,7 @@ extension CodexAppServerTests {
             configuration: .init(
                 groupedBy: .none,
                 reconcilesOnCreation: false,
-                loadsAppSnapshotsOnCreation: false,
-                mcpServerStatusRequest: .init(limit: 5, detail: .toolsAndAuthOnly)
+                loadsAppSnapshotsOnCreation: false
             )
         )
 
@@ -659,8 +658,8 @@ extension CodexAppServerTests {
 
         let mcpPayload = try #require(await transport.recordedRequestPayload(for: "mcpServerStatus/list"))
         let mcpRequest = try decodedJSONObject(from: mcpPayload)
-        #expect(value(at: ["params", "limit"], in: mcpRequest) as? Int == 5)
-        #expect(value(at: ["params", "detail"], in: mcpRequest) as? String == "toolsAndAuthOnly")
+        let mcpParams = try #require(mcpRequest["params"] as? [String: Any])
+        #expect(mcpParams.isEmpty)
 
         let hooksPayload = try #require(await transport.recordedRequestPayload(for: "hooks/list"))
         let hooksRequest = try decodedJSONObject(from: hooksPayload)
@@ -710,7 +709,7 @@ extension CodexAppServerTests {
         let hooksRequests = await transport.requestPayloads(for: "hooks/list")
 
         #expect(capabilityRequests.count == 2)
-        #expect(mcpRequests.count == 2)
+        #expect(mcpRequests.count == 3)
         #expect(hooksRequests.count == 2)
         #expect(library.snapshotPhase == .idle)
 

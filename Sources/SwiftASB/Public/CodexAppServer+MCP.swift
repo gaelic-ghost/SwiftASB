@@ -9,6 +9,7 @@ public extension CodexAppServer {
         public var cursor: String?
         public var detail: Detail?
         public var limit: Int?
+        public var threadID: String?
 
         /// Creates an MCP status-list request.
         ///
@@ -17,11 +18,13 @@ public extension CodexAppServer {
         public init(
             cursor: String? = nil,
             limit: Int? = nil,
-            detail: Detail? = nil
+            detail: Detail? = nil,
+            threadID: String? = nil
         ) {
             self.cursor = cursor
             self.detail = detail
             self.limit = limit
+            self.threadID = threadID
         }
     }
 

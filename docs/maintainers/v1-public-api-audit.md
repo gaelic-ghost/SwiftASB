@@ -246,9 +246,11 @@ Use these decisions for every public symbol:
 - [x] Review app-wide stream semantics for `diagnosticEvents()`.
   Decision: the stream is stable and now uses the stream-shaped
   `diagnosticEvents()` name.
-- [x] Review `listModels(_:)` and `listMcpServerStatuses(_:)` as app-wide
-  capability surfaces.
-  Decision: keep app-wide, snapshot-style capability reads public.
+- [x] Review `listModels(_:)` and MCP status as app-wide capability surfaces.
+  Decision: keep model listing public, but make MCP status SwiftASB-owned state
+  through `mcpServerStatusSnapshot()` and Library snapshots. Keep
+  `listMcpServerStatuses(_:)` compatibility-only while consumers move away from
+  raw MCP list requests.
 - [x] Review whether `CodexAppServer.swift` should keep all nested app-server
   request/result/domain values, or split more values into dedicated files.
   Decision: split by responsibility before v1; no new owners were introduced.

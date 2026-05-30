@@ -531,14 +531,9 @@ struct CodexAppServerLiveIntegrationTests {
 
             let mcpServers = try await withTimeout(
                 seconds: 15,
-                operation: "listing live Codex MCP server capabilities"
+                operation: "refreshing live Codex MCP server capabilities"
             ) {
-                try await client.listMcpServerStatuses(
-                    .init(
-                        limit: 20,
-                        detail: .toolsAndAuthOnly
-                    )
-                )
+                try await client.refreshGlobalMcpServerStatusSnapshot()
             }
             #expect(mcpServers.servers.allSatisfy { server in
                 server.name.isEmpty == false

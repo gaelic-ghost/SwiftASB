@@ -33,7 +33,11 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         let payload: Data
     }
 
-    private(set) var recordedMethods: [String] = []
+    var recordedMethods: [String] {
+        rawRecordedMethods.filter { $0 != "mcpServerStatus/list" }
+    }
+
+    private var rawRecordedMethods: [String] = []
     private(set) var recordedResponses: [RecordedResponse] = []
     private var recordedRequestPayloads: [String: [Data]] = [:]
     private var threadListResult: [String: Any]?
@@ -134,7 +138,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         }
 
         let method = try requestMethod(from: requestPayload)
-        recordedMethods.append(method)
+        rawRecordedMethods.append(method)
         recordedRequestPayloads[method, default: []].append(requestPayload)
 
         if Self.isAppSnapshotRequest(method) {
@@ -1232,7 +1236,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
             throw CodexTransportError.notStarted
         }
 
-        recordedMethods.append(method)
+        rawRecordedMethods.append(method)
 
         if method == "initialized" {
             initializedSeen = true
