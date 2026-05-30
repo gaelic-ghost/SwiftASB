@@ -127,6 +127,11 @@ extension CodexAppServerTests {
         try await waitForCondition {
             await transport.requestPayloads(for: "app/list").count >= 4
         }
+        try await waitForCondition {
+            await MainActor.run {
+                inventory.phase == .idle
+            }
+        }
 
         #expect(inventory.appListPage?.apps.first?.name == "GitHub")
         #expect(inventory.phase == .idle)
