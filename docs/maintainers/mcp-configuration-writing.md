@@ -5,6 +5,12 @@ v0.135.0 app-server schema adds generic config-write methods that look like the
 right backing surface for that future API, but the public Swift shape should
 stay opinionated instead of exposing raw config editing to package consumers.
 
+This note is based on the app-server schema bundled with Codex v0.135.0 plus
+the official Codex configuration reference and live config schema:
+
+- <https://developers.openai.com/codex/config-reference#configtoml>
+- <https://developers.openai.com/codex/config-schema.json>
+
 ## Current Behavior
 
 MCP service reads are already owned by SwiftASB:
@@ -45,10 +51,39 @@ Both write methods return `ConfigWriteResponse`, which includes the canonical
 written file path, a write status, a new version string, and optional overridden
 metadata.
 
+## Codex MCP Config Shape
+
+Codex stores MCP server definitions under `mcp_servers.<id>`. User-level
+configuration lives in `~/.codex/config.toml`. Trusted projects may also have
+project-scoped `.codex/config.toml` overlays; the official docs list the
+project-local keys Codex ignores, and `mcp_servers` is not in that ignored
+set.
+
+The official schema currently accepts these server fields:
+
+- Stdio transport: `command`, `args`, `cwd`, `env`, `env_vars`.
+- Streamable HTTP transport: `url`, `bearer_token_env_var`,
+  `http_headers`, `env_http_headers`.
+- OAuth support: `scopes`, `oauth_resource`, and nested `oauth.client_id`;
+  global OAuth callback and credentials-store settings live outside the server
+  definition.
+- Availability and behavior: `enabled`, `required`, `startup_timeout_sec`,
+  `startup_timeout_ms`, `tool_timeout_sec`, `supports_parallel_tool_calls`.
+- Tool policy: `enabled_tools`, `disabled_tools`,
+  `default_tools_approval_mode`, and
+  `tools.<tool>.approval_mode`.
+- Experimental placement: `experimental_environment`, `environment_id`.
+
+Installed plugins have a narrower override surface at
+`plugins.<plugin>.mcp_servers.<server>`. Those entries intentionally exclude
+transport fields; user config can only change enablement and tool policy for a
+plugin-provided server.
+
 ## Future Public Shape
 
 The public Swift API should be an MCP install surface, not a generic config
-editor. A likely first shape is:
+editor. The first durable building block should support stdio and HTTP
+transports, plus one small policy/options object:
 
 ```swift
 try await appServer.mcp.install(
@@ -56,19 +91,52 @@ try await appServer.mcp.install(
         name: "docs",
         command: "/usr/bin/env",
         arguments: ["node", "/path/to/server.js"],
-        enabled: true
+        options: .init(
+            enabled: true,
+            required: false,
+            startupTimeout: .seconds(10),
+            toolPolicy: .automatic
+        )
+    )
+)
+
+try await appServer.mcp.install(
+    .http(
+        name: "search",
+        url: URL(string: "https://example.com/mcp")!,
+        authorization: .bearerTokenEnvironmentVariable("SEARCH_MCP_TOKEN"),
+        options: .init(toolPolicy: .allowOnly(["search"]))
     )
 )
 ```
 
 SwiftASB should translate that into config writes under `mcp_servers.<name>`
-and use `reloadUserConfig: true` when batch writing. Tool approval policy can
-be added as an explicit nested option once the install model has a small set of
-consumer-facing defaults.
+and use `reloadUserConfig: true` when batch writing.
+
+Recommended public-model boundaries:
+
+- Keep transport-specific values separate: stdio owns `command`, `arguments`,
+  `currentDirectoryPath`, `environment`, and whitelisted environment variable
+  names; HTTP owns `url`, bearer-token environment variable, and headers.
+- Keep operational options shared: enabled, required, startup timeout, tool
+  timeout, and tool policy.
+- Prefer enum-backed approval modes: `automatic`, `prompt`, and `approve`.
+- Prefer tool policy presets: all tools, allow-only, deny, default approval,
+  and per-tool approval overrides.
+- Do not expose `experimental_environment`, `environment_id`,
+  `supports_parallel_tool_calls`, OAuth client settings, or plugin MCP
+  overrides in the first install API. They can become deliberate follow-up
+  surfaces after the basic install path is live-probed.
 
 Use `install` for adding or staging an MCP server into active config,
 `uninstall` for removing it from active config, and `enable` or `disable` for
 changing its config state without removing the definition.
+
+Scope should be explicit. A good first surface is user-level install only,
+because omitting `filePath` writes the user's `config.toml`. A later
+project-scoped install can accept an explicit trusted project config URL and
+write that file path. Thread-scoped MCP state should remain a read/hydration
+concept unless app-server exposes a thread-owned config destination.
 
 ## Probe Before Shipping
 
@@ -80,6 +148,10 @@ Codex home/config file:
 - Whether `replace` removes omitted fields inside an existing table.
 - Whether `expectedVersion` rejects stale writes with a recoverable app-server
   error shape.
+- Whether `config/batchWrite` can safely replace a whole
+  `mcp_servers.<name>` table while preserving unrelated MCP servers.
+- Whether stdio and streamable HTTP configs both become visible through
+  `mcpServerStatus/list`.
 - Whether `reloadUserConfig: true` causes `mcpServerStatus/updated` and whether
   loaded thread-scoped status pages include the new service without reopening
   threads.
