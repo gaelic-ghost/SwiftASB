@@ -85,6 +85,22 @@ final class ThreadInspectorModel {
             errorMessage = String(describing: error)
         }
     }
+
+    func plan(_ prompt: String) async {
+        do {
+            let turn = try await thread.startPlanningTurn(prompt)
+            currentMinimap = turn.minimap
+
+            for try await event in turn.events {
+                if case .completed = event {
+                    _ = try await turn.complete()
+                    return
+                }
+            }
+        } catch {
+            errorMessage = String(describing: error)
+        }
+    }
 }
 ```
 
@@ -101,6 +117,8 @@ When `gitObservability` is enabled in ``SwiftASBFeaturePolicy``, selecting a lib
 Use ``CodexAppServer/Inventory`` when an app-wide UI needs model capabilities, MCP server summaries, hook diagnostics, apps, skills, plugins, and collaboration modes without also needing stored-thread lists. Use ``CodexAppServer/Library/refreshAppSnapshots()`` when model, MCP, and hook snapshots should sit beside the thread library. SwiftASB owns MCP status refresh and keeps summary lists current from startup and app-server status-change notifications.
 
 Use ``CodexThread/Agenda`` when a UI wants to show the thread's current task target, current accepted plan, and proposed plan text while Codex is still shaping it. SwiftASB reads the current goal, listens for goal changes, accepts authoritative plan snapshots, and treats experimental plan deltas as agenda state instead of making app code assemble them.
+
+Use ``CodexThread/startPlanningTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)`` for explicit plan-mode UI controls. It sends the app-server collaboration-mode field rather than passing slash-command text as user input.
 
 Recent companions keep caller-owned UI inputs mutable. For example, views can update selected file or command identifiers and visible item identifiers. SwiftASB uses that information to protect visible or selected payloads while slimming older low-value entries when the resident cache exceeds its budget.
 

@@ -280,6 +280,60 @@ extension CodexAppServerTests {
     }
 
     @MainActor
+    @Test("agenda sends user-friendly goal mutations")
+    func agendaSendsUserFriendlyGoalMutations() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+        let agenda = try await thread.makeAgenda()
+
+        _ = try await agenda.setGoal("Ship plan mode", tokenBudget: 40_000)
+        _ = try await agenda.pauseGoal()
+        _ = try await agenda.resumeGoal()
+        _ = try await agenda.clearGoal()
+
+        let goalSetPayloads = await transport.requestPayloads(for: "thread/goal/set")
+        #expect(goalSetPayloads.count == 3)
+
+        let setGoalRequest = try companionDecodedJSONObject(from: goalSetPayloads[0])
+        #expect(companionValue(at: ["params", "objective"], in: setGoalRequest) as? String == "Ship plan mode")
+        #expect(companionValue(at: ["params", "status"], in: setGoalRequest) as? String == "active")
+        #expect(companionValue(at: ["params", "tokenBudget"], in: setGoalRequest) as? Int == 40_000)
+
+        let pauseRequest = try companionDecodedJSONObject(from: goalSetPayloads[1])
+        #expect(companionValue(at: ["params", "status"], in: pauseRequest) as? String == "paused")
+
+        let resumeRequest = try companionDecodedJSONObject(from: goalSetPayloads[2])
+        #expect(companionValue(at: ["params", "status"], in: resumeRequest) as? String == "active")
+
+        let clearPayload = try #require(await transport.recordedRequestPayload(for: "thread/goal/clear"))
+        let clearRequest = try companionDecodedJSONObject(from: clearPayload)
+        #expect(companionValue(at: ["params", "threadId"], in: clearRequest) as? String == thread.id)
+        #expect(agenda.goal == nil)
+        #expect(agenda.goalTitle == "")
+
+        await client.stop()
+    }
+
+    @MainActor
     @Test("builds a minimap that stays live with turn events")
     func buildsTurnMinimap() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -461,4 +515,24 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+}
+
+private func companionDecodedJSONObject(from data: Data) throws -> [String: Any] {
+    try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+}
+
+private func companionValue(
+    at path: [String],
+    in object: [String: Any]
+) -> Any? {
+    var current: Any = object
+    for key in path {
+        guard let dictionary = current as? [String: Any],
+              let next = dictionary[key]
+        else {
+            return nil
+        }
+        current = next
+    }
+    return current
 }

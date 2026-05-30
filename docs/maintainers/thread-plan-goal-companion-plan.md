@@ -181,7 +181,7 @@ This pass should not yet create a high-level plan or goal authoring API. The
 first implementation should be read/exposure-only plus current low-level goal
 set/clear compatibility.
 
-Later creation APIs can build on `Agenda` once the consumer model is settled:
+Shipped creation and mutation APIs:
 
 - `agenda.setGoal(_ objective: String, tokenBudget: Int?)`
 - `agenda.pauseGoal()`
@@ -189,7 +189,7 @@ Later creation APIs can build on `Agenda` once the consumer model is settled:
 - `agenda.clearGoal()`
 - `thread.startPlanningTurn(...)`
 
-Those should be deliberate convenience APIs, not thin slash-command replicas.
+These are deliberate convenience APIs, not thin slash-command replicas.
 
 ## Implementation Slices
 

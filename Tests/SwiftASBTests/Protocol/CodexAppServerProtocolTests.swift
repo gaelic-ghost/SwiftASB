@@ -786,7 +786,14 @@ struct CodexAppServerProtocolTests {
                 additionalContext: nil,
                 approvalPolicy: .enumeration(.onFailure),
                 approvalsReviewer: .guardianSubagent,
-                collaborationMode: nil,
+                collaborationMode: .init(
+                    mode: .plan,
+                    settings: .init(
+                        developerInstructions: nil,
+                        model: "gpt-5.4",
+                        reasoningEffort: .medium
+                    )
+                ),
                 cwd: "/tmp/project",
                 effort: .medium,
                 environments: nil,
@@ -827,6 +834,13 @@ struct CodexAppServerProtocolTests {
         #expect(params["serviceTier"] as? String == "flex")
         #expect(params["summary"] as? String == "concise")
         #expect(params["threadId"] as? String == "thread-123")
+
+        let collaborationMode = try #require(params["collaborationMode"] as? [String: Any])
+        #expect(collaborationMode["mode"] as? String == "plan")
+        let settings = try #require(collaborationMode["settings"] as? [String: Any])
+        #expect(settings["model"] as? String == "gpt-5.4")
+        #expect(settings["reasoning_effort"] as? String == "medium")
+        #expect(settings["developer_instructions"] == nil)
 
         let input = try #require(params["input"] as? [[String: Any]])
         #expect(input.count == 1)

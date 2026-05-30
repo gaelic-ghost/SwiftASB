@@ -75,13 +75,18 @@ extension CodexThread {
         @ObservationIgnored
         private var proposedPlanItemOrder: [String]
 
+        @ObservationIgnored
+        private let appServer: CodexAppServer
+
         internal init(
             threadID: String,
             initialGoal: Goal?,
+            appServer: CodexAppServer,
             threadEvents: AsyncThrowingStream<CodexThreadEvent, Error>,
             turnEvents: AsyncThrowingStream<CodexTurnEvent, Error>
         ) {
             self.threadID = threadID
+            self.appServer = appServer
             self.currentPlan = nil
             self.goal = initialGoal
             self.goalStatus = initialGoal?.status
@@ -124,16 +129,60 @@ extension CodexThread {
             turnEventTask?.cancel()
         }
 
+        /// Creates or updates this thread's app-server goal.
+        @discardableResult
+        public func setGoal(_ request: GoalSetRequest) async throws -> Goal {
+            let updatedGoal = try await appServer.setThreadGoal(
+                threadID: threadID,
+                request: request
+            )
+            apply(goal: updatedGoal)
+            return updatedGoal
+        }
+
+        /// Sets this thread's goal objective.
+        @discardableResult
+        public func setGoal(
+            _ objective: String,
+            tokenBudget: Int? = nil
+        ) async throws -> Goal {
+            try await setGoal(
+                .init(
+                    objective: objective,
+                    status: .active,
+                    tokenBudget: tokenBudget
+                )
+            )
+        }
+
+        /// Pauses this thread's current app-server goal.
+        @discardableResult
+        public func pauseGoal() async throws -> Goal {
+            try await setGoal(.init(status: .paused))
+        }
+
+        /// Resumes this thread's current app-server goal.
+        @discardableResult
+        public func resumeGoal() async throws -> Goal {
+            try await setGoal(.init(status: .active))
+        }
+
+        /// Clears this thread's app-server goal.
+        @discardableResult
+        public func clearGoal() async throws -> Bool {
+            let cleared = try await appServer.clearThreadGoal(threadID: threadID)
+            if cleared {
+                applyGoalCleared()
+            }
+            return cleared
+        }
+
         private func apply(_ event: CodexThreadEvent) {
             switch event {
             case let .goalUpdated(update):
-                goal = update.goal
-                goalStatus = update.goal.status
-                updatedAt = update.goal.updatedAt
+                apply(goal: update.goal)
             case .goalCleared:
-                goal = nil
-                goalStatus = nil
-                updatedAt = nil
+                applyGoalCleared()
             case .started,
                 .statusChanged,
                 .diagnostic,
@@ -147,6 +196,18 @@ extension CodexThread {
                 .tokenUsageUpdated:
                 return
             }
+        }
+
+        private func apply(goal: Goal) {
+            self.goal = goal
+            goalStatus = goal.status
+            updatedAt = goal.updatedAt
+        }
+
+        private func applyGoalCleared() {
+            goal = nil
+            goalStatus = nil
+            updatedAt = nil
         }
 
         private func apply(_ event: CodexTurnEvent) {

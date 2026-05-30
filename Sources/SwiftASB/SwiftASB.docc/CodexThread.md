@@ -25,7 +25,9 @@ Use ``setName(_:)`` for a human-readable title, ``updateMetadata(gitInfo:)`` for
 
 Rollback returns a refreshed thread handle. SwiftASB records a local rollback marker and trims visible local history to match the app-server response. It does not preserve the full removed-turn payload archive yet.
 
-Use ``makeAgenda()`` when a UI wants current goal and plan state for this thread. Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` when a non-UI caller needs direct goal reads or mutation.
+Use ``startPlanningTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)`` when a mode button or segmented control should start the next turn in Codex plan mode without sending slash-command text through the prompt.
+
+Use ``makeAgenda()`` when a UI wants current goal and plan state for this thread. Agenda also exposes UI-friendly goal actions. Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` when a non-UI caller needs direct goal reads or mutation.
 
 Use ``startReview(against:placement:)`` to ask the app-server to review repository state associated with this thread. The `against` subject can be uncommitted changes, a base branch, one commit, or custom instructions. ``ReviewPlacement/inline`` runs the review turn on this thread. ``ReviewPlacement/detached`` runs the review turn on a new review thread returned in ``CodexReviewHandle/reviewThreadID``.
 
@@ -67,8 +69,6 @@ Recent observable startup can begin as an empty local-only view when the live ap
 - ``instructionSources``
 - ``model``
 - ``modelProvider``
-- ``projectInfo``
-- ``info/source``
 - ``activePermissionProfile``
 - ``permissionProfile``
 - ``reasoningEffort``
@@ -80,7 +80,8 @@ Recent observable startup can begin as an empty local-only view when the live ap
 ### Turns
 
 - ``startTurn(_:)``
-- ``startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
+- ``startTextTurn(_:approvalPolicy:approvalsReviewer:collaborationMode:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
+- ``startPlanningTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
 - ``startReview(against:placement:)``
 - ``TurnStartRequest``
 - ``ReviewSubject``

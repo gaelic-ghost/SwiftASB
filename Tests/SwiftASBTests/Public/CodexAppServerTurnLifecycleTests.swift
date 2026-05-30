@@ -225,6 +225,50 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("starts planning turns through collaboration mode")
+    func startsPlanningTurnsThroughCollaborationMode() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        _ = try await thread.startPlanningTurn(
+            "Map this before editing.",
+            effort: .high
+        )
+
+        let turnStartPayload = try #require(await transport.recordedRequestPayload(for: "turn/start"))
+        let turnStartRequest = try #require(try JSONSerialization.jsonObject(with: turnStartPayload) as? [String: Any])
+        let turnStartParams = try #require(turnStartRequest["params"] as? [String: Any])
+        let collaborationMode = try #require(turnStartParams["collaborationMode"] as? [String: Any])
+        #expect(collaborationMode["mode"] as? String == "plan")
+        let settings = try #require(collaborationMode["settings"] as? [String: Any])
+        #expect(settings["model"] as? String == "gpt-5.4")
+        #expect(settings["reasoning_effort"] as? String == "high")
+
+        let input = try #require(turnStartParams["input"] as? [[String: Any]])
+        #expect(input.first?["text"] as? String == "Map this before editing.")
+
+        await client.stop()
+    }
+
     @Test("persists sealed turn history in the internal thread history store")
     func persistsSealedTurnHistory() async throws {
         let transport = FakeCodexAppServerTransport()

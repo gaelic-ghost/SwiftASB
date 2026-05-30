@@ -78,5 +78,5 @@ Call ``CodexAppServer/start()`` and then ``CodexAppServer/initialize(_:)`` only 
 
 - ``CodexAppServer/startThread(_:)``
 - ``CodexThread``
-- ``CodexThread/startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
+- ``CodexThread/startTextTurn(_:approvalPolicy:approvalsReviewer:collaborationMode:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
 - ``CodexTurnHandle``
