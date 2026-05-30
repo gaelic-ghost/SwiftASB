@@ -676,6 +676,68 @@ public actor CodexAppServer {
         }
     }
 
+    func installMCPServer(_ definition: CodexMCP.ServerDefinition) async throws -> CodexMCP.InstallResult {
+        try requireInitialized(for: "config/batchWrite")
+        try validateMCPServerName(definition.name)
+
+        let requestID = CodexRPCRequestID.generated()
+
+        do {
+            let requestPayload = try protocolLayer.makeConfigBatchWriteRequest(
+                id: requestID,
+                params: .init(
+                    edits: [
+                        .init(
+                            keyPath: "mcp_servers.\(definition.name)",
+                            mergeStrategy: .replace,
+                            value: definition.configValue.wireValue
+                        ),
+                    ],
+                    expectedVersion: nil,
+                    filePath: nil,
+                    reloadUserConfig: true
+                )
+            )
+            let responsePayload = try await transport.send(requestPayload, id: requestID)
+            let response = try protocolLayer.decodeConfigBatchWriteResponse(
+                responsePayload,
+                expectedID: requestID
+            )
+            let page = try await refreshGlobalMcpServerStatusSnapshot()
+
+            return .init(
+                configFilePath: response.filePath,
+                server: page.servers.first { $0.name == definition.name }
+                    .map { .init(status: $0, scope: .global) },
+                status: .init(protocolValue: response.status),
+                version: response.version
+            )
+        } catch {
+            throw CodexAppServerError.wrap(error, operation: "config/batchWrite")
+        }
+    }
+
+    private func validateMCPServerName(_ name: String) throws {
+        guard name.isEmpty == false else {
+            throw CodexAppServerError.invalidState(
+                reason: "SwiftASB cannot install an MCP server with an empty name because Codex stores servers under mcp_servers.<name> in config.toml."
+            )
+        }
+
+        let allowedScalars = name.unicodeScalars.allSatisfy { scalar in
+            (65...90).contains(scalar.value)
+                || (97...122).contains(scalar.value)
+                || (48...57).contains(scalar.value)
+                || scalar.value == 45
+                || scalar.value == 95
+        }
+        guard allowedScalars else {
+            throw CodexAppServerError.invalidState(
+                reason: "SwiftASB cannot install MCP server '\(name)' because server names must contain only letters, numbers, underscores, or hyphens for safe config key-path writes."
+            )
+        }
+    }
+
     /// Reads one resource from a configured MCP server.
     public func readMcpResource(_ request: McpResourceReadRequest) async throws -> McpResourceReadResult {
         try requireInitialized(for: "mcpServer/resource/read")

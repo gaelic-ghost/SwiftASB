@@ -107,6 +107,8 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``CodexFS``
 - ``config``
 - ``CodexConfig``
+- ``mcp``
+- ``CodexMCP``
 - ``extensions``
 - ``CodexExtensions``
 - ``CodexExtensions/upgradeMarketplace(_:)``

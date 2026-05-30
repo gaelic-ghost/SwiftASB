@@ -33,6 +33,7 @@ struct CodexAppServerProtocol {
         case appList = "app/list"
         case collaborationModeList = "collaborationMode/list"
         case configRead = "config/read"
+        case configBatchWrite = "config/batchWrite"
         case configRequirementsRead = "configRequirements/read"
         case commandExec = "command/exec"
         case hooksList = "hooks/list"
@@ -301,6 +302,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .configRead, params: params),
             method: .configRead
+        )
+    }
+
+    func makeConfigBatchWriteRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolConfigBatchWriteParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .configBatchWrite, params: params),
+            method: .configBatchWrite
         )
     }
 
@@ -782,6 +793,18 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .configRead,
             resultType: CodexWireConfigReadResponse.self
+        )
+    }
+
+    func decodeConfigBatchWriteResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolConfigWriteResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .configBatchWrite,
+            resultType: CodexProtocolConfigWriteResponse.self
         )
     }
 

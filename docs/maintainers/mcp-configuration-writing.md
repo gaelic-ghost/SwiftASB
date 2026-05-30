@@ -1,9 +1,9 @@
 # MCP Configuration Writing
 
-SwiftASB does not currently expose a public MCP install or uninstall API. The
-v0.135.0 app-server schema adds generic config-write methods that look like the
-right backing surface for that future API, but the public Swift shape should
-stay opinionated instead of exposing raw config editing to package consumers.
+SwiftASB exposes MCP installation through `CodexMCP`, but does not expose a
+generic public config editor. The v0.135.0 app-server schema adds generic
+config-write methods that back this API internally while the public Swift shape
+stays opinionated.
 
 This note is based on the app-server schema bundled with Codex v0.135.0 plus
 the official Codex configuration reference and live config schema:
@@ -22,6 +22,9 @@ MCP service reads are already owned by SwiftASB:
 - `CodexThread.mcpServers` and `CodexThread.Dashboard.mcpServers` publish the
   effective MCP services visible to a thread, with global services appended by
   the app-server status response.
+- `CodexAppServer.mcp.install(_:)` writes user-level MCP server definitions
+  through app-server `config/batchWrite`, reloads user config, and refreshes
+  SwiftASB's global MCP status snapshot.
 - `CodexAppServer.listMcpServerStatuses(_:)` remains a deprecated
   compatibility method for callers that still need a direct list request.
 
@@ -81,9 +84,9 @@ plugin-provided server.
 
 ## Future Public Shape
 
-The public Swift API should be an MCP install surface, not a generic config
-editor. The first durable building block should support stdio and HTTP
-transports, plus one small policy/options object:
+The public Swift API is an MCP install surface, not a generic config editor.
+The first durable building block supports stdio and HTTP transports, plus one
+small policy/options object:
 
 ```swift
 try await appServer.mcp.install(
@@ -138,25 +141,34 @@ project-scoped install can accept an explicit trusted project config URL and
 write that file path. Thread-scoped MCP state should remain a read/hydration
 concept unless app-server exposes a thread-owned config destination.
 
-## Probe Before Shipping
+## Probe Result
 
-Before promoting an install API, validate these behaviors against a disposable
-Codex home/config file:
+A disposable live app-server probe against Codex v0.135.0 confirmed:
 
-- Whether `keyPath` expects dotted paths such as `mcp_servers.docs` for tables.
+- `config/batchWrite` accepts `keyPath: "mcp_servers.<name>"` for whole-table
+  replacement.
+- `mergeStrategy: "replace"` updates only the named server table and preserves
+  unrelated MCP servers.
+- `reloadUserConfig: true` makes `mcpServerStatus/list` see the written server
+  without restarting app-server.
+- The write response returns `status: "ok"`, a version string, the canonical
+  file path, and null overridden metadata for a normal user-level write.
+
+## Probe Before Widening
+
+Before widening beyond the current user-level install API, validate these
+behaviors against a disposable Codex home/config file:
+
 - Whether `upsert` creates missing parent tables for nested MCP config.
-- Whether `replace` removes omitted fields inside an existing table.
 - Whether `expectedVersion` rejects stale writes with a recoverable app-server
   error shape.
-- Whether `config/batchWrite` can safely replace a whole
-  `mcp_servers.<name>` table while preserving unrelated MCP servers.
-- Whether stdio and streamable HTTP configs both become visible through
-  `mcpServerStatus/list`.
-- Whether `reloadUserConfig: true` causes `mcpServerStatus/updated` and whether
-  loaded thread-scoped status pages include the new service without reopening
-  threads.
+- Whether streamable HTTP configs become visible through `mcpServerStatus/list`
+  in the same way as disabled stdio configs.
+- Whether `reloadUserConfig: true` reliably emits `mcpServerStatus/updated` and
+  whether loaded thread-scoped status pages include the new service without
+  reopening threads.
 - How `overriddenMetadata` behaves when managed or repo-scoped configuration
   overrides the user config.
 
-Until those probes are captured, SwiftASB should keep config writing documented
-as the intended backing behavior and avoid committing a public install method.
+Until those widening probes are captured, SwiftASB should keep config writing
+as an internal backing behavior and avoid exposing raw config write methods.

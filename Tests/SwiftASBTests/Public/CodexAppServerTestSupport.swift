@@ -706,6 +706,16 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     ],
                 ]
             )
+        case "config/batchWrite":
+            return responsePayload(
+                id: id,
+                result: [
+                    "filePath": "/Users/example/.codex/config.toml",
+                    "overriddenMetadata": NSNull(),
+                    "status": "ok",
+                    "version": "sha256:swiftasb-config-write",
+                ]
+            )
         case "configRequirements/read":
             return responsePayload(
                 id: id,
