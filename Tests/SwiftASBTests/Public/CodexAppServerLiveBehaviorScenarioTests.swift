@@ -173,7 +173,7 @@ extension CodexAppServerLiveIntegrationTests {
                     liveProbeCoverage: true,
                     liveProbeScript: "scripts/run-live-codex-server-request-probes.sh",
                     status: "covered",
-                    notes: "The focused server-request probe drives an app-connector MCP fixture through the real app-server and asserts MCP tool-call delivery, mcpServer/elicitation/request delivery, SwiftASB's JSON-RPC response, serverRequest/resolved, and terminal turn completion. The regular stdio fixture remains covered separately as model-to-MCP tool-path evidence, but app-connector MCP is the deterministic elicitation path."
+                    notes: "The focused server-request probe drives an app-connector MCP fixture through the real app-server and asserts MCP tool-call delivery, mcpServer/elicitation/request delivery, SwiftASB's JSON-RPC response, serverRequest/resolved, and terminal turn completion. The regular stdio fixture remains available as an explicitly opted-in observational probe, but app-connector MCP is the deterministic elicitation path."
                 ),
             ],
             sourceNotes: [

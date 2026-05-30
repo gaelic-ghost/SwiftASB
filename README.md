@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.4.0` is the current and latest release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.5.0` is the current and latest release.
 
 ### What This Project Is
 
@@ -38,7 +38,7 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.4.0"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.5.0"),
 ```
 
 Then add the library product to your target dependencies:
@@ -52,7 +52,7 @@ Check your Codex version:
 ```bash
 codex --version
 ```
-*Note: SwiftASB currently supports the latest reviewed Codex CLI minor release, `0.133.x`. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
+*Note: SwiftASB currently supports the latest reviewed Codex CLI minor release, `0.135.x`. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
 
 Add the Socket Marketplace to Codex and enable the SwiftASB Skills Plugin:
 
@@ -74,9 +74,9 @@ unparseable CLI installs.
 
 Use SwiftASB when an app needs to show what Codex is doing right now, keep recent command and file activity visible, answer interactive requests, or build SwiftUI state around a running Codex turn.
 
-For app-wide sidebars and launchers, `CodexAppServer.makeLibrary()` provides observable stored-thread lists, cwd or repository grouping, stable worktree groups, repository/worktree thread filters, refresh actions, library-local selection state, app-server-owned worktree snapshots, selected-worktree Git status, and app-wide model, MCP, and hook diagnostics snapshots. Thread handles can also name, archive, unarchive, compact, and roll back stored threads through thread-scoped methods.
+For app-wide capability and extension UI, `CodexAppServer.makeInventory()` provides observable model capabilities, global MCP summaries, hook diagnostics, apps, skills, plugins, and collaboration modes, with SwiftASB-owned refresh from app-server inventory notifications. For app-wide sidebars and launchers, `CodexAppServer.makeLibrary()` provides observable stored-thread lists, cwd or repository grouping, stable worktree groups, repository/worktree thread filters, refresh actions, library-local selection state, app-server-owned worktree snapshots, selected-worktree Git status, and optional app-wide model, MCP, and hook diagnostics snapshots beside thread lists. Thread handles can also name, archive, unarchive, compact, and roll back stored threads through thread-scoped methods.
 
-Use `CodexAppServer.fs` when a sandboxed client needs filesystem metadata, directory listings, file bytes, file discovery, fuzzy file lookup, or file-change watches through the Codex app-server instead of reading local disk directly. File-discovery hits include match kind, matched character ranges, and ranking reasons for picker highlighting and result explanations. `CodexWorkspace` carries app-server-owned worktree, Git, workspace permission selection, active permission-profile provenance, and runtime filesystem/network permission facts for started threads and turns. Use `CodexAppServer.config` for effective config reads, and `CodexAppServer.extensions` for app, skill, plugin, collaboration-mode inventory, and configured plugin-marketplace upgrades.
+Use `CodexAppServer.fs` when a sandboxed client needs filesystem metadata, directory listings, file bytes, file discovery, fuzzy file lookup, or file-change watches through the Codex app-server instead of reading local disk directly. File-discovery hits include match kind, matched character ranges, and ranking reasons for picker highlighting and result explanations. `CodexWorkspace` carries app-server-owned worktree, Git, workspace permission selection, active permission-profile provenance, and runtime filesystem/network permission facts for started threads and turns. Use `CodexAppServer.config` for effective config reads, `CodexAppServer.mcp` for opinionated MCP installs plus explicit MCP detail reads, and `CodexAppServer.extensions` only when a caller intentionally owns direct extension pagination, plugin-detail inspection, or configured plugin-marketplace upgrades.
 
 Use `CodexAppServer.ThreadListQD`, `CodexFS.FileDiscoveryQD`, `CodexThread.HistoryWindowQD`, `CodexThread.RecentFilesQD`, and `CodexThread.RecentCommandsQD` when a client needs to preserve repeatable list, file-discovery, history-window, or recent-activity intent without depending on Core Data, SwiftData, direct filesystem reads, or raw app-server paging details.
 

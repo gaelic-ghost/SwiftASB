@@ -351,6 +351,7 @@ extension CodexAppServerLiveIntegrationTests {
             let turnStartPayload = try protocolLayer.makeTurnStartRequest(
                 id: turnRequestID,
                 params: CodexWireTurnStartParams(
+                    additionalContext: nil,
                     approvalPolicy: .enumeration(.untrusted),
                     approvalsReviewer: .user,
                     collaborationMode: nil,
@@ -540,6 +541,7 @@ extension CodexAppServerLiveIntegrationTests {
             let turnStartPayload = try protocolLayer.makeTurnStartRequest(
                 id: turnRequestID,
                 params: CodexWireTurnStartParams(
+                    additionalContext: nil,
                     approvalPolicy: .enumeration(.untrusted),
                     approvalsReviewer: .user,
                     collaborationMode: nil,

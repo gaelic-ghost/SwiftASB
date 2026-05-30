@@ -297,6 +297,7 @@ public struct CodexThread: Sendable {
     public let approvalsReviewer: CodexAppServer.ApprovalsReviewer
     public let currentDirectoryPath: String
     public let instructionSources: [String]
+    public let mcpServers: [CodexAppServer.McpServerSummary]
     public let model: String
     public let modelProvider: String
     public let activePermissionProfile: CodexWorkspace.ActivePermissionProfile?
@@ -320,6 +321,7 @@ public struct CodexThread: Sendable {
     internal init(
         appServer: CodexAppServer,
         session: CodexAppServer.ThreadSession,
+        mcpServers: [CodexAppServer.McpServerSummary],
         events: AsyncThrowingStream<CodexThreadEvent, Error>
     ) {
         self.appServer = appServer
@@ -329,6 +331,7 @@ public struct CodexThread: Sendable {
         self.approvalsReviewer = session.approvalsReviewer
         self.currentDirectoryPath = session.currentDirectoryPath
         self.instructionSources = session.instructionSources
+        self.mcpServers = mcpServers
         self.model = session.model
         self.modelProvider = session.modelProvider
         self.activePermissionProfile = session.activePermissionProfile
@@ -422,6 +425,7 @@ public struct CodexThread: Sendable {
         return Dashboard(
             threadID: id,
             initialInfo: info,
+            initialMcpServers: mcpServers,
             events: events,
             initialActivityState: initialActivityState,
             activityUpdates: activityUpdates
@@ -476,6 +480,7 @@ public struct CodexThread: Sendable {
                 serviceTier: serviceTier,
                 thread: threadInfo
             ),
+            mcpServers: mcpServers,
             events: events
         )
     }

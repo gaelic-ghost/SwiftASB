@@ -100,6 +100,78 @@ extension CodexAppServerTests {
     }
 
     @MainActor
+    @Test("library marks locally stored threads as removed after complete app-server refresh misses them")
+    func libraryMarksMissingStoredThreadsRemovedAfterCompleteRefresh() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadListResult: [
+                "data": [
+                    storedThread(
+                        id: "thread-removed",
+                        cwd: "/tmp/project-a",
+                        name: "Deleted in GUI",
+                        preview: "Locally cached history",
+                        statusType: "notLoaded",
+                        updatedAt: 1713350030
+                    ),
+                ],
+                "nextCursor": NSNull(),
+            ]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        _ = try await client.listThreads(
+            .init(
+                archived: false
+            )
+        )
+        await transport.setThreadListResultQueue([
+            [
+                "data": [],
+                "nextCursor": NSNull(),
+            ],
+            [
+                "data": [],
+                "nextCursor": NSNull(),
+            ],
+        ])
+
+        let library = try await client.makeLibrary(
+            configuration: .init(reconcilesOnCreation: false)
+        )
+
+        #expect(library.unarchivedThreads.map(\.id) == ["thread-removed"])
+        #expect(library.removedThreads.isEmpty)
+
+        await library.refresh()
+
+        #expect(library.unarchivedThreads.isEmpty)
+        #expect(library.archivedThreads.isEmpty)
+        #expect(library.removedThreads.map(\.id) == ["thread-removed"])
+        #expect(library.removedThreads.first?.state == .removed)
+
+        let removedSnapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-removed")
+        #expect(removedSnapshot?.state.localState == "removed")
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @MainActor
     @Test("library can group thread snapshots by app-server Git origin")
     func libraryGroupsThreadSnapshotsByRepositoryOrigin() async throws {
         let transport = FakeCodexAppServerTransport(
@@ -556,8 +628,7 @@ extension CodexAppServerTests {
             configuration: .init(
                 groupedBy: .none,
                 reconcilesOnCreation: false,
-                loadsAppSnapshotsOnCreation: false,
-                mcpServerStatusRequest: .init(limit: 5, detail: .toolsAndAuthOnly)
+                loadsAppSnapshotsOnCreation: false
             )
         )
 
@@ -572,6 +643,10 @@ extension CodexAppServerTests {
         #expect(library.modelCapabilities?.imageGeneration == true)
         #expect(library.modelCapabilities?.namespaceTools == false)
         #expect(library.mcpServers.map(\.name) == ["calendar"])
+        #expect(library.mcpServers.map(\.scope) == [.global])
+        #expect(library.mcpServers.map(\.resourceCount) == [1])
+        #expect(library.mcpServers.map(\.resourceTemplateCount) == [1])
+        #expect(library.mcpServers.map(\.toolCount) == [1])
         #expect(library.mcpServerNextCursor == nil)
         #expect(library.hookListSnapshot?.entry(forCurrentDirectoryPath: "/tmp/project")?.hasDiagnostics == true)
         #expect(library.snapshotCurrentDirectoryPaths == ["/tmp/project"])
@@ -587,8 +662,8 @@ extension CodexAppServerTests {
 
         let mcpPayload = try #require(await transport.recordedRequestPayload(for: "mcpServerStatus/list"))
         let mcpRequest = try decodedJSONObject(from: mcpPayload)
-        #expect(value(at: ["params", "limit"], in: mcpRequest) as? Int == 5)
-        #expect(value(at: ["params", "detail"], in: mcpRequest) as? String == "toolsAndAuthOnly")
+        let mcpParams = try #require(mcpRequest["params"] as? [String: Any])
+        #expect(mcpParams.isEmpty)
 
         let hooksPayload = try #require(await transport.recordedRequestPayload(for: "hooks/list"))
         let hooksRequest = try decodedJSONObject(from: hooksPayload)
@@ -638,7 +713,7 @@ extension CodexAppServerTests {
         let hooksRequests = await transport.requestPayloads(for: "hooks/list")
 
         #expect(capabilityRequests.count == 2)
-        #expect(mcpRequests.count == 2)
+        #expect(mcpRequests.count == 3)
         #expect(hooksRequests.count == 2)
         #expect(library.snapshotPhase == .idle)
 

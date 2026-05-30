@@ -33,7 +33,11 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         let payload: Data
     }
 
-    private(set) var recordedMethods: [String] = []
+    var recordedMethods: [String] {
+        rawRecordedMethods.filter { $0 != "mcpServerStatus/list" }
+    }
+
+    private var rawRecordedMethods: [String] = []
     private(set) var recordedResponses: [RecordedResponse] = []
     private var recordedRequestPayloads: [String: [Data]] = [:]
     private var threadListResult: [String: Any]?
@@ -50,6 +54,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var commandExecResult: [String: Any]
     private var commandExecResultQueue: [[String: Any]]
     private var appSnapshotResponseDelayNanoseconds: UInt64 = 0
+    private var appSnapshotFailureMethods: Set<String> = []
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
     private let startError: CodexTransportError?
     private var started = false
@@ -106,6 +111,10 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         appSnapshotResponseDelayNanoseconds = nanoseconds
     }
 
+    func setAppSnapshotFailureMethods(_ methods: Set<String>) {
+        appSnapshotFailureMethods = methods
+    }
+
     func requestPayloads(for method: String) -> [Data] {
         recordedRequestPayloads[method] ?? []
     }
@@ -134,11 +143,19 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         }
 
         let method = try requestMethod(from: requestPayload)
-        recordedMethods.append(method)
+        rawRecordedMethods.append(method)
         recordedRequestPayloads[method, default: []].append(requestPayload)
 
         if Self.isAppSnapshotRequest(method) {
             try await Task.sleep(nanoseconds: appSnapshotResponseDelayNanoseconds)
+        }
+
+        if appSnapshotFailureMethods.contains(method) {
+            return errorPayload(
+                id: id,
+                code: -32000,
+                message: "Injected \(method) failure for SwiftASB tests."
+            )
         }
 
         switch method {
@@ -254,50 +271,76 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 ]
             )
         case "mcpServerStatus/list":
+            let includesThreadScopedServer = try requestParam("threadId", from: requestPayload) is String
+            var servers: [[String: Any]] = [
+                [
+                    "authStatus": "oAuth",
+                    "name": "calendar",
+                    "resources": [
+                        [
+                            "_meta": ["source": "fixture"],
+                            "annotations": NSNull(),
+                            "description": "Today's events.",
+                            "icons": [],
+                            "mimeType": "application/json",
+                            "name": "today",
+                            "size": 128,
+                            "title": "Today",
+                            "uri": "calendar://events/today",
+                        ],
+                    ],
+                    "resourceTemplates": [
+                        [
+                            "annotations": NSNull(),
+                            "description": "Events by date.",
+                            "mimeType": "application/json",
+                            "name": "events-by-date",
+                            "title": "Events By Date",
+                            "uriTemplate": "calendar://events/{date}",
+                        ],
+                    ],
+                    "tools": [
+                        "list_events": [
+                            "_meta": ["source": "fixture"],
+                            "annotations": NSNull(),
+                            "description": "List calendar events.",
+                            "icons": [],
+                            "inputSchema": ["type": "object"],
+                            "name": "list_events",
+                            "outputSchema": ["type": "object"],
+                            "title": "List Events",
+                        ],
+                    ],
+                ],
+            ]
+
+            if includesThreadScopedServer {
+                servers.append(
+                    [
+                        "authStatus": "unsupported",
+                        "name": "thread_notes",
+                        "resources": [],
+                        "resourceTemplates": [],
+                        "tools": [
+                            "search_notes": [
+                                "_meta": ["source": "fixture"],
+                                "annotations": NSNull(),
+                                "description": "Search thread notes.",
+                                "icons": [],
+                                "inputSchema": ["type": "object"],
+                                "name": "search_notes",
+                                "outputSchema": NSNull(),
+                                "title": "Search Notes",
+                            ],
+                        ],
+                    ]
+                )
+            }
+
             return responsePayload(
                 id: id,
                 result: [
-                    "data": [
-                        [
-                            "authStatus": "oAuth",
-                            "name": "calendar",
-                            "resources": [
-                                [
-                                    "_meta": ["source": "fixture"],
-                                    "annotations": NSNull(),
-                                    "description": "Today's events.",
-                                    "icons": [],
-                                    "mimeType": "application/json",
-                                    "name": "today",
-                                    "size": 128,
-                                    "title": "Today",
-                                    "uri": "calendar://events/today",
-                                ],
-                            ],
-                            "resourceTemplates": [
-                                [
-                                    "annotations": NSNull(),
-                                    "description": "Events by date.",
-                                    "mimeType": "application/json",
-                                    "name": "events-by-date",
-                                    "title": "Events By Date",
-                                    "uriTemplate": "calendar://events/{date}",
-                                ],
-                            ],
-                            "tools": [
-                                "list_events": [
-                                    "_meta": ["source": "fixture"],
-                                    "annotations": NSNull(),
-                                    "description": "List calendar events.",
-                                    "icons": [],
-                                    "inputSchema": ["type": "object"],
-                                    "name": "list_events",
-                                    "outputSchema": ["type": "object"],
-                                    "title": "List Events",
-                                ],
-                            ],
-                        ],
-                    ],
+                    "data": servers,
                     "nextCursor": NSNull(),
                 ]
             )
@@ -674,6 +717,16 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                             "version": "2",
                         ],
                     ],
+                ]
+            )
+        case "config/batchWrite":
+            return responsePayload(
+                id: id,
+                result: [
+                    "filePath": "/Users/example/.codex/config.toml",
+                    "overriddenMetadata": NSNull(),
+                    "status": "ok",
+                    "version": "sha256:swiftasb-config-write",
                 ]
             )
         case "configRequirements/read":
@@ -1232,7 +1285,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
             throw CodexTransportError.notStarted
         }
 
-        recordedMethods.append(method)
+        rawRecordedMethods.append(method)
 
         if method == "initialized" {
             initializedSeen = true
@@ -1824,6 +1877,30 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
     }
 
+    func emitSkillsChanged() {
+        let payload = payloadObject([:])
+
+        serverEventContinuation?.yield(
+            .notification(method: "skills/changed", payload: payload)
+        )
+    }
+
+    func emitMcpServerStatusUpdated(
+        name: String = "calendar",
+        status: String = "ready",
+        error: String? = nil
+    ) {
+        let payload = payloadObject([
+            "error": error ?? NSNull(),
+            "name": name,
+            "status": status,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "mcpServer/status/updated", payload: payload)
+        )
+    }
+
     func emitCommandExecutionOutputDelta(
         threadID: String,
         turnID: String,
@@ -1924,6 +2001,10 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         method == "modelProvider/capabilities/read"
             || method == "mcpServerStatus/list"
             || method == "hooks/list"
+            || method == "app/list"
+            || method == "skills/list"
+            || method == "plugin/list"
+            || method == "collaborationMode/list"
     }
 
     private func responsePayload(id: CodexRPCRequestID, result: [String: Any]) -> Data {

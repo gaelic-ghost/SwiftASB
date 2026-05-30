@@ -4,6 +4,43 @@ import Testing
 
 extension CodexAppServerTests {
     @MainActor
+    @Test("hydrates thread MCP status when starting a thread")
+    func hydratesThreadMcpStatusWhenStartingThread() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread()
+        let dashboard = await thread.makeDashboard()
+
+        #expect(thread.mcpServers.map(\.name) == ["calendar", "thread_notes"])
+        #expect(thread.mcpServers.map(\.scope) == [.global, .thread])
+        #expect(thread.mcpServers.map(\.resourceCount) == [1, 0])
+        #expect(thread.mcpServers.map(\.resourceTemplateCount) == [1, 0])
+        #expect(thread.mcpServers.map(\.toolCount) == [1, 1])
+        #expect(dashboard.mcpServers.map(\.name) == ["calendar", "thread_notes"])
+        #expect(dashboard.mcpServers.map(\.scope) == [.global, .thread])
+
+        let requests = await transport.requestPayloads(for: "mcpServerStatus/list")
+        let lastPayload = try #require(requests.last)
+        let lastRequest = try #require(try JSONSerialization.jsonObject(with: lastPayload) as? [String: Any])
+        let lastParams = try #require(lastRequest["params"] as? [String: Any])
+        #expect(lastParams["threadId"] as? String == thread.id)
+
+        await client.stop()
+    }
+
+    @MainActor
     @Test("starts recent observables locally when live turn history is unavailable before first user message")
     func startsRecentObservablesLocallyBeforeLiveHistoryMaterializes() async throws {
         let transport = FakeCodexAppServerTransport(

@@ -636,7 +636,8 @@ struct CodexAppServerProtocolTests {
             params: .init(
                 cursor: "cursor-start",
                 detail: .toolsAndAuthOnly,
-                limit: 10
+                limit: 10,
+                threadID: nil
             )
         )
 
@@ -699,6 +700,39 @@ struct CodexAppServerProtocolTests {
         #expect(configRequest["method"] as? String == "config/read")
         #expect((configRequest["params"] as? [String: Any])?["cwd"] as? String == "/tmp/project")
 
+        let configWritePayload = try protocolLayer.makeConfigBatchWriteRequest(
+            id: .string("config-write-1"),
+            params: .init(
+                edits: [
+                    .init(
+                        keyPath: "mcp_servers.docs",
+                        mergeStrategy: .replace,
+                        value: .object([
+                            "args": .array([.string("server.js")]),
+                            "command": .string("node"),
+                            "enabled": .bool(true),
+                        ])
+                    ),
+                ],
+                expectedVersion: nil,
+                filePath: nil,
+                reloadUserConfig: true
+            )
+        )
+        let configWriteRequest = try #require(
+            try JSONSerialization.jsonObject(with: configWritePayload) as? [String: Any]
+        )
+        #expect(configWriteRequest["method"] as? String == "config/batchWrite")
+        let configWriteParams = try #require(configWriteRequest["params"] as? [String: Any])
+        #expect(configWriteParams["reloadUserConfig"] as? Bool == true)
+        let edits = try #require(configWriteParams["edits"] as? [[String: Any]])
+        #expect(edits.first?["keyPath"] as? String == "mcp_servers.docs")
+        #expect(edits.first?["mergeStrategy"] as? String == "replace")
+        let editValue = try #require(edits.first?["value"] as? [String: Any])
+        #expect(editValue["command"] as? String == "node")
+        #expect(editValue["args"] as? [String] == ["server.js"])
+        #expect(editValue["enabled"] as? Bool == true)
+
         let requirementsPayload = try protocolLayer.makeConfigRequirementsReadRequest(id: .string("requirements-read-1"))
         let requirementsRequest = try #require(try JSONSerialization.jsonObject(with: requirementsPayload) as? [String: Any])
         #expect(requirementsRequest["method"] as? String == "configRequirements/read")
@@ -749,6 +783,7 @@ struct CodexAppServerProtocolTests {
         let payload = try protocolLayer.makeTurnStartRequest(
             id: .string("turn-1"),
             params: CodexWireTurnStartParams(
+                additionalContext: nil,
                 approvalPolicy: .enumeration(.onFailure),
                 approvalsReviewer: .guardianSubagent,
                 collaborationMode: nil,

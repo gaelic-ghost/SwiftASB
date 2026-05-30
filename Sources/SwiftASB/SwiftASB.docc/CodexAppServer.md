@@ -39,7 +39,9 @@ Use ``featureOperationEvents()`` to observe human-readable SwiftASB feature-oper
 
 ## App-Wide Capabilities
 
-Use ``listModels(_:)``, ``listMcpServerStatuses(_:)``, ``readMcpResource(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, MCP server surface, MCP resource contents, and configured hook diagnostics.
+Use ``makeInventory(configuration:)`` when a GUI or CLI client needs observable app-wide catalogs and diagnostics without wiring every read request itself. Inventory publishes model capabilities, global MCP summaries, hook diagnostics, apps, skills, plugins, and collaboration modes, and refreshes from app-server inventory notifications.
+
+Use ``listModels(_:)``, ``mcp``, ``extensions``, and ``listHooks(_:)`` for direct connection-wide reads when a caller intentionally owns pagination, one-off refresh timing, or inspector-style detail. These requests do not belong to a single thread because they describe the app-server's current model catalog, SwiftASB's latest MCP server surface, MCP resource contents, configured hook diagnostics, and extension catalogs.
 
 Use ``fs`` when a client needs filesystem metadata, direct directory entries, file bytes, or file-change watches through the app-server. This keeps sandboxed apps dependent on Codex-owned permissions and path handling instead of requiring the Swift process to read local disk directly.
 
@@ -47,7 +49,7 @@ Use ``CodexWorkspace`` values when starting or resuming a thread with a named pe
 
 Use ``config`` to read effective app-server configuration and requirements policy without opening local config files from the Swift process.
 
-Use ``extensions`` to read app, skill, plugin, and collaboration-mode inventory through the app-server instead of inspecting installed plugin or skill directories directly.
+Use ``extensions`` for direct app, skill, plugin, and collaboration-mode reads when a caller intentionally owns pagination, custom refresh timing, or one selected plugin detail.
 
 Use ``CodexExtensions/upgradeMarketplace(_:)`` for the narrow extension-maintenance mutation SwiftASB owns today: upgrading an already-configured plugin marketplace through app-server `command/exec`. The method preflights `plugin/list`, respects ``SwiftASBFeaturePolicy``'s `extensionMaintenance` category, and emits a ``SwiftASBFeatureOperationEvent``.
 
@@ -102,11 +104,15 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 
 - ``makeLibrary(configuration:)``
 - ``Library``
+- ``makeInventory(configuration:)``
+- ``Inventory``
 - ``ThreadListQD``
 - ``fs``
 - ``CodexFS``
 - ``config``
 - ``CodexConfig``
+- ``mcp``
+- ``CodexMCP``
 - ``extensions``
 - ``CodexExtensions``
 - ``CodexExtensions/upgradeMarketplace(_:)``
@@ -123,10 +129,11 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``HookDiagnostic``
 - ``HookError``
 - ``HookMetadata``
-- ``listMcpServerStatuses(_:)``
+- ``mcpServerStatusSnapshot()``
 - ``McpServerStatusListRequest``
 - ``McpServerStatusPage``
 - ``McpServerStatus``
+- ``McpServerSummary``
 
 ### Thread Operations
 

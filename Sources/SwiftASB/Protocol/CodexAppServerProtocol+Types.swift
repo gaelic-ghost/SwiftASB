@@ -107,6 +107,36 @@ struct CodexProtocolCommandExecResponse: Decodable, Equatable, Sendable {
 
 struct CodexProtocolCollaborationModeListParams: Encodable, Equatable, Sendable {}
 
+struct CodexProtocolConfigBatchWriteParams: Encodable, Equatable, Sendable {
+    let edits: [CodexProtocolConfigEdit]
+    let expectedVersion: String?
+    let filePath: String?
+    let reloadUserConfig: Bool?
+}
+
+struct CodexProtocolConfigEdit: Encodable, Equatable, Sendable {
+    let keyPath: String
+    let mergeStrategy: CodexProtocolConfigMergeStrategy
+    let value: CodexWireJSONValue
+}
+
+enum CodexProtocolConfigMergeStrategy: String, Encodable, Equatable, Sendable {
+    case replace
+    case upsert
+}
+
+struct CodexProtocolConfigWriteResponse: Decodable, Equatable, Sendable {
+    let filePath: String
+    let overriddenMetadata: CodexWireJSONValue?
+    let status: CodexProtocolConfigWriteStatus
+    let version: String
+}
+
+enum CodexProtocolConfigWriteStatus: String, Decodable, Equatable, Sendable {
+    case ok
+    case okOverridden
+}
+
 struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
     let gitInfo: GitInfo?
     let threadID: String

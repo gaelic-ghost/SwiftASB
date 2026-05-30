@@ -16,7 +16,7 @@ let thread = try await appServer.startThread(
 )
 ```
 
-Codex CLI v0.133 accepts the selected profile id for new thread, resumed thread, fork, and turn requests. ``PermissionSelection/modifications`` is retained as source-compatible local metadata for older callers, but SwiftASB does not send those modifications to the v0.133 app-server because the upstream schema no longer accepts them.
+Codex CLI v0.135 accepts the selected profile id for new thread, resumed thread, fork, and turn requests. ``PermissionSelection/modifications`` is retained as source-compatible local metadata for older callers, but SwiftASB does not send those modifications to the v0.135 app-server because the upstream schema no longer accepts them.
 
 Use ``SessionSnapshot`` or the workspace values on ``CodexThread`` when a UI needs to show what Codex actually activated for the session: current directory, Git metadata, instruction sources, legacy sandbox policy, and active profile id.
 

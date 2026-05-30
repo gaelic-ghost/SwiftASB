@@ -1,16 +1,6 @@
 import Foundation
 import Observation
 
-private func snapshotResult<Value: Sendable>(
-    _ operation: @Sendable () async throws -> Value
-) async -> Result<Value, Error> {
-    do {
-        return .success(try await operation())
-    } catch {
-        return .failure(error)
-    }
-}
-
 extension CodexAppServer {
     internal enum LibraryEvent: Sendable, Equatable {
         case appSnapshotsChanged
@@ -220,6 +210,12 @@ public extension CodexAppServer {
             )
         }
 
+        internal var canMarkMissingThreadsRemoved: Bool {
+            currentDirectoryPath == nil
+                && modelProviders?.isEmpty != false
+                && searchTerm == nil
+        }
+
         private static func normalizedSearchTerm(_ searchTerm: String?) -> String? {
             guard let searchTerm else { return nil }
             let trimmed = searchTerm.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -238,7 +234,6 @@ public extension CodexAppServer {
             public var hookListCurrentDirectoryPaths: [String]?
             public var loadsAppSnapshotsOnCreation: Bool
             public var maxPagesPerArchiveState: Int
-            public var mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest
             public var pageSize: Int
             public var query: CodexAppServer.ThreadListQD
             public var reconcilesOnCreation: Bool
@@ -253,8 +248,7 @@ public extension CodexAppServer {
                 featurePolicy: SwiftASBFeaturePolicy = .defaults,
                 reconcilesOnCreation: Bool = true,
                 loadsAppSnapshotsOnCreation: Bool = true,
-                hookListCurrentDirectoryPaths: [String]? = nil,
-                mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest = .init()
+                hookListCurrentDirectoryPaths: [String]? = nil
             ) {
                 let normalizedPageSize = max(1, pageSize)
                 self.pageSize = normalizedPageSize
@@ -264,7 +258,6 @@ public extension CodexAppServer {
                 self.featurePolicy = featurePolicy
                 self.loadsAppSnapshotsOnCreation = loadsAppSnapshotsOnCreation
                 self.hookListCurrentDirectoryPaths = hookListCurrentDirectoryPaths
-                self.mcpServerStatusRequest = mcpServerStatusRequest
                 self.query = .init(
                     archived: query.archived,
                     currentDirectoryPath: query.currentDirectoryPath,
@@ -329,6 +322,11 @@ public extension CodexAppServer {
         }
 
         public struct ThreadSnapshot: Sendable, Equatable, Identifiable {
+            public enum State: String, Sendable, Equatable {
+                case available
+                case removed
+            }
+
             public let id: String
             public let cliVersion: String
             public let createdAt: Int
@@ -337,6 +335,7 @@ public extension CodexAppServer {
             public let forkedFromThreadID: String?
             public let isArchived: Bool
             public let isClosed: Bool
+            public let state: State
             public let lastCompletedTurnAt: Int?
             public let modelProvider: String
             public let name: String?
@@ -374,10 +373,11 @@ public extension CodexAppServer {
         public private(set) var latestGitStatusErrorDescription: String?
         public private(set) var latestSnapshotErrorDescription: String?
         public private(set) var latestErrorDescription: String?
-        public private(set) var mcpServers: [CodexAppServer.McpServerStatus]
+        public private(set) var mcpServers: [CodexAppServer.McpServerSummary]
         public private(set) var mcpServerNextCursor: String?
         public private(set) var modelCapabilities: CodexAppServer.ModelCapabilities?
         public private(set) var phase: ReconciliationPhase
+        public private(set) var removedThreads: [ThreadSnapshot]
         public var selectedThreadID: String? {
             didSet {
                 guard selectedThreadID != oldValue else { return }
@@ -449,9 +449,6 @@ public extension CodexAppServer {
         private let configuredHookListCurrentDirectoryPaths: [String]?
 
         @ObservationIgnored
-        private let mcpServerStatusRequest: CodexAppServer.McpServerStatusListRequest
-
-        @ObservationIgnored
         private var pendingEventReload = false
 
         @ObservationIgnored
@@ -501,10 +498,10 @@ public extension CodexAppServer {
             self.maxPagesPerArchiveState = configuration.maxPagesPerArchiveState
             self.mcpServers = []
             self.mcpServerNextCursor = nil
-            self.mcpServerStatusRequest = configuration.mcpServerStatusRequest
             self.modelCapabilities = nil
             self.phase = .idle
             self.query = configuration.query
+            self.removedThreads = []
             self.selectedThreadID = nil
             self.snapshotCurrentDirectoryPaths = nil
             self.snapshotPhase = .idle
@@ -595,51 +592,32 @@ public extension CodexAppServer {
             let hookCurrentDirectoryPaths = resolvedHookListCurrentDirectoryPaths()
             snapshotCurrentDirectoryPaths = hookCurrentDirectoryPaths
 
-            async let capabilitiesResult = snapshotResult {
-                try await appServer.readModelCapabilities()
-            }
-            async let mcpResult = snapshotResult {
-                try await appServer.listMcpServerStatuses(mcpServerStatusRequest)
-            }
-            async let hooksResult = snapshotResult {
-                try await appServer.listHooks(
-                    .init(currentDirectoryPaths: hookCurrentDirectoryPaths)
+            let snapshot = await appServer.readAppInventorySnapshot(
+                .init(
+                    hookListCurrentDirectoryPaths: hookCurrentDirectoryPaths,
+                    includesExtensions: false
                 )
-            }
-
-            let results = await (
-                capabilities: capabilitiesResult,
-                mcp: mcpResult,
-                hooks: hooksResult
             )
 
-            var errorDescriptions: [String] = []
-            switch results.capabilities {
-            case let .success(capabilities):
+            if let capabilities = snapshot.modelCapabilities {
                 modelCapabilities = capabilities
-            case let .failure(error):
-                errorDescriptions.append(error.localizedDescription)
             }
 
-            switch results.mcp {
-            case let .success(page):
-                mcpServers = page.servers
+            if let page = snapshot.mcpServerStatusPage {
+                mcpServers = page.servers.map { status in
+                    .init(status: status, scope: .global)
+                }
                 mcpServerNextCursor = page.nextCursor
-            case let .failure(error):
-                errorDescriptions.append(error.localizedDescription)
             }
 
-            switch results.hooks {
-            case let .success(snapshot):
-                hookListSnapshot = snapshot
-            case let .failure(error):
-                errorDescriptions.append(error.localizedDescription)
+            if let hookListSnapshot = snapshot.hookListSnapshot {
+                self.hookListSnapshot = hookListSnapshot
             }
 
-            lastSnapshotsReadAt = errorDescriptions.isEmpty ? Date() : lastSnapshotsReadAt
-            latestSnapshotErrorDescription = errorDescriptions.isEmpty
+            lastSnapshotsReadAt = snapshot.succeededCompletely ? Date() : lastSnapshotsReadAt
+            latestSnapshotErrorDescription = snapshot.succeededCompletely
                 ? nil
-                : errorDescriptions.joined(separator: "\n")
+                : snapshot.errorDescriptions.joined(separator: "\n")
             snapshotPhase = .idle
         }
 
@@ -779,8 +757,10 @@ public extension CodexAppServer {
                 by: sortedBy,
                 selectionOrderByThreadID: selectionOrderByThreadID
             )
-            unarchivedThreads = sortedThreads.filter { !$0.isArchived }
-            archivedThreads = sortedThreads.filter(\.isArchived)
+            removedThreads = sortedThreads.filter { $0.state == .removed }
+            let availableThreads = sortedThreads.filter { $0.state != .removed }
+            unarchivedThreads = availableThreads.filter { !$0.isArchived }
+            archivedThreads = availableThreads.filter(\.isArchived)
             groups = Self.groups(
                 from: unarchivedThreads,
                 groupedBy: groupedBy
@@ -811,7 +791,7 @@ public extension CodexAppServer {
 
         private func clearSelectionIfThreadDisappeared() {
             guard let selectedThreadID else { return }
-            if !allThreads.contains(where: { $0.id == selectedThreadID }) {
+            if !allThreads.contains(where: { $0.id == selectedThreadID && $0.state != .removed }) {
                 self.selectedThreadID = nil
             }
         }
@@ -830,7 +810,8 @@ public extension CodexAppServer {
         }
 
         private func sortedVisibleThreads(includeArchived: Bool) -> [ThreadSnapshot] {
-            let threads = includeArchived ? allThreads : allThreads.filter { !$0.isArchived }
+            let availableThreads = allThreads.filter { $0.state != .removed }
+            let threads = includeArchived ? availableThreads : availableThreads.filter { !$0.isArchived }
             return Self.sort(
                 threads,
                 by: sortedBy,
@@ -1045,6 +1026,7 @@ extension CodexAppServer.Library.ThreadSnapshot {
             forkedFromThreadID: snapshot.forkedFromThreadID,
             isArchived: snapshot.isArchived,
             isClosed: snapshot.isClosed,
+            state: .init(snapshot.localState),
             lastCompletedTurnAt: snapshot.lastCompletedTurnAt,
             modelProvider: snapshot.modelProvider,
             name: snapshot.name,
@@ -1077,6 +1059,17 @@ extension CodexAppServer.Library.ThreadSnapshot {
             sha: sha
         )
         return repository.isEmpty ? nil : repository
+    }
+}
+
+private extension CodexAppServer.Library.ThreadSnapshot.State {
+    init(_ localState: ThreadHistoryStore.LocalState) {
+        switch localState {
+        case .available:
+            self = .available
+        case .removed:
+            self = .removed
+        }
     }
 }
 

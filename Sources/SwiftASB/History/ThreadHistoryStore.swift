@@ -8,6 +8,11 @@ actor ThreadHistoryStore {
         case richerThanServer
     }
 
+    enum LocalState: String, Sendable {
+        case available
+        case removed
+    }
+
     struct Configuration: Sendable {
         let inMemory: Bool
         let storeURL: URL
@@ -42,6 +47,7 @@ actor ThreadHistoryStore {
 
         struct StateSnapshot: Sendable, Equatable {
             let completeness: String
+            let localState: String
         }
 
         struct RollbackSnapshot: Sendable, Equatable {
@@ -160,6 +166,7 @@ actor ThreadHistoryStore {
         let gitSHA: String?
         let isArchived: Bool
         let isClosed: Bool
+        let localState: LocalState
         let lastCompletedTurnAt: Int?
         let modelProvider: String
         let name: String?
@@ -208,6 +215,7 @@ actor ThreadHistoryStore {
 
             let state = thread.state ?? HistoryThreadState(context: context)
             state.completeness = Completeness.partial.rawValue
+            state.localState = LocalState.available.rawValue
             state.thread = thread
             thread.state = state
 
@@ -230,6 +238,7 @@ actor ThreadHistoryStore {
             thread.defaults = defaults
 
             let state = thread.state ?? HistoryThreadState(context: context)
+            state.localState = LocalState.available.rawValue
             state.thread = thread
             thread.state = state
 
@@ -275,6 +284,7 @@ actor ThreadHistoryStore {
             thread.defaults = defaults
 
             let state = thread.state ?? HistoryThreadState(context: context)
+            state.localState = LocalState.available.rawValue
             state.thread = thread
             thread.state = state
 
@@ -308,9 +318,11 @@ actor ThreadHistoryStore {
             Self.applyThreadInfo(threadInfo, to: thread)
             if let state = thread.state {
                 state.completeness = state.completeness.isEmpty ? Completeness.partial.rawValue : state.completeness
+                state.localState = LocalState.available.rawValue
             } else {
                 let state = HistoryThreadState(context: context)
                 state.completeness = Completeness.partial.rawValue
+                state.localState = LocalState.available.rawValue
                 state.thread = thread
                 thread.state = state
             }
@@ -330,6 +342,7 @@ actor ThreadHistoryStore {
                 let thread = try Self.fetchOrInsertThread(id: threadInfo.id, in: context)
                 Self.applyThreadInfo(threadInfo, to: thread)
                 Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
+                thread.state?.localState = LocalState.available.rawValue
                 if let archived {
                     thread.isArchived = archived
                 }
@@ -374,6 +387,23 @@ actor ThreadHistoryStore {
         try context.performAndWaitReturning {
             guard let thread = try Self.fetchThread(id: threadID, in: context) else { return }
             thread.isClosed = true
+            try context.saveIfChanged()
+        }
+    }
+
+    func markMissingThreadsRemoved(
+        visibleThreadIDs: Set<String>,
+        archived: Bool
+    ) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let request = HistoryThread.fetchRequest()
+            request.predicate = NSPredicate(format: "isArchived == %@", NSNumber(value: archived))
+            let threads = try context.fetch(request)
+            for thread in threads where !visibleThreadIDs.contains(thread.id) && Self.canMarkRemoved(thread) {
+                Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
+                thread.state?.localState = LocalState.removed.rawValue
+            }
             try context.saveIfChanged()
         }
     }
@@ -656,7 +686,10 @@ actor ThreadHistoryStore {
                 preview: thread.preview,
                 rollbacks: rollbacks,
                 source: (try Self.decode(CodexAppServer.ThreadSource.self, from: thread.sourceData)) ?? .unknown,
-                state: .init(completeness: state.completeness),
+                state: .init(
+                    completeness: state.completeness,
+                    localState: Self.localState(for: thread).rawValue
+                ),
                 statusFlags: (try Self.decode([String].self, from: thread.statusFlagsData)) ?? [],
                 statusType: thread.statusType,
                 turns: turns,
@@ -823,6 +856,7 @@ actor ThreadHistoryStore {
             let threadObject = try Self.fetchOrInsertThread(id: thread.id, in: context)
             Self.applyThreadInfo(thread, to: threadObject)
             Self.ensureThreadPersistenceScaffolding(for: threadObject, in: context)
+            threadObject.state?.localState = LocalState.available.rawValue
             let outcome = try Self.upsertHydratedTurns(
                 turns,
                 for: threadObject,
@@ -852,6 +886,7 @@ actor ThreadHistoryStore {
             let threadObject = try Self.fetchOrInsertThread(id: thread.id, in: context)
             Self.applyThreadInfo(thread, to: threadObject)
             Self.ensureThreadPersistenceScaffolding(for: threadObject, in: context)
+            threadObject.state?.localState = LocalState.available.rawValue
 
             let existingTurns = try Self.fetchTurns(for: threadObject, in: context)
             let previousNewestTurnID = existingTurns.last?.turnID
@@ -901,6 +936,7 @@ actor ThreadHistoryStore {
         try context.performAndWaitReturning {
             let thread = try Self.fetchOrInsertThread(id: threadID, in: context)
             Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
+            thread.state?.localState = LocalState.available.rawValue
             let outcome = try Self.upsertHydratedTurns(
                 turns,
                 for: thread,
@@ -966,9 +1002,23 @@ actor ThreadHistoryStore {
         if thread.state == nil {
             let state = HistoryThreadState(context: context)
             state.completeness = Completeness.partial.rawValue
+            state.localState = LocalState.available.rawValue
             state.thread = thread
             thread.state = state
         }
+    }
+
+    private static func localState(for thread: HistoryThread) -> LocalState {
+        guard let rawValue = thread.state?.localState,
+              let state = LocalState(rawValue: rawValue)
+        else {
+            return .available
+        }
+        return state
+    }
+
+    private static func canMarkRemoved(_ thread: HistoryThread) -> Bool {
+        thread.isClosed || thread.statusType == CodexAppServer.ThreadStatusType.notLoaded.rawValue
     }
 
     private static func upsertHydratedTurns(
@@ -1110,6 +1160,7 @@ actor ThreadHistoryStore {
             gitSHA: thread.gitSHA,
             isArchived: thread.isArchived,
             isClosed: thread.isClosed,
+            localState: localState(for: thread),
             lastCompletedTurnAt: Self.lastCompletedTurnAt(for: thread),
             modelProvider: thread.modelProvider,
             name: thread.name,
@@ -1531,6 +1582,12 @@ actor ThreadHistoryStore {
         stateEntity.managedObjectClassName = NSStringFromClass(HistoryThreadState.self)
         stateEntity.properties = [
             attribute("completeness", .stringAttributeType, isOptional: false),
+            attribute(
+                "localState",
+                .stringAttributeType,
+                isOptional: false,
+                defaultValue: LocalState.available.rawValue
+            ),
         ]
 
         let rollbackEntity = NSEntityDescription()
@@ -1626,11 +1683,17 @@ private enum ThreadHistoryStoreError: Error {
 }
 
 private extension ThreadHistoryStore {
-    static func attribute(_ name: String, _ type: NSAttributeType, isOptional: Bool) -> NSAttributeDescription {
+    static func attribute(
+        _ name: String,
+        _ type: NSAttributeType,
+        isOptional: Bool,
+        defaultValue: Any? = nil
+    ) -> NSAttributeDescription {
         let attribute = NSAttributeDescription()
         attribute.name = name
         attribute.attributeType = type
         attribute.isOptional = isOptional
+        attribute.defaultValue = defaultValue
         return attribute
     }
 
@@ -1763,6 +1826,7 @@ final class HistoryThreadDefaults: NSManagedObject {
 @objc(HistoryThreadState)
 final class HistoryThreadState: NSManagedObject {
     @NSManaged var completeness: String
+    @NSManaged var localState: String
     @NSManaged var thread: HistoryThread?
 }
 

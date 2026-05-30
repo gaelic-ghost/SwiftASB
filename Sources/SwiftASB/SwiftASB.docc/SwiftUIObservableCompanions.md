@@ -6,7 +6,7 @@ Use dashboard, minimap, recent-file, and recent-command companions as current-st
 
 SwiftASB's observable companions are ready-made `@Observable` state objects for SwiftUI surfaces. They are current-state mirrors over live streams and local history; they are not replayable protocol logs.
 
-Use ``CodexAppServer/makeLibrary(configuration:)`` for app-wide stored-thread lists, ``CodexThread/makeDashboard()`` for thread-level state, ``CodexTurnHandle/minimap`` for one active turn, and the recent companions for completed turn, file, and command views.
+Use ``CodexAppServer/makeInventory(configuration:)`` for app-wide capability and extension inventory, ``CodexAppServer/makeLibrary(configuration:)`` for app-wide stored-thread lists, ``CodexThread/makeDashboard()`` for thread-level state, ``CodexTurnHandle/minimap`` for one active turn, and the recent companions for completed turn, file, and command views.
 
 ```swift
 import Observation
@@ -18,6 +18,7 @@ final class ThreadInspectorModel {
     private let appServer: CodexAppServer
     private let thread: CodexThread
 
+    var inventory: CodexAppServer.Inventory?
     var library: CodexAppServer.Library?
     var dashboard: CodexThread.Dashboard?
     var recentFiles: CodexThread.RecentFiles?
@@ -32,12 +33,12 @@ final class ThreadInspectorModel {
 
     func start() async {
         do {
+            inventory = try await appServer.makeInventory()
             library = try await appServer.makeLibrary(
                 configuration: .init(
                     sortedBy: .turnFinishedNewestFirst,
                     groupedBy: .cwd,
-                    query: .unarchived(limit: 30),
-                    mcpServerStatusRequest: .init(detail: .toolsAndAuthOnly)
+                    query: .unarchived(limit: 30)
                 )
             )
             library?.sortedBy = .selectedNewestFirst
@@ -95,7 +96,7 @@ Use ``CodexAppServer/Library/worktreeGroups`` when a sidebar needs repository/wo
 
 When `gitObservability` is enabled in ``SwiftASBFeaturePolicy``, selecting a library thread refreshes ``CodexAppServer/Library/selectedGitStatus`` for that worktree. The status snapshot combines Codex-reported branch, SHA, and origin metadata with sandboxed app-server `command/exec` facts for repository root, remotes, ahead/behind, and dirty/untracked counts.
 
-Use ``CodexAppServer/Library/refreshAppSnapshots()`` when the same app-wide UI needs model capabilities, MCP server status, and hook diagnostics. Library derives hook `cwd` requests from its stored thread snapshots unless configuration provides explicit hook current-directory paths.
+Use ``CodexAppServer/Inventory`` when an app-wide UI needs model capabilities, MCP server summaries, hook diagnostics, apps, skills, plugins, and collaboration modes without also needing stored-thread lists. Use ``CodexAppServer/Library/refreshAppSnapshots()`` when model, MCP, and hook snapshots should sit beside the thread library. SwiftASB owns MCP status refresh and keeps summary lists current from startup and app-server status-change notifications.
 
 Recent companions keep caller-owned UI inputs mutable. For example, views can update selected file or command identifiers and visible item identifiers. SwiftASB uses that information to protect visible or selected payloads while slimming older low-value entries when the resident cache exceeds its budget.
 
@@ -111,6 +112,8 @@ Store the companion object itself in your view model. Do not copy its arrays int
 
 - ``CodexAppServer/makeLibrary(configuration:)``
 - ``CodexAppServer/Library``
+- ``CodexAppServer/makeInventory(configuration:)``
+- ``CodexAppServer/Inventory``
 - ``CodexThread/makeDashboard()``
 - ``CodexThread/Dashboard``
 

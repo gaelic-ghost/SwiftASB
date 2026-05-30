@@ -201,7 +201,7 @@ struct CodexAppServerLiveIntegrationTests {
             let diagnostics = try await client.cliExecutableDiagnostics()
             #expect(diagnostics.resolvedExecutablePath == harness.codexExecutableURL.path)
             #expect(diagnostics.versionString.contains("codex-cli"))
-            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.133.x"))
+            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.135.x"))
 
             await client.stop()
         } catch {
@@ -321,6 +321,7 @@ struct CodexAppServerLiveIntegrationTests {
             let turnStartPayload = try protocolLayer.makeTurnStartRequest(
                 id: turnRequestID,
                 params: CodexWireTurnStartParams(
+                    additionalContext: nil,
                     approvalPolicy: .enumeration(.never),
                     approvalsReviewer: nil,
                     collaborationMode: nil,
@@ -530,14 +531,9 @@ struct CodexAppServerLiveIntegrationTests {
 
             let mcpServers = try await withTimeout(
                 seconds: 15,
-                operation: "listing live Codex MCP server capabilities"
+                operation: "refreshing live Codex MCP server capabilities"
             ) {
-                try await client.listMcpServerStatuses(
-                    .init(
-                        limit: 20,
-                        detail: .toolsAndAuthOnly
-                    )
-                )
+                try await client.refreshGlobalMcpServerStatusSnapshot()
             }
             #expect(mcpServers.servers.allSatisfy { server in
                 server.name.isEmpty == false

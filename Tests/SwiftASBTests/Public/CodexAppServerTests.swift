@@ -83,8 +83,8 @@ struct CodexAppServerTests {
                 launchArgumentsPrefix: [],
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
-                versionString: "codex-cli 0.133.0",
-                compatibility: .supported(documentedWindow: "0.133.x")
+                versionString: "codex-cli 0.135.0",
+                compatibility: .supported(documentedWindow: "0.135.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -94,8 +94,8 @@ struct CodexAppServerTests {
         let diagnostics = try await client.cliExecutableDiagnostics()
         #expect(diagnostics.source == .homebrewAppleSilicon)
         #expect(diagnostics.resolvedExecutablePath == "/opt/homebrew/bin/codex")
-        #expect(diagnostics.versionString == "codex-cli 0.133.0")
-        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.133.x"))
+        #expect(diagnostics.versionString == "codex-cli 0.135.0")
+        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.135.x"))
 
         await client.stop()
     }
@@ -108,8 +108,8 @@ struct CodexAppServerTests {
                 launchArgumentsPrefix: [],
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
-                versionString: "codex-cli 0.133.0",
-                compatibility: .supported(documentedWindow: "0.133.x")
+                versionString: "codex-cli 0.135.0",
+                compatibility: .supported(documentedWindow: "0.135.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -124,7 +124,7 @@ struct CodexAppServerTests {
             )
         )
 
-        #expect(startup.cliExecutableDiagnostics.versionString == "codex-cli 0.133.0")
+        #expect(startup.cliExecutableDiagnostics.versionString == "codex-cli 0.135.0")
         #expect(startup.initializeSession.codexHome == "/Users/galew/.codex")
         #expect(await transport.recordedMethods == ["initialize", "initialized"])
 
@@ -140,7 +140,7 @@ struct CodexAppServerTests {
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.133.x")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.135.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -150,7 +150,7 @@ struct CodexAppServerTests {
                 source: .homebrewAppleSilicon,
                 resolvedExecutablePath: "/opt/homebrew/bin/codex",
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.133.x")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.135.x")
             )
         )) {
             try await client.start(
@@ -177,7 +177,7 @@ struct CodexAppServerTests {
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.133.x")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.135.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -578,8 +578,43 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
-    @Test("lists app-wide MCP server status through the public client")
-    func listsAppWideMcpServerStatus() async throws {
+    @Test("hydrates app-wide MCP server status during initialization")
+    func hydratesAppWideMcpServerStatusDuringInitialization() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let page = await client.mcpServerStatusSnapshot()
+
+        #expect(page.nextCursor == nil)
+        #expect(page.servers.count == 1)
+        #expect(page.servers[0].name == "calendar")
+        #expect(page.servers[0].authStatus == .oAuth)
+        #expect(page.servers[0].resources[0].uri == "calendar://events/today")
+        #expect(page.servers[0].resourceTemplates[0].uriTemplate == "calendar://events/{date}")
+        #expect(page.servers[0].tools["list_events"]?.title == "List Events")
+        #expect(page.servers[0].tools["list_events"]?.inputSchema == .object(["type": .string("object")]))
+
+        let requestPayload = try #require(await transport.recordedRequestPayload(for: "mcpServerStatus/list"))
+        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
+        let params = try #require(request["params"] as? [String: Any])
+        #expect(params.isEmpty)
+
+        await client.stop()
+    }
+
+    @Test("lists app-wide MCP server status through the compatibility request")
+    func listsAppWideMcpServerStatusThroughCompatibilityRequest() async throws {
         let transport = FakeCodexAppServerTransport()
         let client = CodexAppServer(transport: transport)
 
