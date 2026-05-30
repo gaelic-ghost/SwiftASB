@@ -47,7 +47,9 @@ Use ``CodexWorkspace`` values when starting or resuming a thread with a named pe
 
 Use ``config`` to read effective app-server configuration and requirements policy without opening local config files from the Swift process.
 
-Use ``extensions`` to read app, skill, plugin, and collaboration-mode inventory through the app-server instead of inspecting installed plugin or skill directories directly.
+Use ``makeInventory(configuration:)`` when a GUI or CLI client needs observable app-wide catalogs and diagnostics without wiring every read request itself. Inventory publishes model capabilities, global MCP summaries, hook diagnostics, apps, skills, plugins, and collaboration modes, and refreshes from app-server inventory notifications.
+
+Use ``extensions`` for direct app, skill, plugin, and collaboration-mode reads when a caller intentionally owns pagination, custom refresh timing, or one selected plugin detail.
 
 Use ``CodexExtensions/upgradeMarketplace(_:)`` for the narrow extension-maintenance mutation SwiftASB owns today: upgrading an already-configured plugin marketplace through app-server `command/exec`. The method preflights `plugin/list`, respects ``SwiftASBFeaturePolicy``'s `extensionMaintenance` category, and emits a ``SwiftASBFeatureOperationEvent``.
 
@@ -102,6 +104,8 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 
 - ``makeLibrary(configuration:)``
 - ``Library``
+- ``makeInventory(configuration:)``
+- ``Inventory``
 - ``ThreadListQD``
 - ``fs``
 - ``CodexFS``

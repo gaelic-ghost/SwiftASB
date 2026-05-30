@@ -175,6 +175,26 @@ public extension CodexAppServer {
         public private(set) var pluginListSnapshot: CodexExtensions.PluginListSnapshot?
         public private(set) var skillListSnapshot: CodexExtensions.SkillListSnapshot?
 
+        public var apps: [CodexExtensions.AppInfo] {
+            appListPage?.apps ?? []
+        }
+
+        public var skillEntries: [CodexExtensions.SkillListEntry] {
+            skillListSnapshot?.entries ?? []
+        }
+
+        public var skills: [CodexExtensions.SkillMetadata] {
+            skillEntries.flatMap(\.skills)
+        }
+
+        public var pluginMarketplaces: [CodexExtensions.PluginMarketplace] {
+            pluginListSnapshot?.marketplaces ?? []
+        }
+
+        public var collaborationModeEntries: [CodexExtensions.CollaborationMode] {
+            collaborationModes?.modes ?? []
+        }
+
         @ObservationIgnored
         private let appServer: CodexAppServer
 

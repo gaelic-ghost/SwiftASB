@@ -9,7 +9,7 @@ It owns the subprocess transport, the JSON-RPC protocol boundary, typed request 
 
 The public surface has three main handles:
 
-- ``CodexAppServer`` owns the app-server process, initialization, app-wide capability snapshots, and stored-thread operations.
+- ``CodexAppServer`` owns the app-server process, initialization, app-wide observable inventory, capability snapshots, and stored-thread operations.
 - ``CodexFS`` owns app-server-routed filesystem reads for sandboxed clients.
 - ``CodexWorkspace`` owns app-server-routed workspace permission selections and runtime permission facts.
 - ``CodexConfig`` owns app-server-routed configuration reads for sandboxed clients.
@@ -40,6 +40,7 @@ Generated Codex wire types remain internal scaffolding. Public callers should us
 ### Primary Handles
 
 - ``CodexAppServer``
+- ``CodexAppServer/Inventory``
 - ``CodexFS``
 - ``CodexWorkspace``
 - ``CodexConfig``

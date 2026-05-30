@@ -6,11 +6,11 @@ Discover model, MCP-server, MCP-resource, hook diagnostics, and model-capability
 
 Some app-server operations describe the connection rather than one conversation thread. SwiftASB exposes opinionated snapshots on ``CodexAppServer`` and observable companions so consumers can populate settings screens, model pickers, feature gates, MCP inspectors, hook diagnostics, and other app-wide views without orchestrating every app-server read.
 
-Use ``CodexAppServer/listModels(_:)`` to read the currently visible model catalog. Use ``CodexAppServer/readModelCapabilities()`` to decide whether the current model provider supports web search, image generation, or namespace tools. Use ``CodexAppServer/mcpServerStatusSnapshot()`` to inspect SwiftASB's latest configured MCP server catalog, including auth status, resources, resource templates, and tools. Use ``CodexAppServer/Library/mcpServers`` when an app-wide observable UI only needs server names, auth state, scope, and advertised capability counts. Use ``CodexAppServer/readMcpResource(_:)`` to read one advertised MCP resource. Use ``CodexAppServer/listHooks(_:)`` to inspect configured hooks, warnings, and load errors for one or more working directories before a turn runs.
+Use ``CodexAppServer/makeInventory(configuration:)`` for routine app-wide UI that needs model capabilities, global MCP summaries, hook diagnostics, apps, skills, plugins, and collaboration modes. Inventory loads these snapshots on creation by default and refreshes when the app-server reports app-list, skill, or MCP-server status changes.
 
 Use ``CodexAppServer/makeLibrary(configuration:)`` when these same model, MCP, and hook snapshots should live beside observable stored-thread lists. ``CodexAppServer/Library/refreshAppSnapshots()`` reads the current app-wide snapshots and publishes them as Library state; MCP status uses SwiftASB's owned cache, and hook diagnostics use Library thread `cwd` values unless configuration passes explicit hook current-directory paths.
 
-Use ``CodexAppServer/extensions`` for app, skill, plugin, and collaboration-mode inventory. ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` is the narrow maintenance mutation in this app-wide family: it upgrades an already-configured plugin marketplace through app-server `command/exec` and reports the operation through ``CodexAppServer/featureOperationEvents()``.
+Use ``CodexAppServer/listModels(_:)``, ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listHooks(_:)``, and ``CodexAppServer/extensions`` as direct escape hatches when the caller intentionally owns pagination, one-off reads, or custom refresh timing. Use ``CodexAppServer/mcpServerStatusSnapshot()`` to inspect SwiftASB's latest full MCP server catalog, including resources, resource templates, and tools. Use ``CodexAppServer/readMcpResource(_:)`` to read one advertised MCP resource. ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` is the narrow maintenance mutation in this app-wide family: it upgrades an already-configured plugin marketplace through app-server `command/exec` and reports the operation through ``CodexAppServer/featureOperationEvents()``.
 
 ```swift
 let models = try await appServer.listModels(
@@ -30,7 +30,7 @@ let hooks = try await appServer.listHooks(
 )
 ```
 
-These requests are snapshots. If your UI needs refresh behavior, prefer ``CodexAppServer/Library`` so SwiftASB owns the refresh path and notification handling. Library and thread dashboard MCP state intentionally uses ``CodexAppServer/McpServerSummary`` instead of the full catalog so common SwiftUI surfaces can stay compact.
+These direct requests are snapshots. If your UI needs refresh behavior, prefer ``CodexAppServer/Inventory`` so SwiftASB owns the refresh path and notification handling. Use ``CodexAppServer/Library`` instead when the same model, MCP, and hook snapshots should sit beside stored-thread lists. Inventory, Library, and thread dashboard MCP state intentionally use ``CodexAppServer/McpServerSummary`` instead of the full catalog so common SwiftUI surfaces can stay compact.
 
 ## Model Capabilities
 
@@ -113,6 +113,8 @@ These types are public because a consumer can use them directly today. Other gen
 
 ### Extensions
 
+- ``CodexAppServer/makeInventory(configuration:)``
+- ``CodexAppServer/Inventory``
 - ``CodexAppServer/extensions``
 - ``CodexAppServer/CodexExtensions``
 - ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)``
