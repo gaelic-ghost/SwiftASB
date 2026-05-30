@@ -212,6 +212,29 @@ public struct CodexMCP: Sendable {
     public func install(_ definition: ServerDefinition) async throws -> InstallResult {
         try await appServer.installMCPServer(definition)
     }
+
+    /// Returns SwiftASB's latest full global MCP server status snapshot.
+    public func statusSnapshot() async -> CodexAppServer.McpServerStatusPage {
+        await appServer.mcpServerStatusSnapshot()
+    }
+
+    /// Reads one advertised MCP resource.
+    public func readResource(
+        _ request: CodexAppServer.McpResourceReadRequest
+    ) async throws -> CodexAppServer.McpResourceReadResult {
+        try await appServer.readMcpResource(request)
+    }
+
+    /// Reads one advertised MCP resource by server name and URI.
+    public func readResource(
+        server: String,
+        uri: String,
+        threadID: String? = nil
+    ) async throws -> CodexAppServer.McpResourceReadResult {
+        try await readResource(
+            .init(server: server, uri: uri, threadID: threadID)
+        )
+    }
 }
 
 public extension CodexAppServer {

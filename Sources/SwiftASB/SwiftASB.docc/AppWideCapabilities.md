@@ -10,7 +10,7 @@ Use ``CodexAppServer/makeInventory(configuration:)`` for routine app-wide UI tha
 
 Use ``CodexAppServer/makeLibrary(configuration:)`` when these same model, MCP, and hook snapshots should live beside observable stored-thread lists. ``CodexAppServer/Library/refreshAppSnapshots()`` reads the current app-wide snapshots and publishes them as Library state; MCP status uses SwiftASB's owned cache, and hook diagnostics use Library thread `cwd` values unless configuration passes explicit hook current-directory paths.
 
-Use ``CodexAppServer/listModels(_:)``, ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listHooks(_:)``, and ``CodexAppServer/extensions`` as direct escape hatches when the caller intentionally owns pagination, one-off reads, or custom refresh timing. Use ``CodexAppServer/mcpServerStatusSnapshot()`` to inspect SwiftASB's latest full MCP server catalog, including resources, resource templates, and tools. Use ``CodexAppServer/readMcpResource(_:)`` to read one advertised MCP resource. ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` is the narrow maintenance mutation in this app-wide family: it upgrades an already-configured plugin marketplace through app-server `command/exec` and reports the operation through ``CodexAppServer/featureOperationEvents()``.
+Use ``CodexAppServer/listModels(_:)``, ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listHooks(_:)``, and ``CodexAppServer/extensions`` as direct escape hatches when the caller intentionally owns pagination, one-off reads, or custom refresh timing. Use ``CodexMCP/statusSnapshot()`` to inspect SwiftASB's latest full MCP server catalog, including resources, resource templates, and tools. Use ``CodexMCP/readResource(server:uri:threadID:)`` to read one advertised MCP resource. ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` is the narrow maintenance mutation in this app-wide family: it upgrades an already-configured plugin marketplace through app-server `command/exec` and reports the operation through ``CodexAppServer/featureOperationEvents()``.
 
 ```swift
 let models = try await appServer.listModels(
@@ -90,6 +90,8 @@ These types are public because a consumer can use them directly today. Other gen
 
 - ``CodexAppServer/mcpServerStatusSnapshot()``
 - ``CodexAppServer/readMcpResource(_:)``
+- ``CodexMCP/statusSnapshot()``
+- ``CodexMCP/readResource(server:uri:threadID:)``
 - ``CodexAppServer/McpServerStatusListRequest``
 - ``CodexAppServer/McpServerStatusPage``
 - ``CodexAppServer/McpServerStatus``

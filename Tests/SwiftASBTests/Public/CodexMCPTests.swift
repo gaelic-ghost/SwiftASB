@@ -148,4 +148,39 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
+
+    @Test("MCP surface exposes cached status and resource reads")
+    func mcpSurfaceExposesStatusSnapshotAndResourceRead() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let snapshot = await client.mcp.statusSnapshot()
+        #expect(snapshot.servers.map(\.name) == ["calendar"])
+        #expect(snapshot.servers.first?.resources.map(\.uri) == ["calendar://events/today"])
+        #expect(snapshot.servers.first?.tools.keys.sorted() == ["list_events"])
+
+        let resource = try await client.mcp.readResource(
+            server: "calendar",
+            uri: "calendar://events/today"
+        )
+        #expect(resource.contents.first?.uri == "calendar://events/today")
+        #expect(resource.contents.first?.text == #"{"events":[]}"#)
+
+        let payload = try #require(await transport.recordedRequestPayload(for: "mcpServer/resource/read"))
+        let request = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(request["method"] as? String == "mcpServer/resource/read")
+
+        await client.stop()
+    }
 }
