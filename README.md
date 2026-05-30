@@ -84,6 +84,8 @@ Use `CodexThread.makeAgenda()` when a SwiftUI surface needs the thread's current
 
 Use `CodexThread.startPlanningTurn(...)` when a mode button or segmented control should start the next turn in Codex plan mode without sending slash-command text through the prompt. Advanced callers can use `CodexAppServer.TurnCollaborationMode` directly on a turn-start request.
 
+Plan and goal controls are intentionally separate for now. The recommended workflow is to use plan mode first to shape complex or ambiguous work, then set a persistent goal from the accepted objective when the host app or user is ready to track execution. SwiftASB does not currently auto-create goals from plan prompts or auto-promote completed plans into goals.
+
 Use `CodexThread.startReview(against:placement:)` to start app-server code reviews from a thread. The public API uses hand-owned Swift subjects such as `.uncommittedChanges`, `.baseBranch("main")`, `.commit(sha:title:)`, and `.custom(instructions:)`; `placement: .inline` runs the review turn on the current thread, while `.detached` runs it on a returned review thread.
 
 Use `CodexThread.sendShellCommand(_:)` only for explicit user-level shell access. It sends a literal shell command string through app-server `thread/shellCommand`, preserves shell syntax such as pipes and redirects, and is documented upstream as unsandboxed full-user shell execution. SwiftASB keeps its internal `command/exec` helper path separate because that path is argv-shaped app-server command execution for SwiftASB-owned helper intents. `sendShellCommand(_:)` is gated by the disabled-by-default `shellCommandExecution` feature category.

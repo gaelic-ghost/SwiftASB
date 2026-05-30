@@ -120,6 +120,8 @@ Use ``CodexThread/Agenda`` when a UI wants to show the thread's current task tar
 
 Use ``CodexThread/startPlanningTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)`` for explicit plan-mode UI controls. It sends the app-server collaboration-mode field rather than passing slash-command text as user input.
 
+Keep plan and goal actions explicit in host UI. A good default is a Plan control that runs a planning turn, a Goal editor that calls ``CodexThread/Agenda/setGoal(_:tokenBudget:)``, and a separate user-confirmed step that turns an accepted plan into a persistent goal if the app wants that workflow later.
+
 Recent companions keep caller-owned UI inputs mutable. For example, views can update selected file or command identifiers and visible item identifiers. SwiftASB uses that information to protect visible or selected payloads while slimming older low-value entries when the resident cache exceeds its budget.
 
 Start with automatic cache policies unless the UI has known density requirements. Use the named presets for ``CodexThread/RecentTurns`` and automatic policies for file and command companions when the initial page size is enough guidance.

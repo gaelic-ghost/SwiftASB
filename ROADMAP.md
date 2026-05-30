@@ -1376,6 +1376,7 @@ Completed
 
 - [ ] Add a one-shot `run(...)` convenience API once the lower-level handle model is stable enough to hide honestly.
 - [ ] Add optional suggested-goal generation that returns candidate goal strings from a prompt or current agenda state without mutating the thread until a host app or user accepts one.
+- [ ] Add an optional accepted-plan-to-goal workflow that can stage a "set this plan as the goal" action after plan mode produces an accepted plan, without creating goals from raw planning prompts.
 - [ ] Add an optional auto-plan mode feature policy that can suggest or select plan mode for prompts likely to need planning, while keeping explicit mode controls as the default behavior.
 - [ ] Add a broader public history cursor or transcript search surface after the local history contract is clearer.
 - [ ] Add richer MCP progress detail either as public event cases or as deeper observable companion state.

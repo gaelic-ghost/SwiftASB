@@ -13,7 +13,10 @@ Status: the first implementation pass shipped `CodexThread.Agenda`,
 
 Official Codex docs describe plan mode as the way to ask Codex for a multi-step
 execution plan before implementation work starts. They describe goals as a
-persistent thread target, preferably shaped with a plan first.
+persistent thread target, preferably shaped with a plan first. SwiftASB should
+therefore keep plan and goal controls explicit in the shipped API: planning
+creates or updates plan state, and goal actions mutate persisted goal state only
+when the host app or user asks for that mutation.
 
 The current generated app-server schema exposes:
 
@@ -190,6 +193,11 @@ Shipped creation and mutation APIs:
 - `thread.startPlanningTurn(...)`
 
 These are deliberate convenience APIs, not thin slash-command replicas.
+
+Combined plan-plus-goal workflows are intentionally deferred. Future APIs may
+suggest goal strings from accepted plans, stage a "set this plan as the goal"
+action, or optionally recommend plan mode for complex prompts, but the current
+surface should not auto-create a goal from a raw planning prompt.
 
 ## Implementation Slices
 

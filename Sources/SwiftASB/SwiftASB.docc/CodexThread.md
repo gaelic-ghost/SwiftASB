@@ -29,6 +29,8 @@ Use ``startPlanningTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:
 
 Use ``makeAgenda()`` when a UI wants current goal and plan state for this thread. Agenda also exposes UI-friendly goal actions. Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` when a non-UI caller needs direct goal reads or mutation.
 
+Plan and goal actions are separate controls. Use plan mode first to shape complex or ambiguous work, then set a goal from the accepted objective when a user or host app is ready to track execution. SwiftASB does not currently auto-create goals from plan prompts or auto-promote completed plans into goals.
+
 Use ``startReview(against:placement:)`` to ask the app-server to review repository state associated with this thread. The `against` subject can be uncommitted changes, a base branch, one commit, or custom instructions. ``ReviewPlacement/inline`` runs the review turn on this thread. ``ReviewPlacement/detached`` runs the review turn on a new review thread returned in ``CodexReviewHandle/reviewThreadID``.
 
 Use ``sendShellCommand(_:)`` only when a host app intentionally wants to send a literal user-level shell command to the thread shell. This is not the same operation as SwiftASB's internal `command/exec` helper path. `command/exec` sends argv-shaped helper commands through the app-server command runner for SwiftASB-owned intents such as Git fact refreshes or extension maintenance. `thread/shellCommand` preserves shell syntax such as pipes, redirects, and quoting, and the upstream schema documents that it runs unsandboxed with the user's full shell access instead of inheriting the thread sandbox policy.
