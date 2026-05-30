@@ -968,9 +968,9 @@ runtime can be driven with a mock Responses provider.
   app-connector MCP fixture through the real app-server. The probe asserts MCP
   tool-call delivery, `mcpServer/elicitation/request` delivery, SwiftASB's
   JSON-RPC response, `serverRequest/resolved`, and terminal turn completion.
-  The regular stdio MCP fixture remains in the runner as model-to-MCP tool-path
-  evidence, while app-connector MCP is the deterministic live elicitation
-  coverage source.
+  The regular stdio MCP fixture remains available as an explicitly opted-in
+  observational probe, while app-connector MCP is the deterministic live
+  elicitation coverage source.
 - [ ] Guardian denied-action approval after SwiftASB owns a stable public model.
 - [x] Model capability snapshot through `CodexAppServer.readModelCapabilities()`.
 

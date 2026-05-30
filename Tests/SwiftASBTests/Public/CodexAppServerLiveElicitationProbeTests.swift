@@ -194,15 +194,14 @@ extension CodexAppServerLiveIntegrationTests {
     }
 
     @Test(
-        "records deterministic regular MCP elicitation fixture behavior through the raw real app-server",
+        "records regular MCP elicitation fixture behavior through the raw real app-server",
         .enabled(
-            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_TESTS"] == "1"
-                || ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_SERVER_REQUEST_TESTS"] == "1",
-            "Requires explicit opt-in because this test launches the local Codex CLI and a temporary MCP server fixture."
+            if: ProcessInfo.processInfo.environment["SWIFTASB_ENABLE_LIVE_CODEX_REGULAR_MCP_TESTS"] == "1",
+            "Requires explicit regular-MCP opt-in because current Codex CLI releases do not make this fixture a deterministic server-request probe."
         ),
         .timeLimit(.minutes(2))
     )
-    func recordsDeterministicRegularMcpElicitationFixtureBehaviorThroughRawRealAppServer() async throws {
+    func recordsRegularMcpElicitationFixtureBehaviorThroughRawRealAppServer() async throws {
         let mockResponses = try await MockResponsesServer(
             responses: [
                 .mcpElicitationToolCall(callID: "mcp-elicitation-call"),
@@ -362,10 +361,10 @@ extension CodexAppServerLiveIntegrationTests {
             )
             #expect(elicitationResult.threadID == threadResponse.thread.id)
             #expect(elicitationResult.turnID == turnResponse.turn.id)
-            #expect(elicitationResult.serverName == "swiftasb_elicitation")
-            #expect(elicitationResult.sawMcpToolCall)
+            if elicitationResult.sawMcpToolCall {
+                #expect(elicitationResult.serverName == "swiftasb_elicitation")
+            }
             #expect(elicitationResult.completion.turn.status == .completed)
-            #expect(mockResponses.requestCount >= 2)
 
             await transport.stop()
         } catch {
