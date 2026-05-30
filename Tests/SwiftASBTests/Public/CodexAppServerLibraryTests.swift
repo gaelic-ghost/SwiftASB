@@ -100,6 +100,78 @@ extension CodexAppServerTests {
     }
 
     @MainActor
+    @Test("library marks locally stored threads as removed after complete app-server refresh misses them")
+    func libraryMarksMissingStoredThreadsRemovedAfterCompleteRefresh() async throws {
+        let transport = FakeCodexAppServerTransport(
+            threadListResult: [
+                "data": [
+                    storedThread(
+                        id: "thread-removed",
+                        cwd: "/tmp/project-a",
+                        name: "Deleted in GUI",
+                        preview: "Locally cached history",
+                        statusType: "notLoaded",
+                        updatedAt: 1713350030
+                    ),
+                ],
+                "nextCursor": NSNull(),
+            ]
+        )
+        let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
+        let client = CodexAppServer(
+            transport: transport,
+            historyStore: historyStore
+        )
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        _ = try await client.listThreads(
+            .init(
+                archived: false
+            )
+        )
+        await transport.setThreadListResultQueue([
+            [
+                "data": [],
+                "nextCursor": NSNull(),
+            ],
+            [
+                "data": [],
+                "nextCursor": NSNull(),
+            ],
+        ])
+
+        let library = try await client.makeLibrary(
+            configuration: .init(reconcilesOnCreation: false)
+        )
+
+        #expect(library.unarchivedThreads.map(\.id) == ["thread-removed"])
+        #expect(library.removedThreads.isEmpty)
+
+        await library.refresh()
+
+        #expect(library.unarchivedThreads.isEmpty)
+        #expect(library.archivedThreads.isEmpty)
+        #expect(library.removedThreads.map(\.id) == ["thread-removed"])
+        #expect(library.removedThreads.first?.state == .removed)
+
+        let removedSnapshot = try await client.debugThreadHistorySnapshot(threadID: "thread-removed")
+        #expect(removedSnapshot?.state.localState == "removed")
+
+        await client.stop()
+        await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
+    }
+
+    @MainActor
     @Test("library can group thread snapshots by app-server Git origin")
     func libraryGroupsThreadSnapshotsByRepositoryOrigin() async throws {
         let transport = FakeCodexAppServerTransport(

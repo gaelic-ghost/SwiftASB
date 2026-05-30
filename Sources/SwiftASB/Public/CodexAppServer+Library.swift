@@ -220,6 +220,12 @@ public extension CodexAppServer {
             )
         }
 
+        internal var canMarkMissingThreadsRemoved: Bool {
+            currentDirectoryPath == nil
+                && modelProviders?.isEmpty != false
+                && searchTerm == nil
+        }
+
         private static func normalizedSearchTerm(_ searchTerm: String?) -> String? {
             guard let searchTerm else { return nil }
             let trimmed = searchTerm.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -329,6 +335,11 @@ public extension CodexAppServer {
         }
 
         public struct ThreadSnapshot: Sendable, Equatable, Identifiable {
+            public enum State: String, Sendable, Equatable {
+                case available
+                case removed
+            }
+
             public let id: String
             public let cliVersion: String
             public let createdAt: Int
@@ -337,6 +348,7 @@ public extension CodexAppServer {
             public let forkedFromThreadID: String?
             public let isArchived: Bool
             public let isClosed: Bool
+            public let state: State
             public let lastCompletedTurnAt: Int?
             public let modelProvider: String
             public let name: String?
@@ -378,6 +390,7 @@ public extension CodexAppServer {
         public private(set) var mcpServerNextCursor: String?
         public private(set) var modelCapabilities: CodexAppServer.ModelCapabilities?
         public private(set) var phase: ReconciliationPhase
+        public private(set) var removedThreads: [ThreadSnapshot]
         public var selectedThreadID: String? {
             didSet {
                 guard selectedThreadID != oldValue else { return }
@@ -505,6 +518,7 @@ public extension CodexAppServer {
             self.modelCapabilities = nil
             self.phase = .idle
             self.query = configuration.query
+            self.removedThreads = []
             self.selectedThreadID = nil
             self.snapshotCurrentDirectoryPaths = nil
             self.snapshotPhase = .idle
@@ -779,8 +793,10 @@ public extension CodexAppServer {
                 by: sortedBy,
                 selectionOrderByThreadID: selectionOrderByThreadID
             )
-            unarchivedThreads = sortedThreads.filter { !$0.isArchived }
-            archivedThreads = sortedThreads.filter(\.isArchived)
+            removedThreads = sortedThreads.filter { $0.state == .removed }
+            let availableThreads = sortedThreads.filter { $0.state != .removed }
+            unarchivedThreads = availableThreads.filter { !$0.isArchived }
+            archivedThreads = availableThreads.filter(\.isArchived)
             groups = Self.groups(
                 from: unarchivedThreads,
                 groupedBy: groupedBy
@@ -811,7 +827,7 @@ public extension CodexAppServer {
 
         private func clearSelectionIfThreadDisappeared() {
             guard let selectedThreadID else { return }
-            if !allThreads.contains(where: { $0.id == selectedThreadID }) {
+            if !allThreads.contains(where: { $0.id == selectedThreadID && $0.state != .removed }) {
                 self.selectedThreadID = nil
             }
         }
@@ -830,7 +846,8 @@ public extension CodexAppServer {
         }
 
         private func sortedVisibleThreads(includeArchived: Bool) -> [ThreadSnapshot] {
-            let threads = includeArchived ? allThreads : allThreads.filter { !$0.isArchived }
+            let availableThreads = allThreads.filter { $0.state != .removed }
+            let threads = includeArchived ? availableThreads : availableThreads.filter { !$0.isArchived }
             return Self.sort(
                 threads,
                 by: sortedBy,
@@ -1045,6 +1062,7 @@ extension CodexAppServer.Library.ThreadSnapshot {
             forkedFromThreadID: snapshot.forkedFromThreadID,
             isArchived: snapshot.isArchived,
             isClosed: snapshot.isClosed,
+            state: .init(snapshot.localState),
             lastCompletedTurnAt: snapshot.lastCompletedTurnAt,
             modelProvider: snapshot.modelProvider,
             name: snapshot.name,
@@ -1077,6 +1095,17 @@ extension CodexAppServer.Library.ThreadSnapshot {
             sha: sha
         )
         return repository.isEmpty ? nil : repository
+    }
+}
+
+private extension CodexAppServer.Library.ThreadSnapshot.State {
+    init(_ localState: ThreadHistoryStore.LocalState) {
+        switch localState {
+        case .available:
+            self = .available
+        case .removed:
+            self = .removed
+        }
     }
 }
 

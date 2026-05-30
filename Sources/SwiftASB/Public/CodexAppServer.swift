@@ -1903,6 +1903,8 @@ public actor CodexAppServer {
         maxPages: Int
     ) async throws {
         var cursor: String?
+        var visibleThreadIDs = Set<String>()
+        var completedScope = false
         let pageCount = max(1, maxPages)
         for _ in 0..<pageCount {
             try Task.checkCancellation()
@@ -1912,11 +1914,21 @@ public actor CodexAppServer {
                     cursor: cursor
                 )
             )
+            visibleThreadIDs.formUnion(page.threads.map(\.id))
             cursor = page.nextCursor
             if cursor == nil {
+                completedScope = true
                 break
             }
             await Task.yield()
+        }
+
+        if completedScope, query.canMarkMissingThreadsRemoved {
+            try await requireHistoryStore(for: "library thread removal reconciliation")
+                .markMissingThreadsRemoved(
+                    visibleThreadIDs: visibleThreadIDs,
+                    archived: archived
+                )
         }
     }
 
