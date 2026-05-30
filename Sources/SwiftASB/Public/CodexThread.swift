@@ -297,7 +297,7 @@ public struct CodexThread: Sendable {
     public let approvalsReviewer: CodexAppServer.ApprovalsReviewer
     public let currentDirectoryPath: String
     public let instructionSources: [String]
-    public let mcpServers: [CodexAppServer.McpServerStatus]
+    public let mcpServers: [CodexAppServer.McpServerSummary]
     public let model: String
     public let modelProvider: String
     public let activePermissionProfile: CodexWorkspace.ActivePermissionProfile?
@@ -321,7 +321,7 @@ public struct CodexThread: Sendable {
     internal init(
         appServer: CodexAppServer,
         session: CodexAppServer.ThreadSession,
-        mcpServers: [CodexAppServer.McpServerStatus],
+        mcpServers: [CodexAppServer.McpServerSummary],
         events: AsyncThrowingStream<CodexThreadEvent, Error>
     ) {
         self.appServer = appServer

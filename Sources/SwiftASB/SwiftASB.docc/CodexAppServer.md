@@ -127,6 +127,7 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``McpServerStatusListRequest``
 - ``McpServerStatusPage``
 - ``McpServerStatus``
+- ``McpServerSummary``
 
 ### Thread Operations
 

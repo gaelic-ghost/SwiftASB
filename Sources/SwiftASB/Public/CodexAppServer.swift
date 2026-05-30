@@ -609,13 +609,20 @@ public actor CodexAppServer {
         return page
     }
 
-    internal func hydrateMcpServerStatuses(threadID: String) async -> [McpServerStatus] {
+    internal func globalMcpServerSummaries() -> [McpServerSummary] {
+        globalMcpServerStatusPage.servers.map { status in
+            .init(status: status, scope: .global)
+        }
+    }
+
+    internal func hydrateMcpServerSummaries(threadID: String) async -> [McpServerSummary] {
         do {
             let page = try await readMcpServerStatusPage(.init(threadID: threadID))
             threadMcpServerStatusPages[threadID] = page
-            return page.servers
+            return mcpServerSummaries(forThreadStatusPage: page)
         } catch {
-            return threadMcpServerStatusPages[threadID]?.servers ?? []
+            return threadMcpServerStatusPages[threadID]
+                .map(mcpServerSummaries(forThreadStatusPage:)) ?? []
         }
     }
 
@@ -656,6 +663,16 @@ public actor CodexAppServer {
             threadMcpServerStatusPages[threadID] = page
         } else {
             globalMcpServerStatusPage = page
+        }
+    }
+
+    private func mcpServerSummaries(forThreadStatusPage page: McpServerStatusPage) -> [McpServerSummary] {
+        let globalServerNames = Set(globalMcpServerStatusPage.servers.map(\.name))
+        return page.servers.map { status in
+            .init(
+                status: status,
+                scope: globalServerNames.contains(status.name) ? .global : .thread
+            )
         }
     }
 
@@ -708,7 +725,7 @@ public actor CodexAppServer {
             let session = ThreadSession(wireValue: response)
             threadStatuses[response.thread.id] = .init(wireValue: response.thread.status)
             try await requireHistoryStore(for: "thread/start").recordThreadStarted(session: session)
-            let mcpServers = await hydrateMcpServerStatuses(threadID: response.thread.id)
+            let mcpServers = await hydrateMcpServerSummaries(threadID: response.thread.id)
             publishLibraryEvent(.threadChanged(threadID: response.thread.id))
 
             return CodexThread(
@@ -756,7 +773,7 @@ public actor CodexAppServer {
                 }
             )
             try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
-            let mcpServers = await hydrateMcpServerStatuses(threadID: response.thread.id)
+            let mcpServers = await hydrateMcpServerSummaries(threadID: response.thread.id)
             publishLibraryEvent(.threadChanged(threadID: response.thread.id))
 
             return CodexThread(
@@ -803,7 +820,7 @@ public actor CodexAppServer {
                 }
             )
             try await historyStore.recordThreadArchived(threadID: response.thread.id, isArchived: false)
-            let mcpServers = await hydrateMcpServerStatuses(threadID: response.thread.id)
+            let mcpServers = await hydrateMcpServerSummaries(threadID: response.thread.id)
             publishLibraryEvent(.threadChanged(threadID: response.thread.id))
 
             return CodexThread(
@@ -2805,7 +2822,7 @@ public actor CodexAppServer {
             handleDiagnosticEvent(.init(wireValue: notification))
             _ = try? await refreshGlobalMcpServerStatusSnapshot()
             for threadID in Array(threadMcpServerStatusPages.keys) {
-                _ = await hydrateMcpServerStatuses(threadID: threadID)
+                _ = await hydrateMcpServerSummaries(threadID: threadID)
             }
             publishLibraryEvent(.appSnapshotsChanged)
         case let .configWarning(notification):

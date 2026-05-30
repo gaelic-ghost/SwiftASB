@@ -23,8 +23,13 @@ extension CodexAppServerTests {
         let thread = try await client.startThread()
         let dashboard = await thread.makeDashboard()
 
-        #expect(thread.mcpServers.map(\.name) == ["calendar"])
-        #expect(dashboard.mcpServers.map(\.name) == ["calendar"])
+        #expect(thread.mcpServers.map(\.name) == ["calendar", "thread_notes"])
+        #expect(thread.mcpServers.map(\.scope) == [.global, .thread])
+        #expect(thread.mcpServers.map(\.resourceCount) == [1, 0])
+        #expect(thread.mcpServers.map(\.resourceTemplateCount) == [1, 0])
+        #expect(thread.mcpServers.map(\.toolCount) == [1, 1])
+        #expect(dashboard.mcpServers.map(\.name) == ["calendar", "thread_notes"])
+        #expect(dashboard.mcpServers.map(\.scope) == [.global, .thread])
 
         let requests = await transport.requestPayloads(for: "mcpServerStatus/list")
         let lastPayload = try #require(requests.last)

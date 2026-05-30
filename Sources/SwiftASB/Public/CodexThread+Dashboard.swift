@@ -95,7 +95,7 @@ extension CodexThread {
         public private(set) var latestDiagnostic: CodexDiagnosticEvent?
         public private(set) var latestTokenUsage: CodexThreadTokenUsageUpdated?
         public private(set) var mcpCallingStatus: ActivityStatus
-        public private(set) var mcpServers: [CodexAppServer.McpServerStatus]
+        public private(set) var mcpServers: [CodexAppServer.McpServerSummary]
         public private(set) var name: String?
         public private(set) var preview: String
         public private(set) var status: CodexAppServer.ThreadStatus
@@ -114,7 +114,7 @@ extension CodexThread {
         internal init(
             threadID: String,
             initialInfo: CodexAppServer.ThreadInfo,
-            initialMcpServers: [CodexAppServer.McpServerStatus],
+            initialMcpServers: [CodexAppServer.McpServerSummary],
             events: AsyncThrowingStream<CodexThreadEvent, Error>,
             initialActivityState: ActivityState,
             activityUpdates: AsyncStream<ActivityState>

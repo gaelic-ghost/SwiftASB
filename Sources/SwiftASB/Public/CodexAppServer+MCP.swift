@@ -83,6 +83,23 @@ public extension CodexAppServer {
         public let tools: [String: McpTool]
     }
 
+    /// Lightweight MCP server summary for observable app and thread state.
+    struct McpServerSummary: Sendable, Equatable, Identifiable {
+        /// Scope SwiftASB inferred for a visible MCP server.
+        public enum Scope: String, Sendable, Equatable {
+            case global
+            case thread
+        }
+
+        public var id: String { "\(scope.rawValue):\(name)" }
+        public let authStatus: McpServerStatus.AuthStatus
+        public let name: String
+        public let resourceCount: Int
+        public let resourceTemplateCount: Int
+        public let scope: Scope
+        public let toolCount: Int
+    }
+
     /// MCP resource advertised by a server.
     struct McpResource: Sendable, Equatable {
         public let annotations: JSONValue?
@@ -138,6 +155,22 @@ extension CodexAppServer.McpServerStatus {
             resources: wireValue.resources.map(CodexAppServer.McpResource.init),
             resourceTemplates: wireValue.resourceTemplates.map(CodexAppServer.McpResourceTemplate.init),
             tools: wireValue.tools.mapValues(CodexAppServer.McpTool.init)
+        )
+    }
+}
+
+extension CodexAppServer.McpServerSummary {
+    init(
+        status: CodexAppServer.McpServerStatus,
+        scope: CodexAppServer.McpServerSummary.Scope
+    ) {
+        self.init(
+            authStatus: status.authStatus,
+            name: status.name,
+            resourceCount: status.resources.count,
+            resourceTemplateCount: status.resourceTemplates.count,
+            scope: scope,
+            toolCount: status.tools.count
         )
     }
 }

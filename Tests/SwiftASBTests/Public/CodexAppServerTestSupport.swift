@@ -258,50 +258,76 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 ]
             )
         case "mcpServerStatus/list":
+            let includesThreadScopedServer = try requestParam("threadId", from: requestPayload) is String
+            var servers: [[String: Any]] = [
+                [
+                    "authStatus": "oAuth",
+                    "name": "calendar",
+                    "resources": [
+                        [
+                            "_meta": ["source": "fixture"],
+                            "annotations": NSNull(),
+                            "description": "Today's events.",
+                            "icons": [],
+                            "mimeType": "application/json",
+                            "name": "today",
+                            "size": 128,
+                            "title": "Today",
+                            "uri": "calendar://events/today",
+                        ],
+                    ],
+                    "resourceTemplates": [
+                        [
+                            "annotations": NSNull(),
+                            "description": "Events by date.",
+                            "mimeType": "application/json",
+                            "name": "events-by-date",
+                            "title": "Events By Date",
+                            "uriTemplate": "calendar://events/{date}",
+                        ],
+                    ],
+                    "tools": [
+                        "list_events": [
+                            "_meta": ["source": "fixture"],
+                            "annotations": NSNull(),
+                            "description": "List calendar events.",
+                            "icons": [],
+                            "inputSchema": ["type": "object"],
+                            "name": "list_events",
+                            "outputSchema": ["type": "object"],
+                            "title": "List Events",
+                        ],
+                    ],
+                ],
+            ]
+
+            if includesThreadScopedServer {
+                servers.append(
+                    [
+                        "authStatus": "unsupported",
+                        "name": "thread_notes",
+                        "resources": [],
+                        "resourceTemplates": [],
+                        "tools": [
+                            "search_notes": [
+                                "_meta": ["source": "fixture"],
+                                "annotations": NSNull(),
+                                "description": "Search thread notes.",
+                                "icons": [],
+                                "inputSchema": ["type": "object"],
+                                "name": "search_notes",
+                                "outputSchema": NSNull(),
+                                "title": "Search Notes",
+                            ],
+                        ],
+                    ]
+                )
+            }
+
             return responsePayload(
                 id: id,
                 result: [
-                    "data": [
-                        [
-                            "authStatus": "oAuth",
-                            "name": "calendar",
-                            "resources": [
-                                [
-                                    "_meta": ["source": "fixture"],
-                                    "annotations": NSNull(),
-                                    "description": "Today's events.",
-                                    "icons": [],
-                                    "mimeType": "application/json",
-                                    "name": "today",
-                                    "size": 128,
-                                    "title": "Today",
-                                    "uri": "calendar://events/today",
-                                ],
-                            ],
-                            "resourceTemplates": [
-                                [
-                                    "annotations": NSNull(),
-                                    "description": "Events by date.",
-                                    "mimeType": "application/json",
-                                    "name": "events-by-date",
-                                    "title": "Events By Date",
-                                    "uriTemplate": "calendar://events/{date}",
-                                ],
-                            ],
-                            "tools": [
-                                "list_events": [
-                                    "_meta": ["source": "fixture"],
-                                    "annotations": NSNull(),
-                                    "description": "List calendar events.",
-                                    "icons": [],
-                                    "inputSchema": ["type": "object"],
-                                    "name": "list_events",
-                                    "outputSchema": ["type": "object"],
-                                    "title": "List Events",
-                                ],
-                            ],
-                        ],
-                    ],
+                    "data": servers,
                     "nextCursor": NSNull(),
                 ]
             )

@@ -94,7 +94,7 @@ Use ``CodexAppServer/Library/worktreeGroups`` when a sidebar needs repository/wo
 
 When `gitObservability` is enabled in ``SwiftASBFeaturePolicy``, selecting a library thread refreshes ``CodexAppServer/Library/selectedGitStatus`` for that worktree. The status snapshot combines Codex-reported branch, SHA, and origin metadata with sandboxed app-server `command/exec` facts for repository root, remotes, ahead/behind, and dirty/untracked counts.
 
-Use ``CodexAppServer/Library/refreshAppSnapshots()`` when the same app-wide UI needs model capabilities, MCP server status, and hook diagnostics. SwiftASB owns MCP status refresh and keeps ``CodexAppServer/Library/mcpServers`` current from startup and app-server status-change notifications; Library derives hook `cwd` requests from its stored thread snapshots unless configuration provides explicit hook current-directory paths.
+Use ``CodexAppServer/Library/refreshAppSnapshots()`` when the same app-wide UI needs model capabilities, MCP server summaries, and hook diagnostics. SwiftASB owns MCP status refresh and keeps ``CodexAppServer/Library/mcpServers`` current from startup and app-server status-change notifications; Library derives hook `cwd` requests from its stored thread snapshots unless configuration provides explicit hook current-directory paths.
 
 Recent companions keep caller-owned UI inputs mutable. For example, views can update selected file or command identifiers and visible item identifiers. SwiftASB uses that information to protect visible or selected payloads while slimming older low-value entries when the resident cache exceeds its budget.
 

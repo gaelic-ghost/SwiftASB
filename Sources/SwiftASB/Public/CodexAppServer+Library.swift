@@ -383,7 +383,7 @@ public extension CodexAppServer {
         public private(set) var latestGitStatusErrorDescription: String?
         public private(set) var latestSnapshotErrorDescription: String?
         public private(set) var latestErrorDescription: String?
-        public private(set) var mcpServers: [CodexAppServer.McpServerStatus]
+        public private(set) var mcpServers: [CodexAppServer.McpServerSummary]
         public private(set) var mcpServerNextCursor: String?
         public private(set) var modelCapabilities: CodexAppServer.ModelCapabilities?
         public private(set) var phase: ReconciliationPhase
@@ -630,7 +630,9 @@ public extension CodexAppServer {
 
             switch results.mcp {
             case let .success(page):
-                mcpServers = page.servers
+                mcpServers = page.servers.map { status in
+                    .init(status: status, scope: .global)
+                }
                 mcpServerNextCursor = page.nextCursor
             case let .failure(error):
                 errorDescriptions.append(error.localizedDescription)
