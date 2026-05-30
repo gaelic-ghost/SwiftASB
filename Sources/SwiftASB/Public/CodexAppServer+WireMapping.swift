@@ -226,7 +226,7 @@ extension CodexAppServer.TurnStartRequest {
             additionalContext: nil,
             approvalPolicy: approvalPolicy?.wireValue,
             approvalsReviewer: approvalsReviewer?.wireValue,
-            collaborationMode: nil,
+            collaborationMode: collaborationMode?.wireValue,
             cwd: currentDirectoryPath,
             effort: effort?.wireValue,
             environments: nil,
@@ -242,6 +242,30 @@ extension CodexAppServer.TurnStartRequest {
             summary: summary?.wireValue,
             threadID: threadID
         )
+    }
+}
+
+extension CodexAppServer.TurnCollaborationMode {
+    var wireValue: CodexWireCollaborationMode {
+        CodexWireCollaborationMode(
+            mode: kind.wireValue,
+            settings: .init(
+                developerInstructions: developerInstructions,
+                model: model,
+                reasoningEffort: reasoningEffort?.wireValue
+            )
+        )
+    }
+}
+
+extension CodexAppServer.TurnCollaborationMode.Kind {
+    var wireValue: CodexWireModeKind {
+        switch self {
+        case .defaultMode:
+            .modeKindDefault
+        case .plan:
+            .plan
+        }
     }
 }
 

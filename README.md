@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.5.0` is the current and latest release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.6.0` is the current and latest release.
 
 ### What This Project Is
 
@@ -38,7 +38,7 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.5.0"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.6.0"),
 ```
 
 Then add the library product to your target dependencies:
@@ -72,13 +72,19 @@ unparseable CLI installs.
 
 ## Usage
 
-Use SwiftASB when an app needs to show what Codex is doing right now, keep recent command and file activity visible, answer interactive requests, or build SwiftUI state around a running Codex turn.
+Use SwiftASB when an app needs to show what Codex is doing right now, keep plan and goal state visible, keep recent command and file activity visible, answer interactive requests, or build SwiftUI state around a running Codex turn.
 
 For app-wide capability and extension UI, `CodexAppServer.makeInventory()` provides observable model capabilities, global MCP summaries, hook diagnostics, apps, skills, plugins, and collaboration modes, with SwiftASB-owned refresh from app-server inventory notifications. For app-wide sidebars and launchers, `CodexAppServer.makeLibrary()` provides observable stored-thread lists, cwd or repository grouping, stable worktree groups, repository/worktree thread filters, refresh actions, library-local selection state, app-server-owned worktree snapshots, selected-worktree Git status, and optional app-wide model, MCP, and hook diagnostics snapshots beside thread lists. Thread handles can also name, archive, unarchive, compact, and roll back stored threads through thread-scoped methods.
 
 Use `CodexAppServer.fs` when a sandboxed client needs filesystem metadata, directory listings, file bytes, file discovery, fuzzy file lookup, or file-change watches through the Codex app-server instead of reading local disk directly. File-discovery hits include match kind, matched character ranges, and ranking reasons for picker highlighting and result explanations. `CodexWorkspace` carries app-server-owned worktree, Git, workspace permission selection, active permission-profile provenance, and runtime filesystem/network permission facts for started threads and turns. Use `CodexAppServer.config` for effective config reads, `CodexAppServer.mcp` for opinionated MCP installs plus explicit MCP detail reads, and `CodexAppServer.extensions` only when a caller intentionally owns direct extension pagination, plugin-detail inspection, or configured plugin-marketplace upgrades.
 
 Use `CodexAppServer.ThreadListQD`, `CodexFS.FileDiscoveryQD`, `CodexThread.HistoryWindowQD`, `CodexThread.RecentFilesQD`, and `CodexThread.RecentCommandsQD` when a client needs to preserve repeatable list, file-discovery, history-window, or recent-activity intent without depending on Core Data, SwiftData, direct filesystem reads, or raw app-server paging details.
+
+Use `CodexThread.makeAgenda()` when a SwiftUI surface needs the thread's current goal, latest accepted plan, proposed plan text, and summary titles without manually assembling raw plan deltas or reconciling goal reads with goal events.
+
+Use `CodexThread.startPlanningTurn(...)` when a mode button or segmented control should start the next turn in Codex plan mode without sending slash-command text through the prompt. Advanced callers can use `CodexAppServer.TurnCollaborationMode` directly on a turn-start request.
+
+Plan and goal controls are intentionally separate for now. The recommended workflow is to use plan mode first to shape complex or ambiguous work, then set a persistent goal from the accepted objective when the host app or user is ready to track execution. SwiftASB does not currently auto-create goals from plan prompts or auto-promote completed plans into goals.
 
 Use `CodexThread.startReview(against:placement:)` to start app-server code reviews from a thread. The public API uses hand-owned Swift subjects such as `.uncommittedChanges`, `.baseBranch("main")`, `.commit(sha:title:)`, and `.custom(instructions:)`; `placement: .inline` runs the review turn on the current thread, while `.detached` runs it on a returned review thread.
 

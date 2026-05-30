@@ -5,6 +5,7 @@ extension CodexAppServer {
     public struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: ApprovalPolicy?
         public var approvalsReviewer: ApprovalsReviewer?
+        public var collaborationMode: TurnCollaborationMode?
         public var currentDirectoryPath: String?
         public var effort: ReasoningEffort?
         public var input: [TurnInput]
@@ -26,6 +27,7 @@ extension CodexAppServer {
             input: [TurnInput],
             approvalPolicy: ApprovalPolicy? = nil,
             approvalsReviewer: ApprovalsReviewer? = nil,
+            collaborationMode: TurnCollaborationMode? = nil,
             currentDirectoryPath: String? = nil,
             effort: ReasoningEffort? = nil,
             model: String? = nil,
@@ -39,6 +41,7 @@ extension CodexAppServer {
             self.input = input
             self.approvalPolicy = approvalPolicy
             self.approvalsReviewer = approvalsReviewer
+            self.collaborationMode = collaborationMode
             self.currentDirectoryPath = currentDirectoryPath
             self.effort = effort
             self.model = model
@@ -47,6 +50,54 @@ extension CodexAppServer {
             self.personality = personality
             self.serviceTier = serviceTier
             self.summary = summary
+        }
+    }
+
+    /// Collaboration preset used for one turn.
+    ///
+    /// The app-server currently treats collaboration presets as experimental,
+    /// but plan mode is useful enough for SwiftASB to expose behind a small
+    /// Swift-owned value instead of asking callers to emulate slash commands.
+    public struct TurnCollaborationMode: Sendable, Equatable {
+        public enum Kind: String, Sendable, Equatable {
+            case defaultMode = "default"
+            case plan
+        }
+
+        public var developerInstructions: String?
+        public var kind: Kind
+        public var model: String
+        public var reasoningEffort: ReasoningEffort?
+
+        /// Creates a collaboration preset for a turn.
+        ///
+        /// `model` is required because the app-server collaboration-mode
+        /// settings require it. Thread helpers default this to the thread's
+        /// current model when a caller asks for plan mode.
+        public init(
+            kind: Kind,
+            model: String,
+            reasoningEffort: ReasoningEffort? = nil,
+            developerInstructions: String? = nil
+        ) {
+            self.kind = kind
+            self.model = model
+            self.reasoningEffort = reasoningEffort
+            self.developerInstructions = developerInstructions
+        }
+
+        /// Starts the turn in Codex plan mode.
+        public static func plan(
+            model: String,
+            reasoningEffort: ReasoningEffort? = nil,
+            developerInstructions: String? = nil
+        ) -> Self {
+            .init(
+                kind: .plan,
+                model: model,
+                reasoningEffort: reasoningEffort,
+                developerInstructions: developerInstructions
+            )
         }
     }
 

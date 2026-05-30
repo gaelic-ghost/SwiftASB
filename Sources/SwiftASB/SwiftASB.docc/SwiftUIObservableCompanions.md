@@ -1,12 +1,12 @@
 # SwiftUI Observable Companions
 
-Use dashboard, minimap, recent-file, and recent-command companions as current-state UI models.
+Use dashboard, agenda, minimap, recent-file, and recent-command companions as current-state UI models.
 
 ## Overview
 
 SwiftASB's observable companions are ready-made `@Observable` state objects for SwiftUI surfaces. They are current-state mirrors over live streams and local history; they are not replayable protocol logs.
 
-Use ``CodexAppServer/makeInventory(configuration:)`` for app-wide capability and extension inventory, ``CodexAppServer/makeLibrary(configuration:)`` for app-wide stored-thread lists, ``CodexThread/makeDashboard()`` for thread-level state, ``CodexTurnHandle/minimap`` for one active turn, and the recent companions for completed turn, file, and command views.
+Use ``CodexAppServer/makeInventory(configuration:)`` for app-wide capability and extension inventory, ``CodexAppServer/makeLibrary(configuration:)`` for app-wide stored-thread lists, ``CodexThread/makeDashboard()`` for thread-level status, ``CodexThread/makeAgenda()`` for goal and plan state, ``CodexTurnHandle/minimap`` for one active turn, and the recent companions for completed turn, file, and command views.
 
 ```swift
 import Observation
@@ -21,6 +21,7 @@ final class ThreadInspectorModel {
     var inventory: CodexAppServer.Inventory?
     var library: CodexAppServer.Library?
     var dashboard: CodexThread.Dashboard?
+    var agenda: CodexThread.Agenda?
     var recentFiles: CodexThread.RecentFiles?
     var recentCommands: CodexThread.RecentCommands?
     var currentMinimap: CodexTurnHandle.Minimap?
@@ -43,6 +44,7 @@ final class ThreadInspectorModel {
             )
             library?.sortedBy = .selectedNewestFirst
             dashboard = await thread.makeDashboard()
+            agenda = try await thread.makeAgenda()
             recentFiles = try await thread.makeRecentFiles(
                 limit: 20,
                 cachePolicy: .automatic(pageSize: 20)
@@ -83,6 +85,22 @@ final class ThreadInspectorModel {
             errorMessage = String(describing: error)
         }
     }
+
+    func plan(_ prompt: String) async {
+        do {
+            let turn = try await thread.startPlanningTurn(prompt)
+            currentMinimap = turn.minimap
+
+            for try await event in turn.events {
+                if case .completed = event {
+                    _ = try await turn.complete()
+                    return
+                }
+            }
+        } catch {
+            errorMessage = String(describing: error)
+        }
+    }
 }
 ```
 
@@ -97,6 +115,12 @@ Use ``CodexAppServer/Library/worktreeGroups`` when a sidebar needs repository/wo
 When `gitObservability` is enabled in ``SwiftASBFeaturePolicy``, selecting a library thread refreshes ``CodexAppServer/Library/selectedGitStatus`` for that worktree. The status snapshot combines Codex-reported branch, SHA, and origin metadata with sandboxed app-server `command/exec` facts for repository root, remotes, ahead/behind, and dirty/untracked counts.
 
 Use ``CodexAppServer/Inventory`` when an app-wide UI needs model capabilities, MCP server summaries, hook diagnostics, apps, skills, plugins, and collaboration modes without also needing stored-thread lists. Use ``CodexAppServer/Library/refreshAppSnapshots()`` when model, MCP, and hook snapshots should sit beside the thread library. SwiftASB owns MCP status refresh and keeps summary lists current from startup and app-server status-change notifications.
+
+Use ``CodexThread/Agenda`` when a UI wants to show the thread's current task target, current accepted plan, and proposed plan text while Codex is still shaping it. SwiftASB reads the current goal, listens for goal changes, accepts authoritative plan snapshots, and treats experimental plan deltas as agenda state instead of making app code assemble them.
+
+Use ``CodexThread/startPlanningTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)`` for explicit plan-mode UI controls. It sends the app-server collaboration-mode field rather than passing slash-command text as user input.
+
+Keep plan and goal actions explicit in host UI. A good default is a Plan control that runs a planning turn, a Goal editor that calls ``CodexThread/Agenda/setGoal(_:tokenBudget:)``, and a separate user-confirmed step that turns an accepted plan into a persistent goal if the app wants that workflow later.
 
 Recent companions keep caller-owned UI inputs mutable. For example, views can update selected file or command identifiers and visible item identifiers. SwiftASB uses that information to protect visible or selected payloads while slimming older low-value entries when the resident cache exceeds its budget.
 
@@ -116,6 +140,8 @@ Store the companion object itself in your view model. Do not copy its arrays int
 - ``CodexAppServer/Inventory``
 - ``CodexThread/makeDashboard()``
 - ``CodexThread/Dashboard``
+- ``CodexThread/makeAgenda()``
+- ``CodexThread/Agenda``
 
 ### Active Turn State
 

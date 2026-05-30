@@ -186,6 +186,7 @@ public struct CodexThread: Sendable {
     public struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: CodexAppServer.ApprovalPolicy?
         public var approvalsReviewer: CodexAppServer.ApprovalsReviewer?
+        public var collaborationMode: CodexAppServer.TurnCollaborationMode?
         public var currentDirectoryPath: String?
         public var effort: CodexAppServer.ReasoningEffort?
         public var input: [CodexAppServer.TurnInput]
@@ -205,6 +206,7 @@ public struct CodexThread: Sendable {
             input: [CodexAppServer.TurnInput],
             approvalPolicy: CodexAppServer.ApprovalPolicy? = nil,
             approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil,
+            collaborationMode: CodexAppServer.TurnCollaborationMode? = nil,
             currentDirectoryPath: String? = nil,
             effort: CodexAppServer.ReasoningEffort? = nil,
             model: String? = nil,
@@ -217,6 +219,7 @@ public struct CodexThread: Sendable {
             self.input = input
             self.approvalPolicy = approvalPolicy
             self.approvalsReviewer = approvalsReviewer
+            self.collaborationMode = collaborationMode
             self.currentDirectoryPath = currentDirectoryPath
             self.effort = effort
             self.model = model
@@ -351,6 +354,7 @@ public struct CodexThread: Sendable {
                 input: request.input,
                 approvalPolicy: request.approvalPolicy,
                 approvalsReviewer: request.approvalsReviewer,
+                collaborationMode: request.collaborationMode,
                 currentDirectoryPath: request.currentDirectoryPath,
                 effort: request.effort,
                 model: request.model,
@@ -370,6 +374,7 @@ public struct CodexThread: Sendable {
         _ text: String,
         approvalPolicy: CodexAppServer.ApprovalPolicy? = nil,
         approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil,
+        collaborationMode: CodexAppServer.TurnCollaborationMode? = nil,
         currentDirectoryPath: String? = nil,
         effort: CodexAppServer.ReasoningEffort? = nil,
         model: String? = nil,
@@ -384,6 +389,7 @@ public struct CodexThread: Sendable {
                 input: [.text(text)],
                 approvalPolicy: approvalPolicy,
                 approvalsReviewer: approvalsReviewer,
+                collaborationMode: collaborationMode,
                 currentDirectoryPath: currentDirectoryPath,
                 effort: effort,
                 model: model,
@@ -393,6 +399,43 @@ public struct CodexThread: Sendable {
                 serviceTier: serviceTier,
                 summary: summary
             )
+        )
+    }
+
+    /// Starts a plan-mode turn containing one text input item.
+    ///
+    /// This is the SwiftASB equivalent of a mode button for Codex planning: it
+    /// uses the app-server's collaboration-mode field instead of sending slash
+    /// command text through the prompt.
+    public func startPlanningTurn(
+        _ text: String,
+        approvalPolicy: CodexAppServer.ApprovalPolicy? = nil,
+        approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil,
+        currentDirectoryPath: String? = nil,
+        effort: CodexAppServer.ReasoningEffort? = nil,
+        model: String? = nil,
+        outputSchema: CodexAppServer.JSONValue? = nil,
+        permissions: CodexWorkspace.PermissionSelection? = nil,
+        personality: CodexAppServer.Personality? = nil,
+        serviceTier: CodexAppServer.ServiceTier? = nil,
+        summary: CodexAppServer.ReasoningSummary? = nil
+    ) async throws -> CodexTurnHandle {
+        try await startTextTurn(
+            text,
+            approvalPolicy: approvalPolicy,
+            approvalsReviewer: approvalsReviewer,
+            collaborationMode: .plan(
+                model: model ?? self.model,
+                reasoningEffort: effort ?? reasoningEffort
+            ),
+            currentDirectoryPath: currentDirectoryPath,
+            effort: effort,
+            model: model,
+            outputSchema: outputSchema,
+            permissions: permissions,
+            personality: personality,
+            serviceTier: serviceTier,
+            summary: summary
         )
     }
 
@@ -420,6 +463,7 @@ public struct CodexThread: Sendable {
     @MainActor
     public func makeDashboard() async -> Dashboard {
         let events = await appServer.threadEventStream(threadID: id)
+        let turnEvents = await appServer.threadTurnEventStream(threadID: id)
         let initialActivityState = await appServer.threadObservableActivityState(threadID: id)
         let activityUpdates = await appServer.threadObservableActivityStream(threadID: id)
         return Dashboard(
@@ -427,8 +471,28 @@ public struct CodexThread: Sendable {
             initialInfo: info,
             initialMcpServers: mcpServers,
             events: events,
+            turnEvents: turnEvents,
             initialActivityState: initialActivityState,
             activityUpdates: activityUpdates
+        )
+    }
+
+    /// Creates an observable agenda for this thread.
+    ///
+    /// The agenda owns current goal hydration plus live goal and plan updates.
+    /// Use it for plan and goal UI instead of assembling raw turn-plan deltas
+    /// or manually reconciling goal reads with thread events.
+    @MainActor
+    public func makeAgenda() async throws -> Agenda {
+        let threadEvents = await appServer.threadEventStream(threadID: id)
+        let turnEvents = await appServer.threadTurnEventStream(threadID: id)
+        let initialGoal = try await appServer.readThreadGoal(threadID: id)
+        return Agenda(
+            threadID: id,
+            initialGoal: initialGoal,
+            appServer: appServer,
+            threadEvents: threadEvents,
+            turnEvents: turnEvents
         )
     }
 

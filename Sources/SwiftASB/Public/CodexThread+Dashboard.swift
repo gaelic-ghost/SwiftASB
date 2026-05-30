@@ -91,12 +91,13 @@ extension CodexThread {
         public private(set) var isArchived: Bool
         public private(set) var isClosed: Bool
         public private(set) var isCompactingThreadContext: Bool
-        public private(set) var goal: Goal?
+        public private(set) var goalTitle: String
         public private(set) var latestDiagnostic: CodexDiagnosticEvent?
         public private(set) var latestTokenUsage: CodexThreadTokenUsageUpdated?
         public private(set) var mcpCallingStatus: ActivityStatus
         public private(set) var mcpServers: [CodexAppServer.McpServerSummary]
         public private(set) var name: String?
+        public private(set) var planTitle: String
         public private(set) var preview: String
         public private(set) var status: CodexAppServer.ThreadStatus
         public private(set) var toolCallingStatus: ActivityStatus
@@ -104,6 +105,9 @@ extension CodexThread {
 
         @ObservationIgnored
         private var eventTask: Task<Void, Never>?
+
+        @ObservationIgnored
+        private var turnEventTask: Task<Void, Never>?
 
         @ObservationIgnored
         private var activityTask: Task<Void, Never>?
@@ -116,6 +120,7 @@ extension CodexThread {
             initialInfo: CodexAppServer.ThreadInfo,
             initialMcpServers: [CodexAppServer.McpServerSummary],
             events: AsyncThrowingStream<CodexThreadEvent, Error>,
+            turnEvents: AsyncThrowingStream<CodexTurnEvent, Error>,
             initialActivityState: ActivityState,
             activityUpdates: AsyncStream<ActivityState>
         ) {
@@ -123,10 +128,11 @@ extension CodexThread {
             self.isArchived = false
             self.isClosed = false
             self.latestDiagnostic = nil
-            self.goal = nil
+            self.goalTitle = ""
             self.latestTokenUsage = nil
             self.mcpServers = initialMcpServers
             self.name = initialInfo.name
+            self.planTitle = ""
             self.preview = initialInfo.preview
             self.status = initialInfo.status
             self.activityState = initialActivityState
@@ -155,6 +161,20 @@ extension CodexThread {
                 }
             }
 
+            turnEventTask = Task { [weak self] in
+                guard let self else { return }
+
+                do {
+                    for try await event in turnEvents {
+                        self.apply(event)
+                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    return
+                }
+            }
+
             activityTask = Task { [weak self] in
                 guard let self else { return }
 
@@ -166,6 +186,7 @@ extension CodexThread {
 
         deinit {
             eventTask?.cancel()
+            turnEventTask?.cancel()
             activityTask?.cancel()
         }
 
@@ -196,9 +217,31 @@ extension CodexThread {
             case let .tokenUsageUpdated(update):
                 latestTokenUsage = update
             case let .goalUpdated(update):
-                goal = update.goal
+                goalTitle = update.goal.objective
             case .goalCleared:
-                goal = nil
+                goalTitle = ""
+            }
+        }
+
+        private func apply(_ event: CodexTurnEvent) {
+            switch event {
+            case let .planUpdated(update):
+                planTitle = Self.planTitle(from: update)
+            case .started,
+                .planDelta,
+                .diffUpdated,
+                .diagnostic,
+                .approvalRequested,
+                .elicitationRequested,
+                .serverRequestResolved,
+                .itemStarted,
+                .itemCompleted,
+                .agentMessageDelta,
+                .reasoningSummaryPartAdded,
+                .reasoningSummaryTextDelta,
+                .reasoningTextDelta,
+                .completed:
+                return
             }
         }
 
@@ -231,6 +274,19 @@ extension CodexThread {
                 return .errored
             }
             return .idle
+        }
+
+        private static func planTitle(from update: CodexTurnPlanUpdate) -> String {
+            if let activeStep = update.plan.first(where: { $0.status == .inProgress }) {
+                return activeStep.step
+            }
+            if let pendingStep = update.plan.first(where: { $0.status == .pending }) {
+                return pendingStep.step
+            }
+            if let firstStep = update.plan.first {
+                return firstStep.step
+            }
+            return update.explanation ?? ""
         }
     }
 

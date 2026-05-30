@@ -25,7 +25,11 @@ Use ``setName(_:)`` for a human-readable title, ``updateMetadata(gitInfo:)`` for
 
 Rollback returns a refreshed thread handle. SwiftASB records a local rollback marker and trims visible local history to match the app-server response. It does not preserve the full removed-turn payload archive yet.
 
-Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` for the app-server goal attached to this thread.
+Use ``startPlanningTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)`` when a mode button or segmented control should start the next turn in Codex plan mode without sending slash-command text through the prompt.
+
+Use ``makeAgenda()`` when a UI wants current goal and plan state for this thread. Agenda also exposes UI-friendly goal actions. Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` when a non-UI caller needs direct goal reads or mutation.
+
+Plan and goal actions are separate controls. Use plan mode first to shape complex or ambiguous work, then set a goal from the accepted objective when a user or host app is ready to track execution. SwiftASB does not currently auto-create goals from plan prompts or auto-promote completed plans into goals.
 
 Use ``startReview(against:placement:)`` to ask the app-server to review repository state associated with this thread. The `against` subject can be uncommitted changes, a base branch, one commit, or custom instructions. ``ReviewPlacement/inline`` runs the review turn on this thread. ``ReviewPlacement/detached`` runs the review turn on a new review thread returned in ``CodexReviewHandle/reviewThreadID``.
 
@@ -43,7 +47,7 @@ Use the non-UI history helpers when a caller needs completed turn snapshots with
 
 ## Observable Companions
 
-Use ``makeDashboard()`` for thread-level current state, ``makeRecentTurns(limit:cachePolicy:)`` for a turn-centric view, ``makeRecentFiles(limit:cachePolicy:)`` or ``makeRecentFiles(_:)`` for a file-change view, and ``makeRecentCommands(limit:cachePolicy:)`` or ``makeRecentCommands(_:)`` for a command-output view.
+Use ``makeDashboard()`` for thread-level current status, ``makeAgenda()`` for current goal and plan state, ``makeRecentTurns(limit:cachePolicy:)`` for a turn-centric view, ``makeRecentFiles(limit:cachePolicy:)`` or ``makeRecentFiles(_:)`` for a file-change view, and ``makeRecentCommands(limit:cachePolicy:)`` or ``makeRecentCommands(_:)`` for a command-output view.
 
 These companions are separate on purpose. `RecentTurns`, `RecentFiles`, and `RecentCommands` preserve domain-specific behavior that a mixed activity feed would flatten too early.
 
@@ -67,8 +71,6 @@ Recent observable startup can begin as an empty local-only view when the live ap
 - ``instructionSources``
 - ``model``
 - ``modelProvider``
-- ``projectInfo``
-- ``info/source``
 - ``activePermissionProfile``
 - ``permissionProfile``
 - ``reasoningEffort``
@@ -80,7 +82,8 @@ Recent observable startup can begin as an empty local-only view when the live ap
 ### Turns
 
 - ``startTurn(_:)``
-- ``startTextTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
+- ``startTextTurn(_:approvalPolicy:approvalsReviewer:collaborationMode:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
+- ``startPlanningTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:effort:model:outputSchema:permissions:personality:serviceTier:summary:)``
 - ``startReview(against:placement:)``
 - ``TurnStartRequest``
 - ``ReviewSubject``
@@ -121,6 +124,8 @@ Recent observable startup can begin as an empty local-only view when the live ap
 
 - ``makeDashboard()``
 - ``Dashboard``
+- ``makeAgenda()``
+- ``Agenda``
 - ``makeRecentTurns(limit:cachePolicy:)``
 - ``RecentTurns``
 - ``makeRecentFiles(limit:cachePolicy:)``
