@@ -589,7 +589,8 @@ public actor CodexAppServer {
                 params: .init(
                     cursor: request.cursor,
                     detail: request.detail?.wireValue,
-                    limit: request.limit
+                    limit: request.limit,
+                    threadID: nil
                 )
             )
             let responsePayload = try await transport.send(requestPayload, id: requestID)

@@ -223,6 +223,7 @@ extension CodexAppServer.ThreadForkRequest {
 extension CodexAppServer.TurnStartRequest {
     var wireValue: CodexWireTurnStartParams {
         CodexWireTurnStartParams(
+            additionalContext: nil,
             approvalPolicy: approvalPolicy?.wireValue,
             approvalsReviewer: approvalsReviewer?.wireValue,
             collaborationMode: nil,

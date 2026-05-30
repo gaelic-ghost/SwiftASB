@@ -636,7 +636,8 @@ struct CodexAppServerProtocolTests {
             params: .init(
                 cursor: "cursor-start",
                 detail: .toolsAndAuthOnly,
-                limit: 10
+                limit: 10,
+                threadID: nil
             )
         )
 
@@ -749,6 +750,7 @@ struct CodexAppServerProtocolTests {
         let payload = try protocolLayer.makeTurnStartRequest(
             id: .string("turn-1"),
             params: CodexWireTurnStartParams(
+                additionalContext: nil,
                 approvalPolicy: .enumeration(.onFailure),
                 approvalsReviewer: .guardianSubagent,
                 collaborationMode: nil,
