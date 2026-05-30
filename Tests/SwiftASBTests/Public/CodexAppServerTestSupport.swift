@@ -54,6 +54,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var commandExecResult: [String: Any]
     private var commandExecResultQueue: [[String: Any]]
     private var appSnapshotResponseDelayNanoseconds: UInt64 = 0
+    private var appSnapshotFailureMethods: Set<String> = []
     private let resolvedExecutable: CodexCLIExecutableResolver.Resolution?
     private let startError: CodexTransportError?
     private var started = false
@@ -110,6 +111,10 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         appSnapshotResponseDelayNanoseconds = nanoseconds
     }
 
+    func setAppSnapshotFailureMethods(_ methods: Set<String>) {
+        appSnapshotFailureMethods = methods
+    }
+
     func requestPayloads(for method: String) -> [Data] {
         recordedRequestPayloads[method] ?? []
     }
@@ -143,6 +148,14 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
         if Self.isAppSnapshotRequest(method) {
             try await Task.sleep(nanoseconds: appSnapshotResponseDelayNanoseconds)
+        }
+
+        if appSnapshotFailureMethods.contains(method) {
+            return errorPayload(
+                id: id,
+                code: -32000,
+                message: "Injected \(method) failure for SwiftASB tests."
+            )
         }
 
         switch method {
@@ -1864,6 +1877,30 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
     }
 
+    func emitSkillsChanged() {
+        let payload = payloadObject([:])
+
+        serverEventContinuation?.yield(
+            .notification(method: "skills/changed", payload: payload)
+        )
+    }
+
+    func emitMcpServerStatusUpdated(
+        name: String = "calendar",
+        status: String = "ready",
+        error: String? = nil
+    ) {
+        let payload = payloadObject([
+            "error": error ?? NSNull(),
+            "name": name,
+            "status": status,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "mcpServer/status/updated", payload: payload)
+        )
+    }
+
     func emitCommandExecutionOutputDelta(
         threadID: String,
         turnID: String,
@@ -1964,6 +2001,10 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         method == "modelProvider/capabilities/read"
             || method == "mcpServerStatus/list"
             || method == "hooks/list"
+            || method == "app/list"
+            || method == "skills/list"
+            || method == "plugin/list"
+            || method == "collaborationMode/list"
     }
 
     private func responsePayload(id: CodexRPCRequestID, result: [String: Any]) -> Data {

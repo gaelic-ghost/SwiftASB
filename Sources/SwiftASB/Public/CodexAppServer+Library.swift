@@ -1,16 +1,6 @@
 import Foundation
 import Observation
 
-private func snapshotResult<Value: Sendable>(
-    _ operation: @Sendable () async throws -> Value
-) async -> Result<Value, Error> {
-    do {
-        return .success(try await operation())
-    } catch {
-        return .failure(error)
-    }
-}
-
 extension CodexAppServer {
     internal enum LibraryEvent: Sendable, Equatable {
         case appSnapshotsChanged
@@ -602,53 +592,32 @@ public extension CodexAppServer {
             let hookCurrentDirectoryPaths = resolvedHookListCurrentDirectoryPaths()
             snapshotCurrentDirectoryPaths = hookCurrentDirectoryPaths
 
-            async let capabilitiesResult = snapshotResult {
-                try await appServer.readModelCapabilities()
-            }
-            async let mcpResult = snapshotResult {
-                try await appServer.refreshGlobalMcpServerStatusSnapshot()
-            }
-            async let hooksResult = snapshotResult {
-                try await appServer.listHooks(
-                    .init(currentDirectoryPaths: hookCurrentDirectoryPaths)
+            let snapshot = await appServer.readAppInventorySnapshot(
+                .init(
+                    hookListCurrentDirectoryPaths: hookCurrentDirectoryPaths,
+                    includesExtensions: false
                 )
-            }
-
-            let results = await (
-                capabilities: capabilitiesResult,
-                mcp: mcpResult,
-                hooks: hooksResult
             )
 
-            var errorDescriptions: [String] = []
-            switch results.capabilities {
-            case let .success(capabilities):
+            if let capabilities = snapshot.modelCapabilities {
                 modelCapabilities = capabilities
-            case let .failure(error):
-                errorDescriptions.append(error.localizedDescription)
             }
 
-            switch results.mcp {
-            case let .success(page):
+            if let page = snapshot.mcpServerStatusPage {
                 mcpServers = page.servers.map { status in
                     .init(status: status, scope: .global)
                 }
                 mcpServerNextCursor = page.nextCursor
-            case let .failure(error):
-                errorDescriptions.append(error.localizedDescription)
             }
 
-            switch results.hooks {
-            case let .success(snapshot):
-                hookListSnapshot = snapshot
-            case let .failure(error):
-                errorDescriptions.append(error.localizedDescription)
+            if let hookListSnapshot = snapshot.hookListSnapshot {
+                self.hookListSnapshot = hookListSnapshot
             }
 
-            lastSnapshotsReadAt = errorDescriptions.isEmpty ? Date() : lastSnapshotsReadAt
-            latestSnapshotErrorDescription = errorDescriptions.isEmpty
+            lastSnapshotsReadAt = snapshot.succeededCompletely ? Date() : lastSnapshotsReadAt
+            latestSnapshotErrorDescription = snapshot.succeededCompletely
                 ? nil
-                : errorDescriptions.joined(separator: "\n")
+                : snapshot.errorDescriptions.joined(separator: "\n")
             snapshotPhase = .idle
         }
 
