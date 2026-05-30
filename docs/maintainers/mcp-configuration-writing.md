@@ -16,12 +16,15 @@ the official Codex configuration reference and live config schema:
 MCP service reads are already owned by SwiftASB:
 
 - `CodexAppServer.mcpServerStatusSnapshot()` keeps the full app-wide status
-  catalog for inspector-style callers.
-- `CodexAppServer.Library.mcpServers` publishes global-only
-  `McpServerSummary` values for app-wide observable UI.
+  catalog for compatibility and inspector-style callers. `CodexMCP.statusSnapshot()`
+  is the preferred MCP-owned route to the same cached detail.
+- `CodexAppServer.Inventory.mcpServers` and `CodexAppServer.Library.mcpServers`
+  publish global-only `McpServerSummary` values for app-wide observable UI.
 - `CodexThread.mcpServers` and `CodexThread.Dashboard.mcpServers` publish the
   effective MCP services visible to a thread, with global services appended by
   the app-server status response.
+- `CodexAppServer.mcp.readResource(...)` is the preferred MCP-owned helper for
+  reading one advertised MCP resource.
 - `CodexAppServer.mcp.install(_:)` writes user-level MCP server definitions
   through app-server `config/batchWrite`, reloads user config, and refreshes
   SwiftASB's global MCP status snapshot.

@@ -1008,17 +1008,18 @@ history store. They are UI state over the existing thread value snapshots.
 
 ### App snapshot policy
 
-`Library` can publish app-wide read snapshots for UI that needs connection
-state next to stored threads:
+`Inventory` is the preferred observable for UI that needs connection state
+without stored-thread lists. `Library` can publish a smaller app-wide read
+snapshot when that same state needs to sit beside stored threads:
 
 - model capabilities from `CodexAppServer.readModelCapabilities()`
-- MCP server status from SwiftASB's owned `CodexAppServer.mcpServerStatusSnapshot()`
+- MCP summaries from SwiftASB's owned MCP status cache
 - hook diagnostics from `CodexAppServer.listHooks(...)`
 
 These snapshots are read-through app-server state. They do not go through Core
-Data, and they are not reconciled with thread history. The library owns a
-separate snapshot phase, timestamp, and error field so thread-list
-reconciliation and app-wide capability reads can fail or refresh independently.
+Data, and they are not reconciled with thread history. Inventory and Library
+own separate phase, timestamp, and error fields so thread-list reconciliation
+and app-wide capability reads can fail or refresh independently.
 
 Hook diagnostics are cwd-sensitive. Unless a library configuration provides
 explicit hook current-directory paths, the library derives hook `cwds` from its

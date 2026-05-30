@@ -247,10 +247,11 @@ Use these decisions for every public symbol:
   Decision: the stream is stable and now uses the stream-shaped
   `diagnosticEvents()` name.
 - [x] Review `listModels(_:)` and MCP status as app-wide capability surfaces.
-  Decision: keep model listing public, but make MCP status SwiftASB-owned state
-  through `mcpServerStatusSnapshot()` and Library snapshots. Keep
-  `listMcpServerStatuses(_:)` compatibility-only while consumers move away from
-  raw MCP list requests.
+  Decision: keep model listing public, make routine app-wide state observable
+  through `CodexAppServer.Inventory`, keep MCP summaries in observable
+  companions, and expose MCP detail reads through `CodexAppServer.mcp`.
+  Keep `listMcpServerStatuses(_:)` compatibility-only while consumers move
+  away from raw MCP list requests.
 - [x] Review whether `CodexAppServer.swift` should keep all nested app-server
   request/result/domain values, or split more values into dedicated files.
   Decision: split by responsibility before v1; no new owners were introduced.
@@ -474,10 +475,13 @@ Use these decisions for every public symbol:
   app-server read paths.
 - [x] Record the config and extension-inventory namespace decision.
   Decision: `CodexConfig` owns app-server-routed effective-config and
-  requirements reads. `CodexAppServer.CodexExtensions` owns app-server-routed
-  app, skill, plugin, and collaboration-mode inventory. Mutation-oriented
-  plugin, marketplace, skill-config, and config-write APIs remain unpromoted
-  until SwiftASB owns a clear user-review and permission model for them.
+  requirements reads. `CodexAppServer.Inventory` owns routine observable app,
+  skill, plugin, and collaboration-mode inventory. `CodexAppServer.CodexExtensions`
+  remains the direct app-server-routed escape hatch for custom pagination,
+  selected plugin-detail reads, and the narrow marketplace-upgrade maintenance
+  action. Mutation-oriented plugin, marketplace, skill-config, and config-write
+  APIs remain unpromoted until SwiftASB owns a clear user-review and permission
+  model for them.
 - [x] Record the thread-goal promotion.
   Decision: thread goals are thread-scoped public API on `CodexThread`, with
   read, set, clear, and matching thread-event cases. The app-server goal model
@@ -515,9 +519,9 @@ Use these decisions for every public symbol:
   Decision: README, DocC, and this audit now describe the same narrow v1
   promise: app-server lifecycle, app-wide capability reads, stored-thread
   operations, turn control, approval/elicitation handling, diagnostics, local
-  history, observable companions, and selected thread-management actions, while
-  generated wire models and broader app-server feature families stay internal
-  or post-v1.
+  history, observable companions, selected thread-management actions, and
+  opinionated MCP/config helpers, while generated wire models and broader
+  app-server feature families stay internal or post-v1.
 
 ## Initial Risk Notes
 

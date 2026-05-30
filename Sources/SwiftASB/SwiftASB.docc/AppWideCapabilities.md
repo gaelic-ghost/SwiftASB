@@ -13,16 +13,30 @@ Use ``CodexAppServer/makeLibrary(configuration:)`` when these same model, MCP, a
 Use ``CodexAppServer/listModels(_:)``, ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listHooks(_:)``, and ``CodexAppServer/extensions`` as direct escape hatches when the caller intentionally owns pagination, one-off reads, or custom refresh timing. Use ``CodexMCP/statusSnapshot()`` to inspect SwiftASB's latest full MCP server catalog, including resources, resource templates, and tools. Use ``CodexMCP/readResource(server:uri:threadID:)`` to read one advertised MCP resource. ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` is the narrow maintenance mutation in this app-wide family: it upgrades an already-configured plugin marketplace through app-server `command/exec` and reports the operation through ``CodexAppServer/featureOperationEvents()``.
 
 ```swift
+let inventory = try await appServer.makeInventory()
+
+let modelCapabilities = inventory.modelCapabilities
+let globalMCPServers = inventory.mcpServers
+let hooks = inventory.hookListSnapshot
+let apps = inventory.apps
+let skills = inventory.skillEntries
+let pluginMarketplaces = inventory.pluginMarketplaces
+let collaborationModes = inventory.collaborationModes
+```
+
+When a caller intentionally owns one-off reads or inspector detail, use the
+direct app-wide surfaces:
+
+```swift
 let models = try await appServer.listModels(
     .init(limit: 50, includeHidden: false)
 )
 
-let modelCapabilities = try await appServer.readModelCapabilities()
+let statuses = await appServer.mcp.statusSnapshot()
 
-let statuses = await appServer.mcpServerStatusSnapshot()
-
-let resource = try await appServer.readMcpResource(
-    .init(server: "docs", uri: "docs://swiftasb/current")
+let resource = try await appServer.mcp.readResource(
+    server: "docs",
+    uri: "docs://swiftasb/current"
 )
 
 let hooks = try await appServer.listHooks(

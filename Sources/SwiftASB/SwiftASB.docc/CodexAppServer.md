@@ -39,15 +39,15 @@ Use ``featureOperationEvents()`` to observe human-readable SwiftASB feature-oper
 
 ## App-Wide Capabilities
 
-Use ``listModels(_:)``, ``mcpServerStatusSnapshot()``, ``readMcpResource(_:)``, and ``listHooks(_:)`` for connection-wide snapshots. They do not belong to a single thread because they describe the app-server's current model catalog, SwiftASB's latest MCP server surface, MCP resource contents, and configured hook diagnostics.
+Use ``makeInventory(configuration:)`` when a GUI or CLI client needs observable app-wide catalogs and diagnostics without wiring every read request itself. Inventory publishes model capabilities, global MCP summaries, hook diagnostics, apps, skills, plugins, and collaboration modes, and refreshes from app-server inventory notifications.
+
+Use ``listModels(_:)``, ``mcp``, ``extensions``, and ``listHooks(_:)`` for direct connection-wide reads when a caller intentionally owns pagination, one-off refresh timing, or inspector-style detail. These requests do not belong to a single thread because they describe the app-server's current model catalog, SwiftASB's latest MCP server surface, MCP resource contents, configured hook diagnostics, and extension catalogs.
 
 Use ``fs`` when a client needs filesystem metadata, direct directory entries, file bytes, or file-change watches through the app-server. This keeps sandboxed apps dependent on Codex-owned permissions and path handling instead of requiring the Swift process to read local disk directly.
 
 Use ``CodexWorkspace`` values when starting or resuming a thread with a named permissions profile, or when a UI needs to display the active permissions profile and exact filesystem/network permission facts Codex reported for the session.
 
 Use ``config`` to read effective app-server configuration and requirements policy without opening local config files from the Swift process.
-
-Use ``makeInventory(configuration:)`` when a GUI or CLI client needs observable app-wide catalogs and diagnostics without wiring every read request itself. Inventory publishes model capabilities, global MCP summaries, hook diagnostics, apps, skills, plugins, and collaboration modes, and refreshes from app-server inventory notifications.
 
 Use ``extensions`` for direct app, skill, plugin, and collaboration-mode reads when a caller intentionally owns pagination, custom refresh timing, or one selected plugin detail.
 
