@@ -678,7 +678,9 @@ public actor CodexAppServer {
         }
     }
 
-    func installMCPServer(_ definition: CodexMCP.ServerDefinition) async throws -> CodexMCP.InstallResult {
+    func installMCPServer(
+        _ definition: SwiftASB.CodexExtensions.MCP.ServerDefinition
+    ) async throws -> SwiftASB.CodexExtensions.MCP.InstallResult {
         try requireInitialized(for: "config/batchWrite")
         try validateMCPServerName(definition.name)
 
@@ -1420,8 +1422,8 @@ public actor CodexAppServer {
     }
 
     func listExtensionApps(
-        _ request: CodexExtensions.AppListRequest
-    ) async throws -> CodexExtensions.AppListPage {
+        _ request: SwiftASB.CodexExtensions.AppListRequest
+    ) async throws -> SwiftASB.CodexExtensions.AppListPage {
         try requireInitialized(for: "app/list")
 
         let requestID = CodexRPCRequestID.generated()
@@ -1449,8 +1451,8 @@ public actor CodexAppServer {
     }
 
     func listExtensionSkills(
-        _ request: CodexExtensions.SkillListRequest
-    ) async throws -> CodexExtensions.SkillListSnapshot {
+        _ request: SwiftASB.CodexExtensions.SkillListRequest
+    ) async throws -> SwiftASB.CodexExtensions.SkillListSnapshot {
         try requireInitialized(for: "skills/list")
         if request.perCurrentDirectoryExtraUserRoots != nil {
             throw CodexAppServerError.invalidState(
@@ -1481,8 +1483,8 @@ public actor CodexAppServer {
     }
 
     func listExtensionPlugins(
-        _ request: CodexExtensions.PluginListRequest
-    ) async throws -> CodexExtensions.PluginListSnapshot {
+        _ request: SwiftASB.CodexExtensions.PluginListRequest
+    ) async throws -> SwiftASB.CodexExtensions.PluginListSnapshot {
         try requireInitialized(for: "plugin/list")
 
         let requestID = CodexRPCRequestID.generated()
@@ -1505,8 +1507,8 @@ public actor CodexAppServer {
     }
 
     func readExtensionPlugin(
-        _ request: CodexExtensions.PluginReadRequest
-    ) async throws -> CodexExtensions.PluginDetail {
+        _ request: SwiftASB.CodexExtensions.PluginReadRequest
+    ) async throws -> SwiftASB.CodexExtensions.PluginDetail {
         try requireInitialized(for: "plugin/read")
 
         let requestID = CodexRPCRequestID.generated()
@@ -1532,7 +1534,7 @@ public actor CodexAppServer {
         }
     }
 
-    func listExtensionCollaborationModes() async throws -> CodexExtensions.CollaborationModeList {
+    func listExtensionCollaborationModes() async throws -> SwiftASB.CodexExtensions.CollaborationModeList {
         try requireInitialized(for: "collaborationMode/list")
 
         let requestID = CodexRPCRequestID.generated()

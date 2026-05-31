@@ -1,4 +1,4 @@
-# ``CodexAppServer/Inventory``
+# ``CodexExtensions/Inventory``
 
 Observe app-wide Codex catalogs and diagnostics without issuing every list request yourself.
 
@@ -11,7 +11,7 @@ app-server, then publishes compact Swift values for SwiftUI and other
 state-driven clients.
 
 ```swift
-let inventory = try await appServer.makeInventory(
+let inventory = try await appServer.extensions.makeInventory(
     configuration: .init(
         hookListCurrentDirectoryPaths: [workspaceURL.path],
         extensionCurrentDirectoryPaths: [workspaceURL.path]
@@ -27,7 +27,7 @@ By default, Inventory loads once when it is created and refreshes again when the
 app-server reports app-list, skill, or MCP-server status changes. Use
 ``refresh()`` for an explicit reload.
 
-Direct methods on ``CodexAppServer/CodexExtensions`` remain available for
+Direct methods on ``CodexExtensions`` remain available for
 advanced callers that need one-off reads, custom pagination, or plugin-detail
 inspection. Routine app, skill, plugin, and collaboration-mode displays should
 prefer Inventory so SwiftASB owns refresh behavior.
@@ -36,7 +36,7 @@ prefer Inventory so SwiftASB owns refresh behavior.
 
 ### Creating Inventory
 
-- ``CodexAppServer/makeInventory(configuration:)``
+- ``CodexExtensions/makeInventory(configuration:)``
 - ``Configuration``
 - ``Phase``
 

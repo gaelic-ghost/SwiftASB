@@ -32,14 +32,14 @@ extension CodexAppServer {
     }
 
     internal struct AppInventorySnapshot: Sendable, Equatable {
-        var appListPage: CodexExtensions.AppListPage?
-        var collaborationModes: CodexExtensions.CollaborationModeList?
+        var appListPage: SwiftASB.CodexExtensions.AppListPage?
+        var collaborationModes: SwiftASB.CodexExtensions.CollaborationModeList?
         var errorDescriptions: [String] = []
         var hookListSnapshot: HookListSnapshot?
         var mcpServerStatusPage: McpServerStatusPage?
         var modelCapabilities: ModelCapabilities?
-        var pluginListSnapshot: CodexExtensions.PluginListSnapshot?
-        var skillListSnapshot: CodexExtensions.SkillListSnapshot?
+        var pluginListSnapshot: SwiftASB.CodexExtensions.PluginListSnapshot?
+        var skillListSnapshot: SwiftASB.CodexExtensions.SkillListSnapshot?
 
         var succeededCompletely: Bool {
             errorDescriptions.isEmpty
@@ -135,7 +135,7 @@ private extension CodexAppServer.AppInventorySnapshot {
     }
 }
 
-public extension CodexAppServer {
+public extension CodexExtensions {
     @MainActor
     @Observable
     final class Inventory {
@@ -163,35 +163,35 @@ public extension CodexAppServer {
             case loading
         }
 
-        public private(set) var appListPage: CodexExtensions.AppListPage?
-        public private(set) var collaborationModes: CodexExtensions.CollaborationModeList?
-        public private(set) var hookListSnapshot: HookListSnapshot?
+        public private(set) var appListPage: SwiftASB.CodexExtensions.AppListPage?
+        public private(set) var collaborationModes: SwiftASB.CodexExtensions.CollaborationModeList?
+        public private(set) var hookListSnapshot: CodexAppServer.HookListSnapshot?
         public private(set) var lastRefreshedAt: Date?
         public private(set) var latestErrorDescription: String?
         public private(set) var mcpServerNextCursor: String?
         public private(set) var mcpServers: [CodexAppServer.McpServerSummary]
-        public private(set) var modelCapabilities: ModelCapabilities?
+        public private(set) var modelCapabilities: CodexAppServer.ModelCapabilities?
         public private(set) var phase: Phase
-        public private(set) var pluginListSnapshot: CodexExtensions.PluginListSnapshot?
-        public private(set) var skillListSnapshot: CodexExtensions.SkillListSnapshot?
+        public private(set) var pluginListSnapshot: SwiftASB.CodexExtensions.PluginListSnapshot?
+        public private(set) var skillListSnapshot: SwiftASB.CodexExtensions.SkillListSnapshot?
 
-        public var apps: [CodexExtensions.AppInfo] {
+        public var apps: [SwiftASB.CodexExtensions.AppInfo] {
             appListPage?.apps ?? []
         }
 
-        public var skillEntries: [CodexExtensions.SkillListEntry] {
+        public var skillEntries: [SwiftASB.CodexExtensions.SkillListEntry] {
             skillListSnapshot?.entries ?? []
         }
 
-        public var skills: [CodexExtensions.SkillMetadata] {
+        public var skills: [SwiftASB.CodexExtensions.SkillMetadata] {
             skillEntries.flatMap(\.skills)
         }
 
-        public var pluginMarketplaces: [CodexExtensions.PluginMarketplace] {
+        public var pluginMarketplaces: [SwiftASB.CodexExtensions.PluginMarketplace] {
             pluginListSnapshot?.marketplaces ?? []
         }
 
-        public var collaborationModeEntries: [CodexExtensions.CollaborationMode] {
+        public var collaborationModeEntries: [SwiftASB.CodexExtensions.CollaborationMode] {
             collaborationModes?.modes ?? []
         }
 
@@ -319,6 +319,19 @@ public extension CodexAppServer {
     func makeInventory(
         configuration: Inventory.Configuration = .init()
     ) async throws -> Inventory {
-        Inventory(appServer: self, configuration: configuration)
+        Inventory(appServer: appServer, configuration: configuration)
+    }
+}
+
+public extension CodexAppServer {
+    @available(*, deprecated, renamed: "CodexExtensions.Inventory")
+    typealias Inventory = SwiftASB.CodexExtensions.Inventory
+
+    @available(*, deprecated, message: "Use appServer.extensions.makeInventory(configuration:) instead.")
+    @MainActor
+    func makeInventory(
+        configuration: Inventory.Configuration = .init()
+    ) async throws -> Inventory {
+        try await extensions.makeInventory(configuration: configuration)
     }
 }

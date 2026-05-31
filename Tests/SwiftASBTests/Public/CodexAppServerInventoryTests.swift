@@ -14,7 +14,7 @@ extension CodexAppServerTests {
             .init(clientInfo: .init(name: "SwiftASBTests", title: "SwiftASB Tests", version: "0.1.0"))
         )
 
-        let inventory = try await client.makeInventory(
+        let inventory = try await client.extensions.makeInventory(
             configuration: .init(
                 hookListCurrentDirectoryPaths: ["/tmp/project"],
                 extensionCurrentDirectoryPaths: ["/tmp/project"],
@@ -76,7 +76,7 @@ extension CodexAppServerTests {
             .init(clientInfo: .init(name: "SwiftASBTests", title: "SwiftASB Tests", version: "0.1.0"))
         )
 
-        let inventory = try await client.makeInventory(
+        let inventory = try await client.extensions.makeInventory(
             configuration: .init(loadsOnCreation: false)
         )
 
@@ -105,7 +105,7 @@ extension CodexAppServerTests {
             .init(clientInfo: .init(name: "SwiftASBTests", title: "SwiftASB Tests", version: "0.1.0"))
         )
 
-        let inventory = try await client.makeInventory(
+        let inventory = try await client.extensions.makeInventory(
             configuration: .init(loadsOnCreation: false)
         )
         await inventory.refresh()
@@ -150,7 +150,7 @@ extension CodexAppServerTests {
             .init(clientInfo: .init(name: "SwiftASBTests", title: "SwiftASB Tests", version: "0.1.0"))
         )
 
-        let inventory = try await client.makeInventory(
+        let inventory = try await client.extensions.makeInventory(
             configuration: .init(loadsOnCreation: false)
         )
 

@@ -6,14 +6,14 @@ Discover model, MCP-server, MCP-resource, hook diagnostics, and model-capability
 
 Some app-server operations describe the connection rather than one conversation thread. SwiftASB exposes opinionated snapshots on ``CodexAppServer`` and observable companions so consumers can populate settings screens, model pickers, feature gates, MCP inspectors, hook diagnostics, and other app-wide views without orchestrating every app-server read.
 
-Use ``CodexAppServer/makeInventory(configuration:)`` for routine app-wide UI that needs model capabilities, global MCP summaries, hook diagnostics, apps, skills, plugins, and collaboration modes. Inventory loads these snapshots on creation by default and refreshes when the app-server reports app-list, skill, or MCP-server status changes.
+Use ``CodexExtensions/makeInventory(configuration:)`` for routine app-wide UI that needs model capabilities, global MCP summaries, hook diagnostics, apps, skills, plugins, and collaboration modes. Inventory loads these snapshots on creation by default and refreshes when the app-server reports app-list, skill, or MCP-server status changes.
 
 Use ``CodexAppServer/makeLibrary(configuration:)`` when these same model, MCP, and hook snapshots should live beside observable stored-thread lists. ``CodexAppServer/Library/refreshAppSnapshots()`` reads the current app-wide snapshots and publishes them as Library state; MCP status uses SwiftASB's owned cache, and hook diagnostics use Library thread `cwd` values unless configuration passes explicit hook current-directory paths.
 
-Use ``CodexAppServer/listModels(_:)``, ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listHooks(_:)``, and ``CodexAppServer/extensions`` as direct escape hatches when the caller intentionally owns pagination, one-off reads, or custom refresh timing. Use ``CodexMCP/statusSnapshot()`` to inspect SwiftASB's latest full MCP server catalog, including resources, resource templates, and tools. Use ``CodexMCP/readResource(server:uri:threadID:)`` to read one advertised MCP resource. ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` is the narrow maintenance mutation in this app-wide family: it upgrades an already-configured plugin marketplace through app-server `command/exec` and reports the operation through ``CodexAppServer/featureOperationEvents()``.
+Use ``CodexAppServer/listModels(_:)``, ``CodexAppServer/readModelCapabilities()``, ``CodexAppServer/listHooks(_:)``, and ``CodexAppServer/extensions`` as direct escape hatches when the caller intentionally owns pagination, one-off reads, or custom refresh timing. Use ``CodexExtensions/MCP/statusSnapshot()`` to inspect SwiftASB's latest full MCP server catalog, including resources, resource templates, and tools. Use ``CodexExtensions/MCP/readResource(server:uri:threadID:)`` to read one advertised MCP resource. ``CodexExtensions/Plugins/upgradeMarketplace(_:)`` is the narrow maintenance mutation in this app-wide family: it upgrades an already-configured plugin marketplace through app-server `command/exec` and reports the operation through ``CodexAppServer/featureOperationEvents()``.
 
 ```swift
-let inventory = try await appServer.makeInventory()
+let inventory = try await appServer.extensions.makeInventory()
 
 let modelCapabilities = inventory.modelCapabilities
 let globalMCPServers = inventory.mcpServers
@@ -32,9 +32,9 @@ let models = try await appServer.listModels(
     .init(limit: 50, includeHidden: false)
 )
 
-let statuses = await appServer.mcp.statusSnapshot()
+let statuses = await appServer.extensions.mcp.statusSnapshot()
 
-let resource = try await appServer.mcp.readResource(
+let resource = try await appServer.extensions.mcp.readResource(
     server: "docs",
     uri: "docs://swiftasb/current"
 )
@@ -44,7 +44,7 @@ let hooks = try await appServer.listHooks(
 )
 ```
 
-These direct requests are snapshots. If your UI needs refresh behavior, prefer ``CodexAppServer/Inventory`` so SwiftASB owns the refresh path and notification handling. Use ``CodexAppServer/Library`` instead when the same model, MCP, and hook snapshots should sit beside stored-thread lists. Inventory, Library, and thread dashboard MCP state intentionally use ``CodexAppServer/McpServerSummary`` instead of the full catalog so common SwiftUI surfaces can stay compact.
+These direct requests are snapshots. If your UI needs refresh behavior, prefer ``CodexExtensions/Inventory`` so SwiftASB owns the refresh path and notification handling. Use ``CodexAppServer/Library`` instead when the same model, MCP, and hook snapshots should sit beside stored-thread lists. Inventory, Library, and thread dashboard MCP state intentionally use ``CodexAppServer/McpServerSummary`` instead of the full catalog so common SwiftUI surfaces can stay compact.
 
 ## Model Capabilities
 
@@ -104,8 +104,8 @@ These types are public because a consumer can use them directly today. Other gen
 
 - ``CodexAppServer/mcpServerStatusSnapshot()``
 - ``CodexAppServer/readMcpResource(_:)``
-- ``CodexMCP/statusSnapshot()``
-- ``CodexMCP/readResource(server:uri:threadID:)``
+- ``CodexExtensions/MCP/statusSnapshot()``
+- ``CodexExtensions/MCP/readResource(server:uri:threadID:)``
 - ``CodexAppServer/McpServerStatusListRequest``
 - ``CodexAppServer/McpServerStatusPage``
 - ``CodexAppServer/McpServerStatus``
@@ -129,10 +129,10 @@ These types are public because a consumer can use them directly today. Other gen
 
 ### Extensions
 
-- ``CodexAppServer/makeInventory(configuration:)``
-- ``CodexAppServer/Inventory``
+- ``CodexExtensions/makeInventory(configuration:)``
+- ``CodexExtensions/Inventory``
 - ``CodexAppServer/extensions``
-- ``CodexAppServer/CodexExtensions``
-- ``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)``
-- ``CodexAppServer/CodexExtensions/MarketplaceUpgradeRequest``
-- ``CodexAppServer/CodexExtensions/MarketplaceUpgradeResult``
+- ``CodexExtensions``
+- ``CodexExtensions/Plugins/upgradeMarketplace(_:)``
+- ``CodexExtensions/MarketplaceUpgradeRequest``
+- ``CodexExtensions/MarketplaceUpgradeResult``

@@ -1,351 +1,466 @@
 import Foundation
 
-public extension CodexAppServer {
-    /// App-server-owned extension inventory for apps, skills, plugins, and collaboration modes.
-    struct CodexExtensions: Sendable {
+/// App-server-owned extension, MCP, app, skill, plugin, and collaboration-mode surface.
+public struct CodexExtensions: Sendable {
+    let appServer: CodexAppServer
+
+    init(appServer: CodexAppServer) {
+        self.appServer = appServer
+    }
+
+    /// Install intent for one Codex extension family.
+    public enum InstallRequest: Sendable, Equatable {
+        case mcp(MCP.ServerDefinition)
+    }
+
+    /// Result returned after installing one Codex extension family item.
+    public enum InstallResult: Sendable, Equatable {
+        case mcp(MCP.InstallResult)
+    }
+
+    /// Installs one extension-family item through SwiftASB's preferred unified install surface.
+    @discardableResult
+    public func install(_ request: InstallRequest) async throws -> InstallResult {
+        switch request {
+        case let .mcp(definition):
+            return .mcp(try await mcp.install(definition))
+        }
+    }
+
+    /// App and connector inventory family.
+    public struct Apps: Sendable {
         private let appServer: CodexAppServer
 
         init(appServer: CodexAppServer) {
             self.appServer = appServer
         }
 
-        /// Request used to list available apps and connectors.
-        public struct AppListRequest: Sendable, Equatable {
-            public var cursor: String?
-            public var forceRefetch: Bool?
-            public var limit: Int?
-            public var threadID: String?
-
-            public init(
-                cursor: String? = nil,
-                limit: Int? = nil,
-                forceRefetch: Bool? = nil,
-                threadID: String? = nil
-            ) {
-                self.cursor = cursor
-                self.forceRefetch = forceRefetch
-                self.limit = limit
-                self.threadID = threadID
-            }
-        }
-
-        /// One page of app or connector metadata.
-        public struct AppListPage: Sendable, Equatable {
-            public let apps: [AppInfo]
-            public let nextCursor: String?
-        }
-
-        /// App or connector metadata returned by the app-server.
-        public struct AppInfo: Sendable, Equatable, Identifiable {
-            public let branding: AppBranding?
-            public let categories: [String]?
-            public let description: String?
-            public let developer: String?
-            public let distributionChannel: String?
-            public let id: String
-            public let installURL: String?
-            public let isAccessible: Bool?
-            public let isEnabled: Bool?
-            public let labels: [String: String]?
-            public let logoURL: String?
-            public let logoURLDark: String?
-            public let name: String
-            public let pluginDisplayNames: [String]?
-            public let screenshots: [AppScreenshot]?
-            public let version: String?
-            public let versionID: String?
-            public let versionNotes: String?
-        }
-
-        public struct AppBranding: Sendable, Equatable {
-            public let category: String?
-            public let developer: String?
-            public let isDiscoverableApp: Bool
-            public let privacyPolicy: String?
-            public let termsOfService: String?
-            public let website: String?
-        }
-
-        public struct AppScreenshot: Sendable, Equatable {
-            public let fileID: String?
-            public let url: String?
-            public let userPrompt: String
-        }
-
-        /// Request used to list skills visible from one or more working directories.
-        public struct SkillListRequest: Sendable, Equatable {
-            public struct ExtraUserRootsForCurrentDirectory: Sendable, Equatable {
-                public var currentDirectoryPath: String
-                public var extraUserRoots: [String]
-
-                public init(currentDirectoryPath: String, extraUserRoots: [String]) {
-                    self.currentDirectoryPath = currentDirectoryPath
-                    self.extraUserRoots = extraUserRoots
-                }
-            }
-
-            public var currentDirectoryPaths: [String]?
-            public var forceReload: Bool?
-            /// Deprecated by Codex CLI 0.130.0. The app-server no longer accepts
-            /// per-cwd extra skill roots on `skills/list`.
-            public var perCurrentDirectoryExtraUserRoots: [ExtraUserRootsForCurrentDirectory]?
-
-            public init(
-                currentDirectoryPaths: [String]? = nil,
-                forceReload: Bool? = nil,
-                perCurrentDirectoryExtraUserRoots: [ExtraUserRootsForCurrentDirectory]? = nil
-            ) {
-                self.currentDirectoryPaths = currentDirectoryPaths
-                self.forceReload = forceReload
-                self.perCurrentDirectoryExtraUserRoots = perCurrentDirectoryExtraUserRoots
-            }
-        }
-
-        public struct SkillListSnapshot: Sendable, Equatable {
-            public let entries: [SkillListEntry]
-        }
-
-        public struct SkillListEntry: Sendable, Equatable, Identifiable {
-            public var id: String { currentDirectoryPath }
-
-            public let currentDirectoryPath: String
-            public let errors: [SkillError]
-            public let skills: [SkillMetadata]
-        }
-
-        public struct SkillError: Sendable, Equatable {
-            public let message: String
-            public let path: String
-        }
-
-        public struct SkillMetadata: Sendable, Equatable, Identifiable {
-            public enum Scope: String, Sendable, Equatable {
-                case admin, repo, system, user
-            }
-
-            public var id: String { path }
-
-            public let description: String
-            public let displayName: String?
-            public let enabled: Bool
-            public let name: String
-            public let path: String
-            public let scope: Scope
-            public let shortDescription: String?
-        }
-
-        public struct PluginListRequest: Sendable, Equatable {
-            public var currentDirectoryPaths: [String]?
-
-            public init(currentDirectoryPaths: [String]? = nil) {
-                self.currentDirectoryPaths = currentDirectoryPaths
-            }
-        }
-
-        public struct PluginListSnapshot: Sendable, Equatable {
-            public let featuredPluginIDs: [String]
-            public let marketplaceLoadErrors: [MarketplaceLoadError]
-            public let marketplaces: [PluginMarketplace]
-        }
-
-        public struct MarketplaceLoadError: Sendable, Equatable {
-            public let marketplacePath: String
-            public let message: String
-        }
-
-        public struct PluginMarketplace: Sendable, Equatable, Identifiable {
-            public var id: String { path ?? name }
-
-            public let displayName: String?
-            public let name: String
-            public let path: String?
-            public let plugins: [PluginSummary]
-        }
-
-        public struct PluginSummary: Sendable, Equatable, Identifiable {
-            public enum AuthPolicy: String, Sendable, Equatable {
-                case onInstall
-                case onUse
-            }
-
-            public enum InstallPolicy: String, Sendable, Equatable {
-                case available
-                case installedByDefault
-                case notAvailable
-            }
-
-            public enum SourceKind: String, Sendable, Equatable {
-                case git
-                case local
-                case remote
-            }
-
-            public let authPolicy: AuthPolicy
-            public let enabled: Bool
-            public let id: String
-            public let installed: Bool
-            public let installPolicy: InstallPolicy
-            public let interface: PluginInterface?
-            public let name: String
-            public let sourceKind: SourceKind
-            public let sourcePath: String?
-            public let sourceRefName: String?
-            public let sourceSHA: String?
-            public let sourceURL: String?
-        }
-
-        public struct PluginInterface: Sendable, Equatable {
-            public let brandColor: String?
-            public let capabilities: [String]
-            public let category: String?
-            public let defaultPrompt: [String]?
-            public let developerName: String?
-            public let displayName: String?
-            public let longDescription: String?
-            public let shortDescription: String?
-        }
-
-        public struct PluginReadRequest: Sendable, Equatable {
-            public var marketplacePath: String?
-            public var pluginName: String
-            public var remoteMarketplaceName: String?
-
-            public init(
-                pluginName: String,
-                marketplacePath: String? = nil,
-                remoteMarketplaceName: String? = nil
-            ) {
-                self.marketplacePath = marketplacePath
-                self.pluginName = pluginName
-                self.remoteMarketplaceName = remoteMarketplaceName
-            }
-        }
-
-        public struct MarketplaceUpgradeRequest: Sendable, Equatable {
-            public var currentDirectoryPaths: [String]?
-            public var marketplaceName: String
-            public var timeoutMilliseconds: Int
-
-            public init(
-                marketplaceName: String,
-                currentDirectoryPaths: [String]? = nil,
-                timeoutMilliseconds: Int = 120_000
-            ) {
-                self.marketplaceName = marketplaceName
-                self.currentDirectoryPaths = currentDirectoryPaths
-                self.timeoutMilliseconds = max(1_000, timeoutMilliseconds)
-            }
-        }
-
-        public struct MarketplaceUpgradeResult: Sendable, Equatable {
-            public let command: [String]
-            public let exitCode: Int
-            public let marketplaceName: String
-            public let operationID: String
-            public let status: SwiftASBFeatureOperationEvent.Status
-            public let stderr: String
-            public let stdout: String
-        }
-
-        public struct PluginDetail: Sendable, Equatable {
-            public let apps: [AppSummary]
-            public let description: String?
-            public let hooks: [PluginHookSummary]
-            public let marketplaceName: String
-            public let marketplacePath: String?
-            public let mcpServers: [String]
-            public let skills: [SkillSummary]
-            public let summary: PluginSummary
-        }
-
-        public struct PluginHookSummary: Sendable, Equatable, Identifiable {
-            public var id: String { key }
-
-            public let eventName: HookMetadata.EventName
-            public let key: String
-        }
-
-        public struct AppSummary: Sendable, Equatable, Identifiable {
-            public let description: String?
-            public let id: String
-            public let installURL: String?
-            public let name: String
-            public let needsAuth: Bool
-        }
-
-        public struct SkillSummary: Sendable, Equatable, Identifiable {
-            public var id: String { path ?? name }
-
-            public let description: String
-            public let displayName: String?
-            public let enabled: Bool
-            public let name: String
-            public let path: String?
-            public let shortDescription: String?
-        }
-
-        public struct CollaborationModeList: Sendable, Equatable {
-            public let modes: [CollaborationMode]
-        }
-
-        public struct CollaborationMode: Sendable, Equatable, Identifiable {
-            public enum Kind: String, Sendable, Equatable {
-                case defaultMode = "default"
-                case plan
-            }
-
-            public var id: String { name }
-
-            public let kind: Kind?
-            public let model: String?
-            public let name: String
-            public let reasoningEffort: ReasoningEffort?
-        }
-
-        public func listApps(_ request: AppListRequest = .init()) async throws -> AppListPage {
+        public func list(_ request: AppListRequest = .init()) async throws -> AppListPage {
             try await appServer.listExtensionApps(request)
         }
+    }
 
-        public func listSkills(_ request: SkillListRequest = .init()) async throws -> SkillListSnapshot {
-            try await appServer.listExtensionSkills(request)
+    /// Skill inventory family.
+    public struct Skills: Sendable {
+        private let appServer: CodexAppServer
+
+        init(appServer: CodexAppServer) {
+            self.appServer = appServer
         }
 
-        public func listPlugins(_ request: PluginListRequest = .init()) async throws -> PluginListSnapshot {
+        public func list(_ request: SkillListRequest = .init()) async throws -> SkillListSnapshot {
+            try await appServer.listExtensionSkills(request)
+        }
+    }
+
+    /// Plugin and marketplace inventory and maintenance family.
+    public struct Plugins: Sendable {
+        private let appServer: CodexAppServer
+
+        init(appServer: CodexAppServer) {
+            self.appServer = appServer
+        }
+
+        public func list(_ request: PluginListRequest = .init()) async throws -> PluginListSnapshot {
             try await appServer.listExtensionPlugins(request)
         }
 
-        public func readPlugin(_ request: PluginReadRequest) async throws -> PluginDetail {
+        public func read(_ request: PluginReadRequest) async throws -> PluginDetail {
             try await appServer.readExtensionPlugin(request)
         }
 
-        /// Upgrades an already-configured plugin marketplace through Codex.
-        ///
-        /// SwiftASB preflights the marketplace through `plugin/list`, runs the
-        /// installed Codex CLI's `plugin marketplace upgrade` command through
-        /// app-server `command/exec`, and emits a feature-operation event. New
-        /// marketplace installs and marketplace removals remain separate,
-        /// stricter mutation categories.
         public func upgradeMarketplace(
             _ request: MarketplaceUpgradeRequest
         ) async throws -> MarketplaceUpgradeResult {
             try await appServer.upgradeExtensionMarketplace(request)
         }
+    }
 
-        public func listCollaborationModes() async throws -> CollaborationModeList {
+    /// Collaboration-mode inventory family.
+    public struct CollaborationModes: Sendable {
+        private let appServer: CodexAppServer
+
+        init(appServer: CodexAppServer) {
+            self.appServer = appServer
+        }
+
+        public func list() async throws -> CollaborationModeList {
             try await appServer.listExtensionCollaborationModes()
         }
     }
 
-    /// App-server-owned extension inventory surface.
-    var extensions: CodexExtensions {
-        CodexExtensions(appServer: self)
+    /// MCP server configuration, status, and resource family.
+    public var mcp: MCP {
+        MCP(appServer: appServer)
     }
+
+    /// App and connector inventory family.
+    public var apps: Apps {
+        Apps(appServer: appServer)
+    }
+
+    /// Skill inventory family.
+    public var skills: Skills {
+        Skills(appServer: appServer)
+    }
+
+    /// Plugin and marketplace inventory and maintenance family.
+    public var plugins: Plugins {
+        Plugins(appServer: appServer)
+    }
+
+    /// Collaboration-mode inventory family.
+    public var collaborationModes: CollaborationModes {
+        CollaborationModes(appServer: appServer)
+    }
+
+    /// Request used to list available apps and connectors.
+    public struct AppListRequest: Sendable, Equatable {
+        public var cursor: String?
+        public var forceRefetch: Bool?
+        public var limit: Int?
+        public var threadID: String?
+
+        public init(
+            cursor: String? = nil,
+            limit: Int? = nil,
+            forceRefetch: Bool? = nil,
+            threadID: String? = nil
+        ) {
+            self.cursor = cursor
+            self.forceRefetch = forceRefetch
+            self.limit = limit
+            self.threadID = threadID
+        }
+    }
+
+    /// One page of app or connector metadata.
+    public struct AppListPage: Sendable, Equatable {
+        public let apps: [AppInfo]
+        public let nextCursor: String?
+    }
+
+    /// App or connector metadata returned by the app-server.
+    public struct AppInfo: Sendable, Equatable, Identifiable {
+        public let branding: AppBranding?
+        public let categories: [String]?
+        public let description: String?
+        public let developer: String?
+        public let distributionChannel: String?
+        public let id: String
+        public let installURL: String?
+        public let isAccessible: Bool?
+        public let isEnabled: Bool?
+        public let labels: [String: String]?
+        public let logoURL: String?
+        public let logoURLDark: String?
+        public let name: String
+        public let pluginDisplayNames: [String]?
+        public let screenshots: [AppScreenshot]?
+        public let version: String?
+        public let versionID: String?
+        public let versionNotes: String?
+    }
+
+    public struct AppBranding: Sendable, Equatable {
+        public let category: String?
+        public let developer: String?
+        public let isDiscoverableApp: Bool
+        public let privacyPolicy: String?
+        public let termsOfService: String?
+        public let website: String?
+    }
+
+    public struct AppScreenshot: Sendable, Equatable {
+        public let fileID: String?
+        public let url: String?
+        public let userPrompt: String
+    }
+
+    /// Request used to list skills visible from one or more working directories.
+    public struct SkillListRequest: Sendable, Equatable {
+        public struct ExtraUserRootsForCurrentDirectory: Sendable, Equatable {
+            public var currentDirectoryPath: String
+            public var extraUserRoots: [String]
+
+            public init(currentDirectoryPath: String, extraUserRoots: [String]) {
+                self.currentDirectoryPath = currentDirectoryPath
+                self.extraUserRoots = extraUserRoots
+            }
+        }
+
+        public var currentDirectoryPaths: [String]?
+        public var forceReload: Bool?
+        /// Deprecated by Codex CLI 0.130.0. The app-server no longer accepts
+        /// per-cwd extra skill roots on `skills/list`.
+        public var perCurrentDirectoryExtraUserRoots: [ExtraUserRootsForCurrentDirectory]?
+
+        public init(
+            currentDirectoryPaths: [String]? = nil,
+            forceReload: Bool? = nil,
+            perCurrentDirectoryExtraUserRoots: [ExtraUserRootsForCurrentDirectory]? = nil
+        ) {
+            self.currentDirectoryPaths = currentDirectoryPaths
+            self.forceReload = forceReload
+            self.perCurrentDirectoryExtraUserRoots = perCurrentDirectoryExtraUserRoots
+        }
+    }
+
+    public struct SkillListSnapshot: Sendable, Equatable {
+        public let entries: [SkillListEntry]
+    }
+
+    public struct SkillListEntry: Sendable, Equatable, Identifiable {
+        public var id: String { currentDirectoryPath }
+
+        public let currentDirectoryPath: String
+        public let errors: [SkillError]
+        public let skills: [SkillMetadata]
+    }
+
+    public struct SkillError: Sendable, Equatable {
+        public let message: String
+        public let path: String
+    }
+
+    public struct SkillMetadata: Sendable, Equatable, Identifiable {
+        public enum Scope: String, Sendable, Equatable {
+            case admin, repo, system, user
+        }
+
+        public var id: String { path }
+
+        public let description: String
+        public let displayName: String?
+        public let enabled: Bool
+        public let name: String
+        public let path: String
+        public let scope: Scope
+        public let shortDescription: String?
+    }
+
+    public struct PluginListRequest: Sendable, Equatable {
+        public var currentDirectoryPaths: [String]?
+
+        public init(currentDirectoryPaths: [String]? = nil) {
+            self.currentDirectoryPaths = currentDirectoryPaths
+        }
+    }
+
+    public struct PluginListSnapshot: Sendable, Equatable {
+        public let featuredPluginIDs: [String]
+        public let marketplaceLoadErrors: [MarketplaceLoadError]
+        public let marketplaces: [PluginMarketplace]
+    }
+
+    public struct MarketplaceLoadError: Sendable, Equatable {
+        public let marketplacePath: String
+        public let message: String
+    }
+
+    public struct PluginMarketplace: Sendable, Equatable, Identifiable {
+        public var id: String { path ?? name }
+
+        public let displayName: String?
+        public let name: String
+        public let path: String?
+        public let plugins: [PluginSummary]
+    }
+
+    public struct PluginSummary: Sendable, Equatable, Identifiable {
+        public enum AuthPolicy: String, Sendable, Equatable {
+            case onInstall
+            case onUse
+        }
+
+        public enum InstallPolicy: String, Sendable, Equatable {
+            case available
+            case installedByDefault
+            case notAvailable
+        }
+
+        public enum SourceKind: String, Sendable, Equatable {
+            case git
+            case local
+            case remote
+        }
+
+        public let authPolicy: AuthPolicy
+        public let enabled: Bool
+        public let id: String
+        public let installed: Bool
+        public let installPolicy: InstallPolicy
+        public let interface: PluginInterface?
+        public let name: String
+        public let sourceKind: SourceKind
+        public let sourcePath: String?
+        public let sourceRefName: String?
+        public let sourceSHA: String?
+        public let sourceURL: String?
+    }
+
+    public struct PluginInterface: Sendable, Equatable {
+        public let brandColor: String?
+        public let capabilities: [String]
+        public let category: String?
+        public let defaultPrompt: [String]?
+        public let developerName: String?
+        public let displayName: String?
+        public let longDescription: String?
+        public let shortDescription: String?
+    }
+
+    public struct PluginReadRequest: Sendable, Equatable {
+        public var marketplacePath: String?
+        public var pluginName: String
+        public var remoteMarketplaceName: String?
+
+        public init(
+            pluginName: String,
+            marketplacePath: String? = nil,
+            remoteMarketplaceName: String? = nil
+        ) {
+            self.marketplacePath = marketplacePath
+            self.pluginName = pluginName
+            self.remoteMarketplaceName = remoteMarketplaceName
+        }
+    }
+
+    public struct MarketplaceUpgradeRequest: Sendable, Equatable {
+        public var currentDirectoryPaths: [String]?
+        public var marketplaceName: String
+        public var timeoutMilliseconds: Int
+
+        public init(
+            marketplaceName: String,
+            currentDirectoryPaths: [String]? = nil,
+            timeoutMilliseconds: Int = 120_000
+        ) {
+            self.marketplaceName = marketplaceName
+            self.currentDirectoryPaths = currentDirectoryPaths
+            self.timeoutMilliseconds = max(1_000, timeoutMilliseconds)
+        }
+    }
+
+    public struct MarketplaceUpgradeResult: Sendable, Equatable {
+        public let command: [String]
+        public let exitCode: Int
+        public let marketplaceName: String
+        public let operationID: String
+        public let status: SwiftASBFeatureOperationEvent.Status
+        public let stderr: String
+        public let stdout: String
+    }
+
+    public struct PluginDetail: Sendable, Equatable {
+        public let apps: [AppSummary]
+        public let description: String?
+        public let hooks: [PluginHookSummary]
+        public let marketplaceName: String
+        public let marketplacePath: String?
+        public let mcpServers: [String]
+        public let skills: [SkillSummary]
+        public let summary: PluginSummary
+    }
+
+    public struct PluginHookSummary: Sendable, Equatable, Identifiable {
+        public var id: String { key }
+
+        public let eventName: CodexAppServer.HookMetadata.EventName
+        public let key: String
+    }
+
+    public struct AppSummary: Sendable, Equatable, Identifiable {
+        public let description: String?
+        public let id: String
+        public let installURL: String?
+        public let name: String
+        public let needsAuth: Bool
+    }
+
+    public struct SkillSummary: Sendable, Equatable, Identifiable {
+        public var id: String { path ?? name }
+
+        public let description: String
+        public let displayName: String?
+        public let enabled: Bool
+        public let name: String
+        public let path: String?
+        public let shortDescription: String?
+    }
+
+    public struct CollaborationModeList: Sendable, Equatable {
+        public let modes: [CollaborationMode]
+    }
+
+    public struct CollaborationMode: Sendable, Equatable, Identifiable {
+        public enum Kind: String, Sendable, Equatable {
+            case defaultMode = "default"
+            case plan
+        }
+
+        public var id: String { name }
+
+        public let kind: Kind?
+        public let model: String?
+        public let name: String
+        public let reasoningEffort: CodexAppServer.ReasoningEffort?
+    }
+
+    @available(*, deprecated, message: "Use appServer.extensions.apps.list(...) instead.")
+    public func listApps(_ request: AppListRequest = .init()) async throws -> AppListPage {
+        try await apps.list(request)
+    }
+
+    @available(*, deprecated, message: "Use appServer.extensions.skills.list(...) instead.")
+    public func listSkills(_ request: SkillListRequest = .init()) async throws -> SkillListSnapshot {
+        try await skills.list(request)
+    }
+
+    @available(*, deprecated, message: "Use appServer.extensions.plugins.list(...) instead.")
+    public func listPlugins(_ request: PluginListRequest = .init()) async throws -> PluginListSnapshot {
+        try await plugins.list(request)
+    }
+
+    @available(*, deprecated, message: "Use appServer.extensions.plugins.read(...) instead.")
+    public func readPlugin(_ request: PluginReadRequest) async throws -> PluginDetail {
+        try await plugins.read(request)
+    }
+
+    /// Upgrades an already-configured plugin marketplace through Codex.
+    ///
+    /// SwiftASB preflights the marketplace through `plugin/list`, runs the
+    /// installed Codex CLI's `plugin marketplace upgrade` command through
+    /// app-server `command/exec`, and emits a feature-operation event. New
+    /// marketplace installs and marketplace removals remain separate,
+    /// stricter mutation categories.
+    @available(*, deprecated, message: "Use appServer.extensions.plugins.upgradeMarketplace(...) instead.")
+    public func upgradeMarketplace(
+        _ request: MarketplaceUpgradeRequest
+    ) async throws -> MarketplaceUpgradeResult {
+        try await plugins.upgradeMarketplace(request)
+    }
+
+    @available(*, deprecated, message: "Use appServer.extensions.collaborationModes.list() instead.")
+    public func listCollaborationModes() async throws -> CollaborationModeList {
+        try await collaborationModes.list()
+    }
+}
+
+public extension CodexAppServer {
+    /// App-server-owned extension inventory surface.
+    var extensions: SwiftASB.CodexExtensions {
+        SwiftASB.CodexExtensions(appServer: self)
+    }
+
+    @available(*, deprecated, renamed: "CodexExtensions")
+    typealias CodexExtensions = SwiftASB.CodexExtensions
 }
 
 extension CodexAppServer {
     func upgradeExtensionMarketplace(
-        _ request: CodexExtensions.MarketplaceUpgradeRequest
-    ) async throws -> CodexExtensions.MarketplaceUpgradeResult {
+        _ request: SwiftASB.CodexExtensions.MarketplaceUpgradeRequest
+    ) async throws -> SwiftASB.CodexExtensions.MarketplaceUpgradeResult {
         try requireFeatureEnabled(.extensionMaintenance, for: "plugin marketplace upgrade")
 
         let marketplaceName = request.marketplaceName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -441,19 +556,19 @@ extension CodexAppServer {
     }
 }
 
-extension CodexAppServer.CodexExtensions.AppListPage {
+extension CodexExtensions.AppListPage {
     init(wireValue: CodexWireAppsListResponse) {
         self.init(
-            apps: wireValue.data.map(CodexAppServer.CodexExtensions.AppInfo.init(wireValue:)),
+            apps: wireValue.data.map(CodexExtensions.AppInfo.init(wireValue:)),
             nextCursor: wireValue.nextCursor
         )
     }
 }
 
-extension CodexAppServer.CodexExtensions.AppInfo {
+extension CodexExtensions.AppInfo {
     init(wireValue: CodexWireAppInfo) {
         self.init(
-            branding: wireValue.branding.map(CodexAppServer.CodexExtensions.AppBranding.init),
+            branding: wireValue.branding.map(CodexExtensions.AppBranding.init),
             categories: wireValue.appMetadata?.categories,
             description: wireValue.description,
             developer: wireValue.appMetadata?.developer,
@@ -467,7 +582,7 @@ extension CodexAppServer.CodexExtensions.AppInfo {
             logoURLDark: wireValue.logoURLDark,
             name: wireValue.name,
             pluginDisplayNames: wireValue.pluginDisplayNames,
-            screenshots: wireValue.appMetadata?.screenshots?.map(CodexAppServer.CodexExtensions.AppScreenshot.init),
+            screenshots: wireValue.appMetadata?.screenshots?.map(CodexExtensions.AppScreenshot.init),
             version: wireValue.appMetadata?.version,
             versionID: wireValue.appMetadata?.versionID,
             versionNotes: wireValue.appMetadata?.versionNotes
@@ -475,7 +590,7 @@ extension CodexAppServer.CodexExtensions.AppInfo {
     }
 }
 
-extension CodexAppServer.CodexExtensions.AppBranding {
+extension CodexExtensions.AppBranding {
     init(wireValue: CodexWireAppBranding) {
         self.init(
             category: wireValue.category,
@@ -488,35 +603,35 @@ extension CodexAppServer.CodexExtensions.AppBranding {
     }
 }
 
-extension CodexAppServer.CodexExtensions.AppScreenshot {
+extension CodexExtensions.AppScreenshot {
     init(wireValue: CodexWireAppScreenshot) {
         self.init(fileID: wireValue.fileID, url: wireValue.url, userPrompt: wireValue.userPrompt)
     }
 }
 
-extension CodexAppServer.CodexExtensions.SkillListSnapshot {
+extension CodexExtensions.SkillListSnapshot {
     init(wireValue: CodexWireSkillsListResponse) {
-        self.init(entries: wireValue.data.map(CodexAppServer.CodexExtensions.SkillListEntry.init))
+        self.init(entries: wireValue.data.map(CodexExtensions.SkillListEntry.init))
     }
 }
 
-extension CodexAppServer.CodexExtensions.SkillListEntry {
+extension CodexExtensions.SkillListEntry {
     init(wireValue: CodexWireSkillsListEntry) {
         self.init(
             currentDirectoryPath: wireValue.cwd,
-            errors: wireValue.errors.map(CodexAppServer.CodexExtensions.SkillError.init),
-            skills: wireValue.skills.map(CodexAppServer.CodexExtensions.SkillMetadata.init)
+            errors: wireValue.errors.map(CodexExtensions.SkillError.init),
+            skills: wireValue.skills.map(CodexExtensions.SkillMetadata.init)
         )
     }
 }
 
-extension CodexAppServer.CodexExtensions.SkillError {
+extension CodexExtensions.SkillError {
     init(wireValue: CodexWireSkillErrorInfo) {
         self.init(message: wireValue.message, path: wireValue.path)
     }
 }
 
-extension CodexAppServer.CodexExtensions.SkillMetadata {
+extension CodexExtensions.SkillMetadata {
     init(wireValue: CodexWireSkillMetadata) {
         self.init(
             description: wireValue.description,
@@ -530,7 +645,7 @@ extension CodexAppServer.CodexExtensions.SkillMetadata {
     }
 }
 
-extension CodexAppServer.CodexExtensions.SkillMetadata.Scope {
+extension CodexExtensions.SkillMetadata.Scope {
     init(wireValue: CodexWireSkillScope) {
         switch wireValue {
         case .admin:
@@ -545,36 +660,36 @@ extension CodexAppServer.CodexExtensions.SkillMetadata.Scope {
     }
 }
 
-extension CodexAppServer.CodexExtensions.PluginListSnapshot {
+extension CodexExtensions.PluginListSnapshot {
     init(wireValue: CodexWirePluginListResponse) {
         self.init(
             featuredPluginIDs: wireValue.featuredPluginIDS ?? [],
             marketplaceLoadErrors: (wireValue.marketplaceLoadErrors ?? []).map(
-                CodexAppServer.CodexExtensions.MarketplaceLoadError.init
+                CodexExtensions.MarketplaceLoadError.init
             ),
-            marketplaces: wireValue.marketplaces.map(CodexAppServer.CodexExtensions.PluginMarketplace.init)
+            marketplaces: wireValue.marketplaces.map(CodexExtensions.PluginMarketplace.init)
         )
     }
 }
 
-extension CodexAppServer.CodexExtensions.MarketplaceLoadError {
+extension CodexExtensions.MarketplaceLoadError {
     init(wireValue: CodexWireMarketplaceLoadErrorInfo) {
         self.init(marketplacePath: wireValue.marketplacePath, message: wireValue.message)
     }
 }
 
-extension CodexAppServer.CodexExtensions.PluginMarketplace {
+extension CodexExtensions.PluginMarketplace {
     init(wireValue: CodexWirePluginMarketplaceEntry) {
         self.init(
             displayName: wireValue.interface?.displayName,
             name: wireValue.name,
             path: wireValue.path,
-            plugins: wireValue.plugins.map(CodexAppServer.CodexExtensions.PluginSummary.init)
+            plugins: wireValue.plugins.map(CodexExtensions.PluginSummary.init)
         )
     }
 }
 
-extension CodexAppServer.CodexExtensions.PluginSummary {
+extension CodexExtensions.PluginSummary {
     init(wireValue: CodexWirePluginSummary) {
         self.init(
             authPolicy: .init(wireValue: wireValue.authPolicy),
@@ -582,7 +697,7 @@ extension CodexAppServer.CodexExtensions.PluginSummary {
             id: wireValue.id,
             installed: wireValue.installed,
             installPolicy: .init(wireValue: wireValue.installPolicy),
-            interface: wireValue.interface.map(CodexAppServer.CodexExtensions.PluginInterface.init),
+            interface: wireValue.interface.map(CodexExtensions.PluginInterface.init),
             name: wireValue.name,
             sourceKind: .init(wireValue: wireValue.source.type),
             sourcePath: wireValue.source.path,
@@ -593,7 +708,7 @@ extension CodexAppServer.CodexExtensions.PluginSummary {
     }
 }
 
-extension CodexAppServer.CodexExtensions.PluginSummary.AuthPolicy {
+extension CodexExtensions.PluginSummary.AuthPolicy {
     init(wireValue: CodexWirePluginAuthPolicy) {
         switch wireValue {
         case .onInstall:
@@ -604,7 +719,7 @@ extension CodexAppServer.CodexExtensions.PluginSummary.AuthPolicy {
     }
 }
 
-extension CodexAppServer.CodexExtensions.PluginSummary.InstallPolicy {
+extension CodexExtensions.PluginSummary.InstallPolicy {
     init(wireValue: CodexWirePluginInstallPolicy) {
         switch wireValue {
         case .available:
@@ -617,7 +732,7 @@ extension CodexAppServer.CodexExtensions.PluginSummary.InstallPolicy {
     }
 }
 
-extension CodexAppServer.CodexExtensions.PluginSummary.SourceKind {
+extension CodexExtensions.PluginSummary.SourceKind {
     init(wireValue: CodexWirePluginSourceType) {
         switch wireValue {
         case .git:
@@ -630,7 +745,7 @@ extension CodexAppServer.CodexExtensions.PluginSummary.SourceKind {
     }
 }
 
-extension CodexAppServer.CodexExtensions.PluginInterface {
+extension CodexExtensions.PluginInterface {
     init(wireValue: CodexWirePluginInterface) {
         self.init(
             brandColor: wireValue.brandColor,
@@ -645,22 +760,22 @@ extension CodexAppServer.CodexExtensions.PluginInterface {
     }
 }
 
-extension CodexAppServer.CodexExtensions.PluginDetail {
+extension CodexExtensions.PluginDetail {
     init(wireValue: CodexWirePluginDetail) {
         self.init(
-            apps: wireValue.apps.map(CodexAppServer.CodexExtensions.AppSummary.init),
+            apps: wireValue.apps.map(CodexExtensions.AppSummary.init),
             description: wireValue.description,
-            hooks: wireValue.hooks.map(CodexAppServer.CodexExtensions.PluginHookSummary.init),
+            hooks: wireValue.hooks.map(CodexExtensions.PluginHookSummary.init),
             marketplaceName: wireValue.marketplaceName,
             marketplacePath: wireValue.marketplacePath,
             mcpServers: wireValue.mcpServers,
-            skills: wireValue.skills.map(CodexAppServer.CodexExtensions.SkillSummary.init),
+            skills: wireValue.skills.map(CodexExtensions.SkillSummary.init),
             summary: .init(wireValue: wireValue.summary)
         )
     }
 }
 
-extension CodexAppServer.CodexExtensions.PluginHookSummary {
+extension CodexExtensions.PluginHookSummary {
     init(wireValue: CodexWirePluginHookSummary) {
         self.init(
             eventName: .init(wireValue: wireValue.eventName),
@@ -696,7 +811,7 @@ extension CodexAppServer.HookMetadata.EventName {
     }
 }
 
-extension CodexAppServer.CodexExtensions.AppSummary {
+extension CodexExtensions.AppSummary {
     init(wireValue: CodexWireAppSummary) {
         self.init(
             description: wireValue.description,
@@ -708,7 +823,7 @@ extension CodexAppServer.CodexExtensions.AppSummary {
     }
 }
 
-extension CodexAppServer.CodexExtensions.SkillSummary {
+extension CodexExtensions.SkillSummary {
     init(wireValue: CodexWireSkillSummary) {
         self.init(
             description: wireValue.description,
@@ -721,13 +836,13 @@ extension CodexAppServer.CodexExtensions.SkillSummary {
     }
 }
 
-extension CodexAppServer.CodexExtensions.CollaborationModeList {
+extension CodexExtensions.CollaborationModeList {
     init(wireValue: CodexWireCollaborationModeListResponse) {
-        self.init(modes: wireValue.data.map(CodexAppServer.CodexExtensions.CollaborationMode.init))
+        self.init(modes: wireValue.data.map(CodexExtensions.CollaborationMode.init))
     }
 }
 
-extension CodexAppServer.CodexExtensions.CollaborationMode {
+extension CodexExtensions.CollaborationMode {
     init(wireValue: CodexWireCollaborationModeMask) {
         self.init(
             kind: wireValue.mode.map(Kind.init),
@@ -738,7 +853,7 @@ extension CodexAppServer.CodexExtensions.CollaborationMode {
     }
 }
 
-extension CodexAppServer.CodexExtensions.CollaborationMode.Kind {
+extension CodexExtensions.CollaborationMode.Kind {
     init(wireValue: CodexWireModeKind) {
         switch wireValue {
         case .modeKindDefault:
