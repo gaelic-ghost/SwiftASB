@@ -34,7 +34,10 @@ extension CodexAppServerTests {
         let cachedThreadMcpPage = await thread.mcp.statusSnapshot()
         #expect(cachedThreadMcpPage.servers.map(\.name) == ["calendar", "thread_notes"])
 
+        let statusRequestCountBeforeRefresh = await transport.requestPayloads(for: "mcpServerStatus/list").count
         let refreshedThreadMcpPage = try await thread.mcp.refreshStatusSnapshot()
+        let statusRequestCountAfterRefresh = await transport.requestPayloads(for: "mcpServerStatus/list").count
+        #expect(statusRequestCountAfterRefresh > statusRequestCountBeforeRefresh)
         #expect(refreshedThreadMcpPage.servers.map(\.name) == ["calendar", "thread_notes"])
 
         let resource = try await thread.mcp.readResource(
