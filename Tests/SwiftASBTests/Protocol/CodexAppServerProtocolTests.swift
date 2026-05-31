@@ -131,6 +131,39 @@ struct CodexAppServerProtocolTests {
         #expect(params["threadId"] as? String == "thread-123")
     }
 
+    @Test("encodes thread guardian denied-action approval requests")
+    func encodesThreadGuardianDeniedActionApprovalRequest() throws {
+        let payload = try protocolLayer.makeThreadApproveGuardianDeniedActionRequest(
+            id: .string("guardian-approval-1"),
+            params: .init(
+                event: .object([
+                    "assessmentId": .string("assessment-123"),
+                    "status": .string("denied"),
+                ]),
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/approveGuardianDeniedAction")
+        #expect(object["id"] as? String == "guardian-approval-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        let event = try #require(params["event"] as? [String: Any])
+        #expect(event["assessmentId"] as? String == "assessment-123")
+        #expect(event["status"] as? String == "denied")
+
+        let responsePayload = #"{"id":"guardian-approval-1","result":{}}"#.data(using: .utf8)!
+        #expect(
+            try protocolLayer.decodeThreadApproveGuardianDeniedActionResponse(
+                responsePayload,
+                expectedID: .string("guardian-approval-1")
+            ) == .init()
+        )
+    }
+
     @Test("encodes review/start with subject and placement")
     func encodesReviewStartWithSubjectAndPlacement() throws {
         let payload = try protocolLayer.makeReviewStartRequest(
@@ -287,6 +320,93 @@ struct CodexAppServerProtocolTests {
         let unwatchRequest = try #require(try JSONSerialization.jsonObject(with: unwatchPayload) as? [String: Any])
         #expect(unwatchRequest["method"] as? String == "fs/unwatch")
         #expect((unwatchRequest["params"] as? [String: Any])?["watchId"] as? String == "watch-123")
+    }
+
+    @Test("encodes internal fs mutation requests with app-server method names")
+    func encodesInternalFSMutationRequests() throws {
+        let writePayload = try protocolLayer.makeFSWriteFileRequest(
+            id: .string("write-file-1"),
+            params: .init(
+                dataBase64: Data("Hello".utf8).base64EncodedString(),
+                path: "/tmp/project/README.md"
+            )
+        )
+        let writeRequest = try #require(try JSONSerialization.jsonObject(with: writePayload) as? [String: Any])
+        #expect(writeRequest["method"] as? String == "fs/writeFile")
+        let writeParams = try #require(writeRequest["params"] as? [String: Any])
+        #expect(writeParams["dataBase64"] as? String == "SGVsbG8=")
+        #expect(writeParams["path"] as? String == "/tmp/project/README.md")
+
+        let createDirectoryPayload = try protocolLayer.makeFSCreateDirectoryRequest(
+            id: .string("create-directory-1"),
+            params: .init(path: "/tmp/project/Sources/New", recursive: true)
+        )
+        let createDirectoryRequest = try #require(
+            try JSONSerialization.jsonObject(with: createDirectoryPayload) as? [String: Any]
+        )
+        #expect(createDirectoryRequest["method"] as? String == "fs/createDirectory")
+        let createDirectoryParams = try #require(createDirectoryRequest["params"] as? [String: Any])
+        #expect(createDirectoryParams["path"] as? String == "/tmp/project/Sources/New")
+        #expect(createDirectoryParams["recursive"] as? Bool == true)
+
+        let removePayload = try protocolLayer.makeFSRemoveRequest(
+            id: .string("remove-1"),
+            params: .init(force: false, path: "/tmp/project/obsolete.txt", recursive: false)
+        )
+        let removeRequest = try #require(try JSONSerialization.jsonObject(with: removePayload) as? [String: Any])
+        #expect(removeRequest["method"] as? String == "fs/remove")
+        let removeParams = try #require(removeRequest["params"] as? [String: Any])
+        #expect(removeParams["force"] as? Bool == false)
+        #expect(removeParams["path"] as? String == "/tmp/project/obsolete.txt")
+        #expect(removeParams["recursive"] as? Bool == false)
+
+        let copyPayload = try protocolLayer.makeFSCopyRequest(
+            id: .string("copy-1"),
+            params: .init(
+                destinationPath: "/tmp/project/copy.txt",
+                recursive: nil,
+                sourcePath: "/tmp/project/source.txt"
+            )
+        )
+        let copyRequest = try #require(try JSONSerialization.jsonObject(with: copyPayload) as? [String: Any])
+        #expect(copyRequest["method"] as? String == "fs/copy")
+        let copyParams = try #require(copyRequest["params"] as? [String: Any])
+        #expect(copyParams["destinationPath"] as? String == "/tmp/project/copy.txt")
+        #expect(copyParams["recursive"] == nil)
+        #expect(copyParams["sourcePath"] as? String == "/tmp/project/source.txt")
+    }
+
+    @Test("decodes internal fs mutation responses")
+    func decodesInternalFSMutationResponses() throws {
+        let writePayload = #"{"id":"write-file-1","result":{}}"#.data(using: .utf8)!
+        let createDirectoryPayload = #"{"id":"create-directory-1","result":{}}"#.data(using: .utf8)!
+        let removePayload = #"{"id":"remove-1","result":{}}"#.data(using: .utf8)!
+        let copyPayload = #"{"id":"copy-1","result":{}}"#.data(using: .utf8)!
+
+        #expect(
+            try protocolLayer.decodeFSWriteFileResponse(
+                writePayload,
+                expectedID: .string("write-file-1")
+            ) == .init()
+        )
+        #expect(
+            try protocolLayer.decodeFSCreateDirectoryResponse(
+                createDirectoryPayload,
+                expectedID: .string("create-directory-1")
+            ) == .init()
+        )
+        #expect(
+            try protocolLayer.decodeFSRemoveResponse(
+                removePayload,
+                expectedID: .string("remove-1")
+            ) == .init()
+        )
+        #expect(
+            try protocolLayer.decodeFSCopyResponse(
+                copyPayload,
+                expectedID: .string("copy-1")
+            ) == .init()
+        )
     }
 
     @Test("encodes loaded-thread list requests")
@@ -1216,7 +1336,7 @@ struct CodexAppServerProtocolTests {
 
         let mcpStatusEvent = try #require(
             try decodeEvent(
-                method: "mcpServer/status/updated",
+                method: "mcpServer/startupStatus/updated",
                 payload: Data(#"{"error":null,"name":"calendar","status":"ready"}"#.utf8)
             )
         )
@@ -1225,7 +1345,7 @@ struct CodexAppServerProtocolTests {
             #expect(notification.name == "calendar")
             #expect(notification.status == .ready)
         default:
-            Issue.record("Expected mcpServer/status/updated to decode into .mcpServerStatusUpdated.")
+            Issue.record("Expected mcpServer/startupStatus/updated to decode into .mcpServerStatusUpdated.")
         }
 
         let remoteStatusEvent = try #require(
@@ -1375,6 +1495,61 @@ struct CodexAppServerProtocolTests {
             #expect(notification.item.text == "Done.")
         default:
             Issue.record("Expected item/completed to decode into .itemCompleted.")
+        }
+
+        let autoReviewStartedPayload = Data(
+            #"""
+            {"action":{"command":"git status","cwd":"/tmp/project","source":"shell","type":"command"},"review":{"rationale":"Read-only repository inspection.","riskLevel":"low","status":"inProgress","userAuthorization":"medium"},"reviewId":"review-123","startedAtMs":1713350002000,"targetItemId":"item-command-1","threadId":"thread-123","turnId":"turn-123"}
+            """#.utf8
+        )
+
+        let autoReviewStartedEvent = try #require(
+            try decodeEvent(method: "item/autoApprovalReview/started", payload: autoReviewStartedPayload)
+        )
+
+        switch autoReviewStartedEvent {
+        case let .itemGuardianApprovalReviewStarted(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.targetItemID == "item-command-1")
+            #expect(notification.reviewID == "review-123")
+            #expect(notification.startedAtMS == 1_713_350_002_000)
+            #expect(notification.action.type == .command)
+            #expect(notification.action.command == "git status")
+            #expect(notification.action.source == .shell)
+            #expect(notification.review.status == .inProgress)
+            #expect(notification.review.riskLevel == .low)
+        default:
+            Issue.record("Expected item/autoApprovalReview/started to decode into .itemGuardianApprovalReviewStarted.")
+        }
+
+        let autoReviewCompletedPayload = Data(
+            #"""
+            {"action":{"host":"api.example.com","port":443,"protocol":"https","target":"https://api.example.com","type":"networkAccess"},"completedAtMs":1713350003000,"decisionSource":"agent","review":{"rationale":"Network access is limited to the requested host.","riskLevel":"medium","status":"approved","userAuthorization":"high"},"reviewId":"review-124","startedAtMs":1713350002000,"targetItemId":null,"threadId":"thread-123","turnId":"turn-123"}
+            """#.utf8
+        )
+
+        let autoReviewCompletedEvent = try #require(
+            try decodeEvent(method: "item/autoApprovalReview/completed", payload: autoReviewCompletedPayload)
+        )
+
+        switch autoReviewCompletedEvent {
+        case let .itemGuardianApprovalReviewCompleted(completion):
+            let notification = completion.notification
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.targetItemID == nil)
+            #expect(notification.reviewID == "review-124")
+            #expect(notification.startedAtMS == 1_713_350_002_000)
+            #expect(notification.completedAtMS == 1_713_350_003_000)
+            #expect(notification.decisionSource == .agent)
+            #expect(notification.action.type == .networkAccess)
+            #expect(notification.action.host == "api.example.com")
+            #expect(notification.action.guardianApprovalReviewActionProtocol == .https)
+            #expect(notification.review.status == .approved)
+            #expect(notification.review.userAuthorization == .high)
+        default:
+            Issue.record("Expected item/autoApprovalReview/completed to decode into .itemGuardianApprovalReviewCompleted.")
         }
 
         let agentMessageDeltaPayload = Data(
@@ -1544,7 +1719,7 @@ struct CodexAppServerProtocolTests {
     func decodesServerRequests() throws {
         let commandApprovalPayload = Data(
             #"""
-            {"command":"git status","commandActions":[{"command":"git status","type":"unknown"}],"cwd":"/tmp/project","itemId":"item-command-1","reason":"Needs approval to inspect repository state.","threadId":"thread-123","turnId":"turn-123"}
+            {"command":"git status","commandActions":[{"command":"git status","type":"unknown"}],"cwd":"/tmp/project","itemId":"item-command-1","proposedNetworkPolicyAmendments":[{"action":"audit","host":"example.com"}],"reason":"Needs approval to inspect repository state.","threadId":"thread-123","turnId":"turn-123"}
             """#.utf8
         )
 
@@ -1565,6 +1740,9 @@ struct CodexAppServerProtocolTests {
             #expect(request.turnID == "turn-123")
             #expect(request.itemID == "item-command-1")
             #expect(request.command == "git status")
+            let amendment = try #require(request.proposedNetworkPolicyAmendments?.first)
+            #expect(amendment.publicValue.action == .unknown("audit"))
+            #expect(amendment.publicValue.host == "example.com")
         default:
             Issue.record("Expected command approval server request to decode into .commandExecutionApprovalRequested.")
         }

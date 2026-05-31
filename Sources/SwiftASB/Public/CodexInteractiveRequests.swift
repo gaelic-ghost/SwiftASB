@@ -4,6 +4,7 @@ import Foundation
 public enum CodexInteractiveRequestKind: String, Sendable, Equatable {
     case commandExecutionApproval
     case fileChangeApproval
+    case guardianDeniedActionApproval
     case permissionsApproval
     case toolUserInput
     case mcpServerElicitation
@@ -34,6 +35,7 @@ public struct CodexInteractiveRequestResolved: Sendable, Equatable {
 public enum CodexApprovalRequest: Sendable, Equatable {
     case commandExecution(CodexCommandExecutionApprovalRequest)
     case fileChange(CodexFileChangeApprovalRequest)
+    case guardianDeniedAction(CodexGuardianDeniedActionApprovalRequest)
     case permissions(CodexPermissionsApprovalRequest)
 
     public var threadID: String {
@@ -41,6 +43,8 @@ public enum CodexApprovalRequest: Sendable, Equatable {
         case let .commandExecution(request):
             request.threadID
         case let .fileChange(request):
+            request.threadID
+        case let .guardianDeniedAction(request):
             request.threadID
         case let .permissions(request):
             request.threadID
@@ -53,6 +57,8 @@ public enum CodexApprovalRequest: Sendable, Equatable {
             request.turnID
         case let .fileChange(request):
             request.turnID
+        case let .guardianDeniedAction(request):
+            request.turnID
         case let .permissions(request):
             request.turnID
         }
@@ -64,6 +70,8 @@ public enum CodexApprovalRequest: Sendable, Equatable {
             .commandExecutionApproval
         case .fileChange:
             .fileChangeApproval
+        case .guardianDeniedAction:
+            .guardianDeniedActionApproval
         case .permissions:
             .permissionsApproval
         }
@@ -74,6 +82,8 @@ public enum CodexApprovalRequest: Sendable, Equatable {
         case let .commandExecution(request):
             request.requestID
         case let .fileChange(request):
+            request.requestID
+        case let .guardianDeniedAction(request):
             request.requestID
         case let .permissions(request):
             request.requestID
@@ -180,6 +190,154 @@ public struct CodexPermissionsApprovalRequest: Sendable, Equatable {
     }
 }
 
+/// Guardian auto-review denial that can be explicitly approved by the caller.
+public struct CodexGuardianDeniedActionApprovalRequest: Sendable, Equatable {
+    public let threadID: String
+    public let turnID: String
+    public let reviewID: String
+    public let targetItemID: String?
+    public let startedAtMS: Int?
+    public let completedAtMS: Int?
+    public let decisionSource: String
+    public let action: CodexGuardianApprovalReviewAction
+    public let review: CodexGuardianApprovalReview
+    public let event: CodexAppServer.JSONValue
+
+    internal let requestID: CodexRPCRequestID
+
+    internal init(
+        requestID: CodexRPCRequestID,
+        threadID: String,
+        turnID: String,
+        reviewID: String,
+        targetItemID: String?,
+        startedAtMS: Int?,
+        completedAtMS: Int?,
+        decisionSource: String,
+        action: CodexGuardianApprovalReviewAction,
+        review: CodexGuardianApprovalReview,
+        event: CodexAppServer.JSONValue
+    ) {
+        self.requestID = requestID
+        self.threadID = threadID
+        self.turnID = turnID
+        self.reviewID = reviewID
+        self.targetItemID = targetItemID
+        self.startedAtMS = startedAtMS
+        self.completedAtMS = completedAtMS
+        self.decisionSource = decisionSource
+        self.action = action
+        self.review = review
+        self.event = event
+    }
+}
+
+/// Action reviewed by guardian auto-review.
+public struct CodexGuardianApprovalReviewAction: Sendable, Equatable {
+    public enum ActionType: String, Sendable, Equatable {
+        case applyPatch, command, execve, mcpToolCall, networkAccess, requestPermissions
+    }
+
+    public enum CommandSource: String, Sendable, Equatable {
+        case shell, unifiedExec
+    }
+
+    public enum NetworkProtocol: String, Sendable, Equatable {
+        case http, https, socks5TCP, socks5UDP
+    }
+
+    public let type: ActionType
+    public let command: String?
+    public let currentDirectoryPath: String?
+    public let source: CommandSource?
+    public let argv: [String]?
+    public let program: String?
+    public let files: [String]?
+    public let host: String?
+    public let port: Int?
+    public let networkProtocol: NetworkProtocol?
+    public let target: String?
+    public let connectorID: String?
+    public let connectorName: String?
+    public let server: String?
+    public let toolName: String?
+    public let toolTitle: String?
+    public let permissions: CodexPermissionProfile?
+    public let reason: String?
+
+    internal init(
+        type: ActionType,
+        command: String?,
+        currentDirectoryPath: String?,
+        source: CommandSource?,
+        argv: [String]?,
+        program: String?,
+        files: [String]?,
+        host: String?,
+        port: Int?,
+        networkProtocol: NetworkProtocol?,
+        target: String?,
+        connectorID: String?,
+        connectorName: String?,
+        server: String?,
+        toolName: String?,
+        toolTitle: String?,
+        permissions: CodexPermissionProfile?,
+        reason: String?
+    ) {
+        self.type = type
+        self.command = command
+        self.currentDirectoryPath = currentDirectoryPath
+        self.source = source
+        self.argv = argv
+        self.program = program
+        self.files = files
+        self.host = host
+        self.port = port
+        self.networkProtocol = networkProtocol
+        self.target = target
+        self.connectorID = connectorID
+        self.connectorName = connectorName
+        self.server = server
+        self.toolName = toolName
+        self.toolTitle = toolTitle
+        self.permissions = permissions
+        self.reason = reason
+    }
+}
+
+/// Guardian auto-review result attached to a reviewed action.
+public struct CodexGuardianApprovalReview: Sendable, Equatable {
+    public enum RiskLevel: String, Sendable, Equatable {
+        case critical, high, low, medium
+    }
+
+    public enum Status: String, Sendable, Equatable {
+        case aborted, approved, denied, inProgress, timedOut
+    }
+
+    public enum UserAuthorization: String, Sendable, Equatable {
+        case high, low, medium, unknown
+    }
+
+    public let rationale: String?
+    public let riskLevel: RiskLevel?
+    public let status: Status
+    public let userAuthorization: UserAuthorization?
+
+    internal init(
+        rationale: String?,
+        riskLevel: RiskLevel?,
+        status: Status,
+        userAuthorization: UserAuthorization?
+    ) {
+        self.rationale = rationale
+        self.riskLevel = riskLevel
+        self.status = status
+        self.userAuthorization = userAuthorization
+    }
+}
+
 /// Structured command action attached to a command-execution approval request.
 public enum CodexCommandAction: Sendable, Equatable {
     case read(Read)
@@ -233,9 +391,32 @@ public enum CodexCommandAction: Sendable, Equatable {
 /// Network-policy change proposed by Codex or returned by a caller.
 public struct CodexNetworkPolicyAmendment: Sendable, Equatable {
     /// Network-policy action requested for one host.
-    public enum Action: String, Sendable, Equatable {
+    public enum Action: Sendable, Equatable {
         case allow
         case deny
+        case unknown(String)
+
+        public init(wireValue: String) {
+            switch wireValue {
+            case "allow":
+                self = .allow
+            case "deny":
+                self = .deny
+            default:
+                self = .unknown(wireValue)
+            }
+        }
+
+        public var wireValue: String {
+            switch self {
+            case .allow:
+                "allow"
+            case .deny:
+                "deny"
+            case let .unknown(value):
+                value
+            }
+        }
     }
 
     public let action: Action
@@ -463,6 +644,7 @@ public struct CodexMcpServerElicitationRequest: Sendable, Equatable {
 public enum CodexApprovalResponse: Sendable, Equatable {
     case commandExecution(CodexCommandExecutionApprovalResponse)
     case fileChange(CodexFileChangeApprovalResponse)
+    case guardianDeniedAction(CodexGuardianDeniedActionApprovalResponse)
     case permissions(CodexPermissionsApprovalResponse)
 }
 
@@ -479,6 +661,11 @@ public enum CodexCommandExecutionApprovalResponse: Sendable, Equatable {
 /// File-change approval response sent by the caller.
 public enum CodexFileChangeApprovalResponse: String, Sendable, Equatable {
     case accept, acceptForSession, decline, cancel
+}
+
+/// Guardian denied-action approval response sent by the caller.
+public enum CodexGuardianDeniedActionApprovalResponse: Sendable, Equatable {
+    case approve
 }
 
 /// Permissions approval response sent by the caller.

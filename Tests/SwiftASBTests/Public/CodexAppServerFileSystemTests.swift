@@ -294,7 +294,7 @@ extension CodexAppServerTests {
             )
         )
 
-        let apps = try await client.extensions.listApps(.init(cursor: "apps-cursor", limit: 1, forceRefetch: true, threadID: "thread-123"))
+        let apps = try await client.extensions.apps.list(.init(cursor: "apps-cursor", limit: 1, forceRefetch: true, threadID: "thread-123"))
         #expect(apps.apps.map(\.name) == ["GitHub"])
         #expect(apps.apps.first?.branding?.isDiscoverableApp == true)
         #expect(apps.apps.first?.branding?.category == "developer-tools")
@@ -306,7 +306,7 @@ extension CodexAppServerTests {
         #expect(apps.apps.first?.versionID == "version-123")
         #expect(apps.nextCursor == "apps-next")
 
-        let skills = try await client.extensions.listSkills(
+        let skills = try await client.extensions.skills.list(
             .init(
                 currentDirectoryPaths: ["/tmp/project"],
                 forceReload: true
@@ -318,7 +318,7 @@ extension CodexAppServerTests {
         #expect(skills.entries.first?.skills.first?.displayName == "Swift Package Workflow")
         #expect(skills.entries.first?.skills.first?.shortDescription == "SwiftPM workflow from interface")
 
-        let plugins = try await client.extensions.listPlugins(.init(currentDirectoryPaths: ["/tmp/project"]))
+        let plugins = try await client.extensions.plugins.list(.init(currentDirectoryPaths: ["/tmp/project"]))
         #expect(plugins.featuredPluginIDs == ["github"])
         #expect(plugins.marketplaceLoadErrors.first?.marketplacePath == "/tmp/bad-marketplace.json")
         #expect(plugins.marketplaces.first?.displayName == "Curated")
@@ -328,7 +328,7 @@ extension CodexAppServerTests {
         #expect(plugins.marketplaces.first?.plugins.last?.sourceKind == .local)
         #expect(plugins.marketplaces.first?.plugins.last?.sourcePath == "/tmp/plugins/local-plugin")
 
-        let plugin = try await client.extensions.readPlugin(.init(pluginName: "GitHub", remoteMarketplaceName: "openai-curated"))
+        let plugin = try await client.extensions.plugins.read(.init(pluginName: "GitHub", remoteMarketplaceName: "openai-curated"))
         #expect(plugin.marketplaceName == "openai-curated")
         #expect(plugin.marketplacePath == "/tmp/marketplaces/openai-curated.json")
         #expect(plugin.description == "GitHub plugin detail fixture.")
@@ -342,7 +342,7 @@ extension CodexAppServerTests {
         #expect(plugin.summary.sourceSHA == "abc123")
         #expect(plugin.summary.sourceURL == "https://github.com/openai/github-plugin")
 
-        let modes = try await client.extensions.listCollaborationModes()
+        let modes = try await client.extensions.collaborationModes.list()
         #expect(modes.modes.first?.kind == .plan)
         #expect(modes.modes.first?.reasoningEffort == .medium)
 
@@ -399,7 +399,7 @@ extension CodexAppServerTests {
             )
         )
 
-        let result = try await client.extensions.upgradeMarketplace(
+        let result = try await client.extensions.plugins.upgradeMarketplace(
             .init(
                 marketplaceName: "openai-curated",
                 currentDirectoryPaths: ["/tmp/project"],
@@ -461,7 +461,7 @@ extension CodexAppServerTests {
         )
 
         await #expect(throws: CodexAppServerError.self) {
-            try await client.extensions.upgradeMarketplace(
+            try await client.extensions.plugins.upgradeMarketplace(
                 .init(marketplaceName: "openai-curated")
             )
         }
@@ -493,7 +493,7 @@ extension CodexAppServerTests {
         )
 
         await #expect(throws: CodexAppServerError.self) {
-            try await client.extensions.upgradeMarketplace(
+            try await client.extensions.plugins.upgradeMarketplace(
                 .init(marketplaceName: "openai-curated")
             )
         }
@@ -522,7 +522,7 @@ extension CodexAppServerTests {
         )
 
         do {
-            _ = try await client.extensions.listSkills(
+            _ = try await client.extensions.skills.list(
                 .init(
                     currentDirectoryPaths: ["/tmp/project"],
                     perCurrentDirectoryExtraUserRoots: [

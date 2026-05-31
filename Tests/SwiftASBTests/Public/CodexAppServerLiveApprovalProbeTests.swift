@@ -70,6 +70,9 @@ extension CodexAppServerLiveIntegrationTests {
                 case let .fileChange(fileRequest):
                     #expect(fileRequest.threadID == approvalThread.id)
                     #expect(fileRequest.turnID == approvalTurn.turn.id)
+                case let .guardianDeniedAction(guardianRequest):
+                    #expect(guardianRequest.threadID == approvalThread.id)
+                    #expect(guardianRequest.turnID == approvalTurn.turn.id)
                 case let .permissions(permissionsRequest):
                     #expect(permissionsRequest.threadID == approvalThread.id)
                     #expect(permissionsRequest.turnID == approvalTurn.turn.id)

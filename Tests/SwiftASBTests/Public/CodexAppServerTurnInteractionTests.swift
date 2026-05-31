@@ -308,6 +308,94 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("surfaces denied guardian auto-review as an approval request")
+    func surfacesDeniedGuardianAutoReviewAsApprovalRequest() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let thread = try await client.startThread(
+            .init(
+                currentDirectoryPath: "/tmp/project",
+                model: "gpt-5.4",
+                modelProvider: "openai"
+            )
+        )
+
+        let turnHandle = try await thread.startTextTurn("Fetch the protected endpoint.")
+        var iterator = turnHandle.events.makeAsyncIterator()
+        await transport.emitGuardianAutoReviewCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            reviewID: "review-guardian-1",
+            status: "denied",
+            targetItemID: nil
+        )
+
+        let firstEvent = try await iterator.next()
+        guard case let .approvalRequested(approvalRequest)? = firstEvent else {
+            Issue.record("Expected denied guardian auto-review to surface as .approvalRequested.")
+            await client.stop()
+            return
+        }
+
+        guard case let .guardianDeniedAction(guardianRequest) = approvalRequest else {
+            Issue.record("Expected a guardian denied-action approval request.")
+            await client.stop()
+            return
+        }
+
+        #expect(guardianRequest.threadID == thread.id)
+        #expect(guardianRequest.turnID == turnHandle.turn.id)
+        #expect(guardianRequest.reviewID == "review-guardian-1")
+        #expect(guardianRequest.review.status == .denied)
+        #expect(guardianRequest.review.riskLevel == .medium)
+        #expect(guardianRequest.action.type == .networkAccess)
+        #expect(guardianRequest.action.host == "api.example.com")
+        #expect(guardianRequest.action.networkProtocol == .https)
+
+        try await turnHandle.respond(
+            to: approvalRequest,
+            with: .guardianDeniedAction(.approve)
+        )
+
+        let secondEvent = try await iterator.next()
+        guard case let .serverRequestResolved(resolution)? = secondEvent else {
+            Issue.record("Expected approving a guardian denied action to resolve the approval request.")
+            await client.stop()
+            return
+        }
+
+        #expect(resolution.threadID == thread.id)
+        #expect(resolution.turnID == turnHandle.turn.id)
+        #expect(resolution.kind == .guardianDeniedActionApproval)
+
+        let requestPayloads = await transport.requestPayloads(for: "thread/approveGuardianDeniedAction")
+        #expect(requestPayloads.count == 1)
+        let requestObject = try #require(
+            try JSONSerialization.jsonObject(with: requestPayloads[0]) as? [String: Any]
+        )
+        #expect(requestObject["method"] as? String == "thread/approveGuardianDeniedAction")
+        let params = try #require(requestObject["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == thread.id)
+        let event = try #require(params["event"] as? [String: Any])
+        #expect(event["reviewId"] as? String == "review-guardian-1")
+        let review = try #require(event["review"] as? [String: Any])
+        #expect(review["status"] as? String == "denied")
+
+        await client.stop()
+    }
+
     @Test("rejects interactive approval responses sent through the wrong surface")
     func rejectsApprovalResponsesSentThroughWrongSurface() async throws {
         let transport = FakeCodexAppServerTransport()

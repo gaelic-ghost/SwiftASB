@@ -361,6 +361,8 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
             )
         case "thread/archive":
             return responsePayload(id: id, result: [:])
+        case "thread/approveGuardianDeniedAction":
+            return responsePayload(id: id, result: [:])
         case "thread/unarchive":
             return responsePayload(
                 id: id,
@@ -1372,6 +1374,72 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         )
     }
 
+    func emitGuardianAutoReviewStarted(
+        threadID: String,
+        turnID: String,
+        reviewID: String,
+        targetItemID: String?
+    ) {
+        let payload = payloadObject([
+            "action": [
+                "command": "git status",
+                "cwd": "/tmp/project",
+                "source": "shell",
+                "type": "command",
+            ],
+            "review": [
+                "rationale": "Read-only repository inspection.",
+                "riskLevel": "low",
+                "status": "inProgress",
+                "userAuthorization": "medium",
+            ],
+            "reviewId": reviewID,
+            "startedAtMs": 1_713_350_002_000,
+            "targetItemId": (targetItemID as Any?) ?? NSNull(),
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/autoApprovalReview/started", payload: payload)
+        )
+    }
+
+    func emitGuardianAutoReviewCompleted(
+        threadID: String,
+        turnID: String,
+        reviewID: String,
+        status: String,
+        targetItemID: String?
+    ) {
+        let payload = payloadObject([
+            "action": [
+                "host": "api.example.com",
+                "port": 443,
+                "protocol": "https",
+                "target": "https://api.example.com",
+                "type": "networkAccess",
+            ],
+            "completedAtMs": 1_713_350_003_000,
+            "decisionSource": "agent",
+            "review": [
+                "rationale": "Network access is limited to the requested host.",
+                "riskLevel": "medium",
+                "status": status,
+                "userAuthorization": "high",
+            ],
+            "reviewId": reviewID,
+            "startedAtMs": 1_713_350_002_000,
+            "targetItemId": (targetItemID as Any?) ?? NSNull(),
+            "threadId": threadID,
+            "turnId": turnID,
+        ])
+
+        serverEventContinuation?.yield(
+            .notification(method: "item/autoApprovalReview/completed", payload: payload)
+        )
+    }
+
     func emitToolUserInputRequest(
         requestID: CodexRPCRequestID,
         threadID: String,
@@ -1897,7 +1965,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         ])
 
         serverEventContinuation?.yield(
-            .notification(method: "mcpServer/status/updated", payload: payload)
+            .notification(method: "mcpServer/startupStatus/updated", payload: payload)
         )
     }
 

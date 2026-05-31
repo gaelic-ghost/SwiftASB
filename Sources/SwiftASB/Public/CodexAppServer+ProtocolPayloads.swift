@@ -37,7 +37,7 @@ enum CodexProtocolCommandExecutionApprovalDecision: Encodable {
                 [
                     "applyNetworkPolicyAmendment": [
                         "network_policy_amendment": [
-                            "action": amendment.action.rawValue,
+                            "action": amendment.action.wireValue,
                             "host": amendment.host,
                         ]
                     ]
@@ -139,6 +139,171 @@ extension CodexProtocolPermissionsApprovalRequest {
     }
 }
 
+extension CodexProtocolGuardianApprovalReviewCompletedNotification {
+    var publicDeniedActionApprovalRequest: CodexApprovalRequest? {
+        guard notification.review.status == .denied else {
+            return nil
+        }
+
+        return .guardianDeniedAction(
+            .init(
+                requestID: .string("guardian-denied-action:\(notification.reviewID)"),
+                threadID: notification.threadID,
+                turnID: notification.turnID,
+                reviewID: notification.reviewID,
+                targetItemID: notification.targetItemID,
+                startedAtMS: notification.startedAtMS,
+                completedAtMS: notification.completedAtMS,
+                decisionSource: notification.decisionSource.rawValue,
+                action: .init(wireValue: notification.action),
+                review: .init(wireValue: notification.review),
+                event: .init(wireValue: event)
+            )
+        )
+    }
+}
+
+extension CodexGuardianApprovalReviewAction {
+    init(wireValue: CodexWireGuardianApprovalReviewAction) {
+        self.init(
+            type: .init(wireValue: wireValue.type),
+            command: wireValue.command,
+            currentDirectoryPath: wireValue.cwd,
+            source: wireValue.source.map(CommandSource.init(wireValue:)),
+            argv: wireValue.argv,
+            program: wireValue.program,
+            files: wireValue.files,
+            host: wireValue.host,
+            port: wireValue.port,
+            networkProtocol: wireValue.guardianApprovalReviewActionProtocol.map(NetworkProtocol.init(wireValue:)),
+            target: wireValue.target,
+            connectorID: wireValue.connectorID,
+            connectorName: wireValue.connectorName,
+            server: wireValue.server,
+            toolName: wireValue.toolName,
+            toolTitle: wireValue.toolTitle,
+            permissions: wireValue.permissions.map(CodexPermissionProfile.init(wireValue:)),
+            reason: wireValue.reason
+        )
+    }
+}
+
+extension CodexGuardianApprovalReviewAction.ActionType {
+    init(wireValue: CodexWireGuardianApprovalReviewActionType) {
+        switch wireValue {
+        case .applyPatch:
+            self = .applyPatch
+        case .command:
+            self = .command
+        case .execve:
+            self = .execve
+        case .mcpToolCall:
+            self = .mcpToolCall
+        case .networkAccess:
+            self = .networkAccess
+        case .requestPermissions:
+            self = .requestPermissions
+        }
+    }
+}
+
+extension CodexGuardianApprovalReviewAction.CommandSource {
+    init(wireValue: CodexWireGuardianCommandSource) {
+        switch wireValue {
+        case .shell:
+            self = .shell
+        case .unifiedExec:
+            self = .unifiedExec
+        }
+    }
+}
+
+extension CodexGuardianApprovalReviewAction.NetworkProtocol {
+    init(wireValue: CodexWireNetworkApprovalProtocol) {
+        switch wireValue {
+        case .http:
+            self = .http
+        case .https:
+            self = .https
+        case .socks5TCP:
+            self = .socks5TCP
+        case .socks5UDP:
+            self = .socks5UDP
+        }
+    }
+}
+
+extension CodexGuardianApprovalReview {
+    init(wireValue: CodexWireGuardianApprovalReview) {
+        self.init(
+            rationale: wireValue.rationale,
+            riskLevel: wireValue.riskLevel.map(RiskLevel.init(wireValue:)),
+            status: .init(wireValue: wireValue.status),
+            userAuthorization: wireValue.userAuthorization.map(UserAuthorization.init(wireValue:))
+        )
+    }
+}
+
+extension CodexGuardianApprovalReview.RiskLevel {
+    init(wireValue: CodexWireGuardianRiskLevel) {
+        switch wireValue {
+        case .critical:
+            self = .critical
+        case .high:
+            self = .high
+        case .low:
+            self = .low
+        case .medium:
+            self = .medium
+        }
+    }
+}
+
+extension CodexGuardianApprovalReview.Status {
+    init(wireValue: CodexWireGuardianApprovalReviewStatus) {
+        switch wireValue {
+        case .aborted:
+            self = .aborted
+        case .approved:
+            self = .approved
+        case .denied:
+            self = .denied
+        case .inProgress:
+            self = .inProgress
+        case .timedOut:
+            self = .timedOut
+        }
+    }
+}
+
+extension CodexGuardianApprovalReview.UserAuthorization {
+    init(wireValue: CodexWireGuardianUserAuthorization) {
+        switch wireValue {
+        case .high:
+            self = .high
+        case .low:
+            self = .low
+        case .medium:
+            self = .medium
+        case .unknown:
+            self = .unknown
+        }
+    }
+}
+
+extension CodexPermissionProfile {
+    init(wireValue: CodexWireRequestPermissionProfile) {
+        self.init(
+            fileSystem: wireValue.fileSystem.map {
+                .init(read: $0.read, write: $0.write)
+            },
+            network: wireValue.network.map {
+                .init(enabled: $0.enabled)
+            }
+        )
+    }
+}
+
 extension CodexProtocolToolUserInputRequest {
     var publicValue: CodexElicitationRequest {
         .toolUserInput(
@@ -226,7 +391,7 @@ extension CodexProtocolCommandAction {
 extension CodexProtocolNetworkPolicyAmendment {
     var publicValue: CodexNetworkPolicyAmendment {
         .init(
-            action: .init(rawValue: action) ?? .allow,
+            action: .init(wireValue: action),
             host: host
         )
     }

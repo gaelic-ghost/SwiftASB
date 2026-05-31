@@ -9,12 +9,11 @@ It owns the subprocess transport, the JSON-RPC protocol boundary, typed request 
 
 The public surface has three main handles:
 
-- ``CodexAppServer`` owns the app-server process, initialization, app-wide observable inventory, capability snapshots, and stored-thread operations.
+- ``CodexAppServer`` owns the app-server process, initialization, capability snapshots, and stored-thread operations.
 - ``CodexFS`` owns app-server-routed filesystem reads for sandboxed clients.
 - ``CodexWorkspace`` owns app-server-routed workspace permission selections and runtime permission facts.
 - ``CodexConfig`` owns app-server-routed configuration reads for sandboxed clients.
-- ``CodexMCP`` owns opinionated MCP server installation through app-server configuration writes.
-- ``CodexAppServer/CodexExtensions`` owns app, skill, plugin, and collaboration-mode inventory.
+- ``CodexExtensions`` owns app, skill, plugin, MCP, collaboration-mode inventory, and the app-wide observable inventory.
 - ``SwiftASBFeaturePolicy`` owns SwiftASB convenience-feature categories, defaults, and host-access declarations.
 - ``SwiftASBFeatureOperationEvent`` reports SwiftASB-owned mutation operations in human-readable form.
 - ``CodexThread`` owns a single conversation thread, including new turns, thread-management actions, thread event streams, local history windows, and thread-scoped observable companions.
@@ -40,12 +39,12 @@ Generated Codex wire types remain internal scaffolding. Public callers should us
 ### Primary Handles
 
 - ``CodexAppServer``
-- ``CodexAppServer/Inventory``
 - ``CodexFS``
 - ``CodexWorkspace``
 - ``CodexConfig``
-- ``CodexMCP``
-- ``CodexAppServer/CodexExtensions``
+- ``CodexExtensions``
+- ``CodexExtensions/Inventory``
+- ``CodexExtensions/MCP``
 - ``SwiftASBFeaturePolicy``
 - ``SwiftASBFeatureCategory``
 - ``SwiftASBFeatureOperationEvent``

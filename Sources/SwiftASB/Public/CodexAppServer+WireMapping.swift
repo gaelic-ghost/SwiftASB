@@ -994,6 +994,23 @@ extension CodexAppServer.ThreadActiveFlag {
     }
 }
 
+extension CodexThread.Dashboard.AutoReviewStatus {
+    init(wireValue: CodexWireGuardianApprovalReviewStatus) {
+        switch wireValue {
+        case .aborted:
+            self = .aborted
+        case .approved:
+            self = .approved
+        case .denied:
+            self = .denied
+        case .inProgress:
+            self = .inProgress
+        case .timedOut:
+            self = .timedOut
+        }
+    }
+}
+
 extension CodexAppServer.TurnSession {
     init(wireValue: CodexWireTurnStartResponse) {
         self.init(turn: .init(wireValue: wireValue.turn))

@@ -36,6 +36,8 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case turnCompleted(CodexWireTurnCompletedNotification)
 	case itemStarted(CodexWireItemStartedNotification)
 	case itemCompleted(CodexWireItemCompletedNotification)
+	case itemGuardianApprovalReviewStarted(CodexWireItemGuardianApprovalReviewStartedNotification)
+	case itemGuardianApprovalReviewCompleted(CodexProtocolGuardianApprovalReviewCompletedNotification)
 	case commandExecOutputDelta(CodexWireCommandExecOutputDeltaNotification)
 	case commandExecutionOutputDelta(CodexWireCommandExecutionOutputDeltaNotification)
 	case fileChangeOutputDelta(CodexWireFileChangeOutputDeltaNotification)
@@ -60,6 +62,13 @@ struct CodexProtocolThreadShellCommandResponse: Decodable, Equatable, Sendable {
 struct CodexProtocolThreadArchiveResponse: Decodable, Equatable, Sendable {}
 
 struct CodexProtocolThreadSetNameResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolThreadApproveGuardianDeniedActionResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolGuardianApprovalReviewCompletedNotification: Equatable, Sendable {
+	let event: CodexWireJSONValue
+	let notification: CodexWireItemGuardianApprovalReviewCompletedNotification
+}
 
 struct CodexProtocolModelProviderCapabilitiesReadParams: Encodable, Equatable, Sendable {}
 
@@ -136,6 +145,36 @@ enum CodexProtocolConfigWriteStatus: String, Decodable, Equatable, Sendable {
     case ok
     case okOverridden
 }
+
+struct CodexProtocolFSWriteFileParams: Encodable, Equatable, Sendable {
+    let dataBase64: String
+    let path: String
+}
+
+struct CodexProtocolFSCreateDirectoryParams: Encodable, Equatable, Sendable {
+    let path: String
+    let recursive: Bool?
+}
+
+struct CodexProtocolFSRemoveParams: Encodable, Equatable, Sendable {
+    let force: Bool?
+    let path: String
+    let recursive: Bool?
+}
+
+struct CodexProtocolFSCopyParams: Encodable, Equatable, Sendable {
+    let destinationPath: String
+    let recursive: Bool?
+    let sourcePath: String
+}
+
+struct CodexProtocolFSWriteFileResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolFSCreateDirectoryResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolFSRemoveResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolFSCopyResponse: Decodable, Equatable, Sendable {}
 
 struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
     let gitInfo: GitInfo?

@@ -64,11 +64,24 @@ internal enum CodexRPCEnvelope {
                 )
             }
 
-            let doubleValue = number.doubleValue
-            let integerValue = number.intValue
-            guard doubleValue.rounded(.towardZero) == doubleValue else {
+            let decimalValue = number.decimalValue
+            var roundedValue = Decimal()
+            var sourceValue = decimalValue
+            NSDecimalRound(&roundedValue, &sourceValue, 0, .plain)
+            guard roundedValue == decimalValue else {
                 throw CodexTransportError.invalidJSONRPCEnvelope(
                     reason: "JSON-RPC numeric request IDs must be whole numbers."
+                )
+            }
+            guard decimalValue >= Decimal(Int.min), decimalValue <= Decimal(Int.max) else {
+                throw CodexTransportError.invalidJSONRPCEnvelope(
+                    reason: "JSON-RPC numeric request ID \(number) is outside the supported Swift Int range."
+                )
+            }
+
+            guard let integerValue = Int(exactly: NSDecimalNumber(decimal: decimalValue)) else {
+                throw CodexTransportError.invalidJSONRPCEnvelope(
+                    reason: "JSON-RPC numeric request ID \(number) could not be represented exactly as a Swift Int."
                 )
             }
             return .int(integerValue)

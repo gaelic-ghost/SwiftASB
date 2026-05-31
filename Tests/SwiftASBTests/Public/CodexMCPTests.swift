@@ -19,27 +19,34 @@ extension CodexAppServerTests {
             )
         )
 
-        let result = try await client.mcp.install(
-            .stdio(
-                name: "docs",
-                command: "/usr/bin/env",
-                arguments: ["node", "/tmp/docs-server.js"],
-                currentDirectoryPath: "/tmp/docs",
-                environment: ["DOCS_MODE": "test"],
-                inheritedEnvironmentVariables: ["OPENAI_API_KEY"],
-                options: .init(
-                    enabled: true,
-                    required: false,
-                    startupTimeoutSeconds: 5,
-                    toolTimeoutSeconds: 30,
-                    toolPolicy: .init(
-                        enabledTools: ["search"],
-                        defaultApprovalMode: .prompt,
-                        toolApprovalModes: ["write": .approve]
+        let installResult = try await client.extensions.install(
+            .mcp(
+                .stdio(
+                    name: "docs",
+                    command: "/usr/bin/env",
+                    arguments: ["node", "/tmp/docs-server.js"],
+                    currentDirectoryPath: "/tmp/docs",
+                    environment: ["DOCS_MODE": "test"],
+                    inheritedEnvironmentVariables: ["OPENAI_API_KEY"],
+                    options: .init(
+                        enabled: true,
+                        required: false,
+                        startupTimeoutSeconds: 5,
+                        toolTimeoutSeconds: 30,
+                        toolPolicy: .init(
+                            enabledTools: ["search"],
+                            defaultApprovalMode: .prompt,
+                            toolApprovalModes: ["write": .approve]
+                        )
                     )
                 )
             )
         )
+        let result: CodexExtensions.MCP.InstallResult
+        switch installResult {
+        case let .mcp(mcpResult):
+            result = mcpResult
+        }
 
         #expect(result.configFilePath == "/Users/example/.codex/config.toml")
         #expect(result.status == .ok)
@@ -90,16 +97,18 @@ extension CodexAppServerTests {
             )
         )
 
-        try await client.mcp.install(
-            .http(
-                name: "search",
-                url: try #require(URL(string: "https://example.com/mcp")),
-                authorization: .bearerTokenEnvironmentVariable("SEARCH_MCP_TOKEN"),
-                headers: ["X-Static": "yes"],
-                environmentHeaders: ["Authorization": "SEARCH_MCP_AUTH_HEADER"],
-                options: .init(
-                    enabled: false,
-                    toolPolicy: .deny(["delete"])
+        try await client.extensions.install(
+            .mcp(
+                .http(
+                    name: "search",
+                    url: try #require(URL(string: "https://example.com/mcp")),
+                    authorization: .bearerTokenEnvironmentVariable("SEARCH_MCP_TOKEN"),
+                    headers: ["X-Static": "yes"],
+                    environmentHeaders: ["Authorization": "SEARCH_MCP_AUTH_HEADER"],
+                    options: .init(
+                        enabled: false,
+                        toolPolicy: .deny(["delete"])
+                    )
                 )
             )
         )
@@ -138,8 +147,8 @@ extension CodexAppServerTests {
         )
 
         await #expect(throws: CodexAppServerError.self) {
-            try await client.mcp.install(
-                .stdio(name: "bad.name", command: "/usr/bin/env")
+            try await client.extensions.install(
+                .mcp(.stdio(name: "bad.name", command: "/usr/bin/env"))
             )
         }
 
@@ -165,12 +174,12 @@ extension CodexAppServerTests {
             )
         )
 
-        let snapshot = await client.mcp.statusSnapshot()
+        let snapshot = await client.extensions.mcp.statusSnapshot()
         #expect(snapshot.servers.map(\.name) == ["calendar"])
         #expect(snapshot.servers.first?.resources.map(\.uri) == ["calendar://events/today"])
         #expect(snapshot.servers.first?.tools.keys.sorted() == ["list_events"])
 
-        let resource = try await client.mcp.readResource(
+        let resource = try await client.extensions.mcp.readResource(
             server: "calendar",
             uri: "calendar://events/today"
         )

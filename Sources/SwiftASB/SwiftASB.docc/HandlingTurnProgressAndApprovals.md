@@ -57,6 +57,9 @@ func answerApproval(
     case .fileChange:
         try await turn.respond(to: request, with: .fileChange(.accept))
 
+    case .guardianDeniedAction:
+        try await turn.respond(to: request, with: .guardianDeniedAction(.approve))
+
     case let .permissions(permissions):
         try await turn.respond(
             to: request,

@@ -25,7 +25,7 @@ as selected-worktree Git status hydration stay quiet.
 Pass ``SwiftASBFeaturePolicy`` through ``CodexAppServer/Configuration`` to
 control app-server-owned convenience mutations. The default policy enables
 ``SwiftASBFeatureCategory/ID/extensionMaintenance``, which permits
-``CodexAppServer/CodexExtensions/upgradeMarketplace(_:)`` for already-configured
+``CodexExtensions/upgradeMarketplace(_:)`` for already-configured
 plugin marketplaces while leaving new installs, removals, sharing changes, and
 configuration writes out of scope.
 

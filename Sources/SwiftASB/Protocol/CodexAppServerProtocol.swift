@@ -22,6 +22,7 @@ struct CodexAppServerProtocol {
         case threadGoalSet = "thread/goal/set"
         case threadGoalClear = "thread/goal/clear"
         case threadShellCommand = "thread/shellCommand"
+        case threadApproveGuardianDeniedAction = "thread/approveGuardianDeniedAction"
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
@@ -30,6 +31,10 @@ struct CodexAppServerProtocol {
         case fsReadFile = "fs/readFile"
         case fsWatch = "fs/watch"
         case fsUnwatch = "fs/unwatch"
+        case fsWriteFile = "fs/writeFile"
+        case fsCreateDirectory = "fs/createDirectory"
+        case fsRemove = "fs/remove"
+        case fsCopy = "fs/copy"
         case appList = "app/list"
         case collaborationModeList = "collaborationMode/list"
         case configRead = "config/read"
@@ -102,6 +107,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadShellCommand, params: params),
             method: .threadShellCommand
+        )
+    }
+
+    func makeThreadApproveGuardianDeniedActionRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadApproveGuardianDeniedActionParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadApproveGuardianDeniedAction, params: params),
+            method: .threadApproveGuardianDeniedAction
         )
     }
 
@@ -292,6 +307,46 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .fsUnwatch, params: params),
             method: .fsUnwatch
+        )
+    }
+
+    func makeFSWriteFileRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolFSWriteFileParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsWriteFile, params: params),
+            method: .fsWriteFile
+        )
+    }
+
+    func makeFSCreateDirectoryRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolFSCreateDirectoryParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsCreateDirectory, params: params),
+            method: .fsCreateDirectory
+        )
+    }
+
+    func makeFSRemoveRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolFSRemoveParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsRemove, params: params),
+            method: .fsRemove
+        )
+    }
+
+    func makeFSCopyRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolFSCopyParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsCopy, params: params),
+            method: .fsCopy
         )
     }
 
@@ -604,6 +659,18 @@ struct CodexAppServerProtocol {
         )
     }
 
+    func decodeThreadApproveGuardianDeniedActionResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadApproveGuardianDeniedActionResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadApproveGuardianDeniedAction,
+            resultType: CodexProtocolThreadApproveGuardianDeniedActionResponse.self
+        )
+    }
+
     func decodeThreadMetadataUpdateResponse(
         _ responsePayload: Data,
         expectedID: CodexRPCRequestID
@@ -781,6 +848,54 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .fsUnwatch,
             resultType: [String: CodexWireJSONValue].self
+        )
+    }
+
+    func decodeFSWriteFileResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolFSWriteFileResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsWriteFile,
+            resultType: CodexProtocolFSWriteFileResponse.self
+        )
+    }
+
+    func decodeFSCreateDirectoryResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolFSCreateDirectoryResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsCreateDirectory,
+            resultType: CodexProtocolFSCreateDirectoryResponse.self
+        )
+    }
+
+    func decodeFSRemoveResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolFSRemoveResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsRemove,
+            resultType: CodexProtocolFSRemoveResponse.self
+        )
+    }
+
+    func decodeFSCopyResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolFSCopyResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsCopy,
+            resultType: CodexProtocolFSCopyResponse.self
         )
     }
 
@@ -1071,7 +1186,7 @@ struct CodexAppServerProtocol {
                         resultType: [String: CodexWireJSONValue].self
                     )
                 )
-            case "mcpServer/status/updated":
+            case "mcpServer/startupStatus/updated":
                 return .mcpServerStatusUpdated(
                     try decodeNotification(
                         payload,
@@ -1277,6 +1392,29 @@ struct CodexAppServerProtocol {
                         payload,
                         method: method,
                         resultType: CodexWireItemCompletedNotification.self
+                    )
+                )
+            case "item/autoApprovalReview/started":
+                return .itemGuardianApprovalReviewStarted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireItemGuardianApprovalReviewStartedNotification.self
+                    )
+                )
+            case "item/autoApprovalReview/completed":
+                return .itemGuardianApprovalReviewCompleted(
+                    .init(
+                        event: try decodeNotification(
+                            payload,
+                            method: method,
+                            resultType: CodexWireJSONValue.self
+                        ),
+                        notification: try decodeNotification(
+                            payload,
+                            method: method,
+                            resultType: CodexWireItemGuardianApprovalReviewCompletedNotification.self
+                        )
                     )
                 )
             case "item/commandExecution/outputDelta":
