@@ -588,6 +588,10 @@ public actor CodexAppServer {
         globalMcpServerStatusPage
     }
 
+    internal func mcpServerStatusSnapshot(threadID: String) -> McpServerStatusPage {
+        threadMcpServerStatusPages[threadID] ?? .init(nextCursor: nil, servers: [])
+    }
+
     /// Reads the app-server's current MCP server status snapshots.
     ///
     /// Omitting `request` sends an empty status-list request, leaving
@@ -619,13 +623,18 @@ public actor CodexAppServer {
 
     internal func hydrateMcpServerSummaries(threadID: String) async -> [McpServerSummary] {
         do {
-            let page = try await readMcpServerStatusPage(.init(threadID: threadID))
-            threadMcpServerStatusPages[threadID] = page
+            let page = try await refreshMcpServerStatusSnapshot(threadID: threadID)
             return mcpServerSummaries(forThreadStatusPage: page)
         } catch {
             return threadMcpServerStatusPages[threadID]
                 .map(mcpServerSummaries(forThreadStatusPage:)) ?? []
         }
+    }
+
+    internal func refreshMcpServerStatusSnapshot(threadID: String) async throws -> McpServerStatusPage {
+        let page = try await readMcpServerStatusPage(.init(threadID: threadID))
+        threadMcpServerStatusPages[threadID] = page
+        return page
     }
 
     private func readMcpServerStatusPage(

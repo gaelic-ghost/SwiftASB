@@ -31,11 +31,34 @@ extension CodexAppServerTests {
         #expect(dashboard.mcpServers.map(\.name) == ["calendar", "thread_notes"])
         #expect(dashboard.mcpServers.map(\.scope) == [.global, .thread])
 
+        let cachedThreadMcpPage = await thread.mcp.statusSnapshot()
+        #expect(cachedThreadMcpPage.servers.map(\.name) == ["calendar", "thread_notes"])
+
+        let refreshedThreadMcpPage = try await thread.mcp.refreshStatusSnapshot()
+        #expect(refreshedThreadMcpPage.servers.map(\.name) == ["calendar", "thread_notes"])
+
+        let resource = try await thread.mcp.readResource(
+            server: "calendar",
+            uri: "calendar://events/today"
+        )
+        #expect(resource.contents.first?.uri == "calendar://events/today")
+
         let requests = await transport.requestPayloads(for: "mcpServerStatus/list")
         let lastPayload = try #require(requests.last)
         let lastRequest = try #require(try JSONSerialization.jsonObject(with: lastPayload) as? [String: Any])
         let lastParams = try #require(lastRequest["params"] as? [String: Any])
         #expect(lastParams["threadId"] as? String == thread.id)
+
+        let resourceRequests = await transport.requestPayloads(for: "mcpServer/resource/read")
+        let resourcePayload = try #require(resourceRequests.last)
+        let resourceRequest = try #require(try JSONSerialization.jsonObject(with: resourcePayload) as? [String: Any])
+        let resourceParams = try #require(resourceRequest["params"] as? [String: Any])
+        #expect(resourceParams["server"] as? String == "calendar")
+        #expect(resourceParams["uri"] as? String == "calendar://events/today")
+        #expect(resourceParams["threadId"] as? String == thread.id)
+
+        let cachedThreadMcpPageAfterRefresh = await thread.mcp.statusSnapshot()
+        #expect(cachedThreadMcpPageAfterRefresh.servers.map(\.name) == ["calendar", "thread_notes"])
 
         await client.stop()
     }

@@ -38,6 +38,9 @@ the full cached catalog with resources, resource templates, and tool schemas.
 Use ``readResource(_:)`` or ``readResource(server:uri:threadID:)`` to read the
 contents for one advertised resource.
 
+For thread-scoped MCP reads, use ``CodexThread/mcp``. It returns the cached MCP
+status page for that thread and reads resources with the thread id filled in.
+
 ## Topics
 
 ### Installing
@@ -50,6 +53,11 @@ contents for one advertised resource.
 - ``statusSnapshot()``
 - ``readResource(_:)``
 - ``readResource(server:uri:threadID:)``
+
+### Thread-Scoped Reads
+
+- ``CodexThread/MCP``
+- ``CodexThread/mcp``
 
 ### Server Definitions
 

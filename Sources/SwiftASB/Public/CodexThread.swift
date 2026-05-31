@@ -182,6 +182,45 @@ public struct CodexThread: Sendable {
         }
     }
 
+    /// Thread-scoped MCP status and resource reads.
+    public struct MCP: Sendable {
+        private let appServer: CodexAppServer
+        private let threadID: String
+
+        internal init(appServer: CodexAppServer, threadID: String) {
+            self.appServer = appServer
+            self.threadID = threadID
+        }
+
+        /// Returns SwiftASB's latest MCP status snapshot for this thread.
+        public func statusSnapshot() async -> CodexAppServer.McpServerStatusPage {
+            await appServer.mcpServerStatusSnapshot(threadID: threadID)
+        }
+
+        /// Refreshes and returns the app-server MCP status snapshot for this thread.
+        @discardableResult
+        public func refreshStatusSnapshot() async throws -> CodexAppServer.McpServerStatusPage {
+            try await appServer.refreshMcpServerStatusSnapshot(threadID: threadID)
+        }
+
+        /// Reads one advertised MCP resource with this thread's context.
+        public func readResource(
+            _ request: CodexAppServer.McpResourceReadRequest
+        ) async throws -> CodexAppServer.McpResourceReadResult {
+            try await appServer.readMcpResource(
+                .init(server: request.server, uri: request.uri, threadID: threadID)
+            )
+        }
+
+        /// Reads one advertised MCP resource by server name and URI with this thread's context.
+        public func readResource(
+            server: String,
+            uri: String
+        ) async throws -> CodexAppServer.McpResourceReadResult {
+            try await readResource(.init(server: server, uri: uri))
+        }
+    }
+
     /// Request used to start a turn from this thread handle.
     public struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: CodexAppServer.ApprovalPolicy?
@@ -318,6 +357,11 @@ public struct CodexThread: Sendable {
     /// stops the app-server and finishes by throwing when the underlying
     /// app-server event feed fails unexpectedly.
     public let events: AsyncThrowingStream<CodexThreadEvent, Error>
+
+    /// Thread-scoped MCP status and resource surface.
+    public var mcp: MCP {
+        MCP(appServer: appServer, threadID: id)
+    }
 
     private let appServer: CodexAppServer
 
