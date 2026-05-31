@@ -71,6 +71,7 @@ extension CodexAppServerTests {
         #expect(dashboard.isClosed == false)
         #expect(dashboard.goalTitle == "")
         #expect(dashboard.planTitle == "")
+        #expect(dashboard.autoReviewStatus == .idle)
         #expect(dashboard.latestTokenUsage == nil)
 
         await transport.emitHookStarted(
@@ -95,6 +96,31 @@ extension CodexAppServerTests {
         #expect(dashboard.hookRuns.count == 1)
         #expect(dashboard.hookRuns[0].status == .running)
         #expect(dashboard.hookRuns[0].turnID == turnHandle.turn.id)
+
+        await transport.emitGuardianAutoReviewStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            reviewID: "review-guardian-1",
+            targetItemID: "item-command-1"
+        )
+
+        await waitForObservableState {
+            dashboard.autoReviewStatus == .inProgress
+        }
+
+        await transport.emitGuardianAutoReviewCompleted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            reviewID: "review-guardian-1",
+            status: "denied",
+            targetItemID: "item-command-1"
+        )
+
+        await waitForObservableState {
+            dashboard.autoReviewStatus == .denied
+        }
+
+        #expect(dashboard.autoReviewStatus == .denied)
 
         await transport.emitItemCompleted(
             threadID: thread.id,
@@ -180,6 +206,7 @@ extension CodexAppServerTests {
         #expect(dashboard.latestTokenUsage?.total.totalTokens == 650)
         #expect(dashboard.toolCallingStatus == .errored)
         #expect(dashboard.mcpCallingStatus == .idle)
+        #expect(dashboard.autoReviewStatus == .idle)
 
         await client.stop()
     }

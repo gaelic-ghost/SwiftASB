@@ -7,8 +7,10 @@ public actor CodexAppServer {
     }
 
     private struct ThreadObservableActivityState: Sendable, Equatable {
+        var activeAutoReviewIDs: Set<String> = []
         var activeToolLikeItemIDs: Set<String> = []
         var activeMcpItemIDs: Set<String> = []
+        var autoReviewStatus: CodexThread.Dashboard.AutoReviewStatus = .idle
         var hasToolErrorResidue = false
         var hasMcpErrorResidue = false
         var hookRuns: [CodexThread.Dashboard.HookRun] = []
@@ -1877,8 +1879,10 @@ public actor CodexAppServer {
     internal func threadObservableActivityState(threadID: String) -> CodexThread.Dashboard.ActivityState {
         let state = threadObservableActivityStates[threadID] ?? .init()
         return .init(
+            activeAutoReviewIDs: state.activeAutoReviewIDs,
             activeMcpItemIDs: state.activeMcpItemIDs,
             activeToolLikeItemIDs: state.activeToolLikeItemIDs,
+            autoReviewStatus: state.autoReviewStatus,
             hasMcpErrorResidue: state.hasMcpErrorResidue,
             hookRuns: state.hookRuns,
             hasToolErrorResidue: state.hasToolErrorResidue,
@@ -2681,6 +2685,30 @@ public actor CodexAppServer {
                 id: requestID,
                 result: CodexProtocolFileChangeApprovalDecisionPayload(decision: decision.rawValue)
             )
+        case let (.guardianDeniedAction(guardianRequest), .guardianDeniedAction(.approve))
+            where outstandingRequest.kind == .guardianDeniedActionApproval:
+            let approvalRequestID = CodexRPCRequestID.generated()
+            payload = try protocolLayer.makeThreadApproveGuardianDeniedActionRequest(
+                id: approvalRequestID,
+                params: .init(
+                    event: guardianRequest.event.wireValue,
+                    threadID: guardianRequest.threadID
+                )
+            )
+            let responsePayload: Data
+            do {
+                responsePayload = try await transport.send(payload, id: approvalRequestID)
+                _ = try protocolLayer.decodeThreadApproveGuardianDeniedActionResponse(
+                    responsePayload,
+                    expectedID: approvalRequestID
+                )
+            } catch {
+                throw CodexAppServerError.wrap(error, operation: "thread/approveGuardianDeniedAction")
+            }
+            outstandingInteractiveRequests.removeValue(forKey: requestID)
+            updateThreadObservableActivityForGuardianDeniedActionApproved(threadID: guardianRequest.threadID)
+            publishInteractiveRequestResolution(outstandingRequest, requestID: requestID)
+            return
         case (_, .permissions(let grantedPermissions)) where outstandingRequest.kind == .permissionsApproval:
             payload = try protocolLayer.makeServerResponse(
                 id: requestID,
@@ -2805,6 +2833,8 @@ public actor CodexAppServer {
 
     private func settleThreadObservableActivity(threadID: String) {
         var state = threadObservableActivityStates[threadID] ?? .init()
+        state.activeAutoReviewIDs.removeAll()
+        state.autoReviewStatus = .idle
         state.activeMcpItemIDs.removeAll()
         state.activeToolLikeItemIDs.removeAll()
         state.isCompactingThreadContext = false
@@ -2880,8 +2910,13 @@ public actor CodexAppServer {
         switch event {
         case .appListUpdated, .skillsChanged:
             publishLibraryEvent(.appSnapshotsChanged)
-        case .itemGuardianApprovalReviewStarted, .itemGuardianApprovalReviewCompleted:
-            break
+        case let .itemGuardianApprovalReviewStarted(notification):
+            updateThreadObservableActivityForAutoReviewStarted(notification)
+        case let .itemGuardianApprovalReviewCompleted(completion):
+            updateThreadObservableActivityForAutoReviewCompleted(completion.notification)
+            if let request = completion.publicDeniedActionApprovalRequest {
+                handleInteractiveApprovalRequest(request)
+            }
         case let .mcpServerStatusUpdated(notification):
             handleDiagnosticEvent(.init(wireValue: notification))
             _ = try? await refreshGlobalMcpServerStatusSnapshot()
@@ -3769,6 +3804,35 @@ public actor CodexAppServer {
         publishThreadObservableActivityState(threadID: threadID)
     }
 
+    private func updateThreadObservableActivityForAutoReviewStarted(
+        _ notification: CodexWireItemGuardianApprovalReviewStartedNotification
+    ) {
+        var state = threadObservableActivityStates[notification.threadID] ?? .init()
+        state.activeAutoReviewIDs.insert(notification.reviewID)
+        state.autoReviewStatus = .inProgress
+        threadObservableActivityStates[notification.threadID] = state
+        publishThreadObservableActivityState(threadID: notification.threadID)
+    }
+
+    private func updateThreadObservableActivityForAutoReviewCompleted(
+        _ notification: CodexWireItemGuardianApprovalReviewCompletedNotification
+    ) {
+        var state = threadObservableActivityStates[notification.threadID] ?? .init()
+        state.activeAutoReviewIDs.remove(notification.reviewID)
+        state.autoReviewStatus = state.activeAutoReviewIDs.isEmpty
+            ? .init(wireValue: notification.review.status)
+            : .inProgress
+        threadObservableActivityStates[notification.threadID] = state
+        publishThreadObservableActivityState(threadID: notification.threadID)
+    }
+
+    private func updateThreadObservableActivityForGuardianDeniedActionApproved(threadID: String) {
+        var state = threadObservableActivityStates[threadID] ?? .init()
+        state.autoReviewStatus = state.activeAutoReviewIDs.isEmpty ? .approved : .inProgress
+        threadObservableActivityStates[threadID] = state
+        publishThreadObservableActivityState(threadID: threadID)
+    }
+
     private func updateThreadObservableActivityForHookRun(
         _ run: CodexWireHookRunSummary,
         turnID: String?,
@@ -4204,6 +4268,13 @@ public actor CodexAppServer {
             return
         }
 
+        publishInteractiveRequestResolution(outstandingRequest, requestID: requestID)
+    }
+
+    private func publishInteractiveRequestResolution(
+        _ outstandingRequest: OutstandingInteractiveRequest,
+        requestID: CodexRPCRequestID
+    ) {
         let resolution = CodexInteractiveRequestResolved(
             requestID: requestID,
             threadID: outstandingRequest.threadID,

@@ -37,7 +37,7 @@ enum CodexAppServerProtocolEvent: Equatable, Sendable {
 	case itemStarted(CodexWireItemStartedNotification)
 	case itemCompleted(CodexWireItemCompletedNotification)
 	case itemGuardianApprovalReviewStarted(CodexWireItemGuardianApprovalReviewStartedNotification)
-	case itemGuardianApprovalReviewCompleted(CodexWireItemGuardianApprovalReviewCompletedNotification)
+	case itemGuardianApprovalReviewCompleted(CodexProtocolGuardianApprovalReviewCompletedNotification)
 	case commandExecOutputDelta(CodexWireCommandExecOutputDeltaNotification)
 	case commandExecutionOutputDelta(CodexWireCommandExecutionOutputDeltaNotification)
 	case fileChangeOutputDelta(CodexWireFileChangeOutputDeltaNotification)
@@ -64,6 +64,11 @@ struct CodexProtocolThreadArchiveResponse: Decodable, Equatable, Sendable {}
 struct CodexProtocolThreadSetNameResponse: Decodable, Equatable, Sendable {}
 
 struct CodexProtocolThreadApproveGuardianDeniedActionResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolGuardianApprovalReviewCompletedNotification: Equatable, Sendable {
+	let event: CodexWireJSONValue
+	let notification: CodexWireItemGuardianApprovalReviewCompletedNotification
+}
 
 struct CodexProtocolModelProviderCapabilitiesReadParams: Encodable, Equatable, Sendable {}
 

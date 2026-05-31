@@ -2186,6 +2186,8 @@ func acceptanceResponse(for request: CodexApprovalRequest) -> CodexApprovalRespo
         return .commandExecution(.accept)
     case .fileChange:
         return .fileChange(.accept)
+    case .guardianDeniedAction:
+        return .guardianDeniedAction(.approve)
     case let .permissions(permissionsRequest):
         return .permissions(
             .init(

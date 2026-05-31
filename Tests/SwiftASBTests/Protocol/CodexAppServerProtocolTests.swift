@@ -1534,7 +1534,8 @@ struct CodexAppServerProtocolTests {
         )
 
         switch autoReviewCompletedEvent {
-        case let .itemGuardianApprovalReviewCompleted(notification):
+        case let .itemGuardianApprovalReviewCompleted(completion):
+            let notification = completion.notification
             #expect(notification.threadID == "thread-123")
             #expect(notification.turnID == "turn-123")
             #expect(notification.targetItemID == nil)

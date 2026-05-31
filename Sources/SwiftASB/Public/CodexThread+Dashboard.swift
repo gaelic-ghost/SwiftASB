@@ -78,9 +78,20 @@ extension CodexThread {
             case inProgress
         }
 
+        public enum AutoReviewStatus: String, Sendable, Equatable {
+            case aborted
+            case approved
+            case denied
+            case idle
+            case inProgress
+            case timedOut
+        }
+
         internal struct ActivityState: Sendable, Equatable {
+            var activeAutoReviewIDs: Set<String> = []
             var activeMcpItemIDs: Set<String> = []
             var activeToolLikeItemIDs: Set<String> = []
+            var autoReviewStatus: AutoReviewStatus = .idle
             var hasMcpErrorResidue = false
             var hookRuns: [HookRun] = []
             var hasToolErrorResidue = false
@@ -92,6 +103,7 @@ extension CodexThread {
         public private(set) var isClosed: Bool
         public private(set) var isCompactingThreadContext: Bool
         public private(set) var goalTitle: String
+        public private(set) var autoReviewStatus: AutoReviewStatus
         public private(set) var latestDiagnostic: CodexDiagnosticEvent?
         public private(set) var latestTokenUsage: CodexThreadTokenUsageUpdated?
         public private(set) var mcpCallingStatus: ActivityStatus
@@ -136,6 +148,7 @@ extension CodexThread {
             self.preview = initialInfo.preview
             self.status = initialInfo.status
             self.activityState = initialActivityState
+            self.autoReviewStatus = initialActivityState.autoReviewStatus
             self.hookRuns = initialActivityState.hookRuns
             self.isCompactingThreadContext = initialActivityState.isCompactingThreadContext
             self.mcpCallingStatus = Self.activityStatus(
@@ -252,6 +265,7 @@ extension CodexThread {
 
         private func syncActivityPresentation() {
             hookRuns = activityState.hookRuns
+            autoReviewStatus = activityState.autoReviewStatus
             isCompactingThreadContext = activityState.isCompactingThreadContext
             toolCallingStatus = Self.activityStatus(
                 activeIDs: activityState.activeToolLikeItemIDs,

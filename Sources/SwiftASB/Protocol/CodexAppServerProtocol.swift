@@ -1404,10 +1404,17 @@ struct CodexAppServerProtocol {
                 )
             case "item/autoApprovalReview/completed":
                 return .itemGuardianApprovalReviewCompleted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireItemGuardianApprovalReviewCompletedNotification.self
+                    .init(
+                        event: try decodeNotification(
+                            payload,
+                            method: method,
+                            resultType: CodexWireJSONValue.self
+                        ),
+                        notification: try decodeNotification(
+                            payload,
+                            method: method,
+                            resultType: CodexWireItemGuardianApprovalReviewCompletedNotification.self
+                        )
                     )
                 )
             case "item/commandExecution/outputDelta":
