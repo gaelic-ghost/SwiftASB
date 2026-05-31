@@ -1336,7 +1336,7 @@ struct CodexAppServerProtocolTests {
 
         let mcpStatusEvent = try #require(
             try decodeEvent(
-                method: "mcpServer/status/updated",
+                method: "mcpServer/startupStatus/updated",
                 payload: Data(#"{"error":null,"name":"calendar","status":"ready"}"#.utf8)
             )
         )
@@ -1345,7 +1345,7 @@ struct CodexAppServerProtocolTests {
             #expect(notification.name == "calendar")
             #expect(notification.status == .ready)
         default:
-            Issue.record("Expected mcpServer/status/updated to decode into .mcpServerStatusUpdated.")
+            Issue.record("Expected mcpServer/startupStatus/updated to decode into .mcpServerStatusUpdated.")
         }
 
         let remoteStatusEvent = try #require(

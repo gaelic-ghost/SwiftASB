@@ -1186,7 +1186,7 @@ struct CodexAppServerProtocol {
                         resultType: [String: CodexWireJSONValue].self
                     )
                 )
-            case "mcpServer/status/updated":
+            case "mcpServer/startupStatus/updated":
                 return .mcpServerStatusUpdated(
                     try decodeNotification(
                         payload,

@@ -1965,7 +1965,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         ])
 
         serverEventContinuation?.yield(
-            .notification(method: "mcpServer/status/updated", payload: payload)
+            .notification(method: "mcpServer/startupStatus/updated", payload: payload)
         )
     }
 
