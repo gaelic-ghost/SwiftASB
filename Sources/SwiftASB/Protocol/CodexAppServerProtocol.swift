@@ -22,6 +22,7 @@ struct CodexAppServerProtocol {
         case threadGoalSet = "thread/goal/set"
         case threadGoalClear = "thread/goal/clear"
         case threadShellCommand = "thread/shellCommand"
+        case threadApproveGuardianDeniedAction = "thread/approveGuardianDeniedAction"
         case turnStart = "turn/start"
         case turnSteer = "turn/steer"
         case turnInterrupt = "turn/interrupt"
@@ -106,6 +107,16 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .threadShellCommand, params: params),
             method: .threadShellCommand
+        )
+    }
+
+    func makeThreadApproveGuardianDeniedActionRequest(
+        id: CodexRPCRequestID,
+        params: CodexWireThreadApproveGuardianDeniedActionParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .threadApproveGuardianDeniedAction, params: params),
+            method: .threadApproveGuardianDeniedAction
         )
     }
 
@@ -645,6 +656,18 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .threadSetName,
             resultType: CodexProtocolThreadSetNameResponse.self
+        )
+    }
+
+    func decodeThreadApproveGuardianDeniedActionResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolThreadApproveGuardianDeniedActionResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .threadApproveGuardianDeniedAction,
+            resultType: CodexProtocolThreadApproveGuardianDeniedActionResponse.self
         )
     }
 
@@ -1369,6 +1392,22 @@ struct CodexAppServerProtocol {
                         payload,
                         method: method,
                         resultType: CodexWireItemCompletedNotification.self
+                    )
+                )
+            case "item/autoApprovalReview/started":
+                return .itemGuardianApprovalReviewStarted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireItemGuardianApprovalReviewStartedNotification.self
+                    )
+                )
+            case "item/autoApprovalReview/completed":
+                return .itemGuardianApprovalReviewCompleted(
+                    try decodeNotification(
+                        payload,
+                        method: method,
+                        resultType: CodexWireItemGuardianApprovalReviewCompletedNotification.self
                     )
                 )
             case "item/commandExecution/outputDelta":

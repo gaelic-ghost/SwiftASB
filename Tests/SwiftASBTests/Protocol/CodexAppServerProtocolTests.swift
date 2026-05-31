@@ -131,6 +131,39 @@ struct CodexAppServerProtocolTests {
         #expect(params["threadId"] as? String == "thread-123")
     }
 
+    @Test("encodes thread guardian denied-action approval requests")
+    func encodesThreadGuardianDeniedActionApprovalRequest() throws {
+        let payload = try protocolLayer.makeThreadApproveGuardianDeniedActionRequest(
+            id: .string("guardian-approval-1"),
+            params: .init(
+                event: .object([
+                    "assessmentId": .string("assessment-123"),
+                    "status": .string("denied"),
+                ]),
+                threadID: "thread-123"
+            )
+        )
+
+        let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
+        #expect(object["jsonrpc"] == nil)
+        #expect(object["method"] as? String == "thread/approveGuardianDeniedAction")
+        #expect(object["id"] as? String == "guardian-approval-1")
+
+        let params = try #require(object["params"] as? [String: Any])
+        #expect(params["threadId"] as? String == "thread-123")
+        let event = try #require(params["event"] as? [String: Any])
+        #expect(event["assessmentId"] as? String == "assessment-123")
+        #expect(event["status"] as? String == "denied")
+
+        let responsePayload = #"{"id":"guardian-approval-1","result":{}}"#.data(using: .utf8)!
+        #expect(
+            try protocolLayer.decodeThreadApproveGuardianDeniedActionResponse(
+                responsePayload,
+                expectedID: .string("guardian-approval-1")
+            ) == .init()
+        )
+    }
+
     @Test("encodes review/start with subject and placement")
     func encodesReviewStartWithSubjectAndPlacement() throws {
         let payload = try protocolLayer.makeReviewStartRequest(
@@ -1462,6 +1495,60 @@ struct CodexAppServerProtocolTests {
             #expect(notification.item.text == "Done.")
         default:
             Issue.record("Expected item/completed to decode into .itemCompleted.")
+        }
+
+        let autoReviewStartedPayload = Data(
+            #"""
+            {"action":{"command":"git status","cwd":"/tmp/project","source":"shell","type":"command"},"review":{"rationale":"Read-only repository inspection.","riskLevel":"low","status":"inProgress","userAuthorization":"medium"},"reviewId":"review-123","startedAtMs":1713350002000,"targetItemId":"item-command-1","threadId":"thread-123","turnId":"turn-123"}
+            """#.utf8
+        )
+
+        let autoReviewStartedEvent = try #require(
+            try decodeEvent(method: "item/autoApprovalReview/started", payload: autoReviewStartedPayload)
+        )
+
+        switch autoReviewStartedEvent {
+        case let .itemGuardianApprovalReviewStarted(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.targetItemID == "item-command-1")
+            #expect(notification.reviewID == "review-123")
+            #expect(notification.startedAtMS == 1_713_350_002_000)
+            #expect(notification.action.type == .command)
+            #expect(notification.action.command == "git status")
+            #expect(notification.action.source == .shell)
+            #expect(notification.review.status == .inProgress)
+            #expect(notification.review.riskLevel == .low)
+        default:
+            Issue.record("Expected item/autoApprovalReview/started to decode into .itemGuardianApprovalReviewStarted.")
+        }
+
+        let autoReviewCompletedPayload = Data(
+            #"""
+            {"action":{"host":"api.example.com","port":443,"protocol":"https","target":"https://api.example.com","type":"networkAccess"},"completedAtMs":1713350003000,"decisionSource":"agent","review":{"rationale":"Network access is limited to the requested host.","riskLevel":"medium","status":"approved","userAuthorization":"high"},"reviewId":"review-124","startedAtMs":1713350002000,"targetItemId":null,"threadId":"thread-123","turnId":"turn-123"}
+            """#.utf8
+        )
+
+        let autoReviewCompletedEvent = try #require(
+            try decodeEvent(method: "item/autoApprovalReview/completed", payload: autoReviewCompletedPayload)
+        )
+
+        switch autoReviewCompletedEvent {
+        case let .itemGuardianApprovalReviewCompleted(notification):
+            #expect(notification.threadID == "thread-123")
+            #expect(notification.turnID == "turn-123")
+            #expect(notification.targetItemID == nil)
+            #expect(notification.reviewID == "review-124")
+            #expect(notification.startedAtMS == 1_713_350_002_000)
+            #expect(notification.completedAtMS == 1_713_350_003_000)
+            #expect(notification.decisionSource == .agent)
+            #expect(notification.action.type == .networkAccess)
+            #expect(notification.action.host == "api.example.com")
+            #expect(notification.action.guardianApprovalReviewActionProtocol == .https)
+            #expect(notification.review.status == .approved)
+            #expect(notification.review.userAuthorization == .high)
+        default:
+            Issue.record("Expected item/autoApprovalReview/completed to decode into .itemGuardianApprovalReviewCompleted.")
         }
 
         let agentMessageDeltaPayload = Data(

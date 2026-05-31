@@ -2880,6 +2880,8 @@ public actor CodexAppServer {
         switch event {
         case .appListUpdated, .skillsChanged:
             publishLibraryEvent(.appSnapshotsChanged)
+        case .itemGuardianApprovalReviewStarted, .itemGuardianApprovalReviewCompleted:
+            break
         case let .mcpServerStatusUpdated(notification):
             handleDiagnosticEvent(.init(wireValue: notification))
             _ = try? await refreshGlobalMcpServerStatusSnapshot()
