@@ -727,12 +727,12 @@ that should stay visible until closed.
 Audit bundle:
 [`docs/security-audits/82ea49d_20260511T213956-0400/report.md`](docs/security-audits/82ea49d_20260511T213956-0400/report.md).
 
-- [ ] Fix JSON-RPC numeric ID narrowing.
+- [x] Fix JSON-RPC numeric ID narrowing.
   `CodexRPCEnvelope.parseRequestID(_:)` currently checks whole-number shape and
   then uses `NSNumber.intValue`. Replace that with a range-preserving
   conversion or explicit out-of-range rejection, then add boundary tests around
   32-bit and platform `Int` limits.
-- [ ] Fix fail-open network-policy amendment mapping.
+- [x] Fix fail-open network-policy amendment mapping.
   `CodexProtocolNetworkPolicyAmendment.publicValue` currently maps unknown
   wire `action` strings to `.allow`. Preserve unknown values or fail closed so
   approval UI and app logic cannot misrepresent malformed or future actions as

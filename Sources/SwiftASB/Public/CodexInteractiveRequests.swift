@@ -233,9 +233,32 @@ public enum CodexCommandAction: Sendable, Equatable {
 /// Network-policy change proposed by Codex or returned by a caller.
 public struct CodexNetworkPolicyAmendment: Sendable, Equatable {
     /// Network-policy action requested for one host.
-    public enum Action: String, Sendable, Equatable {
+    public enum Action: Sendable, Equatable {
         case allow
         case deny
+        case unknown(String)
+
+        public init(wireValue: String) {
+            switch wireValue {
+            case "allow":
+                self = .allow
+            case "deny":
+                self = .deny
+            default:
+                self = .unknown(wireValue)
+            }
+        }
+
+        public var wireValue: String {
+            switch self {
+            case .allow:
+                "allow"
+            case .deny:
+                "deny"
+            case let .unknown(value):
+                value
+            }
+        }
     }
 
     public let action: Action

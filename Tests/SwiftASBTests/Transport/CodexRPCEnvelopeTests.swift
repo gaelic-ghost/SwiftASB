@@ -70,6 +70,15 @@ struct CodexRPCEnvelopeTests {
         )
     }
 
+    @Test("preserves numeric request IDs at the Swift Int boundary")
+    func preservesNumericRequestIDAtIntBoundary() throws {
+        let payload = Data(#"{"id":\#(Int.max),"result":{"ok":true}}"#.utf8)
+
+        let classified = try CodexRPCEnvelope.classifyInboundMessage(payload)
+
+        #expect(classified == .response(id: .int(Int.max), payload: payload))
+    }
+
     @Test("rejects envelopes that have neither method nor ID")
     func rejectsMeaninglessEnvelope() throws {
         let payload = #"{"params":{"ok":true}}"#.data(using: .utf8)!
@@ -91,6 +100,15 @@ struct CodexRPCEnvelopeTests {
     @Test("rejects fractional numeric request IDs")
     func rejectsFractionalRequestID() throws {
         let payload = #"{"id":1.5,"result":{"ok":true}}"#.data(using: .utf8)!
+
+        #expect(throws: CodexTransportError.self) {
+            try CodexRPCEnvelope.classifyInboundMessage(payload)
+        }
+    }
+
+    @Test("rejects numeric request IDs beyond the Swift Int range")
+    func rejectsOutOfRangeRequestID() throws {
+        let payload = #"{"id":9223372036854775808,"result":{"ok":true}}"#.data(using: .utf8)!
 
         #expect(throws: CodexTransportError.self) {
             try CodexRPCEnvelope.classifyInboundMessage(payload)

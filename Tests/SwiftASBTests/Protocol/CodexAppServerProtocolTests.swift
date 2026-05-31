@@ -1544,7 +1544,7 @@ struct CodexAppServerProtocolTests {
     func decodesServerRequests() throws {
         let commandApprovalPayload = Data(
             #"""
-            {"command":"git status","commandActions":[{"command":"git status","type":"unknown"}],"cwd":"/tmp/project","itemId":"item-command-1","reason":"Needs approval to inspect repository state.","threadId":"thread-123","turnId":"turn-123"}
+            {"command":"git status","commandActions":[{"command":"git status","type":"unknown"}],"cwd":"/tmp/project","itemId":"item-command-1","proposedNetworkPolicyAmendments":[{"action":"audit","host":"example.com"}],"reason":"Needs approval to inspect repository state.","threadId":"thread-123","turnId":"turn-123"}
             """#.utf8
         )
 
@@ -1565,6 +1565,9 @@ struct CodexAppServerProtocolTests {
             #expect(request.turnID == "turn-123")
             #expect(request.itemID == "item-command-1")
             #expect(request.command == "git status")
+            let amendment = try #require(request.proposedNetworkPolicyAmendments?.first)
+            #expect(amendment.publicValue.action == .unknown("audit"))
+            #expect(amendment.publicValue.host == "example.com")
         default:
             Issue.record("Expected command approval server request to decode into .commandExecutionApprovalRequested.")
         }

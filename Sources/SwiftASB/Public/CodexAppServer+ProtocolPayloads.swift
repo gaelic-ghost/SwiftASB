@@ -37,7 +37,7 @@ enum CodexProtocolCommandExecutionApprovalDecision: Encodable {
                 [
                     "applyNetworkPolicyAmendment": [
                         "network_policy_amendment": [
-                            "action": amendment.action.rawValue,
+                            "action": amendment.action.wireValue,
                             "host": amendment.host,
                         ]
                     ]
@@ -226,7 +226,7 @@ extension CodexProtocolCommandAction {
 extension CodexProtocolNetworkPolicyAmendment {
     var publicValue: CodexNetworkPolicyAmendment {
         .init(
-            action: .init(rawValue: action) ?? .allow,
+            action: .init(wireValue: action),
             host: host
         )
     }
