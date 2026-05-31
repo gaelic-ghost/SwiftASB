@@ -137,6 +137,36 @@ enum CodexProtocolConfigWriteStatus: String, Decodable, Equatable, Sendable {
     case okOverridden
 }
 
+struct CodexProtocolFSWriteFileParams: Encodable, Equatable, Sendable {
+    let dataBase64: String
+    let path: String
+}
+
+struct CodexProtocolFSCreateDirectoryParams: Encodable, Equatable, Sendable {
+    let path: String
+    let recursive: Bool?
+}
+
+struct CodexProtocolFSRemoveParams: Encodable, Equatable, Sendable {
+    let force: Bool?
+    let path: String
+    let recursive: Bool?
+}
+
+struct CodexProtocolFSCopyParams: Encodable, Equatable, Sendable {
+    let destinationPath: String
+    let recursive: Bool?
+    let sourcePath: String
+}
+
+struct CodexProtocolFSWriteFileResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolFSCreateDirectoryResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolFSRemoveResponse: Decodable, Equatable, Sendable {}
+
+struct CodexProtocolFSCopyResponse: Decodable, Equatable, Sendable {}
+
 struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
     let gitInfo: GitInfo?
     let threadID: String

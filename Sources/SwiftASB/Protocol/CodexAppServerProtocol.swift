@@ -30,6 +30,10 @@ struct CodexAppServerProtocol {
         case fsReadFile = "fs/readFile"
         case fsWatch = "fs/watch"
         case fsUnwatch = "fs/unwatch"
+        case fsWriteFile = "fs/writeFile"
+        case fsCreateDirectory = "fs/createDirectory"
+        case fsRemove = "fs/remove"
+        case fsCopy = "fs/copy"
         case appList = "app/list"
         case collaborationModeList = "collaborationMode/list"
         case configRead = "config/read"
@@ -292,6 +296,46 @@ struct CodexAppServerProtocol {
         try encodeRequest(
             JSONRPCRequestEnvelope(id: id, method: .fsUnwatch, params: params),
             method: .fsUnwatch
+        )
+    }
+
+    func makeFSWriteFileRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolFSWriteFileParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsWriteFile, params: params),
+            method: .fsWriteFile
+        )
+    }
+
+    func makeFSCreateDirectoryRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolFSCreateDirectoryParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsCreateDirectory, params: params),
+            method: .fsCreateDirectory
+        )
+    }
+
+    func makeFSRemoveRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolFSRemoveParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsRemove, params: params),
+            method: .fsRemove
+        )
+    }
+
+    func makeFSCopyRequest(
+        id: CodexRPCRequestID,
+        params: CodexProtocolFSCopyParams
+    ) throws -> Data {
+        try encodeRequest(
+            JSONRPCRequestEnvelope(id: id, method: .fsCopy, params: params),
+            method: .fsCopy
         )
     }
 
@@ -781,6 +825,54 @@ struct CodexAppServerProtocol {
             expectedID: expectedID,
             method: .fsUnwatch,
             resultType: [String: CodexWireJSONValue].self
+        )
+    }
+
+    func decodeFSWriteFileResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolFSWriteFileResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsWriteFile,
+            resultType: CodexProtocolFSWriteFileResponse.self
+        )
+    }
+
+    func decodeFSCreateDirectoryResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolFSCreateDirectoryResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsCreateDirectory,
+            resultType: CodexProtocolFSCreateDirectoryResponse.self
+        )
+    }
+
+    func decodeFSRemoveResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolFSRemoveResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsRemove,
+            resultType: CodexProtocolFSRemoveResponse.self
+        )
+    }
+
+    func decodeFSCopyResponse(
+        _ responsePayload: Data,
+        expectedID: CodexRPCRequestID
+    ) throws -> CodexProtocolFSCopyResponse {
+        try decodeResponse(
+            responsePayload,
+            expectedID: expectedID,
+            method: .fsCopy,
+            resultType: CodexProtocolFSCopyResponse.self
         )
     }
 

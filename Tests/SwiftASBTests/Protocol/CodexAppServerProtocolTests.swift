@@ -289,6 +289,93 @@ struct CodexAppServerProtocolTests {
         #expect((unwatchRequest["params"] as? [String: Any])?["watchId"] as? String == "watch-123")
     }
 
+    @Test("encodes internal fs mutation requests with app-server method names")
+    func encodesInternalFSMutationRequests() throws {
+        let writePayload = try protocolLayer.makeFSWriteFileRequest(
+            id: .string("write-file-1"),
+            params: .init(
+                dataBase64: Data("Hello".utf8).base64EncodedString(),
+                path: "/tmp/project/README.md"
+            )
+        )
+        let writeRequest = try #require(try JSONSerialization.jsonObject(with: writePayload) as? [String: Any])
+        #expect(writeRequest["method"] as? String == "fs/writeFile")
+        let writeParams = try #require(writeRequest["params"] as? [String: Any])
+        #expect(writeParams["dataBase64"] as? String == "SGVsbG8=")
+        #expect(writeParams["path"] as? String == "/tmp/project/README.md")
+
+        let createDirectoryPayload = try protocolLayer.makeFSCreateDirectoryRequest(
+            id: .string("create-directory-1"),
+            params: .init(path: "/tmp/project/Sources/New", recursive: true)
+        )
+        let createDirectoryRequest = try #require(
+            try JSONSerialization.jsonObject(with: createDirectoryPayload) as? [String: Any]
+        )
+        #expect(createDirectoryRequest["method"] as? String == "fs/createDirectory")
+        let createDirectoryParams = try #require(createDirectoryRequest["params"] as? [String: Any])
+        #expect(createDirectoryParams["path"] as? String == "/tmp/project/Sources/New")
+        #expect(createDirectoryParams["recursive"] as? Bool == true)
+
+        let removePayload = try protocolLayer.makeFSRemoveRequest(
+            id: .string("remove-1"),
+            params: .init(force: false, path: "/tmp/project/obsolete.txt", recursive: false)
+        )
+        let removeRequest = try #require(try JSONSerialization.jsonObject(with: removePayload) as? [String: Any])
+        #expect(removeRequest["method"] as? String == "fs/remove")
+        let removeParams = try #require(removeRequest["params"] as? [String: Any])
+        #expect(removeParams["force"] as? Bool == false)
+        #expect(removeParams["path"] as? String == "/tmp/project/obsolete.txt")
+        #expect(removeParams["recursive"] as? Bool == false)
+
+        let copyPayload = try protocolLayer.makeFSCopyRequest(
+            id: .string("copy-1"),
+            params: .init(
+                destinationPath: "/tmp/project/copy.txt",
+                recursive: nil,
+                sourcePath: "/tmp/project/source.txt"
+            )
+        )
+        let copyRequest = try #require(try JSONSerialization.jsonObject(with: copyPayload) as? [String: Any])
+        #expect(copyRequest["method"] as? String == "fs/copy")
+        let copyParams = try #require(copyRequest["params"] as? [String: Any])
+        #expect(copyParams["destinationPath"] as? String == "/tmp/project/copy.txt")
+        #expect(copyParams["recursive"] == nil)
+        #expect(copyParams["sourcePath"] as? String == "/tmp/project/source.txt")
+    }
+
+    @Test("decodes internal fs mutation responses")
+    func decodesInternalFSMutationResponses() throws {
+        let writePayload = #"{"id":"write-file-1","result":{}}"#.data(using: .utf8)!
+        let createDirectoryPayload = #"{"id":"create-directory-1","result":{}}"#.data(using: .utf8)!
+        let removePayload = #"{"id":"remove-1","result":{}}"#.data(using: .utf8)!
+        let copyPayload = #"{"id":"copy-1","result":{}}"#.data(using: .utf8)!
+
+        #expect(
+            try protocolLayer.decodeFSWriteFileResponse(
+                writePayload,
+                expectedID: .string("write-file-1")
+            ) == .init()
+        )
+        #expect(
+            try protocolLayer.decodeFSCreateDirectoryResponse(
+                createDirectoryPayload,
+                expectedID: .string("create-directory-1")
+            ) == .init()
+        )
+        #expect(
+            try protocolLayer.decodeFSRemoveResponse(
+                removePayload,
+                expectedID: .string("remove-1")
+            ) == .init()
+        )
+        #expect(
+            try protocolLayer.decodeFSCopyResponse(
+                copyPayload,
+                expectedID: .string("copy-1")
+            ) == .init()
+        )
+    }
+
     @Test("encodes loaded-thread list requests")
     func encodesLoadedThreadListRequest() throws {
         let payload = try protocolLayer.makeThreadLoadedListRequest(
