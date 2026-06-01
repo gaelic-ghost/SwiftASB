@@ -1,0 +1,29 @@
+[project]
+name = "agentsb"
+version = "0.1.0"
+description = "Repo-local maintenance agents for SwiftASB."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [
+  { name = "Gale W", email = "mail@galewilliams.com" },
+]
+dependencies = [
+  "openai-agents>=0.2.0",
+]
+
+[project.scripts]
+agentsb = "agentsb.main:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
