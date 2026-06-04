@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from agentsb.reports import REPORT_SECTIONS, render_schema_review_report
+from agentsb.maintain import classify_maintenance_candidates
+from agentsb.reports import REPORT_SECTIONS, render_maintenance_report, render_schema_review_report
 from agentsb.safety import classify_candidate
 
 
@@ -54,6 +55,8 @@ def _run_case(case: dict[str, Any]) -> EvalResult:
         return _run_report_case(case)
     if kind == "safety":
         return _run_safety_case(case)
+    if kind == "maintenance":
+        return _run_maintenance_case(case)
     return EvalResult(case.get("id", "(unknown)"), False, [f"unknown case kind: {kind}"])
 
 
@@ -79,6 +82,26 @@ def _run_safety_case(case: dict[str, Any]) -> EvalResult:
     reason_text = " ".join(classification.reasons)
     if required_reason and required_reason not in reason_text:
         details.append(f"missing reason text: {required_reason}")
+    return EvalResult(case["id"], not details, details)
+
+
+def _run_maintenance_case(case: dict[str, Any]) -> EvalResult:
+    candidates = classify_maintenance_candidates(case["input"]["candidates"])
+    rendered = render_maintenance_report(
+        title="AgentSB Eval Maintenance Draft",
+        facts=case["input"]["facts"],
+        schema_diff=case["input"].get("schema_diff"),
+        candidates=candidates,
+        mode=case["input"].get("mode", "draft"),
+    )
+    details: list[str] = []
+    for text in case["expect"].get("required_text", []):
+        if text not in rendered:
+            details.append(f"missing text: {text}")
+    decisions = [candidate["classification"]["decision"] for candidate in candidates]
+    for decision in case["expect"].get("required_decisions", []):
+        if decision not in decisions:
+            details.append(f"missing decision: {decision}")
     return EvalResult(case["id"], not details, details)
 
 

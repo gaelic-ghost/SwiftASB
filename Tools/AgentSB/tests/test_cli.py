@@ -30,7 +30,53 @@ def test_cli_schema_review_writes_report(fake_repo, capsys):
     assert "Wrote AgentSB schema-review report" in captured.out
     reports = list((fake_repo / "docs" / "agents" / "reports").glob("*-agentsb-schema-review.md"))
     assert len(reports) == 1
-    assert "## Human Decisions" in reports[0].read_text(encoding="utf-8")
+    rendered = reports[0].read_text(encoding="utf-8")
+    assert "## Human Decisions" in rendered
+    assert "## Schema Diff Evidence" in rendered
+    assert "Compared `v0.135.0` to `v0.136.0`" in rendered
+
+
+def test_cli_maintain_draft_writes_reviewable_report(fake_repo, capsys):
+    exit_code = main(["maintain", "--repo", str(fake_repo), "--draft"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "Wrote AgentSB maintenance draft" in captured.out
+    reports = list((fake_repo / "docs" / "agents" / "reports").glob("*-agentsb-maintenance-draft.md"))
+    assert len(reports) == 1
+    rendered = reports[0].read_text(encoding="utf-8")
+    assert "Proposed patch:" in rendered
+    assert "Decision: `report-only`" in rendered
+    assert "Decision: `draft-only`" in rendered
+
+
+def test_cli_maintain_auto_apply_refuses_unsafe_candidates(fake_repo, monkeypatch, capsys):
+    def passing_checks(_root, commands):
+        return [{"command": command, "returncode": 0, "summary": "passed in test"} for command in commands]
+
+    monkeypatch.setattr("agentsb.maintain.run_required_checks", passing_checks)
+
+    exit_code = main(["maintain", "--repo", str(fake_repo), "--auto-apply-safe"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "Wrote AgentSB auto-apply-safe report" in captured.out
+    reports = list((fake_repo / "docs" / "agents" / "reports").glob("*-agentsb-maintenance-auto-apply-safe.md"))
+    assert len(reports) == 1
+    rendered = reports[0].read_text(encoding="utf-8")
+    assert "generated wire snapshots require maintainer-controlled promotion" in rendered
+    assert "Wrote AgentSB-owned schema-review report" in rendered
+    assert (fake_repo / "Sources" / "SwiftASB" / "Generated" / "CodexWire" / "Latest" / "CodexLifecycleV2Batch+JSONValue.swift").read_text(
+        encoding="utf-8"
+    ) == "struct CodexLifecycleV2Batch {}\n"
+
+
+def test_cli_maintain_requires_one_mode(fake_repo, capsys):
+    exit_code = main(["maintain", "--repo", str(fake_repo)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 2
+    assert "choose exactly one" in captured.err
 
 
 def test_cli_local_eval_runs(capsys):

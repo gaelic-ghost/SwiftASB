@@ -35,8 +35,8 @@ AgentSB should default to `report-only` whenever safety is uncertain.
 
 4. Compare schema families.
    AgentSB compares schema dumps across Codex CLI versions, identifies added,
-   removed, and changed families, and records which SwiftASB surfaces may need
-   review.
+   removed, and changed families, and records the evidence in generated
+   reports.
 
 5. Prototype private local Codex storage inspection when explicitly requested.
    AgentSB may use read-only direct ingest for maintainer reports and SwiftASB
@@ -50,13 +50,13 @@ AgentSB should default to `report-only` whenever safety is uncertain.
 
 7. Draft changes.
    The patch drafter prepares reviewable diffs for `draft-only` work without
-   applying them. Drafts should preserve existing document structure and avoid
-   broad rewrites.
+   applying them. Drafts preserve existing document structure and avoid broad
+   rewrites.
 
 8. Auto-apply safe changes.
-   The auto-apply runner applies only `auto-apply` candidates, runs the required
-   checks, and writes a report describing what changed, why it was safe, and
-   what it refused to touch.
+   The auto-apply runner applies only `auto-apply` candidates, runs their
+   required checks, and writes a report describing what changed, why it was
+   safe, and what it refused to touch.
 
 ## Auto-Apply Safety Rules
 
@@ -156,18 +156,19 @@ uv run agentsb maintain --repo ../.. --auto-apply-safe
 apply only candidates classified as `auto-apply`, run the required checks, and
 write a durable report for both applied and refused work.
 
-## Current Completion Focus
+## Current Completion Status
 
-The next implementation pass should finish AgentSB as a useful report-first
-maintainer app before widening into package behavior or unattended edits.
+AgentSB is now a useful report-first maintainer app before any widening into
+package behavior or unattended edits.
 
-- Integrate schema diff evidence into generated reports.
-- Add a `maintain --draft` command that proposes reviewable changes without
-  applying them.
-- Keep `maintain --auto-apply-safe` behind the safety classifier and limited to
-  AgentSB-owned or otherwise proven non-behavioral changes.
-- Expand local evals for draft and auto-apply refusal paths before trusting the
-  runner.
+- Schema diff evidence is integrated into generated schema-review and
+  maintenance reports.
+- `maintain --draft` writes reviewable proposed changes without applying source
+  edits.
+- `maintain --auto-apply-safe` stays behind the safety classifier and is limited
+  to AgentSB-owned or otherwise proven non-behavioral changes.
+- Local evals cover draft and auto-apply refusal paths before the runner is
+  trusted.
 - Keep direct Codex storage reads as prototype evidence for the SwiftASB plan,
   not as a final AgentSB-owned product boundary.
 - Update `ROADMAP.md` and maintainer docs whenever a planned AgentSB slice

@@ -90,7 +90,7 @@
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
 | Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a current-reviewed Codex CLI support window of `0.135.x`, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
 | README-level consumer docs | `Shipped / ongoing` | The README covers installation, runtime assumptions, first-use examples, the supported lifecycle, SwiftUI companion surfaces, and the current Codex CLI compatibility window. Future README work should track new public API additions rather than prerelease readiness. |
-| AgentSB maintainer automation | `Report-first prototype` | `Tools/AgentSB/` is a repo-local Python maintainer app that inspects SwiftASB deterministically, writes tracked reports under `docs/agents/reports/`, evaluates safety-boundary cases, diffs schema dumps, and prototypes local Codex thread-index inspection for future SwiftASB planning. The v1 boundary stays report-first: it must not mutate Swift source, generated wire snapshots, public API, releases, or docs beyond the requested report without an explicit later auto-apply approval model. |
+| AgentSB maintainer automation | `Report-first maintainer app` | `Tools/AgentSB/` is a repo-local Python maintainer app that inspects SwiftASB deterministically, writes tracked reports under `docs/agents/reports/`, evaluates safety-boundary cases, diffs schema dumps, writes reviewable maintenance drafts, and prototypes local Codex thread-index inspection for future SwiftASB planning. The v1 boundary stays report-first: safe auto-apply is classifier-gated and limited to AgentSB-owned report artifacts, and it must not mutate Swift source, generated wire snapshots, public API, releases, or behavior-changing docs. |
 | Agent workflow guidance | `Shipped / ongoing` | SwiftASB-specific Codex guidance now ships through `socket`'s [`swiftasb-skills`](https://github.com/gaelic-ghost/socket/tree/main/plugins/swiftasb-skills) plugin, with skills for explaining SwiftASB, choosing an integration shape, building SwiftUI-facing app state, and diagnosing integration failures. This repo now points package users and maintainers at that plugin while keeping SwiftASB source, DocC, tests, generated-wire review, and release notes here as the package source of truth. |
 | End-to-end subprocess integration tests | `Shipped / ongoing` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including raw transport startup, single-turn completion, cross-thread completion, app-wide model/MCP/hook diagnostics snapshots, thread-name mutation, stored-history materialization, same-thread concurrency probing, deterministic command and permissions approvals through a mock Responses provider, a best-effort prompt-driven approval-path probe, a disposable live rollback scenario, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The umbrella runner is `scripts/run-live-codex-integration-tests.sh`; it defaults to the release-gate set and exposes focused modes for smoke, transport, capability, thread, turn, approval, file-scenario, rollback, same-thread, and all opt-in live tests. Stored-history materialization remains in focused `thread`/`all` runs instead of the release-gate smoke group because the live app-server can delay history materialization. |
 | Apache 2.0 licensing | `Shipped` | The repo now carries the Apache License, Version 2.0 text, and README plus contributor docs describe current releases as Apache 2.0 licensed. |
@@ -1495,9 +1495,9 @@ Completed
 - [ ] Add command-execution-backed Git and GitHub action helpers for consuming
   apps that want Codex-like repository operations through `git` and `gh` when
   those tools are installed and the app has the required access grant.
-- [ ] Finish AgentSB as a report-first maintainer app, then add an explicit
-  safe-diff auto-apply mode only after the classifier can prove a change is
-  docs-only, report-only, or otherwise non-behavioral and non-public-API.
+- [x] Finish AgentSB as a report-first maintainer app with schema-diff evidence,
+  reviewable maintenance drafts, and classifier-gated safe auto-apply limited to
+  AgentSB-owned report artifacts.
 - [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
 - [ ] Fix repository-wide security audit findings around JSON-RPC numeric ID
   parsing and network-policy amendment fail-closed behavior.
@@ -1511,6 +1511,9 @@ Completed
 - 2026-06-04: Added AgentSB maintainer automation planning, eval scaffolding,
   schema-diff reporting, local Codex thread-index prototype work, and a
   SwiftASB-specific direct local thread storage plan for future package work.
+- 2026-06-04: Finished AgentSB's report-first maintainer loop with schema diff
+  evidence in generated reports, `maintain --draft`, and classifier-gated
+  `maintain --auto-apply-safe` for AgentSB-owned report artifacts only.
 - 2026-04-25: Added Xcode `docbuild` DocC validation, Swift Package Index metadata, and warning-clean DocC links.
 - 2026-04-25: Split README package-user guidance from contributor workflow in `CONTRIBUTING.md`.
 - 2026-05-06: Marked the `v1.1.1` SPI listing confirmed, closed the completed v1 milestone status drift, and moved the active maintainer priority to post-v1 query descriptors plus app-library grouping.

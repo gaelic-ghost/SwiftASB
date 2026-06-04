@@ -19,11 +19,32 @@ Write a schema-review report:
 uv run agentsb report schema-review --repo ../..
 ```
 
+Schema-review reports include the latest available schema dump diff evidence
+when at least two local dumps exist under `codex-schemas/`.
+
 Compare two dumped Codex CLI schema versions:
 
 ```bash
 uv run agentsb schema diff --repo ../.. --base v0.133.0 --target v0.135.0
 ```
+
+Write a reviewable maintenance draft without applying proposed source changes:
+
+```bash
+uv run agentsb maintain --repo ../.. --draft
+```
+
+Apply only classifier-approved safe AgentSB-owned changes and report every
+refusal:
+
+```bash
+uv run agentsb maintain --repo ../.. --auto-apply-safe
+```
+
+The current safe auto-apply surface is intentionally narrow: AgentSB can create
+AgentSB-owned reports under `docs/agents/reports/`. It refuses generated wire,
+Swift public API, release automation, behavior-changing candidates, and
+meaning-changing docs updates that need maintainer review.
 
 Inspect the private local Codex thread index in read-only mode:
 

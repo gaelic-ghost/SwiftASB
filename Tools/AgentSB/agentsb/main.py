@@ -8,8 +8,9 @@ from pathlib import Path
 
 from .coordinator import run_ai_notes
 from .evals import run_ai_evals, run_local_evals
+from .maintain import auto_apply_safe, write_maintenance_draft
 from .reports import write_report
-from .schema_diff import diff_schema_dumps
+from .schema_diff import diff_schema_dumps, latest_schema_diff
 from .thread_index import default_database_path, inspect_thread_index
 from .tools import AgentSBError, inspect_repo
 
@@ -29,9 +30,22 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "report" and args.report_command == "schema-review":
             facts = inspect_repo(args.repo)
+            schema_diff = latest_schema_diff(args.repo, facts["schema_dumps"])
             ai_notes = asyncio.run(run_ai_notes(facts)) if args.ai else None
-            path = write_report(args.repo, "schema-review", facts, ai_notes=ai_notes)
+            path = write_report(args.repo, "schema-review", facts, ai_notes=ai_notes, schema_diff=schema_diff)
             print(f"Wrote AgentSB schema-review report: {path}")
+            return 0
+
+        if args.command == "maintain":
+            if args.draft == args.auto_apply_safe:
+                print("AgentSB error: choose exactly one of --draft or --auto-apply-safe", file=sys.stderr)
+                return 2
+            if args.draft:
+                path = write_maintenance_draft(args.repo)
+                print(f"Wrote AgentSB maintenance draft: {path}")
+                return 0
+            path = auto_apply_safe(args.repo)
+            print(f"Wrote AgentSB auto-apply-safe report: {path}")
             return 0
 
         if args.command == "eval" and args.eval_command == "local":
@@ -88,6 +102,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--ai",
         action="store_true",
         help="Use OpenAI Agents SDK notes. Requires OPENAI_API_KEY.",
+    )
+
+    maintain = subcommands.add_parser("maintain", help="Draft or safely apply AgentSB maintenance work.")
+    maintain.add_argument("--repo", type=Path, default=Path.cwd(), help="SwiftASB repository root.")
+    maintain_mode = maintain.add_mutually_exclusive_group()
+    maintain_mode.add_argument(
+        "--draft",
+        action="store_true",
+        help="Write a reviewable maintenance draft without applying proposed source changes.",
+    )
+    maintain_mode.add_argument(
+        "--auto-apply-safe",
+        action="store_true",
+        help="Apply only classifier-approved safe AgentSB-owned changes and report refusals.",
     )
 
     eval_parser = subcommands.add_parser("eval", help="Run AgentSB eval suites.")

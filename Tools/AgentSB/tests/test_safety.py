@@ -23,3 +23,15 @@ def test_agentsb_report_format_candidate_can_auto_apply():
     )
 
     assert classification.decision == "auto-apply"
+
+
+def test_release_automation_candidate_is_report_only():
+    classification = classify_candidate(
+        {
+            "change_kind": "release-automation",
+            "paths": ["scripts/repo-maintenance/release.sh"],
+        }
+    )
+
+    assert classification.decision == "report-only"
+    assert "release automation" in " ".join(classification.reasons)

@@ -38,6 +38,15 @@ def diff_schema_dumps(repo: str | Path, base: str, target: str) -> dict[str, Any
     }
 
 
+def latest_schema_diff(repo: str | Path, schema_dumps: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if len(schema_dumps) < 2:
+        return None
+    ordered = sorted(schema_dumps, key=lambda item: item["name"])
+    base = ordered[-2]["name"]
+    target = ordered[-1]["name"]
+    return diff_schema_dumps(repo, base, target)
+
+
 def _schema_dir(root: Path, version: str) -> Path:
     schema_dir = root / "codex-schemas" / version
     if not schema_dir.exists():

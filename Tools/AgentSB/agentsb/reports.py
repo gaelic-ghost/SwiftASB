@@ -9,6 +9,7 @@ from .tools import AgentSBError, resolve_repo_root
 REPORT_SECTIONS = [
     "Summary",
     "Codex CLI Schema State",
+    "Schema Diff Evidence",
     "Boundary Review",
     "Documentation Drift",
     "Recommended Probes",
@@ -40,14 +41,26 @@ def ensure_report_path(repo: str | Path, path: str | Path) -> Path:
     return _next_available_path(resolved)
 
 
-def write_report(repo: str | Path, topic: str, facts: dict[str, Any], *, ai_notes: str | None = None) -> Path:
+def write_report(
+    repo: str | Path,
+    topic: str,
+    facts: dict[str, Any],
+    *,
+    ai_notes: str | None = None,
+    schema_diff: dict[str, Any] | None = None,
+) -> Path:
     path = report_path(repo, topic)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_schema_review_report(facts, ai_notes=ai_notes), encoding="utf-8")
+    path.write_text(render_schema_review_report(facts, ai_notes=ai_notes, schema_diff=schema_diff), encoding="utf-8")
     return path
 
 
-def render_schema_review_report(facts: dict[str, Any], *, ai_notes: str | None = None) -> str:
+def render_schema_review_report(
+    facts: dict[str, Any],
+    *,
+    ai_notes: str | None = None,
+    schema_diff: dict[str, Any] | None = None,
+) -> str:
     git = facts["git"]
     reviewed_window = facts["reviewed_codex_cli_window"]["window"] or "unknown"
     schema_dumps = facts["schema_dumps"]
@@ -68,6 +81,10 @@ def render_schema_review_report(facts: dict[str, Any], *, ai_notes: str | None =
         "## Codex CLI Schema State",
         "",
         _schema_dump_table(schema_dumps),
+        "",
+        "## Schema Diff Evidence",
+        "",
+        _schema_diff_section(schema_diff),
         "",
         "## Boundary Review",
         "",
@@ -105,6 +122,55 @@ def render_schema_review_report(facts: dict[str, Any], *, ai_notes: str | None =
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_maintenance_report(
+    *,
+    title: str,
+    facts: dict[str, Any],
+    schema_diff: dict[str, Any] | None,
+    candidates: list[dict[str, Any]],
+    mode: str,
+    applied: list[dict[str, Any]] | None = None,
+    checks: list[dict[str, Any]] | None = None,
+) -> str:
+    git = facts["git"]
+    applied = applied or []
+    checks = checks or []
+    lines = [
+        f"# {title}",
+        "",
+        "## Summary",
+        "",
+        f"- Mode: `{mode}`.",
+        f"- Git branch at inspection time: `{git['branch']}`.",
+        f"- Git dirty state at inspection time: `{git['dirty']}`.",
+        f"- Candidates reviewed: {len(candidates)}.",
+        f"- Safe changes applied: {len(applied)}.",
+        "",
+        "## Schema Diff Evidence",
+        "",
+        _schema_diff_section(schema_diff),
+        "",
+        "## Candidate Decisions",
+        "",
+        _candidate_decision_sections(candidates),
+        "",
+        "## Applied Changes",
+        "",
+        _applied_changes_section(applied),
+        "",
+        "## Required Checks",
+        "",
+        _checks_section(checks),
+        "",
+        "## Evidence",
+        "",
+        f"- Repository root: `{facts['repo_root']}`.",
+        f"- Reviewed window source: `{facts['reviewed_codex_cli_window']['source'] or 'not found'}`.",
+        f"- Git upstream: `{git['upstream'] or 'none'}`.",
+    ]
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _schema_dump_table(schema_dumps: list[dict[str, Any]]) -> str:
     if not schema_dumps:
         return "No schema dumps were found under `codex-schemas/`."
@@ -115,6 +181,77 @@ def _schema_dump_table(schema_dumps: list[dict[str, Any]]) -> str:
         for item in schema_dumps
     )
     return "\n".join(rows)
+
+
+def _schema_diff_section(schema_diff: dict[str, Any] | None) -> str:
+    if not schema_diff:
+        return "No schema dump diff was available for this report."
+
+    summary = schema_diff["summary"]
+    lines = [
+        f"- Compared `{schema_diff['base']}` to `{schema_diff['target']}`.",
+        f"- Added JSON files: {summary['added']}.",
+        f"- Removed JSON files: {summary['removed']}.",
+        f"- Changed JSON files: {summary['changed']}.",
+        f"- Unchanged JSON files: {summary['unchanged']}.",
+    ]
+    for label, key in [("Added", "added"), ("Removed", "removed"), ("Changed", "changed")]:
+        values = schema_diff.get(key, [])
+        if values:
+            lines.append(f"- {label}: {_preview_values(values)}.")
+    return "\n".join(lines)
+
+
+def _candidate_decision_sections(candidates: list[dict[str, Any]]) -> str:
+    if not candidates:
+        return "No maintenance candidates were discovered."
+
+    sections: list[str] = []
+    for index, candidate in enumerate(candidates, start=1):
+        classification = candidate["classification"]
+        sections.extend(
+            [
+                f"### {index}. {candidate['title']}",
+                "",
+                f"- Decision: `{classification['decision']}`.",
+                f"- Change kind: `{candidate['change_kind']}`.",
+                f"- Paths: {_preview_values(candidate['paths'])}.",
+                f"- Summary: {candidate['summary']}",
+                f"- Reasons: {_preview_values(classification['reasons'])}.",
+            ]
+        )
+        required_checks = classification.get("required_checks", [])
+        if required_checks:
+            sections.append(f"- Required checks: {_preview_values(required_checks)}.")
+        draft = candidate.get("draft")
+        if draft:
+            sections.extend(["", "Proposed patch:", "", "```diff", draft.rstrip(), "```"])
+        sections.append("")
+    return "\n".join(sections).rstrip()
+
+
+def _applied_changes_section(applied: list[dict[str, Any]]) -> str:
+    if not applied:
+        return "No safe changes were applied."
+    return "\n".join(f"- `{item['path']}`: {item['summary']}" for item in applied)
+
+
+def _checks_section(checks: list[dict[str, Any]]) -> str:
+    if not checks:
+        return "No checks were run."
+    return "\n".join(
+        f"- `{item['command']}` exited {item['returncode']}: {item['summary']}"
+        for item in checks
+    )
+
+
+def _preview_values(values: list[Any], *, limit: int = 8) -> str:
+    if not values:
+        return "none"
+    rendered = [f"`{value}`" for value in values[:limit]]
+    if len(values) > limit:
+        rendered.append(f"... {len(values) - limit} more")
+    return ", ".join(rendered)
 
 
 def _docs_table(docs: dict[str, Any]) -> str:
