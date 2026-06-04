@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from .coordinator import run_ai_notes
+from .evals import run_local_evals
 from .reports import write_report
 from .tools import AgentSBError, inspect_repo
 
@@ -30,6 +31,15 @@ def main(argv: list[str] | None = None) -> int:
             path = write_report(args.repo, "schema-review", facts, ai_notes=ai_notes)
             print(f"Wrote AgentSB schema-review report: {path}")
             return 0
+
+        if args.command == "eval" and args.eval_command == "local":
+            return run_local_evals()
+
+        if args.command == "eval" and args.eval_command == "ai":
+            raise RuntimeError(
+                "`agentsb eval ai` is planned but not implemented yet. Use `agentsb eval local` "
+                "for the current deterministic eval suite."
+            )
 
         parser.print_help()
         return 2
@@ -63,6 +73,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Use OpenAI Agents SDK notes. Requires OPENAI_API_KEY.",
     )
+
+    eval_parser = subcommands.add_parser("eval", help="Run AgentSB eval suites.")
+    eval_subcommands = eval_parser.add_subparsers(dest="eval_command")
+    eval_subcommands.add_parser("local", help="Run deterministic local evals without OPENAI_API_KEY.")
+    eval_subcommands.add_parser("ai", help="Run planned AI-assisted evals. Requires OPENAI_API_KEY.")
 
     return parser
 

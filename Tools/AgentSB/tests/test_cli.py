@@ -31,3 +31,11 @@ def test_cli_schema_review_writes_report(fake_repo, capsys):
     reports = list((fake_repo / "docs" / "agents" / "reports").glob("*-agentsb-schema-review.md"))
     assert len(reports) == 1
     assert "## Human Decisions" in reports[0].read_text(encoding="utf-8")
+
+
+def test_cli_local_eval_runs(capsys):
+    exit_code = main(["eval", "local"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "PASS report_contains_required_sections" in captured.out

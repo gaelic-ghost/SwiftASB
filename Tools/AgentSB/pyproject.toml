@@ -24,6 +24,17 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+exclude = [
+  "/.pytest_cache",
+  "/.venv",
+  "/dist",
+  "/evals/results/latest.json",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agentsb", "evals"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

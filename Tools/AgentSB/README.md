@@ -35,6 +35,16 @@ Use AI-assisted report notes only when credentials are available:
 OPENAI_API_KEY=... uv run agentsb report schema-review --repo ../.. --ai
 ```
 
+Run the deterministic eval suite:
+
+```bash
+uv run agentsb eval local
+```
+
+The current eval suite checks report rendering and the first safety
+classification rules for future auto-apply behavior. Results are written to
+`evals/results/latest.json`.
+
 ## Roadmap
 
 AgentSB is intended to grow into a review-first maintenance loop:
