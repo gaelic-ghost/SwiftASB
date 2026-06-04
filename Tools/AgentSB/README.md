@@ -34,3 +34,16 @@ Use AI-assisted report notes only when credentials are available:
 ```bash
 OPENAI_API_KEY=... uv run agentsb report schema-review --repo ../.. --ai
 ```
+
+## Roadmap
+
+AgentSB is intended to grow into a review-first maintenance loop:
+
+1. report deterministic repo facts;
+2. run local and AI-assisted evals;
+3. compare Codex CLI schema dumps;
+4. classify candidates as `auto-apply`, `draft-only`, or `report-only`;
+5. draft reviewable patches for unsafe or meaning-changing work;
+6. opt into auto-applying only changes proven non-behavioral and non-public-API.
+
+The durable roadmap lives at `docs/agents/agentsb-roadmap.md`.

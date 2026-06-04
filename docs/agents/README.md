@@ -10,3 +10,6 @@ repository documentation before commit.
 AgentSB version one is report-first. A normal report run may create a new
 Markdown file in `docs/agents/reports/`, but it must not promote generated wire
 snapshots, edit Swift public API, tag releases, or change release automation.
+
+See [`agentsb-roadmap.md`](agentsb-roadmap.md) for the planned eval, schema
+diffing, draft-patch, and safe auto-apply workflow.
