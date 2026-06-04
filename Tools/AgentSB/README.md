@@ -52,7 +52,7 @@ Inspect the private local Codex thread index in read-only mode:
 uv run agentsb threads inspect-index --cwd /Users/galew/Workspace/gaelic-ghost/SwiftASB --unarchived
 ```
 
-Private prompt and preview text is redacted by default. Pass
+Private title, prompt, and preview text is redacted by default. Pass
 `--include-private-text` only for local maintainer investigations that need it.
 This command is a prototype and reporting aid for the future SwiftASB
 direct-thread-storage feature; it is not the final package API.

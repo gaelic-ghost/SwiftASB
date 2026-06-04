@@ -36,8 +36,10 @@ content.
 - Never mutate Codex state, archive flags, JSONL files, logs, goals, or app
   support files.
 - Prefer metadata summaries over prompt/tool-content ingestion.
-- Redact private text by default, including first user messages and previews.
-- Require an explicit flag before including private prompt or preview text.
+- Redact private text by default, including titles, first user messages, and
+  previews.
+- Require an explicit flag before including private title, prompt, or preview
+  text.
 - Read JSONL lazily and only for selected rows.
 - Keep direct-read outputs labeled as private local Codex storage observations.
 - Keep app-server surfaces authoritative for product behavior, archive actions,
@@ -62,7 +64,8 @@ The command should:
 - open the database in SQLite read-only mode;
 - validate that required columns exist;
 - print JSON with schema status, counts, and recent rows;
-- redact private text unless `--include-private-text` is passed.
+- redact title, prompt, and preview text unless `--include-private-text` is
+  passed.
 
 ## Future Implementation Slices
 

@@ -13,6 +13,8 @@ def test_thread_index_inspection_redacts_private_text(fake_thread_index):
     assert inventory["schema_status"]["compatible"] is True
     assert inventory["counts"] == {"total": 2, "archived": 1, "unarchived": 1}
     assert inventory["rows"][0]["id"] == "thread-active"
+    assert inventory["rows"][0]["title"] is None
+    assert inventory["rows"][0]["title_length"] == len("Active title")
     assert inventory["rows"][0]["first_user_message"] is None
     assert inventory["rows"][0]["first_user_message_length"] == len("private first message")
     assert inventory["rows"][0]["preview"] is None
@@ -23,6 +25,7 @@ def test_thread_index_inspection_can_include_private_text(fake_thread_index):
     inventory = inspect_thread_index(fake_thread_index, include_private_text=True)
 
     assert inventory["privacy"]["private_text_redacted"] is False
+    assert inventory["rows"][0]["title"] == "Active title"
     assert inventory["rows"][0]["first_user_message"] == "private first message"
     assert inventory["rows"][0]["preview"] == "private preview"
 

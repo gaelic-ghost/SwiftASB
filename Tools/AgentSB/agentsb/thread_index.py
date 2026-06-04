@@ -104,7 +104,7 @@ def inspect_thread_index(
         "rows": rows,
         "privacy": {
             "private_text_redacted": not include_private_text,
-            "private_text_fields": ["first_user_message", "preview"],
+            "private_text_fields": ["title", "first_user_message", "preview"],
         },
         "warning": (
             "Direct thread index reads use private local Codex storage. "
@@ -224,7 +224,7 @@ def _where(*, cwd: str | None, archive_filter: ArchiveFilter) -> tuple[str, list
 def _normalize_row(row: sqlite3.Row, *, include_private_text: bool) -> dict[str, Any]:
     result = dict(row)
     result["archived"] = bool(result.get("archived"))
-    for field in ["first_user_message", "preview"]:
+    for field in ["title", "first_user_message", "preview"]:
         if field not in result:
             continue
         value = result.get(field) or ""

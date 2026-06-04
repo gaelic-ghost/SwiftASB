@@ -80,9 +80,10 @@ Likely caller-facing owner:
 - Open SQLite databases read-only.
 - Never mutate Codex state, archive flags, JSONL files, logs, goals, or app
   support files.
-- Redact private prompt and preview text by default.
-- Require an explicit opt-in before returning first user messages, previews,
-  raw transcript text, tool output, command output, or file-change payloads.
+- Redact private title, prompt, and preview text by default.
+- Require an explicit opt-in before returning titles, first user messages,
+  previews, raw transcript text, tool output, command output, or file-change
+  payloads.
 - Prefer metadata summaries over transcript ingestion.
 - Read JSONL lazily and only for selected rows.
 - Label all direct-read data as local persisted storage observations.
