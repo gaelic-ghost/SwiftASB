@@ -1,17 +1,17 @@
-# Codex Direct Read Plan
+# AgentSB Direct Read Prototype Plan
 
 AgentSB may use direct local Codex reads as an experimental maintainer lane for
-faster reports, especially thread inventory and history discovery. This lane is
-private, read-only by default, and version-gated. It is not SwiftASB public API
-and must not replace app-server behavior as the source of truth for package
-features.
+faster reports and for prototyping the future SwiftASB direct-thread-storage
+feature. This lane is private, read-only by default, and version-gated. The
+destination feature is tracked in
+[`../maintainers/codex-direct-thread-storage-plan.md`](../maintainers/codex-direct-thread-storage-plan.md).
 
 ## Goal
 
-Use local Codex storage to make AgentSB reports faster and broader without
-clogging the CLI/app-server JSONL pipe. The first target is thread inventory:
-read SQLite metadata first, then lazily read referenced JSONL only when deeper
-turn evidence is needed.
+Use local Codex storage to help design and validate a faster SwiftASB thread
+inventory path without clogging the CLI/app-server JSONL pipe. The first AgentSB
+target is thread inventory: read SQLite metadata first, then lazily read
+referenced JSONL only when deeper turn evidence is needed.
 
 ## Supported Storage Contract
 
@@ -25,9 +25,10 @@ on 2026-06-04:
 - active and archived JSONL using the same broad envelope families:
   `session_meta`, `turn_context`, `event_msg`, and `response_item`
 
-AgentSB must treat this as a compatibility window, not a forever-stable schema.
-If the table, required columns, or path conventions drift, AgentSB should report
-the mismatch and stop before reading deeper content.
+AgentSB must treat this as a prototype compatibility window, not a
+forever-stable schema. If the table, required columns, or path conventions
+drift, AgentSB should report the mismatch and stop before reading deeper
+content.
 
 ## Direct Read Principles
 
@@ -39,8 +40,9 @@ the mismatch and stop before reading deeper content.
 - Require an explicit flag before including private prompt or preview text.
 - Read JSONL lazily and only for selected rows.
 - Keep direct-read outputs labeled as private local Codex storage observations.
-- Keep app-server and SwiftASB surfaces authoritative for product behavior,
-  archive actions, live state, and compatibility claims.
+- Keep app-server surfaces authoritative for product behavior, archive actions,
+  live state, and compatibility claims while SwiftASB's direct-read design is
+  still experimental.
 
 ## First Implementation Slice
 
@@ -76,7 +78,8 @@ The command should:
 
 3. Add version gates.
    Record observed Codex CLI version, GUI storage version if detectable, SQLite
-   table hash, and required-column compatibility in every direct-read report.
+   table hash, and required-column compatibility in every direct-read report so
+   SwiftASB can decide which storage windows to support.
 
 4. Add evals.
    Fixture SQLite databases should cover active threads, archived threads,
@@ -101,7 +104,7 @@ The command should:
 
 ## Decision
 
-Proceed with direct reads only as AgentSB maintainer tooling. Do not expose this
-as SwiftASB package API unless Codex publishes a stable storage contract or the
-feature is deliberately reframed as local forensic tooling with narrow version
-support.
+Proceed with AgentSB direct reads as prototype and reporting tooling only. The
+actual direct-read capability should be designed and reviewed as a SwiftASB
+feature with explicit version support, privacy defaults, and caller-facing
+ownership.

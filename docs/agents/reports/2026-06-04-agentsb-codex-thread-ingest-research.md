@@ -2,8 +2,9 @@
 
 ## Summary
 
-AgentSB should treat direct Codex thread ingest as a read-only maintainer and
-reporting lane, not as the source of truth for product behavior.
+SwiftASB should treat direct Codex thread ingest as a future read-only local
+storage capability with explicit version support. AgentSB can prototype and
+report on the storage shape, but the destination is SwiftASB itself.
 
 The promising fast path is:
 
@@ -14,9 +15,9 @@ The promising fast path is:
    user-facing behavior, archive actions, live thread state, and compatibility
    guarantees.
 
-This could reduce pressure on the CLI/app-server JSONL pipe because AgentSB can
-inventory many threads from SQLite without paging every stored thread through
-`thread/read`.
+This could reduce pressure on the CLI/app-server JSONL pipe because SwiftASB
+could inventory many threads from SQLite without paging every stored thread
+through `thread/read`.
 
 ## Observed Local Storage
 
@@ -77,27 +78,29 @@ SwiftASB and the app-server expose a deliberate public/session-oriented view:
 - goals
 - SwiftASB-owned hydrated history cache
 
-The local SQLite index is richer for maintainer inventory work. It includes
+The local SQLite index is richer for inventory work. It includes
 exact rollout paths, archive timestamps, cwd grouping, first-message and preview
 fields, Git metadata, CLI version, source/subagent metadata, model fields, and
-token totals. Those fields are useful for AgentSB reports but should not be
-treated as stable public SwiftASB API.
+token totals. Those fields are useful for AgentSB reports and could support a
+future SwiftASB direct-read feature, but they should not be treated as stable
+public API until SwiftASB defines a versioned compatibility window.
 
-## Recommended AgentSB Ingest Shape
+## Recommended SwiftASB Ingest Shape
 
-Add a future `threads ingest-plan` or `threads inspect-index` command that:
+Use AgentSB's prototype `threads inspect-index` command to validate a future
+SwiftASB direct-read design that:
 
 1. Opens `~/.codex/state_5.sqlite` read-only.
 2. Queries `threads` by cwd, archived state, updated timestamp, and source.
-3. Emits a report-oriented thread inventory with rollout paths, titles,
-   previews, archive state, Git facts, model facts, and token totals.
+3. Emits a thread inventory with rollout paths, titles, previews, archive state,
+   Git facts, model facts, and token totals.
 4. Reads JSONL lazily only for selected rows when a report needs turn-level
    evidence.
-5. Labels every direct-ingest field as private/local Codex storage, not
-   SwiftASB public API.
+5. Labels every direct-ingest field as private/local Codex storage until
+   SwiftASB defines the caller-facing model.
 
-The command should be disabled by default for normal package consumers and
-framed as local maintainer tooling.
+The SwiftASB feature should be opt-in and read-only by default. AgentSB should
+remain the maintainer-side experiment/report harness.
 
 ## Risks
 

@@ -33,6 +33,8 @@ uv run agentsb threads inspect-index --cwd /Users/galew/Workspace/gaelic-ghost/S
 
 Private prompt and preview text is redacted by default. Pass
 `--include-private-text` only for local maintainer investigations that need it.
+This command is a prototype and reporting aid for the future SwiftASB
+direct-thread-storage feature; it is not the final package API.
 
 The default report path is `docs/agents/reports/YYYY-MM-DD-agentsb-schema-review.md`.
 If that file already exists, AgentSB appends a numeric suffix.

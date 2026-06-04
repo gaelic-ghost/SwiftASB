@@ -38,9 +38,10 @@ AgentSB should default to `report-only` whenever safety is uncertain.
    removed, and changed families, and records which SwiftASB surfaces may need
    review.
 
-5. Inspect private local Codex storage when explicitly requested.
-   AgentSB may use read-only direct ingest for maintainer reports when the
-   storage version is recognized and private text stays redacted by default.
+5. Prototype private local Codex storage inspection when explicitly requested.
+   AgentSB may use read-only direct ingest for maintainer reports and SwiftASB
+   design evidence when the storage version is recognized and private text
+   stays redacted by default. The destination capability belongs in SwiftASB.
 
 6. Classify maintenance work.
    The safety classifier assigns each candidate to `auto-apply`, `draft-only`,

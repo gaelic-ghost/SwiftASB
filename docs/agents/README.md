@@ -14,5 +14,7 @@ snapshots, edit Swift public API, tag releases, or change release automation.
 See [`agentsb-roadmap.md`](agentsb-roadmap.md) for the planned eval, schema
 diffing, draft-patch, and safe auto-apply workflow.
 
-See [`codex-direct-read-plan.md`](codex-direct-read-plan.md) for the
-experimental read-only Codex storage ingest plan.
+See [`codex-direct-read-plan.md`](codex-direct-read-plan.md) for the AgentSB
+prototype plan for read-only Codex storage inspection. The intended SwiftASB
+feature direction lives in
+[`../maintainers/codex-direct-thread-storage-plan.md`](../maintainers/codex-direct-thread-storage-plan.md).
