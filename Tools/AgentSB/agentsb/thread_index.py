@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import quote
 
 from .tools import AgentSBError
 
@@ -106,14 +107,15 @@ def inspect_thread_index(
             "private_text_fields": ["first_user_message", "preview"],
         },
         "warning": (
-            "Direct thread index reads use private local Codex storage and are "
-            "intended for AgentSB maintainer reports, not SwiftASB public API."
+            "Direct thread index reads use private local Codex storage. "
+            "AgentSB uses this as prototype and reporting evidence for a future "
+            "SwiftASB direct-storage feature; it is not the final package API."
         ),
     }
 
 
 def _connect_read_only(path: Path) -> sqlite3.Connection:
-    uri = f"file:{path}?mode=ro"
+    uri = f"file:{quote(str(path), safe='/')}?mode=ro"
     try:
         connection = sqlite3.connect(uri, uri=True)
     except sqlite3.Error as error:

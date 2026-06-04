@@ -156,6 +156,23 @@ uv run agentsb maintain --repo ../.. --auto-apply-safe
 apply only candidates classified as `auto-apply`, run the required checks, and
 write a durable report for both applied and refused work.
 
+## Current Completion Focus
+
+The next implementation pass should finish AgentSB as a useful report-first
+maintainer app before widening into package behavior or unattended edits.
+
+- Integrate schema diff evidence into generated reports.
+- Add a `maintain --draft` command that proposes reviewable changes without
+  applying them.
+- Keep `maintain --auto-apply-safe` behind the safety classifier and limited to
+  AgentSB-owned or otherwise proven non-behavioral changes.
+- Expand local evals for draft and auto-apply refusal paths before trusting the
+  runner.
+- Keep direct Codex storage reads as prototype evidence for the SwiftASB plan,
+  not as a final AgentSB-owned product boundary.
+- Update `ROADMAP.md` and maintainer docs whenever a planned AgentSB slice
+  changes the SwiftASB package roadmap.
+
 ## Rollout Order
 
 1. Report skeleton with deterministic inspection.
