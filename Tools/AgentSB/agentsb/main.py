@@ -10,6 +10,7 @@ from .coordinator import run_ai_notes
 from .evals import run_ai_evals, run_local_evals
 from .reports import write_report
 from .schema_diff import diff_schema_dumps
+from .thread_index import default_database_path, inspect_thread_index
 from .tools import AgentSBError, inspect_repo
 
 
@@ -42,6 +43,18 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "schema" and args.schema_command == "diff":
             diff = diff_schema_dumps(args.repo, args.base, args.target)
             print(json.dumps(diff, indent=2, sort_keys=True))
+            return 0
+
+        if args.command == "threads" and args.threads_command == "inspect-index":
+            archive_filter = _archive_filter(args)
+            inventory = inspect_thread_index(
+                args.database,
+                cwd=args.cwd,
+                archive_filter=archive_filter,
+                limit=args.limit,
+                include_private_text=args.include_private_text,
+            )
+            print(json.dumps(inventory, indent=2, sort_keys=True))
             return 0
 
         parser.print_help()
@@ -89,7 +102,39 @@ def build_parser() -> argparse.ArgumentParser:
     schema_diff.add_argument("--base", required=True, help="Base schema dump name, such as v0.133.0.")
     schema_diff.add_argument("--target", required=True, help="Target schema dump name, such as v0.135.0.")
 
+    threads_parser = subcommands.add_parser("threads", help="Inspect private local Codex thread storage.")
+    threads_subcommands = threads_parser.add_subparsers(dest="threads_command")
+    inspect_index = threads_subcommands.add_parser(
+        "inspect-index",
+        help="Read the Codex thread SQLite index in read-only mode.",
+    )
+    inspect_index.add_argument(
+        "--database",
+        type=Path,
+        default=default_database_path(),
+        help="Codex state SQLite path. Defaults to ~/.codex/state_5.sqlite.",
+    )
+    inspect_index.add_argument("--cwd", help="Filter threads to a repository cwd.")
+    archive_group = inspect_index.add_mutually_exclusive_group()
+    archive_group.add_argument("--archived", action="store_true", help="Only include archived threads.")
+    archive_group.add_argument("--unarchived", action="store_true", help="Only include unarchived threads.")
+    archive_group.add_argument("--all", action="store_true", help="Include archived and unarchived threads.")
+    inspect_index.add_argument("--limit", type=int, default=20, help="Maximum rows to return.")
+    inspect_index.add_argument(
+        "--include-private-text",
+        action="store_true",
+        help="Include first user message and preview text. Redacted by default.",
+    )
+
     return parser
+
+
+def _archive_filter(args: argparse.Namespace) -> str:
+    if getattr(args, "archived", False):
+        return "archived"
+    if getattr(args, "unarchived", False):
+        return "unarchived"
+    return "all"
 
 
 if __name__ == "__main__":

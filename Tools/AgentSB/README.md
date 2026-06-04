@@ -25,6 +25,15 @@ Compare two dumped Codex CLI schema versions:
 uv run agentsb schema diff --repo ../.. --base v0.133.0 --target v0.135.0
 ```
 
+Inspect the private local Codex thread index in read-only mode:
+
+```bash
+uv run agentsb threads inspect-index --cwd /Users/galew/Workspace/gaelic-ghost/SwiftASB --unarchived
+```
+
+Private prompt and preview text is redacted by default. Pass
+`--include-private-text` only for local maintainer investigations that need it.
+
 The default report path is `docs/agents/reports/YYYY-MM-DD-agentsb-schema-review.md`.
 If that file already exists, AgentSB appends a numeric suffix.
 
