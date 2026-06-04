@@ -9,6 +9,7 @@ from pathlib import Path
 from .coordinator import run_ai_notes
 from .evals import run_ai_evals, run_local_evals
 from .reports import write_report
+from .schema_diff import diff_schema_dumps
 from .tools import AgentSBError, inspect_repo
 
 
@@ -37,6 +38,11 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "eval" and args.eval_command == "ai":
             return run_ai_evals()
+
+        if args.command == "schema" and args.schema_command == "diff":
+            diff = diff_schema_dumps(args.repo, args.base, args.target)
+            print(json.dumps(diff, indent=2, sort_keys=True))
+            return 0
 
         parser.print_help()
         return 2
@@ -75,6 +81,13 @@ def build_parser() -> argparse.ArgumentParser:
     eval_subcommands = eval_parser.add_subparsers(dest="eval_command")
     eval_subcommands.add_parser("local", help="Run deterministic local evals without OPENAI_API_KEY.")
     eval_subcommands.add_parser("ai", help="Run planned AI-assisted evals. Requires OPENAI_API_KEY.")
+
+    schema_parser = subcommands.add_parser("schema", help="Inspect dumped Codex CLI schemas.")
+    schema_subcommands = schema_parser.add_subparsers(dest="schema_command")
+    schema_diff = schema_subcommands.add_parser("diff", help="Compare two dumped Codex CLI schema versions.")
+    schema_diff.add_argument("--repo", type=Path, default=Path.cwd(), help="SwiftASB repository root.")
+    schema_diff.add_argument("--base", required=True, help="Base schema dump name, such as v0.133.0.")
+    schema_diff.add_argument("--target", required=True, help="Target schema dump name, such as v0.135.0.")
 
     return parser
 

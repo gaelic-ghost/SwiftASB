@@ -49,6 +49,7 @@ def fake_repo(tmp_path) -> Path:
     root = tmp_path / "SwiftASB"
     (root / "Sources" / "SwiftASB" / "Generated" / "CodexWire" / "Latest").mkdir(parents=True)
     (root / "codex-schemas" / "v0.135.0").mkdir(parents=True)
+    (root / "codex-schemas" / "v0.136.0").mkdir(parents=True)
     (root / "docs" / "maintainers").mkdir(parents=True)
     (root / "docs" / "agents" / "reports").mkdir(parents=True)
     (root / "Package.swift").write_text("// swift-tools-version: 6.0\n", encoding="utf-8")
@@ -61,6 +62,11 @@ def fake_repo(tmp_path) -> Path:
     (root / "CONTRIBUTING.md").write_text("# CONTRIBUTING\n", encoding="utf-8")
     (root / "docs" / "maintainers" / "example.md").write_text("# Example\n", encoding="utf-8")
     (root / "codex-schemas" / "v0.135.0" / "schema.json").write_text("{}", encoding="utf-8")
+    (root / "codex-schemas" / "v0.135.0" / "removed.json").write_text('{"old":true}', encoding="utf-8")
+    (root / "codex-schemas" / "v0.135.0" / "changed.json").write_text('{"value":1}', encoding="utf-8")
+    (root / "codex-schemas" / "v0.136.0" / "schema.json").write_text("{}", encoding="utf-8")
+    (root / "codex-schemas" / "v0.136.0" / "added.json").write_text('{"new":true}', encoding="utf-8")
+    (root / "codex-schemas" / "v0.136.0" / "changed.json").write_text('{"value":2}', encoding="utf-8")
     (
         root / "Sources" / "SwiftASB" / "Generated" / "CodexWire" / "Latest" / "CodexLifecycleV2Batch+JSONValue.swift"
     ).write_text("struct CodexLifecycleV2Batch {}\n", encoding="utf-8")

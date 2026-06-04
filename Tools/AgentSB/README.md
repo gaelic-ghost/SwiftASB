@@ -19,6 +19,12 @@ Write a schema-review report:
 uv run agentsb report schema-review --repo ../..
 ```
 
+Compare two dumped Codex CLI schema versions:
+
+```bash
+uv run agentsb schema diff --repo ../.. --base v0.133.0 --target v0.135.0
+```
+
 The default report path is `docs/agents/reports/YYYY-MM-DD-agentsb-schema-review.md`.
 If that file already exists, AgentSB appends a numeric suffix.
 
