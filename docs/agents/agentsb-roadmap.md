@@ -38,17 +38,21 @@ AgentSB should default to `report-only` whenever safety is uncertain.
    removed, and changed families, and records which SwiftASB surfaces may need
    review.
 
-5. Classify maintenance work.
+5. Inspect private local Codex storage when explicitly requested.
+   AgentSB may use read-only direct ingest for maintainer reports when the
+   storage version is recognized and private text stays redacted by default.
+
+6. Classify maintenance work.
    The safety classifier assigns each candidate to `auto-apply`, `draft-only`,
    or `report-only`. The classifier must explain the evidence behind each
    decision.
 
-6. Draft changes.
+7. Draft changes.
    The patch drafter prepares reviewable diffs for `draft-only` work without
    applying them. Drafts should preserve existing document structure and avoid
    broad rewrites.
 
-7. Auto-apply safe changes.
+8. Auto-apply safe changes.
    The auto-apply runner applies only `auto-apply` candidates, runs the required
    checks, and writes a report describing what changed, why it was safe, and
    what it refused to touch.
@@ -142,6 +146,7 @@ Planned commands:
 ```bash
 uv run agentsb eval local
 uv run agentsb eval ai
+uv run agentsb threads inspect-index
 uv run agentsb maintain --repo ../.. --draft
 uv run agentsb maintain --repo ../.. --auto-apply-safe
 ```
@@ -156,8 +161,9 @@ write a durable report for both applied and refused work.
 2. Local eval harness.
 3. AI-assisted eval harness.
 4. Schema dump diffing and family inventory.
-5. Safety classifier with report-only, draft-only, and auto-apply decisions.
-6. Patch drafter for `draft-only` changes.
-7. Opt-in auto-apply runner for proven-safe changes.
-8. Optional repo-maintenance validation integration after the eval suite is
+5. Read-only Codex thread index inspection.
+6. Safety classifier with report-only, draft-only, and auto-apply decisions.
+7. Patch drafter for `draft-only` changes.
+8. Opt-in auto-apply runner for proven-safe changes.
+9. Optional repo-maintenance validation integration after the eval suite is
    stable.

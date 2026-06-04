@@ -13,3 +13,6 @@ snapshots, edit Swift public API, tag releases, or change release automation.
 
 See [`agentsb-roadmap.md`](agentsb-roadmap.md) for the planned eval, schema
 diffing, draft-patch, and safe auto-apply workflow.
+
+See [`codex-direct-read-plan.md`](codex-direct-read-plan.md) for the
+experimental read-only Codex storage ingest plan.
