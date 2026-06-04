@@ -39,3 +39,13 @@ def test_cli_local_eval_runs(capsys):
 
     assert exit_code == 0
     assert "PASS report_contains_required_sections" in captured.out
+
+
+def test_cli_ai_eval_requires_api_key(monkeypatch, capsys):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    exit_code = main(["eval", "ai"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "OPENAI_API_KEY is required" in captured.err

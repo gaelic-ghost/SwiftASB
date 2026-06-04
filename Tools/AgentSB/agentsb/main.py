@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from .coordinator import run_ai_notes
-from .evals import run_local_evals
+from .evals import run_ai_evals, run_local_evals
 from .reports import write_report
 from .tools import AgentSBError, inspect_repo
 
@@ -36,10 +36,7 @@ def main(argv: list[str] | None = None) -> int:
             return run_local_evals()
 
         if args.command == "eval" and args.eval_command == "ai":
-            raise RuntimeError(
-                "`agentsb eval ai` is planned but not implemented yet. Use `agentsb eval local` "
-                "for the current deterministic eval suite."
-            )
+            return run_ai_evals()
 
         parser.print_help()
         return 2

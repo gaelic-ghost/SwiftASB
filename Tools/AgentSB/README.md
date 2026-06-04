@@ -45,6 +45,12 @@ The current eval suite checks report rendering and the first safety
 classification rules for future auto-apply behavior. Results are written to
 `evals/results/latest.json`.
 
+Run AI-assisted evals only when credentials are available:
+
+```bash
+OPENAI_API_KEY=... uv run agentsb eval ai
+```
+
 ## Roadmap
 
 AgentSB is intended to grow into a review-first maintenance loop:
