@@ -1,0 +1,78 @@
+# AgentSB Schema Review
+
+## Summary
+
+- Reviewed Codex CLI compatibility window: `0.135.x`.
+- Latest discovered schema dump: `v0.135.0`.
+- Promoted generated wire files: 2.
+- Git branch at inspection time: `agents/agentsb-maintenance`.
+
+## Codex CLI Schema State
+
+| Dump | Variant | JSON files |
+| --- | --- | --- |
+| `v0.124.0` | experimental | 225 |
+| `v0.125.0` | experimental | 227 |
+| `v0.128.0` | experimental | 269 |
+| `v0.129.0` | experimental | 290 |
+| `v0.130.0` | experimental | 286 |
+| `v0.132.0` | experimental | 297 |
+| `v0.133.0` | experimental | 302 |
+| `v0.135.0` | experimental | 304 |
+
+## Schema Diff Evidence
+
+- Compared `v0.133.0` to `v0.135.0`.
+- Added JSON files: 2.
+- Removed JSON files: 0.
+- Changed JSON files: 34.
+- Unchanged JSON files: 268.
+- Added: `v2/ThreadSearchParams.json`, `v2/ThreadSearchResponse.json`.
+- Changed: `ClientRequest.json`, `ServerNotification.json`, `codex_app_server_protocol.schemas.json`, `codex_app_server_protocol.v2.schemas.json`, `v2/ConfigReadParams.json`, `v2/ConfigReadResponse.json`, `v2/ConfigRequirementsReadResponse.json`, `v2/FeedbackUploadParams.json`, ... 26 more.
+
+## Boundary Review
+
+- Report skeleton only: classify any new schema families as `public now`, `observable-only`, or `internal-only` before promotion.
+- Do not expose generated `CodexWire...` models as public Swift API without a hand-owned SwiftASB boundary.
+
+## Documentation Drift
+
+| Document | Present | Bytes |
+| --- | --- | --- |
+| `AGENTS.md` | true | 9696 |
+| `README.md` | true | 8375 |
+| `CONTRIBUTING.md` | true | 8580 |
+| `ROADMAP.md` | true | 120802 |
+| `docs/maintainers/*.md` | true | 12 files |
+
+## Recommended Probes
+
+- Run `swift build` and `swift test` after package behavior changes.
+- Run `scripts/run-live-codex-integration-tests.sh smoke` for runtime confidence after schema-boundary changes.
+- Run `xcodebuild docbuild -scheme SwiftASB -destination generic/platform=macOS -derivedDataPath tmp/xcode-docc/DerivedData` after DocC changes.
+
+## Human Decisions
+
+- Decide whether any newly dumped schema family deserves public API, observable-only support, or internal-only coverage.
+- Decide whether README, CONTRIBUTING, ROADMAP, or DocC need compatibility-window updates.
+
+## Evidence
+
+- Repository root: `/Users/galew/Workspace/gaelic-ghost/SwiftASB`.
+- Git dirty state: `False`.
+- Git upstream: `origin/agents/agentsb-maintenance`.
+- Reviewed window source: `ROADMAP.md`.
+- Promoted wire files:
+  - `Sources/SwiftASB/Generated/CodexWire/Latest/CodexLifecycleV2Batch+JSONValue.swift` (222811 bytes)
+  - `Sources/SwiftASB/Generated/CodexWire/Latest/CodexWireInitializeResponse.swift` (841 bytes)
+
+## Agent Notes
+
+- Branch is clean: `agents/agentsb-maintenance` tracking `origin/agents/agentsb-maintenance`.
+- Reviewed Codex CLI window: `0.135.x` (from `ROADMAP.md`).
+- Experimental schema dumps are present across `v0.124.0` → `v0.135.0`, with JSON counts ranging `225` to `304`.
+- Promoted wire files observed:
+  - `Sources/SwiftASB/Generated/CodexWire/Latest/CodexLifecycleV2Batch+JSONValue.swift`
+  - `Sources/SwiftASB/Generated/CodexWire/Latest/CodexWireInitializeResponse.swift`
+- Docs inventory is healthy: `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, `ROADMAP.md`, plus maintainer plans for API audit, symbol inventory, transport, lifecycle, storage, and codegen.
+- No boundary classification was provided here; don’t treat generated schemas as promotable by default.

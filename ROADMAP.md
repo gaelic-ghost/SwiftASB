@@ -1498,6 +1498,35 @@ Completed
 - [x] Finish AgentSB as a report-first maintainer app with schema-diff evidence,
   reviewable maintenance drafts, and classifier-gated safe auto-apply limited to
   AgentSB-owned report artifacts.
+- [ ] Clean up the AgentSB CLI surface so routine maintainer flows are ergonomic:
+  collapse common `--repo` usage, make dry-run/draft/apply modes easier to
+  discover, expose the active AI model in command output and reports, and group
+  schema, thread-index, eval, and maintenance commands around the workflows
+  maintainers actually run.
+- [ ] Teach AgentSB to detect the installed Codex CLI version, compare it to
+  SwiftASB's reviewed compatibility window, and call
+  `scripts/dump-codex-schemas.sh` when the installed CLI is newer than the
+  latest local dump. Keep generated dumps untracked by default, then report the
+  new schema diff and required human boundary decisions.
+- [ ] Add an optional Homebrew update-check lane for AgentSB: run
+  `brew outdated` for Codex-related packages, report available upgrades, and
+  require explicit maintainer approval before any `brew upgrade` or schema dump
+  produced from an upgraded CLI.
+- [ ] Enrich AgentSB schema reports with official OpenAI/Codex documentation
+  context for newly added schema families, including direct links, release-note
+  clues when available, and a clear separation between documented behavior,
+  generated-schema evidence, and AgentSB inference.
+- [ ] Decide AgentSB's AI model policy. The current Agents SDK default is
+  `gpt-5.4-mini` when `OPENAI_DEFAULT_MODEL` is unset; future work should make
+  the model explicit/configurable, record the model in reports, and choose
+  stronger or faster models deliberately for schema classification, docs
+  auditing, and patch drafting.
+- [ ] Design the AgentSB patch execution path before widening auto-apply beyond
+  report artifacts. LangGraph can orchestrate human-in-the-loop tool calls, but
+  current docs do not provide a built-in source patcher, so evaluate a
+  deterministic unified-diff applier and a `codex exec`-backed patch worker
+  that can reuse Gale's Codex skills/config while preserving AgentSB's safety
+  classifier and validation gates.
 - [ ] Add archive-aware retention/eviction and rollback forensic archival for removed turn payloads.
 - [ ] Fix repository-wide security audit findings around JSON-RPC numeric ID
   parsing and network-policy amendment fail-closed behavior.
@@ -1508,6 +1537,11 @@ Completed
 
 ## History
 
+- 2026-06-05: Took AgentSB through an AI-enabled schema-report and
+  auto-apply-safe shakedown, dumped local `codex-cli 0.137.0` schemas with the
+  existing script, and recorded follow-up work for CLI ergonomics, installed
+  Codex version detection, Homebrew update checks, OpenAI/Codex docs enrichment,
+  AI model policy, and patch execution.
 - 2026-06-04: Added AgentSB maintainer automation planning, eval scaffolding,
   schema-diff reporting, local Codex thread-index prototype work, and a
   SwiftASB-specific direct local thread storage plan for future package work.
