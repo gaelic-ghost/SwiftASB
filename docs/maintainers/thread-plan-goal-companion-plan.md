@@ -60,7 +60,7 @@ Use these distinctions when naming APIs, docs, tests, and UI affordances:
   complete or blocked only when that state is explicit.
 - A Codex Plan is the current working checklist for a task or turn. It is
   lower-level than a goal, can be updated as work progresses, and can exist
-  whether or not plan collaboration mode is active.
+  whether plan collaboration mode is active.
 - Plan collaboration mode is a separate collaboration flow. It changes how
   planning and decisions are handled, especially by allowing structured
   user-input prompts during planning. It is not the same thing as a plan.
