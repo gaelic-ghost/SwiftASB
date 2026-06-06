@@ -14,6 +14,18 @@ let package = Package(
             name: "SwiftASB",
             targets: ["SwiftASB"]
         ),
+        .library(
+            name: "ASBPresentation",
+            targets: ["ASBPresentation"]
+        ),
+        .library(
+            name: "ASBAppKit",
+            targets: ["ASBAppKit"]
+        ),
+        .library(
+            name: "ASBSwiftUI",
+            targets: ["ASBSwiftUI"]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-async-algorithms", from: "1.1.0"),
@@ -27,9 +39,33 @@ let package = Package(
                 .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
             ]
         ),
+        .target(
+            name: "ASBPresentation",
+            dependencies: ["SwiftASB"]
+        ),
+        .target(
+            name: "ASBAppKit",
+            dependencies: ["ASBPresentation", "SwiftASB"]
+        ),
+        .target(
+            name: "ASBSwiftUI",
+            dependencies: ["ASBAppKit", "ASBPresentation", "SwiftASB"]
+        ),
         .testTarget(
             name: "SwiftASBTests",
             dependencies: ["SwiftASB"]
+        ),
+        .testTarget(
+            name: "ASBPresentationTests",
+            dependencies: ["ASBPresentation"]
+        ),
+        .testTarget(
+            name: "ASBAppKitTests",
+            dependencies: ["ASBAppKit", "ASBPresentation"]
+        ),
+        .testTarget(
+            name: "ASBSwiftUITests",
+            dependencies: ["ASBAppKit", "ASBPresentation", "ASBSwiftUI"]
         ),
     ],
     swiftLanguageModes: [.v6]
