@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 
 from agents import Runner
 
-from agentsb.coordinator import build_coordinator, default_openai_model
+from agentsb.coordinator import build_coordinator, build_run_config, default_openai_model
 
 
 @dataclass
@@ -66,7 +66,11 @@ async def _run_cases(cases: list[dict[str, Any]], *, model: str) -> list[AIEvalR
     coordinator = build_coordinator(model)
     results: list[AIEvalResult] = []
     for case in cases:
-        result = await Runner.run(coordinator, case["prompt"])
+        result = await Runner.run(
+            coordinator,
+            case["prompt"],
+            run_config=build_run_config(workflow_name="AgentSB AI eval"),
+        )
         output = str(result.final_output).strip()
         results.append(_grade_case(case, output, model=model))
     return results

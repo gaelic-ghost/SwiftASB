@@ -72,6 +72,13 @@ Write a reviewable maintenance draft without applying proposed source changes:
 uv run agentsb maintain --repo ../.. --draft
 ```
 
+Maintenance drafts include predictable Codex CLI compatibility follow-up patches
+when AgentSB sees a newer schema dump than SwiftASB's reviewed window. Those
+drafts can cover version-window docs, `scripts/generate-wire-types.sh`, the
+internal CLI compatibility gate, and AgentSB's own current-window assertions.
+Generated wire snapshots and unclassified schema-family promotion remain
+report-only.
+
 Apply only classifier-approved safe AgentSB-owned changes and report every
 refusal:
 
@@ -110,6 +117,10 @@ Use AI-assisted report notes only when credentials are available:
 ```bash
 OPENAI_API_KEY=... uv run agentsb report schema-review --repo ../.. --ai
 ```
+
+Hosted Agents SDK tracing is disabled by default for AgentSB CLI runs so report
+generation does not wait on trace export at process shutdown. Set
+`AGENTSB_ENABLE_TRACING=1` to opt back into hosted tracing for a run.
 
 Run the deterministic eval suite:
 

@@ -66,6 +66,9 @@ def test_cli_maintain_draft_writes_reviewable_report(fake_repo, capsys):
     assert len(reports) == 1
     rendered = reports[0].read_text(encoding="utf-8")
     assert "Proposed patch:" in rendered
+    assert "Draft Codex CLI compatibility alignment patch" in rendered
+    assert "SCHEMA_VERSION=${SCHEMA_VERSION:-v0.136.0}" in rendered
+    assert "latestSupportedPublicRelease = Version(major: 0, minor: 136, patch: 0)" in rendered
     assert "Decision: `report-only`" in rendered
     assert "Decision: `draft-only`" in rendered
 

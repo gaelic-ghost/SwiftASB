@@ -47,3 +47,15 @@ def test_package_manager_upgrade_candidate_is_report_only():
 
     assert classification.decision == "report-only"
     assert "package manager upgrades" in " ".join(classification.reasons)
+
+
+def test_compatibility_alignment_candidate_is_draft_only():
+    classification = classify_candidate(
+        {
+            "change_kind": "compatibility-alignment",
+            "paths": ["README.md", "scripts/generate-wire-types.sh"],
+        }
+    )
+
+    assert classification.decision == "draft-only"
+    assert "compatibility alignment" in " ".join(classification.reasons)

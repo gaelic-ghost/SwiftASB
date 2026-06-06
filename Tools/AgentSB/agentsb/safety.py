@@ -58,6 +58,13 @@ def classify_candidate(candidate: dict[str, Any]) -> SafetyClassification:
             ["git diff --check"],
         )
 
+    if change_kind in {"compatibility-alignment", "schema-generator-membership"}:
+        return SafetyClassification(
+            "draft-only",
+            ["Codex CLI compatibility alignment changes need maintainer review before application"],
+            ["swift build", "swift test", "uv run pytest", "git diff --check"],
+        )
+
     return SafetyClassification(
         "draft-only",
         ["candidate is not on a known auto-apply-safe surface"],

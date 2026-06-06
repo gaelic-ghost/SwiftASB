@@ -89,6 +89,50 @@ def build_maintenance_candidates(
     ]
 
     if schema_diff and _diff_has_review_work(schema_diff):
+        compatibility_patch = _compatibility_alignment_patch(facts, schema_diff)
+        if compatibility_patch:
+            candidates.append(
+                {
+                    "title": "Draft Codex CLI compatibility alignment patch",
+                    "change_kind": "compatibility-alignment",
+                    "paths": [
+                        "README.md",
+                        "ROADMAP.md",
+                        "docs/maintainers/interactive-lifecycle-release-boundary.md",
+                        "scripts/generate-wire-types.sh",
+                        "Sources/SwiftASB/Transport/CodexCLIExecutableResolver.swift",
+                        "Tools/AgentSB/tests/test_cli.py",
+                        "Tools/AgentSB/tests/test_tools.py",
+                    ],
+                    "summary": (
+                        "Draft the predictable version-window updates needed after maintainers "
+                        f"classify `{schema_diff['target']}` as the reviewed Codex CLI schema."
+                    ),
+                    "behavioral": False,
+                    "public_api": False,
+                    "ambiguous": False,
+                    "action": "draft_only",
+                    "draft": compatibility_patch,
+                }
+            )
+        generator_patch = _schema_generator_membership_patch(root, schema_diff)
+        if generator_patch:
+            candidates.append(
+                {
+                    "title": "Draft generated-wire schema membership patch",
+                    "change_kind": "schema-generator-membership",
+                    "paths": ["scripts/generate-wire-types.sh"],
+                    "summary": (
+                        "Draft the generator-script additions for new schema files so maintainers "
+                        "can promote the classified wire batch through the normal script."
+                    ),
+                    "behavioral": False,
+                    "public_api": False,
+                    "ambiguous": False,
+                    "action": "draft_only",
+                    "draft": generator_patch,
+                }
+            )
         candidates.append(
             {
                 "title": "Classify schema family changes before generated-wire promotion",
@@ -195,6 +239,129 @@ def _roadmap_evidence_patch(schema_diff: dict[str, Any]) -> str:
             "Do not update public support claims or generated wire output until maintainers classify each changed family.",
         ]
     )
+
+
+def _compatibility_alignment_patch(facts: dict[str, Any], schema_diff: dict[str, Any]) -> str | None:
+    current_window = facts["reviewed_codex_cli_window"].get("window")
+    target_window = _schema_version_to_window(schema_diff["target"])
+    target_minor = _schema_version_minor(schema_diff["target"])
+    if not current_window or not target_window or target_window == current_window or target_minor is None:
+        return None
+
+    return "\n".join(
+        [
+            "diff --git a/scripts/generate-wire-types.sh b/scripts/generate-wire-types.sh",
+            "--- a/scripts/generate-wire-types.sh",
+            "+++ b/scripts/generate-wire-types.sh",
+            "@@",
+            f"-SCHEMA_VERSION=${{SCHEMA_VERSION:-{schema_diff['base']}}}",
+            f"+SCHEMA_VERSION=${{SCHEMA_VERSION:-{schema_diff['target']}}}",
+            "diff --git a/Sources/SwiftASB/Transport/CodexCLIExecutableResolver.swift b/Sources/SwiftASB/Transport/CodexCLIExecutableResolver.swift",
+            "--- a/Sources/SwiftASB/Transport/CodexCLIExecutableResolver.swift",
+            "+++ b/Sources/SwiftASB/Transport/CodexCLIExecutableResolver.swift",
+            "@@",
+            "-        internal static let latestSupportedPublicRelease = Version(major: 0, minor: <old-minor>, patch: 0)",
+            f"+        internal static let latestSupportedPublicRelease = Version(major: 0, minor: {target_minor}, patch: 0)",
+            "diff --git a/README.md b/README.md",
+            "--- a/README.md",
+            "+++ b/README.md",
+            "@@",
+            f"-*Note: SwiftASB currently supports the latest reviewed Codex CLI minor release, `{current_window}`.*",
+            f"+*Note: SwiftASB currently supports the latest reviewed Codex CLI minor release, `{target_window}`.*",
+            "diff --git a/ROADMAP.md b/ROADMAP.md",
+            "--- a/ROADMAP.md",
+            "+++ b/ROADMAP.md",
+            "@@",
+            f"-The current reviewed compatibility window is `codex-cli {current_window}`",
+            f"+The current reviewed compatibility window is `codex-cli {target_window}`",
+            "@@",
+            f"+- [ ] Classify the Codex CLI `{schema_diff['target']}` schema diff before promotion.",
+            f"+  Decision: update the reviewed CLI window to `{target_window}` only after",
+            "+  generated-wire and public API boundary review is complete.",
+            "diff --git a/docs/maintainers/interactive-lifecycle-release-boundary.md b/docs/maintainers/interactive-lifecycle-release-boundary.md",
+            "--- a/docs/maintainers/interactive-lifecycle-release-boundary.md",
+            "+++ b/docs/maintainers/interactive-lifecycle-release-boundary.md",
+            "@@",
+            f"-- current reviewed minor release: `{current_window}`",
+            f"+- current reviewed minor release: `{target_window}`",
+            "diff --git a/Tools/AgentSB/tests/test_cli.py b/Tools/AgentSB/tests/test_cli.py",
+            "--- a/Tools/AgentSB/tests/test_cli.py",
+            "+++ b/Tools/AgentSB/tests/test_cli.py",
+            "@@",
+            f'-    assert facts["reviewed_codex_cli_window"]["window"] == "{current_window}"',
+            f'+    assert facts["reviewed_codex_cli_window"]["window"] == "{target_window}"',
+            "diff --git a/Tools/AgentSB/tests/test_tools.py b/Tools/AgentSB/tests/test_tools.py",
+            "--- a/Tools/AgentSB/tests/test_tools.py",
+            "+++ b/Tools/AgentSB/tests/test_tools.py",
+            "@@",
+            f'-    assert facts["reviewed_codex_cli_window"]["window"] == "{current_window}"',
+            f'+    assert facts["reviewed_codex_cli_window"]["window"] == "{target_window}"',
+        ]
+    )
+
+
+def _schema_generator_membership_patch(root: Path, schema_diff: dict[str, Any]) -> str | None:
+    added_types = _missing_generator_types(root, _added_v2_schema_types(schema_diff))
+    if not added_types:
+        return None
+
+    additions = "\n".join(f"+  {type_name} \\" for type_name in added_types)
+    return "\n".join(
+        [
+            "diff --git a/scripts/generate-wire-types.sh b/scripts/generate-wire-types.sh",
+            "--- a/scripts/generate-wire-types.sh",
+            "+++ b/scripts/generate-wire-types.sh",
+            "@@",
+            "   # Add classified schema families to the consolidated v2 batch.",
+            additions,
+        ]
+    )
+
+
+def _added_v2_schema_types(schema_diff: dict[str, Any]) -> list[str]:
+    type_names: list[str] = []
+    for path in schema_diff.get("added", []):
+        if not path.startswith("v2/") or not path.endswith(".json"):
+            continue
+        type_names.append(Path(path).stem)
+    return type_names
+
+
+def _missing_generator_types(root: Path, type_names: list[str]) -> list[str]:
+    script = root / "scripts" / "generate-wire-types.sh"
+    if not script.exists():
+        return type_names
+
+    contents = script.read_text(encoding="utf-8")
+    return [type_name for type_name in type_names if type_name not in contents]
+
+
+def _schema_version_to_window(version: str) -> str | None:
+    parts = _schema_version_parts(version)
+    if not parts:
+        return None
+    major, minor, _patch = parts
+    return f"{major}.{minor}.x"
+
+
+def _schema_version_minor(version: str) -> int | None:
+    parts = _schema_version_parts(version)
+    if not parts:
+        return None
+    _major, minor, _patch = parts
+    return minor
+
+
+def _schema_version_parts(version: str) -> tuple[int, int, int] | None:
+    normalized = version.removeprefix("v")
+    pieces = normalized.split(".")
+    if len(pieces) != 3:
+        return None
+    try:
+        major, minor, patch = (int(piece) for piece in pieces)
+    except ValueError:
+        return None
+    return major, minor, patch
 
 
 def _unique(values: list[str]) -> list[str]:

@@ -12,6 +12,19 @@ def default_openai_model() -> str:
     return os.environ.get("AGENTSB_OPENAI_MODEL") or os.environ.get("OPENAI_DEFAULT_MODEL") or DEFAULT_OPENAI_MODEL
 
 
+def hosted_tracing_enabled() -> bool:
+    return os.environ.get("AGENTSB_ENABLE_TRACING", "").lower() in {"1", "true", "yes", "on"}
+
+
+def build_run_config(*, workflow_name: str):
+    from agents import RunConfig
+
+    return RunConfig(
+        tracing_disabled=not hosted_tracing_enabled(),
+        workflow_name=workflow_name,
+    )
+
+
 def build_coordinator(model: str | None = None):
     agent_type = require_agents_sdk()
     specialists = [
@@ -61,5 +74,9 @@ async def run_ai_notes(facts: dict[str, Any], *, model: str | None = None) -> st
         "Create concise AgentSB maintainer notes from these deterministic "
         f"SwiftASB inspection facts:\n{facts!r}"
     )
-    result = await Runner.run(build_coordinator(model), prompt)
+    result = await Runner.run(
+        build_coordinator(model),
+        prompt,
+        run_config=build_run_config(workflow_name="AgentSB schema review"),
+    )
     return str(result.final_output)

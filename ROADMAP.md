@@ -1507,8 +1507,10 @@ Completed
   apps that want Codex-like repository operations through `git` and `gh` when
   those tools are installed and the app has the required access grant.
 - [x] Finish AgentSB as a report-first maintainer app with schema-diff evidence,
-  reviewable maintenance drafts, and classifier-gated safe auto-apply limited to
-  AgentSB-owned report artifacts.
+  reviewable maintenance drafts, predictable compatibility-alignment patch
+  drafts, and classifier-gated safe auto-apply limited to AgentSB-owned report
+  artifacts. Generated wire snapshots remain report-only until maintainers
+  classify the schema families and run the package validation path.
 - [ ] Clean up the AgentSB CLI surface so routine maintainer flows are ergonomic:
   collapse common `--repo` usage, make dry-run/draft/apply modes easier to
   discover, expose the active AI model in command output and reports, and group
