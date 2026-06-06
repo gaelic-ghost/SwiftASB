@@ -51,6 +51,31 @@ That is useful but too raw for routine app UI. Consumers should not need to
 reconcile thread-goal reads with live goal notifications, and they should not
 need to treat experimental plan deltas as a stable user-facing data source.
 
+## Concept Boundary
+
+Use these distinctions when naming APIs, docs, tests, and UI affordances:
+
+- A Codex Goal is a durable objective and progress container. It can span
+  multiple turns, can optionally carry a token budget, and should be marked
+  complete or blocked only when that state is explicit.
+- A Codex Plan is the current working checklist for a task or turn. It is
+  lower-level than a goal, can be updated as work progresses, and can exist
+  whether plan collaboration mode is active.
+- Plan collaboration mode is a separate collaboration flow. It changes how
+  planning and decisions are handled, especially by allowing structured
+  user-input prompts during planning. It is not the same thing as a plan.
+
+These concepts compose, but they are not fused. A goal can exist without a
+current plan, a plan can exist without a goal, and plan collaboration mode can
+be active or inactive independently of both. The short mental model is: goal is
+the durable mission, plan is the active checklist, and plan collaboration mode is
+the planning and decision-making cadence.
+
+Operationally, SwiftASB should create or mutate goals only when the user or host
+app explicitly asks for persistent objective tracking. Agent-facing plans may be
+created or updated whenever they help organize multi-step work, but a plan is
+not a request to persist a goal.
+
 ## Proposed Public Shape
 
 Add one thread-scoped observable companion that owns plan and goal current state.

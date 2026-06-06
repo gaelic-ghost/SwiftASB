@@ -29,7 +29,11 @@ Use ``startPlanningTurn(_:approvalPolicy:approvalsReviewer:currentDirectoryPath:
 
 Use ``makeAgenda()`` when a UI wants current goal and plan state for this thread. Agenda also exposes UI-friendly goal actions. Use ``readGoal()``, ``setGoal(_:)``, and ``clearGoal()`` when a non-UI caller needs direct goal reads or mutation.
 
-Plan and goal actions are separate controls. Use plan mode first to shape complex or ambiguous work, then set a goal from the accepted objective when a user or host app is ready to track execution. SwiftASB does not currently auto-create goals from plan prompts or auto-promote completed plans into goals.
+Goals, plans, and plan collaboration mode are related but separate concepts. A Codex goal is a durable objective and progress container. It can span turns, can optionally have a token budget, and is explicitly marked complete or blocked when that status is known. A Codex plan is the active working checklist for a task or turn. It is lower-level than a goal and can be updated as work progresses. Plan collaboration mode is a separate turn-start mode that changes the planning and decision-making flow, including structured user-input prompts during planning.
+
+These controls compose, but they are not fused. A goal can exist without a current plan, a plan can exist without a goal, and plan collaboration mode can be active or inactive independently of both. A useful mental model is: goal is the durable mission, plan is the active checklist, and plan collaboration mode is the planning cadence.
+
+Plan and goal actions are separate controls. Use plan mode first to shape complex or ambiguous work, then set a goal from the accepted objective when a user or host app is ready to track execution. SwiftASB does not currently auto-create goals from plan prompts or auto-promote completed plans into goals. Keep goal creation explicit; plans may still be created or updated when an agent needs a checklist for multi-step work.
 
 Use ``startReview(against:placement:)`` to ask the app-server to review repository state associated with this thread. The `against` subject can be uncommitted changes, a base branch, one commit, or custom instructions. ``ReviewPlacement/inline`` runs the review turn on this thread. ``ReviewPlacement/detached`` runs the review turn on a new review thread returned in ``CodexReviewHandle/reviewThreadID``.
 
