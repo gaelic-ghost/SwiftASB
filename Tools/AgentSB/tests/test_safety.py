@@ -35,3 +35,15 @@ def test_release_automation_candidate_is_report_only():
 
     assert classification.decision == "report-only"
     assert "release automation" in " ".join(classification.reasons)
+
+
+def test_package_manager_upgrade_candidate_is_report_only():
+    classification = classify_candidate(
+        {
+            "change_kind": "codex-cli-upgrade",
+            "paths": ["codex-schemas/v0.137.0"],
+        }
+    )
+
+    assert classification.decision == "report-only"
+    assert "package manager upgrades" in " ".join(classification.reasons)

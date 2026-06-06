@@ -61,7 +61,12 @@ def _run_case(case: dict[str, Any]) -> EvalResult:
 
 
 def _run_report_case(case: dict[str, Any]) -> EvalResult:
-    rendered = render_schema_review_report(case["input"]["facts"])
+    rendered = render_schema_review_report(
+        case["input"]["facts"],
+        ai_notes=case["input"].get("ai_notes"),
+        ai_model=case["input"].get("ai_model"),
+        schema_diff=case["input"].get("schema_diff"),
+    )
     details: list[str] = []
     for section in case["expect"].get("required_sections", REPORT_SECTIONS):
         if f"## {section}" not in rendered:

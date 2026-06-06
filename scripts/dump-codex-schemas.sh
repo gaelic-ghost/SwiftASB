@@ -164,7 +164,17 @@ version_gt() {
 
 json_escape() {
   printf '%s' "$1" |
-    sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g'
+    awk 'BEGIN { first = 1 } {
+      gsub(/\\/, "\\\\")
+      gsub(/"/, "\\\"")
+      gsub(/\t/, "\\t")
+      if (first) {
+        first = 0
+      } else {
+        printf "\\n"
+      }
+      printf "%s", $0
+    }'
 }
 
 say() {
@@ -256,6 +266,10 @@ run_brew_check() {
   if [ "$brew_code" -ne 0 ] && [ -z "$brew_output" ] && [ -n "$brew_error" ]; then
     brew_status=error
     return
+  fi
+
+  if [ "$brew_code" -eq 0 ]; then
+    brew_error=''
   fi
 
   if [ -n "$brew_output" ]; then

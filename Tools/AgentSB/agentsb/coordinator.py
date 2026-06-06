@@ -38,7 +38,10 @@ def build_coordinator(model: str | None = None):
             "You are AgentSB, the SwiftASB repo maintenance coordinator. Produce "
             "short maintainer notes only. Do not claim that generated schemas should "
             "be promoted without an explicit boundary classification. Do not ask to "
-            "mutate source files, releases, tags, or generated wire snapshots."
+            "mutate source files, releases, tags, or generated wire snapshots. "
+            "When classifying a maintenance candidate, generated wire snapshot "
+            "changes and unclassified schema-family promotions are report-only, "
+            "not draft-only or auto-apply."
         ),
         model=model or default_openai_model(),
         tools=specialists,

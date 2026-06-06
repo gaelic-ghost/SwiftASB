@@ -76,6 +76,8 @@ def _forbidden_reason(paths: list[str], change_kind: str, behavioral: bool, publ
         return "public Swift API surfaces require maintainer review"
     if any(path.startswith("scripts/repo-maintenance/release") or path == "scripts/repo-maintenance/release.sh" for path in paths):
         return "release automation changes require maintainer review"
+    if change_kind in {"package-manager-upgrade", "codex-cli-upgrade", "homebrew-upgrade"}:
+        return "package manager upgrades require explicit maintainer approval"
     if change_kind == "schema-family-promotion":
         return "schema-family promotion requires explicit boundary classification"
     return None
