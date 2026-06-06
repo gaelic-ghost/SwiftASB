@@ -471,12 +471,15 @@ workflow earns them in a later feature release.
   package docs and DocC as the source of truth for SwiftASB behavior, then sync
   the plugin when public API, examples, compatibility windows, diagnostics,
   approval handling, validation, or recommended integration shape changes.
-- [ ] Basic SwiftUI component library for SwiftASB consumers. Start with small,
-  copyable components that demonstrate the stable observable companions:
-  dashboard status, turn minimap call snapshots, recent turns, recent files,
-  recent commands, diagnostics, and approval/elicitation prompts. Keep this as a
-  development aide and example surface first; do not let it blur the core
-  package API or force an app-specific design system into the library.
+- [ ] Hybrid presentation and UI component targets for SwiftASB consumers. Start
+  with a framework-neutral `ASBPresentation` layer for snapshots, selection
+  state, viewport hints, and typed UI intents; add `ASBAppKit` for dense macOS
+  renderers such as thread sidebars and turn timelines; and add `ASBSwiftUI` for
+  native light panels plus SwiftUI wrappers around the AppKit-backed dense
+  components. Keep `SwiftASB` as the runtime source of truth and avoid letting
+  AppKit or SwiftUI own separate thread-list, timeline, cache, or action
+  models. See
+  [`docs/maintainers/presentation-ui-targets-plan.md`](docs/maintainers/presentation-ui-targets-plan.md).
 
 ### Public API Curation
 
