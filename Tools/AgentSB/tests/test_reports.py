@@ -26,3 +26,10 @@ def test_schema_review_report_contains_required_sections(sample_facts):
         assert f"## {section}" in rendered
     assert "CodexLifecycleV2Batch+JSONValue.swift" in rendered
     assert "0.135.x" in rendered
+
+
+def test_schema_review_report_records_ai_model(sample_facts):
+    rendered = render_schema_review_report(sample_facts, ai_notes="review notes", ai_model="gpt-5.5")
+
+    assert "## Agent Notes" in rendered
+    assert "- AI model: `gpt-5.5`." in rendered

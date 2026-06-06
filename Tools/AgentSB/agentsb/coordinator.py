@@ -5,8 +5,14 @@ from typing import Any
 
 from .specialists import boundary_reviewer, docs_auditor, probe_planner, require_agents_sdk, schema_scout
 
+DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
 
-def build_coordinator():
+
+def default_openai_model() -> str:
+    return os.environ.get("AGENTSB_OPENAI_MODEL") or os.environ.get("OPENAI_DEFAULT_MODEL") or DEFAULT_OPENAI_MODEL
+
+
+def build_coordinator(model: str | None = None):
     agent_type = require_agents_sdk()
     specialists = [
         schema_scout().as_tool(
@@ -34,11 +40,12 @@ def build_coordinator():
             "be promoted without an explicit boundary classification. Do not ask to "
             "mutate source files, releases, tags, or generated wire snapshots."
         ),
+        model=model or default_openai_model(),
         tools=specialists,
     )
 
 
-async def run_ai_notes(facts: dict[str, Any]) -> str:
+async def run_ai_notes(facts: dict[str, Any], *, model: str | None = None) -> str:
     if not os.environ.get("OPENAI_API_KEY"):
         raise RuntimeError(
             "OPENAI_API_KEY is required for `--ai` reports. Run without `--ai` "
@@ -51,5 +58,5 @@ async def run_ai_notes(facts: dict[str, Any]) -> str:
         "Create concise AgentSB maintainer notes from these deterministic "
         f"SwiftASB inspection facts:\n{facts!r}"
     )
-    result = await Runner.run(build_coordinator(), prompt)
+    result = await Runner.run(build_coordinator(model), prompt)
     return str(result.final_output)

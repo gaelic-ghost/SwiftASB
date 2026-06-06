@@ -1503,12 +1503,12 @@ Completed
   discover, expose the active AI model in command output and reports, and group
   schema, thread-index, eval, and maintenance commands around the workflows
   maintainers actually run.
-- [ ] Teach AgentSB to detect the installed Codex CLI version, compare it to
+- [x] Teach AgentSB to detect the installed Codex CLI version, compare it to
   SwiftASB's reviewed compatibility window, and call
   `scripts/dump-codex-schemas.sh` when the installed CLI is newer than the
   latest local dump. Keep generated dumps untracked by default, then report the
   new schema diff and required human boundary decisions.
-- [ ] Add an optional Homebrew update-check lane for AgentSB: run
+- [x] Add an optional Homebrew update-check lane for AgentSB: run
   `brew outdated` for Codex-related packages, report available upgrades, and
   require explicit maintainer approval before any `brew upgrade` or schema dump
   produced from an upgraded CLI.
@@ -1516,11 +1516,12 @@ Completed
   context for newly added schema families, including direct links, release-note
   clues when available, and a clear separation between documented behavior,
   generated-schema evidence, and AgentSB inference.
-- [ ] Decide AgentSB's AI model policy. The current Agents SDK default is
-  `gpt-5.4-mini` when `OPENAI_DEFAULT_MODEL` is unset; future work should make
-  the model explicit/configurable, record the model in reports, and choose
-  stronger or faster models deliberately for schema classification, docs
-  auditing, and patch drafting.
+- [x] Decide AgentSB's AI model policy. AgentSB now makes the model
+  explicit/configurable with `AGENTSB_OPENAI_MODEL`, `OPENAI_DEFAULT_MODEL`, or
+  `gpt-5.4-mini` precedence, accepts CLI model overrides for AI reports/evals,
+  and records the model in AI-assisted reports and eval output. Future work can
+  still choose stronger or faster models deliberately for schema classification,
+  docs auditing, and patch drafting.
 - [ ] Design the AgentSB patch execution path before widening auto-apply beyond
   report artifacts. LangGraph can orchestrate human-in-the-loop tool calls, but
   current docs do not provide a built-in source patcher, so evaluate a
@@ -1542,6 +1543,10 @@ Completed
   existing script, and recorded follow-up work for CLI ergonomics, installed
   Codex version detection, Homebrew update checks, OpenAI/Codex docs enrichment,
   AI model policy, and patch execution.
+- 2026-06-05: Integrated AgentSB with `scripts/dump-codex-schemas.sh` for
+  installed Codex CLI drift checks, dump-if-newer schema acquisition, optional
+  Homebrew outdated checks, explicit Codex Homebrew upgrade-and-dump mode, and
+  explicit AI model selection for reports and evals.
 - 2026-06-04: Added AgentSB maintainer automation planning, eval scaffolding,
   schema-diff reporting, local Codex thread-index prototype work, and a
   SwiftASB-specific direct local thread storage plan for future package work.

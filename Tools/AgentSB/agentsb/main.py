@@ -6,10 +6,11 @@ import json
 import sys
 from pathlib import Path
 
-from .coordinator import run_ai_notes
+from .coordinator import default_openai_model, run_ai_notes
 from .evals import run_ai_evals, run_local_evals
 from .maintain import auto_apply_safe, write_maintenance_draft
 from .reports import write_report
+from .schema_dump import run_schema_dump_script
 from .schema_diff import diff_schema_dumps, latest_schema_diff
 from .thread_index import default_database_path, inspect_thread_index
 from .tools import AgentSBError, inspect_repo
@@ -31,8 +32,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "report" and args.report_command == "schema-review":
             facts = inspect_repo(args.repo)
             schema_diff = latest_schema_diff(args.repo, facts["schema_dumps"])
-            ai_notes = asyncio.run(run_ai_notes(facts)) if args.ai else None
-            path = write_report(args.repo, "schema-review", facts, ai_notes=ai_notes, schema_diff=schema_diff)
+            ai_model = args.model or default_openai_model()
+            ai_notes = asyncio.run(run_ai_notes(facts, model=ai_model)) if args.ai else None
+            path = write_report(
+                args.repo,
+                "schema-review",
+                facts,
+                ai_notes=ai_notes,
+                ai_model=ai_model if args.ai else None,
+                schema_diff=schema_diff,
+            )
             print(f"Wrote AgentSB schema-review report: {path}")
             return 0
 
@@ -52,11 +61,22 @@ def main(argv: list[str] | None = None) -> int:
             return run_local_evals()
 
         if args.command == "eval" and args.eval_command == "ai":
-            return run_ai_evals()
+            return run_ai_evals(model=args.model)
 
         if args.command == "schema" and args.schema_command == "diff":
             diff = diff_schema_dumps(args.repo, args.base, args.target)
             print(json.dumps(diff, indent=2, sort_keys=True))
+            return 0
+
+        if args.command == "schema" and args.schema_command in {"check", "dump-if-newer", "brew-upgrade-and-dump"}:
+            summary = run_schema_dump_script(
+                args.repo,
+                args.schema_command,
+                brew_check=args.brew_check,
+                stable=args.stable,
+                force=args.force,
+            )
+            print(json.dumps(summary, indent=2, sort_keys=True))
             return 0
 
         if args.command == "threads" and args.threads_command == "inspect-index":
@@ -103,6 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Use OpenAI Agents SDK notes. Requires OPENAI_API_KEY.",
     )
+    schema_review.add_argument(
+        "--model",
+        default=None,
+        help=f"OpenAI model for --ai notes. Defaults to AGENTSB_OPENAI_MODEL, OPENAI_DEFAULT_MODEL, or {default_openai_model()}.",
+    )
 
     maintain = subcommands.add_parser("maintain", help="Draft or safely apply AgentSB maintenance work.")
     maintain.add_argument("--repo", type=Path, default=Path.cwd(), help="SwiftASB repository root.")
@@ -121,10 +146,27 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser = subcommands.add_parser("eval", help="Run AgentSB eval suites.")
     eval_subcommands = eval_parser.add_subparsers(dest="eval_command")
     eval_subcommands.add_parser("local", help="Run deterministic local evals without OPENAI_API_KEY.")
-    eval_subcommands.add_parser("ai", help="Run planned AI-assisted evals. Requires OPENAI_API_KEY.")
+    ai_eval = eval_subcommands.add_parser("ai", help="Run planned AI-assisted evals. Requires OPENAI_API_KEY.")
+    ai_eval.add_argument(
+        "--model",
+        default=None,
+        help=f"OpenAI model for AI evals. Defaults to AGENTSB_OPENAI_MODEL, OPENAI_DEFAULT_MODEL, or {default_openai_model()}.",
+    )
 
     schema_parser = subcommands.add_parser("schema", help="Inspect dumped Codex CLI schemas.")
     schema_subcommands = schema_parser.add_subparsers(dest="schema_command")
+    schema_check = schema_subcommands.add_parser("check", help="Check installed Codex CLI and local schema dump drift.")
+    _add_schema_script_arguments(schema_check)
+    schema_dump = schema_subcommands.add_parser(
+        "dump-if-newer",
+        help="Call the SwiftASB schema dump script only when installed Codex is newer than local dumps.",
+    )
+    _add_schema_script_arguments(schema_dump)
+    schema_upgrade = schema_subcommands.add_parser(
+        "brew-upgrade-and-dump",
+        help="Explicitly upgrade the Codex Homebrew package, then dump schemas if the CLI is newer.",
+    )
+    _add_schema_script_arguments(schema_upgrade)
     schema_diff = schema_subcommands.add_parser("diff", help="Compare two dumped Codex CLI schema versions.")
     schema_diff.add_argument("--repo", type=Path, default=Path.cwd(), help="SwiftASB repository root.")
     schema_diff.add_argument("--base", required=True, help="Base schema dump name, such as v0.133.0.")
@@ -155,6 +197,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def _add_schema_script_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--repo", type=Path, default=Path.cwd(), help="SwiftASB repository root.")
+    parser.add_argument("--brew-check", action="store_true", help="Include `brew outdated` status in the schema check.")
+    parser.add_argument("--stable", action="store_true", help="Use stable schema dumps instead of experimental dumps.")
+    parser.add_argument("--force", action="store_true", help="Replace an existing schema dump for the detected version.")
 
 
 def _archive_filter(args: argparse.Namespace) -> str:

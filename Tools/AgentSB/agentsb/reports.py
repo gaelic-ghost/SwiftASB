@@ -47,11 +47,15 @@ def write_report(
     facts: dict[str, Any],
     *,
     ai_notes: str | None = None,
+    ai_model: str | None = None,
     schema_diff: dict[str, Any] | None = None,
 ) -> Path:
     path = report_path(repo, topic)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_schema_review_report(facts, ai_notes=ai_notes, schema_diff=schema_diff), encoding="utf-8")
+    path.write_text(
+        render_schema_review_report(facts, ai_notes=ai_notes, ai_model=ai_model, schema_diff=schema_diff),
+        encoding="utf-8",
+    )
     return path
 
 
@@ -59,6 +63,7 @@ def render_schema_review_report(
     facts: dict[str, Any],
     *,
     ai_notes: str | None = None,
+    ai_model: str | None = None,
     schema_diff: dict[str, Any] | None = None,
 ) -> str:
     git = facts["git"]
@@ -117,7 +122,16 @@ def render_schema_review_report(
     ]
 
     if ai_notes:
-        lines.extend(["", "## Agent Notes", "", ai_notes.strip()])
+        lines.extend(
+            [
+                "",
+                "## Agent Notes",
+                "",
+                f"- AI model: `{ai_model or 'unknown'}`.",
+                "",
+                ai_notes.strip(),
+            ]
+        )
 
     return "\n".join(lines).rstrip() + "\n"
 

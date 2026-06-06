@@ -163,6 +163,13 @@ package behavior or unattended edits.
 
 - Schema diff evidence is integrated into generated schema-review and
   maintenance reports.
+- AgentSB can call `scripts/dump-codex-schemas.sh` to check installed Codex CLI
+  drift, dump schemas when the installed CLI is newer than local dumps, include
+  optional Homebrew outdated status, and explicitly run a Codex Homebrew
+  upgrade-and-dump workflow.
+- AI-assisted reports and evals use an explicit model choice. The default
+  precedence is `AGENTSB_OPENAI_MODEL`, then `OPENAI_DEFAULT_MODEL`, then
+  `gpt-5.4-mini`.
 - `maintain --draft` writes reviewable proposed changes without applying source
   edits.
 - `maintain --auto-apply-safe` stays behind the safety classifier and is limited
@@ -180,9 +187,12 @@ package behavior or unattended edits.
 2. Local eval harness.
 3. AI-assisted eval harness.
 4. Schema dump diffing and family inventory.
-5. Read-only Codex thread index inspection.
-6. Safety classifier with report-only, draft-only, and auto-apply decisions.
-7. Patch drafter for `draft-only` changes.
-8. Opt-in auto-apply runner for proven-safe changes.
-9. Optional repo-maintenance validation integration after the eval suite is
+5. Installed Codex CLI drift checks plus dump-if-newer integration through
+   `scripts/dump-codex-schemas.sh`.
+6. Explicit AI model selection and model reporting.
+7. Read-only Codex thread index inspection.
+8. Safety classifier with report-only, draft-only, and auto-apply decisions.
+9. Patch drafter for `draft-only` changes.
+10. Opt-in auto-apply runner for proven-safe changes.
+11. Optional repo-maintenance validation integration after the eval suite is
    stable.

@@ -49,6 +49,7 @@ def sample_facts(repo_root):
 def fake_repo(tmp_path) -> Path:
     root = tmp_path / "SwiftASB"
     (root / "Sources" / "SwiftASB" / "Generated" / "CodexWire" / "Latest").mkdir(parents=True)
+    (root / "scripts").mkdir(parents=True)
     (root / "codex-schemas" / "v0.135.0").mkdir(parents=True)
     (root / "codex-schemas" / "v0.136.0").mkdir(parents=True)
     (root / "docs" / "maintainers").mkdir(parents=True)
@@ -62,6 +63,51 @@ def fake_repo(tmp_path) -> Path:
     (root / "README.md").write_text("# README\n", encoding="utf-8")
     (root / "CONTRIBUTING.md").write_text("# CONTRIBUTING\n", encoding="utf-8")
     (root / "docs" / "maintainers" / "example.md").write_text("# Example\n", encoding="utf-8")
+    schema_script = root / "scripts" / "dump-codex-schemas.sh"
+    schema_script.write_text(
+        """#!/bin/sh
+set -eu
+mode=check
+brew_status=not-run
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --dump-if-newer) mode=dump-if-newer ;;
+    --brew-upgrade-codex) mode=brew-upgrade-and-dump; brew_status=checked ;;
+    --brew-check) brew_status=checked ;;
+  esac
+  shift
+done
+dumped=false
+if [ "$mode" = "dump-if-newer" ] || [ "$mode" = "brew-upgrade-and-dump" ]; then
+  dumped=true
+fi
+cat <<JSON
+{
+  "codex_bin": "codex",
+  "installed_codex_cli": "0.136.0",
+  "schema_variant": "experimental",
+  "schema_parent": "$PWD/codex-schemas",
+  "schema_version": "v0.136.0",
+  "schema_dir": "$PWD/codex-schemas/v0.136.0",
+  "schema_json_files": 1,
+  "latest_local_dump": "v0.135.0",
+  "installed_newer_than_local": true,
+  "dump_missing": true,
+  "dumped": $dumped,
+  "brew": {
+    "package": "codex",
+    "status": "$brew_status",
+    "outdated": false,
+    "upgraded": false,
+    "detail": "",
+    "error": ""
+  }
+}
+JSON
+""",
+        encoding="utf-8",
+    )
+    schema_script.chmod(0o755)
     (root / "codex-schemas" / "v0.135.0" / "schema.json").write_text("{}", encoding="utf-8")
     (root / "codex-schemas" / "v0.135.0" / "removed.json").write_text('{"old":true}', encoding="utf-8")
     (root / "codex-schemas" / "v0.135.0" / "changed.json").write_text('{"value":1}', encoding="utf-8")

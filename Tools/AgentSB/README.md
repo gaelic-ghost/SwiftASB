@@ -22,6 +22,44 @@ uv run agentsb report schema-review --repo ../..
 Schema-review reports include the latest available schema dump diff evidence
 when at least two local dumps exist under `codex-schemas/`.
 
+Use AI-assisted report notes with an explicit model:
+
+```bash
+uv run agentsb report schema-review --repo ../.. --ai --model gpt-5.5
+```
+
+If `--model` is omitted, AgentSB uses `AGENTSB_OPENAI_MODEL`,
+`OPENAI_DEFAULT_MODEL`, or `gpt-5.4-mini`, in that order. AI-generated reports
+record the chosen model in the `Agent Notes` section.
+
+Check installed Codex CLI drift against local schema dumps:
+
+```bash
+uv run agentsb schema check --repo ../..
+```
+
+Dump schemas only when the installed Codex CLI is newer than the latest local
+dump:
+
+```bash
+uv run agentsb schema dump-if-newer --repo ../..
+```
+
+Include Homebrew outdated status in the check:
+
+```bash
+uv run agentsb schema check --repo ../.. --brew-check
+```
+
+Explicitly upgrade the Codex Homebrew package and dump schemas afterward:
+
+```bash
+uv run agentsb schema brew-upgrade-and-dump --repo ../..
+```
+
+This command is intentionally separate from ordinary report generation because
+it changes the local Codex installation.
+
 Compare two dumped Codex CLI schema versions:
 
 ```bash
@@ -86,7 +124,7 @@ classification rules for future auto-apply behavior. Results are written to
 Run AI-assisted evals only when credentials are available:
 
 ```bash
-OPENAI_API_KEY=... uv run agentsb eval ai
+OPENAI_API_KEY=... uv run agentsb eval ai --model gpt-5.5
 ```
 
 ## Roadmap

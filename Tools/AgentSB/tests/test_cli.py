@@ -36,6 +36,26 @@ def test_cli_schema_review_writes_report(fake_repo, capsys):
     assert "Compared `v0.135.0` to `v0.136.0`" in rendered
 
 
+def test_cli_schema_check_uses_dump_script(fake_repo, capsys):
+    exit_code = main(["schema", "check", "--repo", str(fake_repo), "--brew-check"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    summary = json.loads(captured.out)
+    assert summary["installed_codex_cli"] == "0.136.0"
+    assert summary["installed_newer_than_local"] is True
+    assert summary["brew"]["status"] == "checked"
+
+
+def test_cli_schema_dump_if_newer_uses_dump_script(fake_repo, capsys):
+    exit_code = main(["schema", "dump-if-newer", "--repo", str(fake_repo)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    summary = json.loads(captured.out)
+    assert summary["dumped"] is True
+
+
 def test_cli_maintain_draft_writes_reviewable_report(fake_repo, capsys):
     exit_code = main(["maintain", "--repo", str(fake_repo), "--draft"])
     captured = capsys.readouterr()
@@ -90,7 +110,7 @@ def test_cli_local_eval_runs(capsys):
 def test_cli_ai_eval_requires_api_key(monkeypatch, capsys):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
-    exit_code = main(["eval", "ai"])
+    exit_code = main(["eval", "ai", "--model", "gpt-5.5"])
     captured = capsys.readouterr()
 
     assert exit_code == 1
