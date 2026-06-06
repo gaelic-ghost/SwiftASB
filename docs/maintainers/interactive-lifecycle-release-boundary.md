@@ -50,7 +50,7 @@ runtime while the app-server schema is moving quickly before v1.
 Current policy:
 
 - support the latest reviewed public Codex CLI minor release
-- current reviewed minor release: `0.133.x`
+- current reviewed minor release: `0.137.x`
 - widen back to a rolling window only after the latest generated-wire and public
   API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
@@ -239,6 +239,10 @@ families break down like this:
 | `DeprecationNoticeNotification` | `Public now as diagnostics` |
 | `McpServerStatusUpdatedNotification` | `Public now as diagnostics and app-snapshot refresh` |
 | `RemoteControlStatusChangedNotification` | `Public now as diagnostics` |
+| `RemoteControlPairingStartParams` / `RemoteControlPairingStartResponse` | `Internal-only for now` |
+| `RemoteControlClientsListParams` / `RemoteControlClientsListResponse` | `Internal-only for now` |
+| `RemoteControlClientsRevokeParams` / `RemoteControlClientsRevokeResponse` | `Internal-only for now` |
+| `SkillsExtraRootsSetParams` / `SkillsExtraRootsSetResponse` | `Internal-only for now` |
 | `AppListUpdatedNotification` | `Observable-only for app-snapshot refresh` |
 | `SkillsChangedNotification` | `Observable-only for app-snapshot refresh` |
 | `HookStartedNotification` | `Observable-only for now` |

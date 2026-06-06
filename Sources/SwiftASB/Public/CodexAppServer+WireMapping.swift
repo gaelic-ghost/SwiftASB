@@ -163,7 +163,6 @@ extension CodexAppServer.ThreadStartRequest {
             model: model,
             modelProvider: modelProvider,
             permissions: permissions?.wireValue,
-            persistExtendedHistory: nil,
             personality: personality?.wireValue,
             runtimeWorkspaceRoots: nil,
             sandbox: sandboxMode?.wireValue,
@@ -226,6 +225,7 @@ extension CodexAppServer.TurnStartRequest {
             additionalContext: nil,
             approvalPolicy: approvalPolicy?.wireValue,
             approvalsReviewer: approvalsReviewer?.wireValue,
+            clientUserMessageID: nil,
             collaborationMode: collaborationMode?.wireValue,
             cwd: currentDirectoryPath,
             effort: effort?.wireValue,
@@ -920,7 +920,7 @@ extension CodexProtocolThreadTurnsSortDirection {
     }
 }
 
-extension CodexWireSortDirection {
+extension CodexWireRemoteControlClientsListOrder {
     init(_ direction: CodexAppServer.ThreadTurnsSortDirection) {
         switch direction {
         case .asc:

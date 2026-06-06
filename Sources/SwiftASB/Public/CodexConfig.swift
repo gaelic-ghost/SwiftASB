@@ -55,6 +55,7 @@ public struct CodexConfig: Sendable {
         public enum Kind: String, Sendable, Equatable {
             case legacyManagedConfigTomlFromFile
             case legacyManagedConfigTomlFromMdm
+            case enterpriseManaged
             case mdm
             case project
             case sessionFlags
@@ -65,8 +66,10 @@ public struct CodexConfig: Sendable {
         public let dotCodexFolder: String?
         public let domain: String?
         public let file: String?
+        public let id: String?
         public let key: String?
         public let kind: Kind
+        public let name: String?
     }
 
     /// Requirements policy currently visible to the app-server.
@@ -132,8 +135,10 @@ extension CodexConfig.LayerSource {
             dotCodexFolder: wireValue.dotCodexFolder,
             domain: wireValue.domain,
             file: wireValue.file,
+            id: wireValue.id,
             key: wireValue.key,
-            kind: .init(wireValue: wireValue.type)
+            kind: .init(wireValue: wireValue.type),
+            name: wireValue.name
         )
     }
 }
@@ -141,6 +146,8 @@ extension CodexConfig.LayerSource {
 extension CodexConfig.LayerSource.Kind {
     init(wireValue: CodexWireConfigLayerSourceType) {
         switch wireValue {
+        case .enterpriseManaged:
+            self = .enterpriseManaged
         case .legacyManagedConfigTomlFromFile:
             self = .legacyManagedConfigTomlFromFile
         case .legacyManagedConfigTomlFromMdm:
