@@ -214,7 +214,6 @@ struct CodexAppServerProtocolTests {
                 model: "gpt-5.4",
                 modelProvider: "openai",
                 permissions: ":workspace",
-                persistExtendedHistory: nil,
                 personality: .friendly,
                 runtimeWorkspaceRoots: nil,
                 sandbox: .workspaceWrite,
@@ -906,6 +905,7 @@ struct CodexAppServerProtocolTests {
                 additionalContext: nil,
                 approvalPolicy: .enumeration(.onFailure),
                 approvalsReviewer: .guardianSubagent,
+                clientUserMessageID: nil,
                 collaborationMode: .init(
                     mode: .plan,
                     settings: .init(

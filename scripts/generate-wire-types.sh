@@ -2,7 +2,7 @@
 set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-SCHEMA_VERSION=${SCHEMA_VERSION:-v0.135.0}
+SCHEMA_VERSION=${SCHEMA_VERSION:-v0.137.0}
 SCHEMA_ROOT="$ROOT_DIR/codex-schemas/$SCHEMA_VERSION"
 DERIVED_DIR="$ROOT_DIR/tmp/derived-schemas/${SCHEMA_VERSION//./_}"
 OUT_DIR="$ROOT_DIR/tmp/quicktype-wire/${SCHEMA_VERSION//./_}"
@@ -148,6 +148,8 @@ build_batch \
   AppListUpdatedNotification \
   SkillsListParams \
   SkillsListResponse \
+  SkillsExtraRootsSetParams \
+  SkillsExtraRootsSetResponse \
   SkillsChangedNotification \
   PluginListParams \
   PluginListResponse \
@@ -213,6 +215,12 @@ build_batch \
   ModelReroutedNotification \
   ModelVerificationNotification \
   RemoteControlStatusChangedNotification \
+  RemoteControlPairingStartParams \
+  RemoteControlPairingStartResponse \
+  RemoteControlClientsListParams \
+  RemoteControlClientsListResponse \
+  RemoteControlClientsRevokeParams \
+  RemoteControlClientsRevokeResponse \
   DeprecationNoticeNotification \
   ServerRequestResolvedNotification \
   HookStartedNotification \

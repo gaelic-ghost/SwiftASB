@@ -702,6 +702,17 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                             ],
                             "version": "2",
                         ],
+                        [
+                            "config": [
+                                "review_model": "gpt-5.5",
+                            ],
+                            "name": [
+                                "type": "enterpriseManaged",
+                                "id": "enterprise-layer-1",
+                                "name": "Admin Defaults",
+                            ],
+                            "version": "3",
+                        ],
                     ],
                     "origins": [
                         "model": [
@@ -717,6 +728,14 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                                 "dotCodexFolder": "/tmp/project/.codex",
                             ],
                             "version": "2",
+                        ],
+                        "review_model": [
+                            "name": [
+                                "type": "enterpriseManaged",
+                                "id": "enterprise-layer-1",
+                                "name": "Admin Defaults",
+                            ],
+                            "version": "3",
                         ],
                     ],
                 ]

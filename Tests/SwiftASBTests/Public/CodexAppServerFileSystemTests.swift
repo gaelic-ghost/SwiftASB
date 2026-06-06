@@ -251,13 +251,18 @@ extension CodexAppServerTests {
 
         let snapshot = try await client.config.read(.init(currentDirectoryPath: "/tmp/project", includeLayers: true))
         #expect(snapshot.config == .object(["model": .string("gpt-5.2"), "sandbox_mode": .string("workspace-write")]))
-        #expect(snapshot.layers?.count == 2)
+        #expect(snapshot.layers?.count == 3)
         #expect(snapshot.layers?.first?.name.kind == .user)
         #expect(snapshot.layers?[1].name.kind == .project)
         #expect(snapshot.layers?[1].name.dotCodexFolder == "/tmp/project/.codex")
         #expect(snapshot.layers?[1].disabledReason == "Project config is disabled for this fixture.")
+        #expect(snapshot.layers?[2].name.kind == .enterpriseManaged)
+        #expect(snapshot.layers?[2].name.id == "enterprise-layer-1")
+        #expect(snapshot.layers?[2].name.name == "Admin Defaults")
         #expect(snapshot.origins["model"]?.name.file == "/Users/galew/.codex/config.toml")
         #expect(snapshot.origins["sandbox_mode"]?.name.kind == .project)
+        #expect(snapshot.origins["review_model"]?.name.kind == .enterpriseManaged)
+        #expect(snapshot.origins["review_model"]?.name.name == "Admin Defaults")
 
         let requirements = try await client.config.readRequirements()
         #expect(requirements.requirements == .object([

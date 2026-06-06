@@ -1675,7 +1675,7 @@ public actor CodexAppServer {
                 params: .init(
                     cursor: request.cursor,
                     limit: request.limit,
-                    sortDirection: request.sortDirection.map(CodexWireSortDirection.init),
+                    sortDirection: request.sortDirection.map(CodexWireRemoteControlClientsListOrder.init),
                     threadID: request.threadID,
                     turnID: request.turnID
                 )

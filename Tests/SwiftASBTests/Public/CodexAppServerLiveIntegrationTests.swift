@@ -149,7 +149,6 @@ struct CodexAppServerLiveIntegrationTests {
                     model: nil,
                     modelProvider: nil,
                     permissions: nil,
-                    persistExtendedHistory: nil,
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
                     sandbox: .workspaceWrite,
@@ -201,7 +200,7 @@ struct CodexAppServerLiveIntegrationTests {
             let diagnostics = try await client.cliExecutableDiagnostics()
             #expect(diagnostics.resolvedExecutablePath == harness.codexExecutableURL.path)
             #expect(diagnostics.versionString.contains("codex-cli"))
-            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.135.x"))
+            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.137.x"))
 
             await client.stop()
         } catch {
@@ -296,7 +295,6 @@ struct CodexAppServerLiveIntegrationTests {
                     model: nil,
                     modelProvider: nil,
                     permissions: nil,
-                    persistExtendedHistory: nil,
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
                     sandbox: .workspaceWrite,
@@ -324,6 +322,7 @@ struct CodexAppServerLiveIntegrationTests {
                     additionalContext: nil,
                     approvalPolicy: .enumeration(.never),
                     approvalsReviewer: nil,
+                    clientUserMessageID: nil,
                     collaborationMode: nil,
                     cwd: nil,
                     effort: nil,
