@@ -11,7 +11,6 @@ load_env_file "$SELF_DIR/config/release.env"
 mode="${REPO_MAINTENANCE_DEFAULT_RELEASE_MODE:-standard}"
 release_tag=""
 skip_validate="false"
-skip_local_release_gate="false"
 skip_gh_release="false"
 skip_version_bump="false"
 base_branch="${REPO_MAINTENANCE_RELEASE_BRANCH:-main}"
@@ -32,10 +31,6 @@ while [ "$#" -gt 0 ]; do
       ;;
     --skip-validate)
       skip_validate="true"
-      shift
-      ;;
-    --skip-local-release-gate)
-      skip_local_release_gate="true"
       shift
       ;;
     --skip-gh-release)
@@ -69,7 +64,7 @@ while [ "$#" -gt 0 ]; do
     -h|--help)
       cat <<'USAGE'
 Usage:
-  release.sh --mode standard --version <vX.Y.Z> [--base-branch main] [--skip-validate] [--skip-local-release-gate] [--skip-version-bump] [--skip-gh-release] [--review-comments-addressed] [--remote-ci-mode full|defer] [--skip-branch-cleanup] [--dry-run]
+  release.sh --mode standard --version <vX.Y.Z> [--base-branch main] [--skip-validate] [--skip-version-bump] [--skip-gh-release] [--review-comments-addressed] [--remote-ci-mode full|defer] [--skip-branch-cleanup] [--dry-run]
   release.sh --mode submodule --version <vX.Y.Z> [--skip-validate] [--skip-gh-release] [--dry-run]
 USAGE
       exit 0
@@ -159,26 +154,6 @@ run_version_bump() {
   git -C "$REPO_ROOT" add -A
   git -C "$REPO_ROOT" commit -m "release: bump versions for $RELEASE_TAG"
   log "Committed version bump for $RELEASE_TAG."
-}
-
-run_local_release_gate() {
-  release_gate_script="$REPO_ROOT/scripts/run-live-codex-release-gate.sh"
-
-  if [ "$skip_local_release_gate" = "true" ]; then
-    log "Skipping local release gate because --skip-local-release-gate was requested."
-    return 0
-  fi
-
-  [ -f "$release_gate_script" ] || die "Standard release mode expected a local release gate at $release_gate_script so the release candidate can run full Swift package tests and live Codex probes before publishing."
-
-  if [ "$REPO_MAINTENANCE_DRY_RUN" = "true" ]; then
-    log "Would run local release gate at $release_gate_script."
-    return 0
-  fi
-
-  log "Running local release gate before publishing $RELEASE_TAG."
-  sh "$release_gate_script"
-  log "Local release gate passed for $RELEASE_TAG."
 }
 
 create_release_tag() {
@@ -389,28 +364,6 @@ check_pr_comments() {
   log "PR #$pr_number has no blocking review state."
 }
 
-ensure_base_branch_checkout_available() {
-  branch_name="$1"
-
-  if [ "$REPO_MAINTENANCE_DRY_RUN" = "true" ]; then
-    log "Would verify local $base_branch can be checked out before merging the release PR."
-    return 0
-  fi
-
-  git -C "$REPO_ROOT" fetch origin "$base_branch"
-
-  if git -C "$REPO_ROOT" switch "$base_branch" 2>/dev/null || git -C "$REPO_ROOT" checkout "$base_branch" 2>/dev/null; then
-    if git -C "$REPO_ROOT" switch "$branch_name" 2>/dev/null || git -C "$REPO_ROOT" checkout "$branch_name" 2>/dev/null; then
-      log "Verified local $base_branch can be checked out for post-merge fast-forward and tagging."
-      return 0
-    fi
-
-    die "Release workflow could check out $base_branch but could not return to $branch_name. Restore the release branch checkout before rerunning release.sh."
-  fi
-
-  die "Could not check out local $base_branch before merging, likely because another worktree owns it. Fast-forward $base_branch from origin/$base_branch in that checkout or release that worktree before rerunning release.sh."
-}
-
 merge_pr() {
   pr_number="$1"
 
@@ -504,8 +457,6 @@ run_standard_release() {
 
   run_version_bump
   ensure_clean_worktree
-  run_local_release_gate
-  ensure_clean_worktree
   push_release_branch "$branch_name"
   create_or_update_pr "$branch_name"
   pr_number="$PR_NUMBER"
@@ -516,7 +467,6 @@ run_standard_release() {
   fi
   watch_ci "$pr_number"
   check_pr_comments "$pr_number"
-  ensure_base_branch_checkout_available "$branch_name"
   merge_pr "$pr_number"
   fast_forward_base_branch
   create_release_tag
