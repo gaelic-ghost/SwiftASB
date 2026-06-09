@@ -5,7 +5,10 @@ is to let consuming macOS apps build high-performance Codex interfaces without
 duplicating thread-list, transcript, selection, cache, and action mapping logic
 between AppKit and SwiftUI.
 
-Status: planned. No package targets have been added yet.
+Status: in progress. The package now has `ASBPresentation`, `ASBAppKit`, and
+`ASBSwiftUI` targets. `ASBPresentation` currently ships the first
+framework-neutral thread-sidebar contract. Finish the remaining presentation
+foundation before implementing AppKit or SwiftUI renderer components.
 
 ## Decision
 
@@ -68,7 +71,7 @@ runtime-facing objects.
 adapts current-state companions into stable UI snapshots and maps UI commands
 into typed intents.
 
-Likely first families:
+Foundation families:
 
 - `ThreadSidebarSnapshot`
 - `ThreadSidebarSection`
@@ -82,12 +85,15 @@ Likely first families:
 - `RecentActivityItem`
 - `AgendaSnapshot`
 - `DashboardSnapshot`
-- `PresentationIntent`
+- focused intent enums for each surface
 
-The first implementation should keep these shapes intentionally small. Prefer
-plain value types with stable identifiers over protocols or generic renderer
-models. Add broader search, filtering, and decoration payloads only when a
-component needs them.
+The foundation implementation should keep these shapes intentionally small.
+Prefer plain value types with stable identifiers over protocols or generic
+renderer models. Add broader search, filtering, and decoration payloads only
+when a component needs them. The presentation target is complete enough for
+renderer work only when the sidebar, timeline, recent-activity, agenda, and
+dashboard families all have framework-neutral snapshots, typed intents, and
+tests proving stable identity and projection behavior.
 
 ### ASBAppKit
 
@@ -231,7 +237,67 @@ Intents:
   `ThreadSidebarSnapshot`.
 - Add tests that prove stable identity, grouping, and selection behavior.
 
-### Slice 3: ASBAppKit Sidebar Prototype
+Status: complete. This slice landed in `ThreadSidebarPresentation.swift`.
+
+### Slice 3: ASBPresentation Foundation Completion
+
+Complete `ASBPresentation` before renderer work starts. This slice is the
+foundation gate for `ASBAppKit` and `ASBSwiftUI`.
+
+Add the missing framework-neutral surface families:
+
+- `TurnTimelineSnapshot`
+- `TurnTimelineSection`
+- `TurnTimelineItem`
+- `TurnTimelineViewportState`
+- `RecentActivitySnapshot`
+- `RecentActivityItem`
+- `AgendaSnapshot`
+- `AgendaStep`
+- `DashboardSnapshot`
+- focused intent enums for timeline, agenda, dashboard, and recent-activity
+  surfaces
+
+Projection work:
+
+- Project `CodexThread.RecentTurns` into timeline sections and rows.
+- Project `CodexTurnHandle.Minimap` into active-turn timeline and dashboard
+  summaries where the current public API exposes enough information.
+- Project `CodexThread.RecentFiles` and `CodexThread.RecentCommands` into a
+  shared recent-activity snapshot when a renderer wants one mixed activity rail.
+- Project `CodexThread.Agenda` into agenda state.
+- Project `CodexThread.Dashboard` into dashboard state.
+
+Intent work:
+
+- Keep intents renderer-neutral and runtime-shaped.
+- Model pagination, visibility, selection, rehydration, goal, planning, and
+  approval or elicitation actions without AppKit index paths, SwiftUI bindings,
+  or arbitrary cell closures.
+- Keep action execution outside `ASBPresentation`; hosts or renderer adapters
+  translate intents back into SwiftASB owner calls.
+
+Test work:
+
+- Prove stable identity for sections, turns, items, commands, files, plan
+  steps, and status summaries.
+- Prove viewport and selection values remain renderer-neutral.
+- Prove projection feasibility from existing SwiftASB companions. If a
+  companion cannot be constructed directly in tests, cover pure presentation
+  values and rely on `swift build` to validate projection initializers.
+- Prove `ASBPresentation` does not import AppKit or SwiftUI.
+
+Completion gate:
+
+- `ASBPresentation` contains no placeholder scaffold files.
+- Every foundation family has public value types, focused intents where useful,
+  and tests.
+- `swift build`, `swift test`, repo-maintenance validation, and whitespace
+  checks pass.
+- This plan and the roadmap accurately describe the landed presentation
+  foundation before renderer work begins.
+
+### Slice 4: ASBAppKit Sidebar Prototype
 
 - Add the `ASBAppKit` target and tests where practical.
 - Build `ASBThreadSidebarView` around AppKit data-source ownership.
@@ -239,7 +305,7 @@ Intents:
 - Emit typed presentation intents instead of mutating SwiftASB directly from
   view cells.
 
-### Slice 4: ASBSwiftUI Sidebar Wrapper And Light Panels
+### Slice 5: ASBSwiftUI Sidebar Wrapper And Light Panels
 
 - Add the `ASBSwiftUI` target.
 - Add a SwiftUI `ThreadSidebar` wrapper around `ASBThreadSidebarView`.
@@ -248,9 +314,8 @@ Intents:
 - Document when consumers should choose native SwiftUI components versus
   AppKit-backed wrappers.
 
-### Slice 5: Turn Timeline
+### Slice 6: Turn Timeline Renderer
 
-- Add `TurnTimelineSnapshot` in `ASBPresentation`.
 - Add `ASBTurnTimelineView` in `ASBAppKit`.
 - Add a SwiftUI `TurnTimeline` wrapper.
 - Wire viewport and visible-item hints back to `CodexThread.RecentTurns` without
