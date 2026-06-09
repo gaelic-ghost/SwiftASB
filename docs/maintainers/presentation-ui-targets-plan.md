@@ -5,10 +5,12 @@ is to let consuming macOS apps build high-performance Codex interfaces without
 duplicating thread-list, transcript, selection, cache, and action mapping logic
 between AppKit and SwiftUI.
 
-Status: in progress. The package now has `ASBPresentation`, `ASBAppKit`, and
-`ASBSwiftUI` targets. `ASBPresentation` currently ships the first
-framework-neutral thread-sidebar contract. Finish the remaining presentation
-foundation before implementing AppKit or SwiftUI renderer components.
+Status: presentation foundation complete. The package now has
+`ASBPresentation`, `ASBAppKit`, and `ASBSwiftUI` targets. `ASBPresentation`
+ships framework-neutral contracts for thread sidebars, turn timelines, recent
+activity, agenda panels, dashboard panels, viewport state, selection state, and
+typed UI intents. Renderer implementation can now start in `ASBAppKit` and
+`ASBSwiftUI`.
 
 ## Decision
 
@@ -296,6 +298,18 @@ Completion gate:
   checks pass.
 - This plan and the roadmap accurately describe the landed presentation
   foundation before renderer work begins.
+
+Status: complete. The foundation families landed in:
+
+- `ThreadSidebarPresentation.swift`
+- `TurnTimelinePresentation.swift`
+- `RecentActivityPresentation.swift`
+- `AgendaDashboardPresentation.swift`
+
+`CodexThread.RecentFiles.FileSnapshot` and
+`CodexThread.RecentCommands.CommandSnapshot` expose public read-only order
+hints so `ASBPresentation` can build a mixed recent-activity rail without
+guessing chronology.
 
 ### Slice 4: ASBAppKit Sidebar Prototype
 
