@@ -71,13 +71,13 @@ extension CodexAppServer {
     }
 
     /// Reasoning effort option passed to Codex requests.
-    public enum ReasoningEffort: String, Sendable, Equatable {
+    public enum ReasoningEffort: Sendable, Equatable {
         case high
         case low
         case medium
         case minimal
         case none
-        case unrecognized
+        case unrecognized(String)
         case xhigh
     }
 

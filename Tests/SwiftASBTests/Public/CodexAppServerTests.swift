@@ -4,6 +4,16 @@ import Testing
 
 @Suite("CodexAppServer", .serialized)
 struct CodexAppServerTests {
+    @Test("preserves unknown reasoning effort wire values")
+    func preservesUnknownReasoningEffortWireValues() {
+        let effort = CodexAppServer.ReasoningEffort(wireValue: "experimental-ludicrous")
+
+        #expect(effort == .unrecognized("experimental-ludicrous"))
+        #expect(effort.wireValue == "experimental-ludicrous")
+        #expect(CodexAppServer.ReasoningEffort(wireValue: "medium") == .medium)
+        #expect(CodexAppServer.ReasoningEffort.medium.wireValue == "medium")
+    }
+
     @Test("describes public app-server errors with operation context")
     func describesPublicAppServerErrorsWithOperationContext() {
         let invalidState = CodexAppServerError.invalidState(reason: "Initialize the app-server before starting a thread.")

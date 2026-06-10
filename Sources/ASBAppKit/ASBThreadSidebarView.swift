@@ -192,44 +192,44 @@ extension ASBThreadSidebarView: NSOutlineViewDelegate {
 
 /// Snapshot adapter that owns AppKit tree mechanics for the sidebar.
 @MainActor
-public final class ASBThreadSidebarAdapter {
-    public static let columnIdentifier = NSUserInterfaceItemIdentifier("ASBThreadSidebarColumn")
+final class ASBThreadSidebarAdapter {
+    static let columnIdentifier = NSUserInterfaceItemIdentifier("ASBThreadSidebarColumn")
 
-    public private(set) var sections: [ASBThreadSidebarRow] = []
+    private(set) var sections: [ASBThreadSidebarRow] = []
 
-    public init(snapshot: ThreadSidebarSnapshot = .init()) {
+    init(snapshot: ThreadSidebarSnapshot = .init()) {
         apply(snapshot)
     }
 
-    public func apply(_ snapshot: ThreadSidebarSnapshot) {
+    func apply(_ snapshot: ThreadSidebarSnapshot) {
         sections = snapshot.sections.map(ASBThreadSidebarRow.init(section:))
     }
 
-    public var flattenedRows: [ASBThreadSidebarRow] {
+    var flattenedRows: [ASBThreadSidebarRow] {
         sections.flatMap { [$0] + $0.children }
     }
 
-    public func row(forThreadID threadID: String) -> ASBThreadSidebarRow? {
+    func row(forThreadID threadID: String) -> ASBThreadSidebarRow? {
         sections.lazy
             .flatMap(\.children)
             .first { $0.threadItem?.id == threadID }
     }
 
-    public func numberOfChildren(of item: Any?) -> Int {
+    func numberOfChildren(of item: Any?) -> Int {
         guard let row = item as? ASBThreadSidebarRow else {
             return sections.count
         }
         return row.children.count
     }
 
-    public func child(_ index: Int, of item: Any?) -> ASBThreadSidebarRow {
+    func child(_ index: Int, of item: Any?) -> ASBThreadSidebarRow {
         guard let row = item as? ASBThreadSidebarRow else {
             return sections[index]
         }
         return row.children[index]
     }
 
-    public func isExpandable(_ item: Any) -> Bool {
+    func isExpandable(_ item: Any) -> Bool {
         guard let row = item as? ASBThreadSidebarRow else { return false }
         return !row.children.isEmpty
     }
@@ -237,20 +237,20 @@ public final class ASBThreadSidebarAdapter {
 
 /// One AppKit outline row derived from a presentation snapshot.
 @MainActor
-public final class ASBThreadSidebarRow: NSObject, Identifiable {
-    public enum Kind: Sendable, Equatable {
+final class ASBThreadSidebarRow: NSObject, Identifiable {
+    enum Kind: Sendable, Equatable {
         case section
         case thread
     }
 
-    public let id: String
-    public let kind: Kind
-    public let title: String
-    public let subtitle: String?
-    public let threadItem: ThreadSidebarItem?
-    public let children: [ASBThreadSidebarRow]
+    let id: String
+    let kind: Kind
+    let title: String
+    let subtitle: String?
+    let threadItem: ThreadSidebarItem?
+    let children: [ASBThreadSidebarRow]
 
-    public init(section: ThreadSidebarSection) {
+    init(section: ThreadSidebarSection) {
         self.id = "section:\(section.id)"
         self.kind = .section
         self.title = section.title
@@ -260,7 +260,7 @@ public final class ASBThreadSidebarRow: NSObject, Identifiable {
         super.init()
     }
 
-    public init(item: ThreadSidebarItem) {
+    init(item: ThreadSidebarItem) {
         self.id = "thread:\(item.id)"
         self.kind = .thread
         self.title = item.title
