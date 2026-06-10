@@ -911,11 +911,11 @@ struct CodexAppServerProtocolTests {
                     settings: .init(
                         developerInstructions: nil,
                         model: "gpt-5.4",
-                        reasoningEffort: .medium
+                        reasoningEffort: "medium"
                     )
                 ),
                 cwd: "/tmp/project",
-                effort: .medium,
+                effort: "medium",
                 environments: nil,
                 input: [
                     CodexWireUserInput(
@@ -964,8 +964,9 @@ struct CodexAppServerProtocolTests {
 
         let input = try #require(params["input"] as? [[String: Any]])
         #expect(input.count == 1)
-        #expect(input.first?["type"] as? String == "text")
-        #expect(input.first?["text"] as? String == "Hello from SwiftASB")
+        let inputRow = try #require(input.first)
+        #expect(inputRow["type"] as? String == "text")
+        #expect(inputRow["text"] as? String == "Hello from SwiftASB")
 
         let outputSchema = try #require(params["outputSchema"] as? [String: Any])
         #expect(outputSchema["type"] as? String == "object")

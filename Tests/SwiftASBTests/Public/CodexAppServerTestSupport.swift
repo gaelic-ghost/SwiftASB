@@ -908,6 +908,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                                 "needsAuth": true,
                             ],
                         ],
+                        "appTemplates": [],
                         "description": "GitHub plugin detail fixture.",
                         "hooks": [
                             [

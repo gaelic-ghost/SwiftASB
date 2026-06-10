@@ -848,7 +848,9 @@ extension CodexExtensions.CollaborationMode {
             kind: wireValue.mode.map(Kind.init),
             model: wireValue.model,
             name: wireValue.name,
-            reasoningEffort: wireValue.reasoningEffort.map(CodexAppServer.ReasoningEffort.init)
+            reasoningEffort: wireValue.reasoningEffort.map {
+                CodexAppServer.ReasoningEffort(wireValue: $0)
+            }
         )
     }
 }

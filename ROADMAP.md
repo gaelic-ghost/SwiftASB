@@ -42,7 +42,7 @@
 | --- | --- | --- |
 | Bundled schema-driven wire generation | `Shipped internally` | `scripts/generate-wire-types.sh` derives from the bundled v2 schema, patches dynamic JSON to `CodexWireJSONValue`, and validates the staged Swift output. |
 | Promoted generated v2 wire snapshot | `Shipped internally` | `Sources/SwiftASB/Generated/CodexWire/Latest/` now contains a wider lifecycle batch covering bootstrap, stored and loaded thread reads, filesystem reads and watches, config reads, extension inventory, remote-control status plus pairing/client-management wire families, thread goals, and many thread, turn, item, reasoning, and tool-progress notifications, alongside the hand-owned `CodexWireInitializeResponse` shim. |
-| Codex CLI schema review | `Shipped / ongoing` | The current reviewed compatibility window is `codex-cli 0.137.x`; the v0.137 schema families have been classified for the current boundary, and `scripts/dump-codex-schemas.sh` makes future versioned experimental dumps repeatable by default. Future Codex CLI schema families still need public/observable/internal decisions before promotion. |
+| Codex CLI schema review | `Shipped / ongoing` | The current reviewed compatibility window is `codex-cli 0.138.x`; the v0.138 schema families have been classified for the current boundary, and `scripts/dump-codex-schemas.sh` makes future versioned experimental dumps repeatable by default. Future Codex CLI schema families still need public/observable/internal decisions before promotion. |
 | Stdio subprocess transport | `Shipped internally` | The transport launches `codex app-server --listen stdio://`, frames newline-delimited JSON, correlates request IDs, and captures stderr for diagnostics. |
 | Raw server-event fanout | `Shipped internally` | Transport can stream raw JSON-RPC notifications and server requests to higher layers. |
 | Typed protocol request encoding | `Shipped internally` | `initialize`, `initialized`, core thread and turn methods, archive-state actions, filesystem reads and watches, config reads, app/skill/plugin/collaboration-mode inventory, model/MCP/hook reads, MCP resource reads, and thread-goal methods are encoded through the protocol layer. |
@@ -88,7 +88,7 @@
 | Internal thread history persistence | `Partially shipped` | The package now has a Core Data-backed `ThreadHistoryStore` that persists live-built thread and turn history, hydrates stored turns from `thread/read`, `thread/resume`, `thread/fork`, and `thread/turns/list`, seeds previously unknown local threads from paged history, widens persisted turn identity to stay thread-scoped across forks, and records explicit fork lineage while preserving conservative reconciliation that keeps richer local detail when upstream stored history is thinner. Public history paging/search helpers and archive-retention policy are still open. |
 | Direct local Codex thread storage | `Planned / prototyped` | SwiftASB now has a maintainer plan for an opt-in, read-only local Codex storage reader that can inventory threads through Codex's SQLite metadata and lazily hydrate JSONL evidence without forcing every caller through the app-server JSONL pipe. AgentSB prototypes the inspection shape for reports only; the package API, version gates, privacy defaults, and fallback behavior remain separate SwiftASB design work. See [`docs/maintainers/codex-direct-thread-storage-plan.md`](docs/maintainers/codex-direct-thread-storage-plan.md). |
 | Convenience run API | `Not started` | No `run(...)` or one-shot text convenience layer yet. |
-| Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a current-reviewed Codex CLI support window of `0.137.x`, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
+| Binary discovery and compatibility policy | `Partially shipped` | Explicit binary override exists, the docs now define a current-reviewed Codex CLI support window of `0.138.x`, transport startup checks PATH, common Homebrew paths, and the npm global prefix on macOS, and `cliExecutableDiagnostics()` now exposes the resolved binary, version string, and documented support-window assessment. Any further diagnostics work is now expansion rather than a missing baseline surface. |
 | README-level consumer docs | `Shipped / ongoing` | The README covers installation, runtime assumptions, first-use examples, the supported lifecycle, SwiftUI companion surfaces, and the current Codex CLI compatibility window. Future README work should track new public API additions rather than prerelease readiness. |
 | AgentSB maintainer automation | `Report-first maintainer app` | `Tools/AgentSB/` is a repo-local Python maintainer app that inspects SwiftASB deterministically, writes tracked reports under `docs/agents/reports/`, evaluates safety-boundary cases, diffs schema dumps, writes reviewable maintenance drafts, and prototypes local Codex thread-index inspection for future SwiftASB planning. The v1 boundary stays report-first: safe auto-apply is classifier-gated and limited to AgentSB-owned report artifacts, and it must not mutate Swift source, generated wire snapshots, public API, releases, or behavior-changing docs. |
 | Agent workflow guidance | `Shipped / ongoing` | SwiftASB-specific Codex guidance now ships through `socket`'s [`swiftasb-skills`](https://github.com/gaelic-ghost/socket/tree/main/plugins/swiftasb-skills) plugin, with skills for explaining SwiftASB, choosing an integration shape, building SwiftUI-facing app state, and diagnosing integration failures. This repo now points package users and maintainers at that plugin while keeping SwiftASB source, DocC, tests, generated-wire review, and release notes here as the package source of truth. |
@@ -113,14 +113,15 @@ or command-approval completion. Those slices now exist and shipped in the
 `v1.7.1` baseline.
 
 The next meaningful work is to probe and deliberately shape the newly promoted
-Codex CLI `0.137.x` wire families before widening public API. Remote-control
-pairing/client management, skills extra roots, richer turn-start context,
-runtime workspace roots, environments, structured output schemas, and
-rollout-path forking all need live behavior evidence before SwiftASB turns them
-into stable Swift surfaces. Descriptors should compile against Codex-owned
-workspace, Git, file, and thread facts wherever possible, rather than making
-SwiftASB or a sandboxed client infer repository identity by walking the local
-filesystem.
+Codex CLI `0.138.x` wire families before widening public API. Remote-control
+pairing/client management and pairing status, account token usage, turn
+moderation metadata, plugin app templates, skills extra roots, richer
+turn-start context, runtime workspace roots, environments, structured output
+schemas, and rollout-path forking all need live behavior evidence before
+SwiftASB turns them into stable Swift surfaces. Descriptors should compile
+against Codex-owned workspace, Git, file, and thread facts wherever possible,
+rather than making SwiftASB or a sandboxed client infer repository identity by
+walking the local filesystem.
 
 The 2026-05-11 repository-wide security audit added two patch-sized hardening
 items that landed before broadening more protocol surface: preserving or
@@ -278,11 +279,11 @@ consuming apps to adopt:
 
 ## Current Patch Release Slice
 
-This slice records the `v1.7.1` compatibility patch. It does not widen the
-public API boundary. Its job is to keep SwiftASB aligned with the latest
-reviewed Codex CLI `0.137.x` app-server schema while preserving generated wire
-families as internal scaffolding until their behavior and ownership model are
-probed.
+This slice records the `v1.7.1` and follow-up compatibility patches. It does
+not widen the public API boundary. Its job is to keep SwiftASB aligned with the
+latest reviewed Codex CLI `0.138.x` app-server schema while preserving generated
+wire families as internal scaffolding until their behavior and ownership model
+are probed.
 
 ### Shipped in v1.7.1
 
@@ -300,6 +301,12 @@ probed.
   forking probe-first instead of promising stable public request parameters in
   this patch.
 - [x] Exercise deterministic Swift and AgentSB tests before tagging the patch.
+- [x] Classify the Codex CLI `v0.138.0` schema diff before promotion.
+  Decision: refresh the promoted v2 lifecycle batch, update the reviewed CLI
+  window to `0.138.x`, promote account token usage, remote-control pairing
+  status, and turn moderation metadata wire types internally, and keep those
+  schema families out of public API until their user-facing jobs and ownership
+  model are deliberately designed.
 
 ### Follow-Up Probes
 
@@ -702,10 +709,16 @@ workflow earns them in a later feature release.
   and skills extra-roots wire types internally, and keep those request families
   as future public API decisions until their permission and ownership model is
   designed deliberately.
+- [x] Classify the Codex CLI `v0.138.0` schema diff before promotion.
+  Decision: refresh the promoted v2 lifecycle batch, update the reviewed CLI
+  window to `0.138.x`, promote account token usage, remote-control pairing
+  status, turn moderation metadata, plugin app-template, encrypted-content, and
+  response-item author/recipient wire changes internally, and keep them out of
+  public API until live behavior and consumer use cases are clearer.
 - [x] Decide whether v1 should support only the latest documented rolling window
   or whether a shorter first-v1 compatibility promise is more honest.
   Decision: use a narrow latest-reviewed-minor support window, currently
-  `0.137.x`, and widen deliberately after generated-wire and public API review
+  `0.138.x`, and widen deliberately after generated-wire and public API review
   catches up
   with later Codex CLI releases.
 
@@ -815,7 +828,7 @@ workflow earns them in a later feature release.
 #### Compatibility Window
 
 - The compatibility promise is intentionally narrow while app-server schema is
-  moving quickly: reviewed support for Codex CLI `0.137.x`.
+  moving quickly: reviewed support for Codex CLI `0.138.x`.
 - SwiftASB discovers `codex` from an explicit executable URL, `PATH`, common
   Homebrew locations, or the npm global prefix, and exposes startup diagnostics
   through `cliExecutableDiagnostics()`.
@@ -1180,6 +1193,12 @@ not as the current maintainer priority.
   remote-control pairing/client-management plus skills extra-roots wire types
   internally while leaving public API ownership for those request families as
   future design work.
+- A `v0.138.0` experimental schema compatibility pass has refreshed the staging
+  generator again, updated the Codex CLI compatibility window, and promoted
+  account token usage, remote-control pairing status, turn moderation metadata,
+  plugin app-template, encrypted-content, and response-item author/recipient
+  wire changes internally while leaving public API ownership for those families
+  as future design work.
 - API curation and DocC docs good enough that a Swift consumer can understand
   the supported package surface without reading maintainer notes, including
   walkthroughs for the primary v1 lifecycle jobs.
@@ -1603,6 +1622,12 @@ Completed
   v0.137.0 generated wire snapshot internally, and kept new remote-control and
   skills extra-roots request families out of public API until their ownership
   model is designed.
+- 2026-06-09: Used AgentSB schema check, dump, diff, and maintenance-draft
+  reports for the Codex CLI `0.138.x` compatibility refresh, promoted the
+  v0.138.0 generated wire snapshot internally, and kept account token usage,
+  remote-control pairing status, turn moderation metadata, plugin app-template,
+  encrypted-content, and response-item author/recipient changes out of public
+  API pending live behavior review.
 - 2026-06-05: Took AgentSB through an AI-enabled schema-report and
   auto-apply-safe shakedown, dumped local `codex-cli 0.137.0` schemas with the
   existing script, and recorded follow-up work for CLI ergonomics, installed

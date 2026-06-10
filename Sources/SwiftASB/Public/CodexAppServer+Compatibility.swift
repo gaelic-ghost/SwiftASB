@@ -77,6 +77,7 @@ extension CodexAppServer {
         case medium
         case minimal
         case none
+        case unrecognized
         case xhigh
     }
 
