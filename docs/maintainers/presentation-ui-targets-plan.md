@@ -319,6 +319,11 @@ guessing chronology.
 - Emit typed presentation intents instead of mutating SwiftASB directly from
   view cells.
 
+Status: complete. `ASBThreadSidebarView` consumes `ThreadSidebarSnapshot`, owns
+the AppKit outline-view adapter, maps selection and open actions to
+`ThreadSidebarIntent`, and keeps outline rows, item expansion, row heights, and
+view reuse inside `ASBAppKit`.
+
 ### Slice 5: ASBSwiftUI Sidebar Wrapper And Light Panels
 
 - Add the `ASBSwiftUI` target.
