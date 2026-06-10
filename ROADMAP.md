@@ -80,7 +80,7 @@
 | Non-UI local history-reading helpers | `Partially shipped` | `CodexThread` now exposes a lightweight `HistoryWindow` page shape for recent local history, older or newer local windows around a known boundary turn id, centered `windowAroundTurn(...)` reads, centered `windowAroundItem(...)` reads, direct `ClosedTurn` reads for one turn, and convenience array helpers over those same windows. This gives non-UI callers an intentional path into the local history store without binding a UI-oriented observable, while still deferring a broader public cursor model, transcript search surface, and richer history-query helpers. |
 | Public API curation | `Shipped / ongoing` | The source-organization pass has split app-wide model, MCP, thread-management, history, and observable companion values into focused public files while preserving `CodexAppServer`, `CodexThread`, and `CodexTurnHandle` as the three real owners. The connected public-surface review closed the v1 ownership model; post-v1 curation now includes app-server-owned project identity and thread source facts for launcher UI without exposing generated wire models. Future curation should stay tied to concrete public API additions. |
 | DocC documentation | `Shipped / ongoing` | `Sources/SwiftASB/SwiftASB.docc/` contains a package landing page, public-handle extension pages, conceptual articles for app-wide capabilities, interactive lifecycle, thread management, history/observable companions, generated-wire boundary notes, and copy-pasteable walkthroughs for startup, progress/approval handling, diagnostics/history, and SwiftUI observable companions. The catalog is validated through Xcode `docbuild`; future work is ordinary stale-link, prose, and symbol-comment refinement as the public API grows. |
-| Swift Package Index readiness | `Shipped` | `.spi.yml` declares `SwiftASB` as the documentation target, and Swift Package Index lists `gaelic-ghost/SwiftASB` with a documentation link, compatibility/build results, Package ID `9B5839D9-9551-473F-A939-841534A3FC55`, and a 2026-05-06 update timestamp for the latest confirmed indexed release. Recheck SPI after the `v1.7.1` tag is published. |
+| Swift Package Index readiness | `Shipped` | `.spi.yml` declares `SwiftASB` as the documentation target, and Swift Package Index lists `gaelic-ghost/SwiftASB` with a documentation link, compatibility/build results, Package ID `9B5839D9-9551-473F-A939-841534A3FC55`, and a 2026-05-06 update timestamp for the latest confirmed indexed release. Recheck SPI after the `v1.7.2` tag is published. |
 | Contributor documentation split | `Shipped` | `README.md` is now focused on Swift and SwiftUI package users, while `CONTRIBUTING.md` owns contributor setup, validation, DocC, live-test flags, generated-wire refresh, and PR expectations. |
 | `CodexTurnHandle` live observable companion | `Partially shipped` | `CodexTurnHandle` owns a live `Minimap` companion that is attached when the handle is created and maintains current-state call snapshots for command, file-edit, dynamic-tool, collab-tool, and MCP item activity. It also now mirrors whether thread context compaction is active for the turn and supports explicit `complete()` handoff into a caller-owned sealed turn snapshot. |
 | Additional turn event mapping | `Partially shipped` | The public event layer covers the current interactive lifecycle plus the item-start and item-complete events needed for observable call-state mirrors. Raw command-output and file-change-output deltas now stay internal as transport detail but drive the shipped `RecentCommands` and `RecentFiles` companions, and streamed or patch-updated payloads are preserved when later completed snapshots are thinner. Richer MCP-progress detail still remains internal, while warning, guardian-warning, config-warning, deprecation, MCP-server-status, remote-control-status, model-reroute, and model-verification notifications now surface through hand-owned diagnostic events. |
@@ -93,7 +93,7 @@
 | AgentSB maintainer automation | `Report-first maintainer app` | `Tools/AgentSB/` is a repo-local Python maintainer app that inspects SwiftASB deterministically, writes tracked reports under `docs/agents/reports/`, evaluates safety-boundary cases, diffs schema dumps, writes reviewable maintenance drafts, and prototypes local Codex thread-index inspection for future SwiftASB planning. The v1 boundary stays report-first: safe auto-apply is classifier-gated and limited to AgentSB-owned report artifacts, and it must not mutate Swift source, generated wire snapshots, public API, releases, or behavior-changing docs. |
 | Agent workflow guidance | `Shipped / ongoing` | SwiftASB-specific Codex guidance now ships through `socket`'s [`swiftasb-skills`](https://github.com/gaelic-ghost/socket/tree/main/plugins/swiftasb-skills) plugin, with skills for explaining SwiftASB, choosing an integration shape, building SwiftUI-facing app state, and diagnosing integration failures. This repo now points package users and maintainers at that plugin while keeping SwiftASB source, DocC, tests, generated-wire review, and release notes here as the package source of truth. |
 | End-to-end subprocess integration tests | `Shipped / ongoing` | The package includes opt-in live Codex CLI integration tests with temp workspaces and time limits, including raw transport startup, single-turn completion, cross-thread completion, app-wide model/MCP/hook diagnostics snapshots, thread-name mutation, stored-history materialization, same-thread concurrency probing, deterministic command and permissions approvals through a mock Responses provider, a best-effort prompt-driven approval-path probe, a disposable live rollback scenario, and a multi-turn file-mutation scenario that creates, edits, and deletes files through the real CLI. The umbrella runner is `scripts/run-live-codex-integration-tests.sh`; it defaults to the release-gate set and exposes focused modes for smoke, transport, capability, thread, turn, approval, file-scenario, rollback, same-thread, and all opt-in live tests. Stored-history materialization remains in focused `thread`/`all` runs instead of the release-gate smoke group because the live app-server can delay history materialization. |
-| Apache 2.0 licensing | `Shipped` | The repo now carries the Apache License, Version 2.0 text, and README plus contributor docs describe current releases as Apache 2.0 licensed. |
+| PolyForm Noncommercial licensing | `Release-prepped` | Future public versions now use the PolyForm Noncommercial License 1.0.0 with a separate commercial-use policy. The historical Apache License 2.0 text is preserved for versions published before the license change. |
 
 ## Milestone Progress
 
@@ -112,7 +112,7 @@ lifecycle, SPI visibility, basic history hydration, first-pass reconciliation,
 or command-approval completion. Those slices now exist and shipped in the
 `v1.7.1` baseline.
 
-The next meaningful work is to probe and deliberately shape the newly promoted
+The next meaningful work after the `v1.7.2` patch release is to probe and deliberately shape the newly promoted
 Codex CLI `0.138.x` wire families before widening public API. Remote-control
 pairing/client management and pairing status, account token usage, turn
 moderation metadata, plugin app templates, skills extra roots, richer
@@ -279,11 +279,27 @@ consuming apps to adopt:
 
 ## Current Patch Release Slice
 
-This slice records the `v1.7.1` and follow-up compatibility patches. It does
-not widen the public API boundary. Its job is to keep SwiftASB aligned with the
-latest reviewed Codex CLI `0.138.x` app-server schema while preserving generated
-wire families as internal scaffolding until their behavior and ownership model
-are probed.
+This slice records the `v1.7.2` patch release prep. It does not widen the
+public SwiftASB API boundary. Its job is to ship the ASBPresentation and
+ASBAppKit foundation, keep SwiftASB aligned with the latest reviewed Codex CLI
+`0.138.x` app-server schema, and move future public versions to PolyForm
+Noncommercial licensing while preserving historical terms for earlier versions.
+
+### Planned for v1.7.2
+
+- [x] Land `ASBPresentation` as the shared renderer-neutral UI model target for
+  snapshots, intents, and cache policy values.
+- [x] Land the first `ASBAppKit` thread sidebar view backed by
+  `ThreadSidebarSnapshot` data.
+- [x] Classify the Codex CLI `v0.138.0` schema diff before promotion.
+  Decision: refresh the promoted v2 lifecycle batch, update the reviewed CLI
+  window to `0.138.x`, promote account token usage, remote-control pairing
+  status, and turn moderation metadata wire types internally, and keep those
+  schema families out of public API until their user-facing jobs and ownership
+  model are deliberately designed.
+- [x] Move future public versions to the PolyForm Noncommercial License 1.0.0,
+  preserve historical Apache License 2.0 text, and add a commercial-use policy.
+- [ ] Run the final release workflow for `v1.7.2`.
 
 ### Shipped in v1.7.1
 
@@ -301,13 +317,6 @@ are probed.
   forking probe-first instead of promising stable public request parameters in
   this patch.
 - [x] Exercise deterministic Swift and AgentSB tests before tagging the patch.
-- [x] Classify the Codex CLI `v0.138.0` schema diff before promotion.
-  Decision: refresh the promoted v2 lifecycle batch, update the reviewed CLI
-  window to `0.138.x`, promote account token usage, remote-control pairing
-  status, and turn moderation metadata wire types internally, and keep those
-  schema families out of public API until their user-facing jobs and ownership
-  model are deliberately designed.
-
 ### Follow-Up Probes
 
 - [ ] Investigate the Codex GUI remote-control pairing/auth setup and decide
@@ -568,8 +577,9 @@ workflow earns them in a later feature release.
 ### Documentation And Examples
 
 - [x] Update stale release references after the `v1.7.1` release.
-  Decision: README now names `v1.7.1` as the current released baseline and no
-  longer describes the package as early development.
+  Decision: README named `v1.7.1` as the current released baseline and no
+  longer described the package as early development. The `v1.7.2` patch prep
+  updates the current release reference again.
 - [x] Finish DocC symbol comments for the supported lifecycle, not just the
   conceptual articles.
   Decision: the source-level documentation pass now covers
@@ -838,7 +848,7 @@ workflow earns them in a later feature release.
 #### Migration Notes
 
 - Existing `v0.9.x` consumers should update the SwiftPM dependency to
-  `from: "1.7.1"` once the tag is published.
+  `from: "1.7.2"` once the tag is published.
 - The v1 API surface has removed stale pre-v1 compatibility shims and phantom
   fields that no longer exist in the reviewed `v0.128.0` schema.
 - Same-thread overlapping turns are rejected client-side with
@@ -863,7 +873,7 @@ workflow earns them in a later feature release.
 
 - Keep an eye on future Swift Package Index builds after compatibility-window
   or DocC changes; the `v1.1.1` listing and documentation link are live, and
-  `v1.7.1` should be rechecked after the patch tag is indexed.
+  `v1.7.2` should be rechecked after the patch tag is indexed.
 - Add broader live server-request coverage for permissions and MCP elicitation
   if those become stronger public runtime guarantees.
 - Continue tuning recent companion cache calibration, richer file previews,
@@ -1500,6 +1510,9 @@ Completed
 - [x] Decide whether real subprocess integration tests are required before the first release.
   Decision: yes, but as opt-in suites rather than as part of the default `swift test` path while the live Codex runtime remains an external local dependency.
 - [x] Add an explicit source-available license for the package.
+  Decision: future public versions now use the PolyForm Noncommercial License
+  1.0.0, commercial use requires a separate written license from Gale, and the
+  historical Apache License 2.0 text is preserved for earlier versions.
 
 ### Exit Criteria
 
@@ -1617,6 +1630,9 @@ Completed
 
 ## History
 
+- 2026-06-09: Prepared the `v1.7.2` release branch with the ASBPresentation
+  foundation, first ASBAppKit thread sidebar view, Codex CLI `0.138.x`
+  generated-wire refresh, and PolyForm Noncommercial license transition.
 - 2026-06-06: Used the AgentSB schema-review and auto-apply-safe reports as the
   basis for the Codex CLI `0.137.x` compatibility refresh, promoted the
   v0.137.0 generated wire snapshot internally, and kept new remote-control and

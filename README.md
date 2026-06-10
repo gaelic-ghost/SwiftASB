@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.1` is the current and latest release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.2` is the current and latest release.
 
 ### What This Project Is
 
@@ -38,7 +38,7 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.7.1"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.7.2"),
 ```
 
 Then add the library product to your target dependencies:
@@ -137,8 +137,12 @@ Agent-facing maintainer guidance lives in [AGENTS.md](./AGENTS.md).
 
 ## Release Notes
 
-`ROADMAP.md` tracks milestone status and release-facing work. Git tags and GitHub releases are the source of truth for published versions.
+`ROADMAP.md` tracks milestone status and release-facing work. `docs/releases/v1.7.2.md` contains the current patch release note draft. Git tags and GitHub releases are the source of truth for published versions.
 
 ## License
 
-SwiftASB is licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE).
+SwiftASB is licensed under the PolyForm Noncommercial License 1.0.0 for future public versions. See [LICENSE](./LICENSE), [NOTICE](./NOTICE), and [COMMERCIAL-USE.md](./COMMERCIAL-USE.md).
+
+Commercial use requires a separate written commercial license from Gale. For commercial licensing, contact Gale W at <mail@galewilliams.com>.
+
+SwiftASB versions published before the PolyForm Noncommercial change remain available under the license terms that applied to those versions. The historical Apache License 2.0 text is preserved in [LICENSE-APACHE-2.0](./LICENSE-APACHE-2.0).
