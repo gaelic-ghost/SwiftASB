@@ -1,0 +1,37 @@
+SwiftASB
+Copyright 2026 Gale Williams
+
+Required Notice: Copyright 2026 Gale Williams (mailto:mail@galewilliams.com)
+
+This repository is licensed under the PolyForm Noncommercial License 1.0.0.
+See [LICENSE](./LICENSE) for the full license text.
+
+Commercial use requires a separate written commercial license from Gale.
+For commercial licensing, contact Gale W at <mail@galewilliams.com>.
+See [COMMERCIAL-USE.md](./COMMERCIAL-USE.md) for the current commercial-use
+policy.
+
+SwiftASB versions published before the PolyForm Noncommercial change remain
+available under the license terms that applied to those versions. The historical
+Apache License 2.0 text is preserved in [LICENSE-APACHE-2.0](./LICENSE-APACHE-2.0).
+
+Third-Party Trademarks And Brand References
+
+SwiftASB refers to third-party technologies, developer tools, programming
+languages, product names, and visual identities for identification,
+compatibility, and workflow description only. Those references do not imply
+sponsorship, endorsement, approval, or affiliation unless an explicit written
+license or partnership statement says so.
+
+SwiftASB and Gaelic Ghost are independent projects and are not affiliated with,
+authorized by, sponsored by, endorsed by, or otherwise approved by Apple Inc.,
+the Swift open source project, OpenAI, or the Codex project.
+
+Apple, Xcode, Swift, SwiftUI, SwiftData, Safari, TestFlight, and the Swift Logo
+are trademarks of Apple Inc., registered in the U.S. and other countries and
+regions. OpenAI, ChatGPT, and Codex are trademarks or service marks of OpenAI,
+L.L.C. or its affiliates. Any references in this repository are referential
+and descriptive.
+
+All other third-party trademarks, service marks, names, logos, and brand
+features are the property of their respective owners.

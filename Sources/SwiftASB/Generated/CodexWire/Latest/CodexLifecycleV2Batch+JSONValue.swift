@@ -44,6 +44,7 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let fsUnwatchResponse: [String: CodexWireJSONValue]?
     let fsWatchParams: CodexWireFSWatchParams?
     let fsWatchResponse: CodexWireFSWatchResponse?
+    let getAccountTokenUsageResponse: CodexWireGetAccountTokenUsageResponse?
     let guardianWarningNotification: CodexWireGuardianWarningNotification?
     let hookCompletedNotification: CodexWireHookCompletedNotification?
     let hookStartedNotification: CodexWireHookStartedNotification?
@@ -96,6 +97,8 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let remoteControlClientsRevokeResponse: [String: CodexWireJSONValue]?
     let remoteControlPairingStartParams: CodexWireRemoteControlPairingStartParams?
     let remoteControlPairingStartResponse: CodexWireRemoteControlPairingStartResponse?
+    let remoteControlPairingStatusParams: CodexWireRemoteControlPairingStatusParams?
+    let remoteControlPairingStatusResponse: CodexWireRemoteControlPairingStatusResponse?
     let remoteControlStatusChangedNotification: CodexWireRemoteControlStatusChangedNotification?
     let reviewStartParams: CodexWireReviewStartParams?
     let reviewStartResponse: CodexWireReviewStartResponse?
@@ -148,6 +151,7 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let threadUnarchiveResponse: CodexWireThreadUnarchiveResponse?
     let turnCompletedNotification: CodexWireTurnCompletedNotification?
     let turnDiffUpdatedNotification: CodexWireTurnDiffUpdatedNotification?
+    let turnModerationMetadataNotification: CodexWireTurnModerationMetadataNotification?
     let turnPlanUpdatedNotification: CodexWireTurnPlanUpdatedNotification?
     let turnStartedNotification: CodexWireTurnStartedNotification?
     let turnStartParams: CodexWireTurnStartParams?
@@ -156,10 +160,10 @@ struct CodexWireCodexLifecycleV2Batch: Codable, Equatable, Sendable {
     let windowsSandboxReadinessResponse: CodexWireWindowsSandboxReadinessResponse?
 
     enum CodingKeys: String, CodingKey {
-        case agentMessageDeltaNotification, appListUpdatedNotification, appsListParams, appsListResponse, collaborationModeListParams, collaborationModeListResponse, commandExecOutputDeltaNotification, commandExecutionOutputDeltaNotification, configReadParams, configReadResponse, configRequirementsReadResponse, configWarningNotification, contextCompactedNotification, deprecationNoticeNotification, errorNotification, externalAgentConfigImportCompletedNotification, fileChangeOutputDeltaNotification, fileChangePatchUpdatedNotification, fsChangedNotification, fsGetMetadataParams, fsGetMetadataResponse, fsReadDirectoryParams, fsReadDirectoryResponse, fsReadFileParams, fsReadFileResponse, fsUnwatchParams, fsUnwatchResponse, fsWatchParams, fsWatchResponse, guardianWarningNotification, hookCompletedNotification, hookStartedNotification, initializeParams, itemCompletedNotification, itemGuardianApprovalReviewCompletedNotification, itemGuardianApprovalReviewStartedNotification, itemStartedNotification
+        case agentMessageDeltaNotification, appListUpdatedNotification, appsListParams, appsListResponse, collaborationModeListParams, collaborationModeListResponse, commandExecOutputDeltaNotification, commandExecutionOutputDeltaNotification, configReadParams, configReadResponse, configRequirementsReadResponse, configWarningNotification, contextCompactedNotification, deprecationNoticeNotification, errorNotification, externalAgentConfigImportCompletedNotification, fileChangeOutputDeltaNotification, fileChangePatchUpdatedNotification, fsChangedNotification, fsGetMetadataParams, fsGetMetadataResponse, fsReadDirectoryParams, fsReadDirectoryResponse, fsReadFileParams, fsReadFileResponse, fsUnwatchParams, fsUnwatchResponse, fsWatchParams, fsWatchResponse, getAccountTokenUsageResponse, guardianWarningNotification, hookCompletedNotification, hookStartedNotification, initializeParams, itemCompletedNotification, itemGuardianApprovalReviewCompletedNotification, itemGuardianApprovalReviewStartedNotification, itemStartedNotification
         case listMCPServerStatusParams = "listMcpServerStatusParams"
         case listMCPServerStatusResponse = "listMcpServerStatusResponse"
-        case mcpResourceReadParams, mcpResourceReadResponse, mcpServerStatusUpdatedNotification, mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, pluginShareDeleteParams, pluginShareDeleteResponse, pluginShareListParams, pluginShareListResponse, pluginShareSaveParams, pluginShareSaveResponse, pluginShareUpdateTargetsParams, pluginShareUpdateTargetsResponse, pluginSkillReadParams, pluginSkillReadResponse, processExitedNotification, processKillParams, processKillResponse, processOutputDeltaNotification, processResizePtyParams, processResizePtyResponse, processSpawnParams, processSpawnResponse, processWriteStdinParams, processWriteStdinResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, remoteControlClientsListParams, remoteControlClientsListResponse, remoteControlClientsRevokeParams, remoteControlClientsRevokeResponse, remoteControlPairingStartParams, remoteControlPairingStartResponse, remoteControlStatusChangedNotification, reviewStartParams, reviewStartResponse, serverRequestResolvedNotification, skillsChangedNotification, skillsExtraRootsSetParams, skillsExtraRootsSetResponse, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadArchiveParams, threadArchiveResponse, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSearchParams, threadSearchResponse, threadSetNameParams, threadSetNameResponse, threadShellCommandParams, threadShellCommandResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsItemsListParams, threadTurnsItemsListResponse, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, threadUnarchiveParams, threadUnarchiveResponse, turnCompletedNotification, turnDiffUpdatedNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification, windowsSandboxReadinessResponse
+        case mcpResourceReadParams, mcpResourceReadResponse, mcpServerStatusUpdatedNotification, mcpToolCallProgressNotification, modelListParams, modelListResponse, modelReroutedNotification, modelVerificationNotification, planDeltaNotification, pluginListParams, pluginListResponse, pluginReadParams, pluginReadResponse, pluginShareDeleteParams, pluginShareDeleteResponse, pluginShareListParams, pluginShareListResponse, pluginShareSaveParams, pluginShareSaveResponse, pluginShareUpdateTargetsParams, pluginShareUpdateTargetsResponse, pluginSkillReadParams, pluginSkillReadResponse, processExitedNotification, processKillParams, processKillResponse, processOutputDeltaNotification, processResizePtyParams, processResizePtyResponse, processSpawnParams, processSpawnResponse, processWriteStdinParams, processWriteStdinResponse, rawResponseItemCompletedNotification, reasoningSummaryPartAddedNotification, reasoningSummaryTextDeltaNotification, reasoningTextDeltaNotification, remoteControlClientsListParams, remoteControlClientsListResponse, remoteControlClientsRevokeParams, remoteControlClientsRevokeResponse, remoteControlPairingStartParams, remoteControlPairingStartResponse, remoteControlPairingStatusParams, remoteControlPairingStatusResponse, remoteControlStatusChangedNotification, reviewStartParams, reviewStartResponse, serverRequestResolvedNotification, skillsChangedNotification, skillsExtraRootsSetParams, skillsExtraRootsSetResponse, skillsListParams, skillsListResponse, threadApproveGuardianDeniedActionParams, threadApproveGuardianDeniedActionResponse, threadArchivedNotification, threadArchiveParams, threadArchiveResponse, threadClosedNotification, threadCompactStartParams, threadCompactStartResponse, threadGoalClearedNotification, threadGoalClearParams, threadGoalClearResponse, threadGoalGetParams, threadGoalGetResponse, threadGoalSetParams, threadGoalSetResponse, threadGoalUpdatedNotification, threadLoadedListParams, threadLoadedListResponse, threadMetadataUpdateParams, threadMetadataUpdateResponse, threadNameUpdatedNotification, threadRollbackParams, threadRollbackResponse, threadSearchParams, threadSearchResponse, threadSetNameParams, threadSetNameResponse, threadShellCommandParams, threadShellCommandResponse, threadStartedNotification, threadStartParams, threadStartResponse, threadStatusChangedNotification, threadTokenUsageUpdatedNotification, threadTurnsItemsListParams, threadTurnsItemsListResponse, threadTurnsListParams, threadTurnsListResponse, threadUnarchivedNotification, threadUnarchiveParams, threadUnarchiveResponse, turnCompletedNotification, turnDiffUpdatedNotification, turnModerationMetadataNotification, turnPlanUpdatedNotification, turnStartedNotification, turnStartParams, turnStartResponse, warningNotification, windowsSandboxReadinessResponse
     }
 }
 
@@ -357,7 +361,7 @@ struct CodexWireCollaborationModeMask: Codable, Equatable, Sendable {
     let mode: CodexWireModeKind?
     let model: String?
     let name: String
-    let reasoningEffort: CodexWireReasoningEffort?
+    let reasoningEffort: String?
 
     enum CodingKeys: String, CodingKey {
         case mode, model, name
@@ -369,17 +373,6 @@ struct CodexWireCollaborationModeMask: Codable, Equatable, Sendable {
 enum CodexWireModeKind: String, Codable, Equatable, Sendable {
     case modeKindDefault = "default"
     case plan = "plan"
-}
-
-/// See
-/// https://platform.openai.com/docs/guides/reasoning?api-mode=responses#get-started-with-reasoning
-enum CodexWireReasoningEffort: String, Codable, Equatable, Sendable {
-    case high = "high"
-    case low = "low"
-    case medium = "medium"
-    case minimal = "minimal"
-    case none = "none"
-    case xhigh = "xhigh"
 }
 
 //
@@ -496,7 +489,7 @@ struct CodexWireConfig: Codable, Equatable, Sendable {
     let modelAutoCompactTokenLimitScope: CodexWireAutoCompactTokenLimitScope?
     let modelContextWindow: Int?
     let modelProvider: String?
-    let modelReasoningEffort: CodexWireReasoningEffort?
+    let modelReasoningEffort: String?
     let modelReasoningSummary: CodexWireReasoningSummary?
     let modelVerbosity: CodexWireVerbosity?
     let reviewModel: String?
@@ -907,12 +900,13 @@ struct CodexWireConfigRequirements: Codable, Equatable, Sendable {
     let allowAppshots: Bool?
     let allowedApprovalPolicies: [CodexWireAskForApproval]?
     let allowedApprovalsReviewers: [CodexWireApprovalsReviewer]?
-    let allowedPermissions: [String]?
+    let allowedPermissionProfiles: [String: Bool]?
     let allowedSandboxModes: [CodexWireSandboxMode]?
     let allowedWebSearchModes: [CodexWireWebSearchMode]?
     let allowedWindowsSandboxImplementations: [CodexWireWindowsSandboxSetupMode]?
     let allowManagedHooksOnly: Bool?
     let computerUse: CodexWireComputerUseRequirements?
+    let defaultPermissions: String?
     let enforceResidency: CodexWireResidencyRequirement?
     let featureRequirements: [String: Bool]?
     let hooks: CodexWireManagedHooksRequirements?
@@ -1568,6 +1562,48 @@ struct CodexWireFSWatchResponse: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
+// MARK: - CodexWireGetAccountTokenUsageResponse
+struct CodexWireGetAccountTokenUsageResponse: Codable, Equatable, Sendable {
+    let dailyUsageBuckets: [CodexWireAccountTokenUsageDailyBucket]?
+    let summary: CodexWireAccountTokenUsageSummary
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireAccountTokenUsageDailyBucket
+struct CodexWireAccountTokenUsageDailyBucket: Codable, Equatable, Sendable {
+    let startDate: String
+    let tokens: Int
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireAccountTokenUsageSummary
+struct CodexWireAccountTokenUsageSummary: Codable, Equatable, Sendable {
+    let currentStreakDays, lifetimeTokens, longestRunningTurnSEC, longestStreakDays: Int?
+    let peakDailyTokens: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case currentStreakDays, lifetimeTokens
+        case longestRunningTurnSEC = "longestRunningTurnSec"
+        case longestStreakDays, peakDailyTokens
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
 // MARK: - CodexWireGuardianWarningNotification
 struct CodexWireGuardianWarningNotification: Codable, Equatable, Sendable {
     /// Concise guardian warning message for the user.
@@ -1844,7 +1880,7 @@ struct CodexWireThreadItem: Codable, Equatable, Sendable {
     /// Prompt text sent as part of the collab tool call, when available.
     let prompt: String?
     /// Reasoning effort requested for the spawned agent, when applicable.
-    let reasoningEffort: CodexWireReasoningEffort?
+    let reasoningEffort: String?
     /// Thread ID of the receiving agent, when applicable. In case of spawn operation, this
     /// corresponds to the newly spawned agent.
     let receiverThreadIDS: [String]?
@@ -2781,7 +2817,7 @@ struct CodexWireModel: Codable, Equatable, Sendable {
     /// Deprecated: use `serviceTiers` instead.
     let additionalSpeedTiers: [String]?
     let availabilityNux: CodexWireModelAvailabilityNux?
-    let defaultReasoningEffort: CodexWireReasoningEffort
+    let defaultReasoningEffort: String
     /// Catalog default service tier id for this model, when one is configured.
     let defaultServiceTier: String?
     let description, displayName: String
@@ -2838,7 +2874,7 @@ struct CodexWireModelServiceTier: Codable, Equatable, Sendable {
 // MARK: - CodexWireReasoningEffortOption
 struct CodexWireReasoningEffortOption: Codable, Equatable, Sendable {
     let description: String
-    let reasoningEffort: CodexWireReasoningEffort
+    let reasoningEffort: String
 }
 
 //
@@ -3213,6 +3249,7 @@ struct CodexWirePluginReadResponse: Codable, Equatable, Sendable {
 // MARK: - CodexWirePluginDetail
 struct CodexWirePluginDetail: Codable, Equatable, Sendable {
     let apps: [CodexWireAppSummary]
+    let appTemplates: [CodexWireAppTemplateSummary]
     let description: String?
     let hooks: [CodexWirePluginHookSummary]
     let marketplaceName: String
@@ -3220,6 +3257,36 @@ struct CodexWirePluginDetail: Codable, Equatable, Sendable {
     let mcpServers: [String]
     let skills: [CodexWireSkillSummary]
     let summary: CodexWirePluginSummary
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireAppTemplateSummary
+struct CodexWireAppTemplateSummary: Codable, Equatable, Sendable {
+    let canonicalConnectorID, description, logoURL, logoURLDark: String?
+    let materializedAppIDS: [String]
+    let name: String
+    let reason: CodexWireAppTemplateUnavailableReason?
+    let templateID: String
+
+    enum CodingKeys: String, CodingKey {
+        case canonicalConnectorID = "canonicalConnectorId"
+        case description
+        case logoURL = "logoUrl"
+        case logoURLDark = "logoUrlDark"
+        case materializedAppIDS = "materializedAppIds"
+        case name, reason
+        case templateID = "templateId"
+    }
+}
+
+enum CodexWireAppTemplateUnavailableReason: String, Codable, Equatable, Sendable {
+    case noActiveWorkspace = "NO_ACTIVE_WORKSPACE"
+    case notConfiguredForWorkspace = "NOT_CONFIGURED_FOR_WORKSPACE"
 }
 
 //
@@ -3647,6 +3714,7 @@ struct CodexWireResponseItem: Codable, Equatable, Sendable {
     let phase: CodexWireMessagePhase?
     let role: String?
     let type: CodexWireResponseItemType
+    let author, recipient: String?
     let encryptedContent: String?
     let summary: [CodexWireReasoningItemReasoningSummary]?
     let action: CodexWireResponsesAPIWebSearchAction?
@@ -3663,7 +3731,7 @@ struct CodexWireResponseItem: Codable, Equatable, Sendable {
     let revisedPrompt: String?
 
     enum CodingKeys: String, CodingKey {
-        case content, id, phase, role, type
+        case content, id, phase, role, type, author, recipient
         case encryptedContent = "encrypted_content"
         case summary, action
         case callID = "call_id"
@@ -3714,17 +3782,19 @@ enum CodexWireExecLocalShellActionType: String, Codable, Equatable, Sendable {
 // MARK: - CodexWireContentItem
 struct CodexWireContentItem: Codable, Equatable, Sendable {
     let text: String?
-    let type: CodexWireType
+    let type: CodexWireEncryptedContentAgentMessageInputContentType
     let detail: CodexWireImageDetail?
-    let imageURL: String?
+    let imageURL, encryptedContent: String?
 
     enum CodingKeys: String, CodingKey {
         case text, type, detail
         case imageURL = "image_url"
+        case encryptedContent = "encrypted_content"
     }
 }
 
-enum CodexWireType: String, Codable, Equatable, Sendable {
+enum CodexWireEncryptedContentAgentMessageInputContentType: String, Codable, Equatable, Sendable {
+    case encryptedContent = "encrypted_content"
     case inputImage = "input_image"
     case inputText = "input_text"
     case outputText = "output_text"
@@ -3805,6 +3875,7 @@ enum CodexWireSummaryTextReasoningItemReasoningSummaryType: String, Codable, Equ
 }
 
 enum CodexWireResponseItemType: String, Codable, Equatable, Sendable {
+    case agentMessage = "agent_message"
     case compaction = "compaction"
     case compactionTrigger = "compaction_trigger"
     case contextCompaction = "context_compaction"
@@ -3984,6 +4055,28 @@ struct CodexWireRemoteControlPairingStartResponse: Codable, Equatable, Sendable 
         case environmentID = "environmentId"
         case expiresAt, manualPairingCode, pairingCode
     }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireRemoteControlPairingStatusParams
+struct CodexWireRemoteControlPairingStatusParams: Codable, Equatable, Sendable {
+    let manualPairingCode, pairingCode: String?
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
+// MARK: - CodexWireRemoteControlPairingStatusResponse
+struct CodexWireRemoteControlPairingStatusResponse: Codable, Equatable, Sendable {
+    let claimed: Bool
 }
 
 //
@@ -5038,8 +5131,7 @@ struct CodexWireThreadStartParams: Codable, Equatable, Sendable {
     /// Named profile id for this thread. Cannot be combined with `sandbox`.
     let permissions: String?
     let personality: CodexWirePersonality?
-    /// Replace the thread's runtime workspace roots. Relative paths are resolved against the
-    /// effective cwd for the thread.
+    /// Replace the thread's runtime workspace roots. Paths must be absolute.
     let runtimeWorkspaceRoots: [String]?
     let sandbox: CodexWireSandboxMode?
     let serviceName, serviceTier: String?
@@ -5107,7 +5199,7 @@ struct CodexWireThreadStartResponse: Codable, Equatable, Sendable {
     /// Instruction source files currently loaded for this thread.
     let instructionSources: [String]?
     let model, modelProvider: String
-    let reasoningEffort: CodexWireReasoningEffort?
+    let reasoningEffort: String?
     /// Thread-scoped runtime workspace roots used to materialize `:workspace_roots`.
     let runtimeWorkspaceRoots: [String]?
     /// Legacy sandbox policy retained for compatibility. Experimental clients should prefer
@@ -5426,6 +5518,24 @@ struct CodexWireTurnDiffUpdatedNotification: Codable, Equatable, Sendable {
 // for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
 // synthesized for types that have collections (such as arrays or dictionaries).
 
+// MARK: - CodexWireTurnModerationMetadataNotification
+struct CodexWireTurnModerationMetadataNotification: Codable, Equatable, Sendable {
+    let metadata: CodexWireJSONValue
+    let threadID, turnID: String
+
+    enum CodingKeys: String, CodingKey {
+        case metadata
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
+}
+
+//
+// Hashable or Equatable:
+// The compiler will not be able to synthesize the implementation of Hashable or Equatable
+// for types that require the use of CodexWireJSONValue, nor will the implementation of Hashable be
+// synthesized for types that have collections (such as arrays or dictionaries).
+
 // MARK: - CodexWireTurnPlanUpdatedNotification
 struct CodexWireTurnPlanUpdatedNotification: Codable, Equatable, Sendable {
     let explanation: String?
@@ -5481,7 +5591,7 @@ struct CodexWireTurnStartParams: Codable, Equatable, Sendable {
     /// Override the working directory for this turn and subsequent turns.
     let cwd: String?
     /// Override the reasoning effort for this turn and subsequent turns.
-    let effort: CodexWireReasoningEffort?
+    let effort: String?
     /// Optional turn-scoped environments.
     ///
     /// Omitted uses the thread sticky environments. Empty disables environment access for this
@@ -5500,8 +5610,8 @@ struct CodexWireTurnStartParams: Codable, Equatable, Sendable {
     let personality: CodexWirePersonality?
     /// Optional turn-scoped Responses API client metadata.
     let responsesapiClientMetadata: [String: String]?
-    /// Replace the thread's runtime workspace roots for this turn and subsequent turns. Relative
-    /// paths are resolved against the effective cwd for the turn.
+    /// Replace the thread's runtime workspace roots for this turn and subsequent turns. Paths
+    /// must be absolute.
     let runtimeWorkspaceRoots: [String]?
     /// Override the sandbox policy for this turn and subsequent turns.
     let sandboxPolicy: CodexWireDangerFullAccessSandboxPolicyClass?
@@ -5560,7 +5670,7 @@ struct CodexWireCollaborationMode: Codable, Equatable, Sendable {
 struct CodexWireSettings: Codable, Equatable, Sendable {
     let developerInstructions: String?
     let model: String
-    let reasoningEffort: CodexWireReasoningEffort?
+    let reasoningEffort: String?
 
     enum CodingKeys: String, CodingKey {
         case developerInstructions = "developer_instructions"

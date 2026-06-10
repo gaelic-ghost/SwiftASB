@@ -1193,7 +1193,7 @@ actor ThreadHistoryStore {
         defaults.instructionSourcesData = try? encode(session.instructionSources)
         defaults.model = session.model
         defaults.modelProvider = session.modelProvider
-        defaults.reasoningEffort = session.reasoningEffort?.rawValue
+        defaults.reasoningEffort = session.reasoningEffort?.wireValue
         defaults.sandboxPolicyData = try? encode(SandboxPolicySnapshot(session.sandboxPolicy))
         defaults.serviceTier = session.serviceTier?.rawValue
     }

@@ -487,42 +487,46 @@ extension CodexAppServer.SessionStartSource {
 }
 
 extension CodexAppServer.ReasoningEffort {
-    init(wireValue: CodexWireReasoningEffort) {
-        self = Self(wireValue: Optional(wireValue))!
-    }
-
-    init?(wireValue: CodexWireReasoningEffort?) {
-        guard let wireValue else { return nil }
+    init(wireValue: String) {
         switch wireValue {
-        case .high:
+        case "high":
             self = .high
-        case .low:
+        case "low":
             self = .low
-        case .medium:
+        case "medium":
             self = .medium
-        case .minimal:
+        case "minimal":
             self = .minimal
-        case .none:
+        case "none":
             self = .none
-        case .xhigh:
+        case "xhigh":
             self = .xhigh
+        default:
+            self = .unrecognized(wireValue)
         }
     }
 
-    var wireValue: CodexWireReasoningEffort {
+    init?(wireValue: String?) {
+        guard let wireValue else { return nil }
+        self.init(wireValue: wireValue)
+    }
+
+    var wireValue: String {
         switch self {
         case .high:
-            .high
+            "high"
         case .low:
-            .low
+            "low"
         case .medium:
-            .medium
+            "medium"
         case .minimal:
-            .minimal
+            "minimal"
         case .none:
-            .none
+            "none"
+        case let .unrecognized(value):
+            value
         case .xhigh:
-            .xhigh
+            "xhigh"
         }
     }
 }

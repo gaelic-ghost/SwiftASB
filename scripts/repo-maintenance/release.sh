@@ -399,7 +399,11 @@ create_github_release() {
 
   if [ "$REPO_MAINTENANCE_DRY_RUN" = "true" ]; then
     prerelease_flag="$(github_release_create_prerelease_flag "$RELEASE_TAG")"
-    log "Would create a GitHub release for $RELEASE_TAG with gh release create --verify-tag${prerelease_flag:+ $prerelease_flag}."
+    if notes_file="$(github_release_notes_file "$RELEASE_TAG")"; then
+      log "Would create a GitHub release for $RELEASE_TAG with gh release create --verify-tag --notes-file $notes_file${prerelease_flag:+ $prerelease_flag}."
+    else
+      log "Would create a GitHub release for $RELEASE_TAG with gh release create --verify-tag --generate-notes${prerelease_flag:+ $prerelease_flag}."
+    fi
     return 0
   fi
 
@@ -410,8 +414,14 @@ create_github_release() {
   fi
 
   prerelease_flag="$(github_release_create_prerelease_flag "$RELEASE_TAG")"
-  # shellcheck disable=SC2086
-  gh release create "$RELEASE_TAG" --verify-tag --generate-notes $prerelease_flag
+  if notes_file="$(github_release_notes_file "$RELEASE_TAG")"; then
+    # shellcheck disable=SC2086
+    gh release create "$RELEASE_TAG" --verify-tag --notes-file "$notes_file" $prerelease_flag
+  else
+    warn "No release notes found at docs/releases/$RELEASE_TAG.md or docs/releases/${RELEASE_TAG#v}.md; falling back to GitHub-generated notes."
+    # shellcheck disable=SC2086
+    gh release create "$RELEASE_TAG" --verify-tag --generate-notes $prerelease_flag
+  fi
   log "Created GitHub release $RELEASE_TAG."
   wait_for_github_release "$RELEASE_TAG"
   verify_github_release_prerelease_metadata "$RELEASE_TAG"
