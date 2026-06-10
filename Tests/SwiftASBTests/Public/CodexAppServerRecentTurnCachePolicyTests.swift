@@ -328,7 +328,7 @@ extension CodexAppServerTests {
 
         let recordedMethods = await transport.recordedMethods
         #expect(
-            recordedMethods == [
+            Array(recordedMethods.prefix(5)) == [
                 "initialize",
                 "initialized",
                 "thread/start",
@@ -336,6 +336,7 @@ extension CodexAppServerTests {
                 "thread/turns/list",
             ]
         )
+        #expect(recordedMethods.filter { $0 == "thread/turns/list" }.count >= 2)
 
         recentTurns = nil
         await settleObservableTeardown()

@@ -12,6 +12,7 @@ func waitForObservableState(
             return
         }
         await Task.yield()
+        try? await Task.sleep(for: .milliseconds(1))
     }
 }
 
