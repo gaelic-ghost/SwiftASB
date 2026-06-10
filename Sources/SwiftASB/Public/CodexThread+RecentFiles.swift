@@ -74,9 +74,9 @@ extension CodexThread {
             public private(set) var status: Status
             public let turnID: String
 
-            var itemOrderIndex: Int?
-            var turnOrderIndex: Int?
-            var turnStartedAt: Int?
+            public internal(set) var itemOrderIndex: Int?
+            public internal(set) var turnOrderIndex: Int?
+            public internal(set) var turnStartedAt: Int?
 
             fileprivate mutating func apply(delta: String) {
                 payloadText = (payloadText ?? "") + delta
