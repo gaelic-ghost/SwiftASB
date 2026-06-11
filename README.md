@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.2` is being prepared as the next release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.2` is the current published release.
 
 ### What This Project Is
 
@@ -137,7 +137,7 @@ Agent-facing maintainer guidance lives in [AGENTS.md](./AGENTS.md).
 
 ## Release Notes
 
-`ROADMAP.md` tracks milestone status and release-facing work. `docs/releases/v1.7.2.md` contains the current patch release note draft. Git tags and GitHub releases are the source of truth for published versions.
+`ROADMAP.md` tracks milestone status and release-facing work. `docs/releases/v1.7.2.md` contains the current patch release notes. Git tags and GitHub releases are the source of truth for published versions.
 
 ## License
 
