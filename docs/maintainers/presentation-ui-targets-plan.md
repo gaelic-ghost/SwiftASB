@@ -133,6 +133,46 @@ representable wrappers for dense surfaces such as the thread sidebar and turn
 timeline when scrolling, selection, reuse, or incremental updates are central to
 the component.
 
+#### OS Availability Strategy
+
+Keep the public `ASBSwiftUI` entry points stable across the package's supported
+macOS floor. The baseline files should build against the package minimum and
+should expose views that can render without requiring the newest SDK features.
+
+Put OS-specific SwiftUI adoption in narrow availability islands:
+
+- Use `if #available(macOS 27.0, *)` inside stable public views when one public
+  component should choose a newer rendering path at runtime.
+- Use `@available(macOS 27.0, *)` on declarations that only make sense when the
+  caller can opt into an OS 27-only style, modifier, helper view, or overload.
+- Use `#if os(macOS)` for platform separation and `#if canImport(SwiftUI)` only
+  for module availability. Use `#if compiler(>=...)` only when new language or
+  SDK syntax would not parse on older supported toolchains.
+- Keep availability checks in renderer, style, adapter, and modifier files.
+  Do not put OS-version branches in `ASBPresentation` snapshots or intents.
+
+Suggested file shape:
+
+```text
+Sources/ASBSwiftUI/
+  ThreadSidebar/
+    ASBThreadSidebar.swift
+    ASBThreadSidebarRepresentable.swift
+    ASBThreadSidebar+macOS27.swift
+  Agenda/
+    ASBAgendaPanel.swift
+    ASBAgendaPanel+macOS27.swift
+  Dashboard/
+    ASBDashboardPanel.swift
+    ASBDashboardPanel+macOS27.swift
+  Support/
+    ASBAvailabilitySupport.swift
+```
+
+This is a durable building-block rule for the SwiftUI target. It keeps new SDK
+adoption readable without forcing OS-specific concepts into framework-neutral
+presentation data.
+
 ## Ownership Rules
 
 - SwiftASB owns runtime truth.
@@ -332,6 +372,8 @@ view reuse inside `ASBAppKit`.
   are light current-state surfaces.
 - Document when consumers should choose native SwiftUI components versus
   AppKit-backed wrappers.
+- Establish the OS availability file shape before adopting OS 27-specific
+  SwiftUI APIs, and keep baseline public views available at the package minimum.
 
 ### Slice 6: Turn Timeline Renderer
 

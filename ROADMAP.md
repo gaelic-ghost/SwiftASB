@@ -1522,7 +1522,7 @@ Completed
   Decision: yes, but as opt-in suites rather than as part of the default `swift test` path while the live Codex runtime remains an external local dependency.
 - [x] Add an explicit source-available license for the package.
   Decision: future public versions now use the PolyForm Noncommercial License
-  1.0.0, commercial use requires a separate written license from Gale, and the
+  1.0.0, commercial use is handled by separate written agreement, and the
   historical Apache License 2.0 text is preserved for earlier versions.
 
 ### Exit Criteria
