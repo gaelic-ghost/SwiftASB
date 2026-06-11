@@ -71,21 +71,21 @@ inspecting upstream schema changes or quicktype regressions.
 ## Current generated batch
 
 The default generated batch currently stages against the local experimental
-`v0.133.0` schema dump:
+`v0.139.0` schema dump:
 
-- `SCHEMA_VERSION=v0.133.0`
+- `SCHEMA_VERSION=v0.139.0`
 - promoted output:
   `Sources/SwiftASB/Generated/CodexWire/Latest/CodexLifecycleV2Batch+JSONValue.swift`
 
 The promoted `Latest` snapshot is intentionally not swapped blindly just
-because staging generation succeeds. The v0.133 experimental dump changes
-request-side permissions from a structured profile selection to a named profile
-id string, removes the full runtime `permissionProfile` response from thread
-session responses, adds image-detail hints on user input, expands remote-control
-diagnostic identity, and adds environment, remote-control action, plugin
-checkout, plugin-installed, attestation, permission-profile-list, and
-thread-settings update endpoints. Promote generated changes only after
-classifying public, observable-only, and internal effects.
+because staging generation succeeds. The current `v0.139.0` staging pass is a
+good example of that boundary discipline: the promoted-wire delta from the
+previous reviewed snapshot is only an optional `threadId` on
+`CodexWireMCPServerStatusUpdatedNotification` plus wording-only generated
+comment drift on turn environments, and SwiftASB keeps that new MCP status
+target internal-only until a real thread-scoped diagnostic surface is clearly
+earned. Promote generated changes only after classifying public,
+observable-only, and internal effects.
 
 ## Compatibility Shim Policy
 
