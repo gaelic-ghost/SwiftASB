@@ -79,6 +79,34 @@ rewrite_release_references() {
     ' "$input_path" >"$output_path"
 }
 
+rewrite_release_doc_references() {
+  input_path="$1"
+  output_path="$2"
+
+  awk \
+    -v old_version="$current_version" \
+    -v new_version="$release_version" '
+      index($0, "next meaningful work after the ") && index($0, "patch release") {
+        gsub("`v" old_version "`", "`v" new_version "`")
+      }
+      index($0, "patch prep") && index($0, "updates the current release reference again") {
+        gsub("`v" old_version "`", "`v" new_version "`")
+      }
+      index($0, "current released baseline") {
+        gsub("`v" old_version "`", "`v" new_version "`")
+      }
+      index($0, "should be rechecked after the patch tag is indexed") {
+        gsub("`v" old_version "`", "`v" new_version "`")
+      }
+      index($0, "once the tag is published") {
+        gsub("from: \"" old_version "\"", "from: \"" new_version "\"")
+      }
+      {
+        print
+      }
+    ' "$input_path" >"$output_path"
+}
+
 readme_reference_count="$(count_readme_release_references "$current_version")"
 [ "$readme_reference_count" -ge 2 ] || {
   printf 'ERROR: SwiftASB version bump expected at least two README release references for %s, but found %s.\n' "$current_version" "$readme_reference_count" >&2
@@ -101,7 +129,7 @@ fi
 for doc_path in "$ROADMAP_PATH" "$API_AUDIT_PATH"; do
   tmp_file="${TMPDIR:-/tmp}/swiftasb-release-doc-version.XXXXXX"
   tmp_file=$(mktemp "$tmp_file")
-  rewrite_release_references "$doc_path" "$tmp_file"
+  rewrite_release_doc_references "$doc_path" "$tmp_file"
   mv "$tmp_file" "$doc_path"
 done
 

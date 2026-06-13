@@ -1977,16 +1977,20 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     func emitMcpServerStatusUpdated(
         name: String = "calendar",
         status: String = "ready",
-        error: String? = nil
+        error: String? = nil,
+        threadID: String? = nil
     ) {
-        let payload = payloadObject([
+        var payload: [String: Any] = [
             "error": error ?? NSNull(),
             "name": name,
             "status": status,
-        ])
+        ]
+        if let threadID {
+            payload["threadId"] = threadID
+        }
 
         serverEventContinuation?.yield(
-            .notification(method: "mcpServer/startupStatus/updated", payload: payload)
+            .notification(method: "mcpServer/startupStatus/updated", payload: payloadObject(payload))
         )
     }
 

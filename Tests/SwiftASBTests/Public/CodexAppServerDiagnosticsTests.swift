@@ -190,6 +190,48 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("keeps MCP status diagnostics app-wide even when the wire payload names a thread")
+    func keepsMcpStatusDiagnosticsAppWideWhenWireNamesThread() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+
+        let appDiagnosticsTask = Task {
+            try await diagnosticEvents(from: await client.diagnosticEvents(), count: 1)
+        }
+
+        for _ in 0..<5 {
+            await Task.yield()
+        }
+
+        await transport.emitMcpServerStatusUpdated(threadID: "thread-123")
+
+        let appDiagnostics = try await appDiagnosticsTask.value
+        #expect(appDiagnostics.count == 1)
+
+        switch appDiagnostics.first {
+        case let .mcpServerStatusChanged(diagnostic):
+            #expect(diagnostic.name == "calendar")
+            #expect(diagnostic.status == .ready)
+            #expect(appDiagnostics.first?.threadID == nil)
+            #expect(appDiagnostics.first?.turnID == nil)
+        default:
+            Issue.record("Expected an app-wide MCP server status diagnostic.")
+        }
+
+        await client.stop()
+    }
+
     @Test("finishes diagnostics stream when server-event decoding fails")
     func finishesDiagnosticsStreamWhenServerEventDecodingFails() async throws {
         let transport = FakeCodexAppServerTransport()

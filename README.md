@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.2` is the current published release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.3` is the current and latest release.
 
 ### What This Project Is
 
@@ -38,7 +38,7 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.7.2"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.7.3"),
 ```
 
 Then add the library product to your target dependencies:
@@ -52,7 +52,7 @@ Check your Codex version:
 ```bash
 codex --version
 ```
-*Note: SwiftASB currently supports the latest reviewed Codex CLI minor release, `0.138.x`. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
+*Note: SwiftASB currently supports the latest reviewed Codex CLI minor release, `0.139.x`. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
 
 Add the Socket Marketplace to Codex and enable the SwiftASB Skills Plugin:
 
@@ -137,7 +137,7 @@ Agent-facing maintainer guidance lives in [AGENTS.md](./AGENTS.md).
 
 ## Release Notes
 
-`ROADMAP.md` tracks milestone status and release-facing work. `docs/releases/v1.7.2.md` contains the current patch release notes. Git tags and GitHub releases are the source of truth for published versions.
+`ROADMAP.md` tracks milestone status and release-facing work. The `docs/releases/` directory contains checked-in patch release notes. Git tags and GitHub releases are the source of truth for published versions.
 
 ## License
 

@@ -2749,6 +2749,12 @@ struct CodexWireMCPServerStatusUpdatedNotification: Codable, Equatable, Sendable
     let error: String?
     let name: String
     let status: CodexWireMCPServerStartupState
+    let threadID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case error, name, status
+        case threadID = "threadId"
+    }
 }
 
 enum CodexWireMCPServerStartupState: String, Codable, Equatable, Sendable {
@@ -5592,7 +5598,7 @@ struct CodexWireTurnStartParams: Codable, Equatable, Sendable {
     let cwd: String?
     /// Override the reasoning effort for this turn and subsequent turns.
     let effort: String?
-    /// Optional turn-scoped environments.
+    /// Optional environments for this turn and subsequent turns.
     ///
     /// Omitted uses the thread sticky environments. Empty disables environment access for this
     /// turn. Non-empty selects the first environment as the current turn environment for this

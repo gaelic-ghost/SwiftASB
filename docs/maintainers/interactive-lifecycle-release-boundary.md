@@ -50,7 +50,7 @@ runtime while the app-server schema is moving quickly before v1.
 Current policy:
 
 - support the latest reviewed public Codex CLI minor release
-- current reviewed minor release: `0.138.x`
+- current reviewed minor release: `0.139.x`
 - widen back to a rolling window only after the latest generated-wire and public
   API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
@@ -201,6 +201,7 @@ Remaining gap inside the observable-only slice:
 | Context compacted notifications | Interesting for diagnostics, but still not surfaced as a first-class public event; consumers currently see compaction through `Dashboard` and `Minimap` state plus explicit `compactContext()` control. |
 | Error notifications | The current public contract keeps lifecycle failures unified under `CodexAppServerError` instead of streaming raw protocol error-notification payloads. |
 | Guardian approval review started / completed notifications | The generated wire comments already mark these payloads as unstable, so they should stay internal until upstream stabilizes them and the package decides on a real public model. |
+| Thread-targeted MCP status update metadata | `v0.139.0` adds an optional `threadId` on `mcpServer/startupStatus/updated`, but SwiftASB keeps the public MCP status surface centered on app-wide snapshots and thread-visible summaries until a dedicated thread-scoped MCP diagnostic model is clearly earned. |
 
 ## Family Inventory
 
@@ -341,8 +342,10 @@ The current remaining promotion questions are therefore narrower than before:
 4. diagnostics and control flows stay separate. Warning, guardian-warning,
    config-warning, deprecation, MCP-server-status, remote-control-status,
    model-reroute, and model-verification families are passive public diagnostic
-   events. Guardian denied-action approval stays internal until SwiftASB owns a
-   stable request and response model for what the user is approving.
+   events. Thread-targeted MCP status metadata stays internal until SwiftASB
+   owns a stable thread-scoped diagnostic model, and guardian denied-action
+   approval stays internal until SwiftASB owns a stable request and response
+   model for what the user is approving.
 5. file and command detail are now both treated as dedicated companion
    observables rather than as widened event enums:
    `RecentFiles` and `RecentCommands` are the shipped file-centric and
