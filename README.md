@@ -137,7 +137,7 @@ Agent-facing maintainer guidance lives in [AGENTS.md](./AGENTS.md).
 
 ## Release Notes
 
-`ROADMAP.md` tracks milestone status and release-facing work. `docs/releases/v1.7.2.md` contains the current patch release notes. Git tags and GitHub releases are the source of truth for published versions.
+`ROADMAP.md` tracks milestone status and release-facing work. The `docs/releases/` directory contains checked-in patch release notes. Git tags and GitHub releases are the source of truth for published versions.
 
 ## License
 

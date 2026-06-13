@@ -283,31 +283,29 @@ consuming apps to adopt:
 
 ## Current Patch Release Slice
 
-This slice records the `v1.7.2` patch release prep. It does not widen the
-public SwiftASB API boundary. Its job is to ship the ASBPresentation and
-ASBAppKit foundation, keep SwiftASB aligned with the latest reviewed Codex CLI
-`0.138.x` app-server schema, and move future public versions to PolyForm
-Noncommercial licensing while preserving historical terms for earlier versions.
+This slice records the `v1.7.3` patch release prep. It does not widen the
+public SwiftASB API boundary. Its job is to keep SwiftASB aligned with the
+latest reviewed Codex CLI `0.139.x` app-server schema while preserving the
+generated wire layer as internal scaffolding until a stronger public ownership
+model is earned for any newly added schema families.
 
-### Planned for v1.7.2
+### Planned for v1.7.3
 
-- [x] Land `ASBPresentation` as the shared renderer-neutral UI model target for
-  snapshots, intents, and cache policy values.
-- [x] Land the first `ASBAppKit` thread sidebar view backed by
-  `ThreadSidebarSnapshot` data.
-- [x] Classify the Codex CLI `v0.138.0` schema diff before promotion.
+- [x] Classify the Codex CLI `v0.139.0` schema diff before promotion.
   Decision: refresh the promoted v2 lifecycle batch, update the reviewed CLI
-  window to `0.138.x`, promote account token usage, remote-control pairing
-  status, and turn moderation metadata wire types internally, and keep those
-  schema families out of public API until their user-facing jobs and ownership
-  model are deliberately designed.
-- [x] Move future public versions to the PolyForm Noncommercial License 1.0.0,
-  preserve historical Apache License 2.0 text, and add a commercial-use policy.
-- [x] Run the final release workflow for `v1.7.2`.
-  Decision: `v1.7.2` is tagged and published on GitHub. The release shipped the
-  ASBPresentation foundation, first ASBAppKit thread sidebar view, Codex CLI
-  `0.138.x` generated-wire refresh, and PolyForm Noncommercial license
-  transition.
+  window to `0.139.x`, promote the optional
+  `mcpServer/startupStatus/updated.threadId` field internally, and keep that
+  new MCP status target out of public API until SwiftASB owns a deliberate
+  thread-scoped MCP diagnostic model.
+- [x] Update the reviewed compatibility window, generator defaults, and binary
+  diagnostics for Codex CLI `0.139.x`.
+- [x] Add checked-in `v1.7.3` release notes that describe the schema refresh,
+  public-boundary decision, migration notes, and verification performed.
+- [x] Run the full release-branch validation set before tagging `v1.7.3`.
+  Decision: `swift build`, `swift test`,
+  `bash scripts/repo-maintenance/validate-all.sh`, `uv run pytest` from
+  `Tools/AgentSB`, `git diff --check`, and
+  `scripts/run-live-codex-release-gate.sh` all passed on 2026-06-13.
 
 ### Shipped in v1.7.1
 
@@ -1643,6 +1641,10 @@ Completed
 
 ## History
 
+- 2026-06-13: Prepared the `v1.7.3` release branch for the Codex CLI `0.139.x`
+  compatibility refresh, promoted the `v0.139.0` generated wire snapshot
+  internally, kept the new optional MCP status thread target out of public API,
+  and cleared the full repo-owned live Codex release gate.
 - 2026-06-09: Published `v1.7.2` with the ASBPresentation foundation, first
   ASBAppKit thread sidebar view, Codex CLI `0.138.x` generated-wire refresh,
   and PolyForm Noncommercial license transition.
