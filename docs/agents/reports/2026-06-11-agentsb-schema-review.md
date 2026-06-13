@@ -45,8 +45,7 @@ No schema dump diff was available for this report.
 
 ## Evidence
 
-- Repository root: `/Users/galew/.codex/worktrees/8d09/SwiftASB`.
-- Git dirty state: `True`.
+- Repository root: `.`.
 - Git upstream: `none`.
 - Reviewed window source: `ROADMAP.md`.
 - Promoted wire files:
