@@ -1645,10 +1645,10 @@ Completed
   compatibility refresh, promoted the `v0.139.0` generated wire snapshot
   internally, kept the new optional MCP status thread target out of public API,
   and cleared the full repo-owned live Codex release gate.
-- 2026-06-09: Published `v1.7.3` with the ASBPresentation foundation, first
+- 2026-06-09: Published `v1.7.2` with the ASBPresentation foundation, first
   ASBAppKit thread sidebar view, Codex CLI `0.138.x` generated-wire refresh,
   and PolyForm Noncommercial license transition.
-- 2026-06-09: Prepared the `v1.7.3` release branch with the ASBPresentation
+- 2026-06-09: Prepared the `v1.7.2` release branch with the ASBPresentation
   foundation, first ASBAppKit thread sidebar view, Codex CLI `0.138.x`
   generated-wire refresh, and PolyForm Noncommercial license transition.
 - 2026-06-06: Used the AgentSB schema-review and auto-apply-safe reports as the
