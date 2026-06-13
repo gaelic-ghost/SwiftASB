@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.2` is the current published release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.2` is the current and latest release.
 
 ### What This Project Is
 
