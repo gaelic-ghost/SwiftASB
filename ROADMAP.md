@@ -283,6 +283,55 @@ consuming apps to adopt:
 
 ## Current Patch Release Slice
 
+This slice records the `v1.7.4` patch release prep. Its job is to ship the
+first usable `ASBSwiftUI` components, record the immediate coverage audit, and
+turn the audit findings into follow-up work without widening the core
+app-server API boundary.
+
+### Planned for v1.7.4
+
+- [x] Add the first real `ASBSwiftUI` component surface.
+  Decision: `ASBThreadSidebar` wraps the AppKit-backed source-list renderer,
+  while `ASBAgendaPanel` and `ASBDashboardPanel` render light current-state
+  snapshots natively in SwiftUI. The old scaffold-only module marker is gone.
+- [x] Add package tests for the new SwiftUI component inputs.
+  Decision: `ASBSwiftUITests` now covers the public snapshots and intent
+  handlers accepted by the new SwiftUI components, while `ASBAppKitTests`
+  continues to cover the underlying sidebar view adapter behavior.
+- [x] Add high-impact README and maintainer-plan docs for the new UI products.
+  Decision: the README now shows the `ASBPresentation`, `ASBAppKit`, and
+  `ASBSwiftUI` products plus a compact component usage example, and the
+  presentation UI plan marks Slice 5 complete.
+- [x] Run a SwiftPM test coverage audit before release.
+  Decision: `swift test --enable-code-coverage` passed on 2026-06-14. The
+  source-only coverage report, excluding `.build`, generated wire, and test
+  files, reported 78.46% line coverage. The all-file report reported 78.17%
+  line coverage. These numbers are directional rather than a release gate
+  because SwiftUI `body` coverage stays low in ordinary package tests unless a
+  renderer or preview harness actually evaluates view bodies.
+- [ ] Follow up on coverage findings after the patch release.
+  Action: add renderer-focused tests for `ASBSwiftUI` display helpers and view
+  state once the first consumer usage clarifies which labels, statuses, and
+  action affordances are stable enough to test directly.
+  Action: add more presentation projection tests for agenda, dashboard,
+  timeline, and recent-activity variants instead of relying only on pure value
+  construction.
+  Action: add targeted transport/error/workspace edge tests for the lower
+  coverage files that still affect operator-facing diagnostics:
+  `CodexTransportError`, `CodexWorkspace`, `CodexAppServerTransport`, and
+  `CodexErrors`.
+  Action: keep generated-wire coverage out of the goal because generated
+  scaffolding remains internal and is validated by schema generation plus
+  protocol mapping tests.
+- [ ] Run the full release-branch validation set before tagging `v1.7.4`.
+  Required: `swift build`, `swift test`,
+  `swift test --enable-code-coverage`,
+  `bash scripts/repo-maintenance/validate-all.sh`, `uv run pytest` from
+  `Tools/AgentSB`, `git diff --check`, and
+  `scripts/run-live-codex-release-gate.sh`.
+
+## Previous Patch Release Slice
+
 This slice records the `v1.7.3` patch release prep. It does not widen the
 public SwiftASB API boundary. Its job is to keep SwiftASB aligned with the
 latest reviewed Codex CLI `0.139.x` app-server schema while preserving the
