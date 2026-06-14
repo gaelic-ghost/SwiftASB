@@ -494,14 +494,14 @@ workflow earns them in a later feature release.
   the plugin when public API, examples, compatibility windows, diagnostics,
   approval handling, validation, or recommended integration shape changes.
 - [ ] Hybrid presentation and UI component targets for SwiftASB consumers. The
-  package now has `ASBPresentation`, `ASBAppKit`, and `ASBSwiftUI` targets, and
-  `ASBPresentation` now has the framework-neutral foundation for sidebar, turn
-  timeline, recent activity, agenda, dashboard, selection state, viewport hints,
-  and typed UI intents. Next, add `ASBAppKit` dense macOS renderers such as
-  thread sidebars and turn timelines, then add `ASBSwiftUI` native light panels
-  plus SwiftUI wrappers around AppKit-backed dense components. Keep `SwiftASB`
-  as the runtime source of truth and avoid letting AppKit or SwiftUI own
-  separate thread-list, timeline, cache, or action models. See
+  package now has `ASBPresentation`, `ASBAppKit`, and `ASBSwiftUI` targets.
+  `ASBPresentation` has framework-neutral snapshots and intents for sidebar,
+  turn timeline, recent activity, agenda, dashboard, selection state, and
+  viewport hints. `ASBAppKit` ships the first dense thread-sidebar renderer,
+  and `ASBSwiftUI` ships the first sidebar wrapper plus native agenda and
+  dashboard panels. Next, add the turn timeline renderer and keep `SwiftASB` as
+  the runtime source of truth so AppKit and SwiftUI do not own separate
+  thread-list, timeline, cache, or action models. See
   [`docs/maintainers/presentation-ui-targets-plan.md`](docs/maintainers/presentation-ui-targets-plan.md).
 
 ### Public API Curation
