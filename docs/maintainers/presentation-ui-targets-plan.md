@@ -375,6 +375,12 @@ view reuse inside `ASBAppKit`.
 - Establish the OS availability file shape before adopting OS 27-specific
   SwiftUI APIs, and keep baseline public views available at the package minimum.
 
+Status: complete. `ASBThreadSidebar` wraps `ASBThreadSidebarView` for SwiftUI
+hosts, while `ASBAgendaPanel` and `ASBDashboardPanel` render the light
+current-state snapshots natively in SwiftUI. The SwiftUI target now keeps
+component files grouped by surface so future OS-specific adoption can stay in
+availability islands instead of leaking into `ASBPresentation`.
+
 ### Slice 6: Turn Timeline Renderer
 
 - Add `ASBTurnTimelineView` in `ASBAppKit`.

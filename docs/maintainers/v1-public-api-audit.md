@@ -514,7 +514,7 @@ Use these decisions for every public symbol:
   Decision: covered by the startup, progress/approval, diagnostics/history, and
   SwiftUI observable companion walkthroughs in `Sources/SwiftASB/SwiftASB.docc/`.
 - [x] Update stale README release references before the next release.
-  Decision: README now names `v1.7.3` as the current released baseline.
+  Decision: README now names `v1.7.4` as the current released baseline.
 - [x] Confirm README, DocC, and this audit use the same v1 release boundary.
   Decision: README, DocC, and this audit now describe the same narrow v1
   promise: app-server lifecycle, app-wide capability reads, stored-thread

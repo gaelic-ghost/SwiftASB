@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.3` is the current and latest release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.4` is the current and latest release.
 
 ### What This Project Is
 
@@ -38,13 +38,21 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.7.3"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.7.4"),
 ```
 
 Then add the library product to your target dependencies:
 
 ```swift
 .product(name: "SwiftASB", package: "SwiftASB"),
+```
+
+For reusable presentation or UI components, also add the products you use:
+
+```swift
+.product(name: "ASBPresentation", package: "SwiftASB"),
+.product(name: "ASBAppKit", package: "SwiftASB"),
+.product(name: "ASBSwiftUI", package: "SwiftASB"),
 ```
 
 Check your Codex version:
@@ -81,6 +89,28 @@ Use `CodexAppServer.fs` when a sandboxed client needs filesystem metadata, direc
 Use `CodexAppServer.ThreadListQD`, `CodexFS.FileDiscoveryQD`, `CodexThread.HistoryWindowQD`, `CodexThread.RecentFilesQD`, and `CodexThread.RecentCommandsQD` when a client needs to preserve repeatable list, file-discovery, history-window, or recent-activity intent without depending on Core Data, SwiftData, direct filesystem reads, or raw app-server paging details.
 
 Use `CodexThread.makeAgenda()` when a SwiftUI surface needs the thread's current goal, latest accepted plan, proposed plan text, and summary titles without manually assembling raw plan deltas or reconciling goal reads with goal events.
+
+Use `ASBSwiftUI` when a macOS app wants ready-made SwiftUI surfaces over the
+presentation snapshots:
+
+```swift
+import ASBPresentation
+import ASBSwiftUI
+
+ASBThreadSidebar(snapshot: ThreadSidebarSnapshot(library: library)) { intent in
+    // Route ThreadSidebarIntent values back to the owning app state.
+}
+
+ASBAgendaPanel(snapshot: AgendaSnapshot(agenda: agenda)) { intent in
+    // Route AgendaIntent values through the owning CodexThread.
+}
+
+ASBDashboardPanel(snapshot: DashboardSnapshot(dashboard: dashboard))
+```
+
+`ASBThreadSidebar` wraps the AppKit-backed source-list renderer for dense
+thread lists. `ASBAgendaPanel` and `ASBDashboardPanel` are native SwiftUI
+panels for lighter current-state surfaces.
 
 Use `CodexThread.startPlanningTurn(...)` when a mode button or segmented control should start the next turn in Codex plan mode without sending slash-command text through the prompt. Advanced callers can use `CodexAppServer.TurnCollaborationMode` directly on a turn-start request.
 
@@ -120,6 +150,9 @@ Agent-facing maintainer guidance lives in [AGENTS.md](./AGENTS.md).
 ├── README.md
 ├── ROADMAP.md
 ├── Sources/
+│   ├── ASBAppKit/
+│   ├── ASBPresentation/
+│   ├── ASBSwiftUI/
 │   └── SwiftASB/
 │       ├── Generated/
 │       ├── History/

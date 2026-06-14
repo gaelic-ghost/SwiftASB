@@ -112,7 +112,7 @@ lifecycle, SPI visibility, basic history hydration, first-pass reconciliation,
 or command-approval completion. Those slices now exist and shipped in the
 `v1.7.1` baseline.
 
-The next meaningful work after the `v1.7.3` patch release is to probe and deliberately shape the newly promoted
+The next meaningful work after the `v1.7.4` patch release is to probe and deliberately shape the newly promoted
 Codex CLI `0.139.x` wire families before widening public API. The `v0.139.0`
 promotion itself stayed intentionally small: SwiftASB refreshed the promoted
 wire snapshot, kept the new optional `threadId` on
@@ -282,6 +282,55 @@ consuming apps to adopt:
    lower-level lifecycle has more production mileage.
 
 ## Current Patch Release Slice
+
+This slice records the `v1.7.4` patch release prep. Its job is to ship the
+first usable `ASBSwiftUI` components, record the immediate coverage audit, and
+turn the audit findings into follow-up work without widening the core
+app-server API boundary.
+
+### Planned for v1.7.4
+
+- [x] Add the first real `ASBSwiftUI` component surface.
+  Decision: `ASBThreadSidebar` wraps the AppKit-backed source-list renderer,
+  while `ASBAgendaPanel` and `ASBDashboardPanel` render light current-state
+  snapshots natively in SwiftUI. The old scaffold-only module marker is gone.
+- [x] Add package tests for the new SwiftUI component inputs.
+  Decision: `ASBSwiftUITests` now covers the public snapshots and intent
+  handlers accepted by the new SwiftUI components, while `ASBAppKitTests`
+  continues to cover the underlying sidebar view adapter behavior.
+- [x] Add high-impact README and maintainer-plan docs for the new UI products.
+  Decision: the README now shows the `ASBPresentation`, `ASBAppKit`, and
+  `ASBSwiftUI` products plus a compact component usage example, and the
+  presentation UI plan marks Slice 5 complete.
+- [x] Run a SwiftPM test coverage audit before release.
+  Decision: `swift test --enable-code-coverage` passed on 2026-06-14. The
+  source-only coverage report, excluding `.build`, generated wire, and test
+  files, reported 78.46% line coverage. The all-file report reported 78.17%
+  line coverage. These numbers are directional rather than a release gate
+  because SwiftUI `body` coverage stays low in ordinary package tests unless a
+  renderer or preview harness actually evaluates view bodies.
+- [ ] Follow up on coverage findings after the patch release.
+  Action: add renderer-focused tests for `ASBSwiftUI` display helpers and view
+  state once the first consumer usage clarifies which labels, statuses, and
+  action affordances are stable enough to test directly.
+  Action: add more presentation projection tests for agenda, dashboard,
+  timeline, and recent-activity variants instead of relying only on pure value
+  construction.
+  Action: add targeted transport/error/workspace edge tests for the lower
+  coverage files that still affect operator-facing diagnostics:
+  `CodexTransportError`, `CodexWorkspace`, `CodexAppServerTransport`, and
+  `CodexErrors`.
+  Action: keep generated-wire coverage out of the goal because generated
+  scaffolding remains internal and is validated by schema generation plus
+  protocol mapping tests.
+- [ ] Run the full release-branch validation set before tagging `v1.7.4`.
+  Required: `swift build`, `swift test`,
+  `swift test --enable-code-coverage`,
+  `bash scripts/repo-maintenance/validate-all.sh`, `uv run pytest` from
+  `Tools/AgentSB`, `git diff --check`, and
+  `scripts/run-live-codex-release-gate.sh`.
+
+## Previous Patch Release Slice
 
 This slice records the `v1.7.3` patch release prep. It does not widen the
 public SwiftASB API boundary. Its job is to keep SwiftASB aligned with the
@@ -494,14 +543,14 @@ workflow earns them in a later feature release.
   the plugin when public API, examples, compatibility windows, diagnostics,
   approval handling, validation, or recommended integration shape changes.
 - [ ] Hybrid presentation and UI component targets for SwiftASB consumers. The
-  package now has `ASBPresentation`, `ASBAppKit`, and `ASBSwiftUI` targets, and
-  `ASBPresentation` now has the framework-neutral foundation for sidebar, turn
-  timeline, recent activity, agenda, dashboard, selection state, viewport hints,
-  and typed UI intents. Next, add `ASBAppKit` dense macOS renderers such as
-  thread sidebars and turn timelines, then add `ASBSwiftUI` native light panels
-  plus SwiftUI wrappers around AppKit-backed dense components. Keep `SwiftASB`
-  as the runtime source of truth and avoid letting AppKit or SwiftUI own
-  separate thread-list, timeline, cache, or action models. See
+  package now has `ASBPresentation`, `ASBAppKit`, and `ASBSwiftUI` targets.
+  `ASBPresentation` has framework-neutral snapshots and intents for sidebar,
+  turn timeline, recent activity, agenda, dashboard, selection state, and
+  viewport hints. `ASBAppKit` ships the first dense thread-sidebar renderer,
+  and `ASBSwiftUI` ships the first sidebar wrapper plus native agenda and
+  dashboard panels. Next, add the turn timeline renderer and keep `SwiftASB` as
+  the runtime source of truth so AppKit and SwiftUI do not own separate
+  thread-list, timeline, cache, or action models. See
   [`docs/maintainers/presentation-ui-targets-plan.md`](docs/maintainers/presentation-ui-targets-plan.md).
 
 ### Public API Curation
@@ -854,7 +903,7 @@ workflow earns them in a later feature release.
 #### Migration Notes
 
 - Existing `v0.9.x` consumers should update the SwiftPM dependency to
-  `from: "1.7.3"` once the tag is published.
+  `from: "1.7.4"` once the tag is published.
 - The v1 API surface has removed stale pre-v1 compatibility shims and phantom
   fields that no longer exist in the reviewed `v0.128.0` schema.
 - Same-thread overlapping turns are rejected client-side with
@@ -879,7 +928,7 @@ workflow earns them in a later feature release.
 
 - Keep an eye on future Swift Package Index builds after compatibility-window
   or DocC changes; the `v1.1.1` listing and documentation link are live, and
-  `v1.7.3` should be rechecked after the patch tag is indexed.
+  `v1.7.4` should be rechecked after the patch tag is indexed.
 - Add broader live server-request coverage for permissions and MCP elicitation
   if those become stronger public runtime guarantees.
 - Continue tuning recent companion cache calibration, richer file previews,
