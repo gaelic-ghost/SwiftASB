@@ -1,23 +1,19 @@
 import Foundation
 
-internal enum CodexRPCRequestID: Hashable, Sendable, Codable, CustomStringConvertible {
+enum CodexRPCRequestID: Hashable, Codable, CustomStringConvertible {
     case string(String)
     case int(Int)
 
-    internal static func generated() -> Self {
-        .string(UUID().uuidString)
-    }
-
-    internal var description: String {
+    var description: String {
         switch self {
-        case let .string(value):
-            value
-        case let .int(value):
-            String(value)
+            case let .string(value):
+                value
+            case let .int(value):
+                String(value)
         }
     }
 
-    internal init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let string = try? container.decode(String.self) {
             self = .string(string)
@@ -33,13 +29,17 @@ internal enum CodexRPCRequestID: Hashable, Sendable, Codable, CustomStringConver
         )
     }
 
-    internal func encode(to encoder: Encoder) throws {
+    static func generated() -> Self {
+        .string(UUID().uuidString)
+    }
+
+    func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
-        case let .string(value):
-            try container.encode(value)
-        case let .int(value):
-            try container.encode(value)
+            case let .string(value):
+                try container.encode(value)
+            case let .int(value):
+                try container.encode(value)
         }
     }
 }

@@ -1,24 +1,24 @@
 import Foundation
 
-internal struct LineDelimitedDataBuffer: Sendable {
+struct LineDelimitedDataBuffer {
     private var buffer = Data()
 
-    internal init() {}
+    init() {}
 
-    internal var isEmpty: Bool {
+    var isEmpty: Bool {
         buffer.isEmpty
     }
 
-    internal mutating func append(_ chunk: Data) -> [Data] {
+    mutating func append(_ chunk: Data) -> [Data] {
         buffer.append(chunk)
         return drainCompleteLines()
     }
 
-    internal mutating func removeAll(keepingCapacity: Bool = false) {
+    mutating func removeAll(keepingCapacity: Bool = false) {
         buffer.removeAll(keepingCapacity: keepingCapacity)
     }
 
-    internal mutating func finishPartialLine() -> Data? {
+    mutating func finishPartialLine() -> Data? {
         guard !buffer.isEmpty else {
             return nil
         }

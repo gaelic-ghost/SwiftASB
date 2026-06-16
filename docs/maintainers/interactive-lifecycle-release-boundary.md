@@ -50,7 +50,7 @@ runtime while the app-server schema is moving quickly before v1.
 Current policy:
 
 - support the latest reviewed public Codex CLI minor release
-- current reviewed minor release: `0.139.x`
+- current reviewed minor release: `0.140.x`
 - widen back to a rolling window only after the latest generated-wire and public
   API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
@@ -109,6 +109,7 @@ belongs in the release boundary:
 | Core item lifecycle notifications | `CodexTurnEvent.itemStarted`, `.itemCompleted` | These are the supported item-level lifecycle events today. |
 | Agent-message and plan deltas | `CodexTurnEvent.agentMessageDelta`, `.planDelta` | These are part of the intended interactive turn stream. |
 | Reasoning deltas | `CodexTurnEvent.reasoningSummaryPartAdded`, `.reasoningSummaryTextDelta`, `.reasoningTextDelta` | These are public because they are already part of the meaningful supported turn stream. |
+| Sub-agent activity turn items | `CodexTurnItem.Kind.subAgentActivity` | v0.140 adds this item type to the thread-item union. SwiftASB exposes it as an item kind so existing item-start, item-complete, and stored-turn surfaces can preserve the app-server classification without a separate sub-agent activity API. |
 | Server-request resolution notifications | `CodexTurnEvent.serverRequestResolved`, `CodexThreadEvent.serverRequestResolved` | These are public because request cleanup is part of the supported interactive lifecycle. |
 | Approval request families | `CodexTurnEvent.approvalRequested`, `CodexThreadEvent.approvalRequested` | These are protocol-level server requests rather than generated notifications, but they are part of the supported public lifecycle. |
 | Elicitation request families | `CodexTurnEvent.elicitationRequested`, `CodexThreadEvent.elicitationRequested` | These are also protocol-level server requests and part of the supported public lifecycle. |
@@ -120,7 +121,7 @@ belongs in the release boundary:
 | Thread shell command execution | `CodexThread.sendShellCommand(_:)` | `thread/shellCommand` is public as an explicitly gated, high-impact thread action. It stays separate from internal `command/exec` helper usage because it sends literal shell syntax to the thread shell and upstream documents it as unsandboxed full-user shell access. |
 | Code review start | `CodexThread.startReview(against:placement:)` | `review/start` is public as a thread-scoped review action. SwiftASB exposes hand-owned review subjects and placement names instead of the upstream `target` and `delivery` field names, and returns `CodexReviewHandle` so detached reviews can surface the returned review thread id. |
 | App-wide model listing | `CodexAppServer.listModels(...)` | `model/list` describes shared runtime capabilities rather than one conversation thread, so the public API belongs on the connection-owning app-server actor. |
-| App-wide MCP-server status snapshots | `CodexAppServer.mcp.statusSnapshot()`, `CodexAppServer.Inventory.mcpServers`, `CodexAppServer.Library.mcpServers` | SwiftASB owns refresh for `mcpServerStatus/list`. `CodexMCP.statusSnapshot()` keeps the full connection-wide catalog for inspectors; observable Inventory and Library state expose lightweight `McpServerSummary` values for common UI surfaces. The lower-level list request remains compatibility-only while consumers move to owned snapshots. |
+| App-wide MCP-server status snapshots | `CodexAppServer.mcp.statusSnapshot()`, `CodexAppServer.Inventory.mcpServers`, `CodexAppServer.Library.mcpServers` | SwiftASB owns refresh for `mcpServerStatus/list`. `CodexMCP.statusSnapshot()` keeps the full connection-wide catalog for inspectors; observable Inventory and Library state expose lightweight `McpServerSummary` values for common UI surfaces. The lower-level list request remains internal snapshot-refresh support instead of a public compatibility surface. |
 | App-wide MCP resource reads | `CodexAppServer.mcp.readResource(...)` | `mcpServer/resource/read` is public as a read-only capability/resource inspection action. It stays app-server-owned because the resource may be connection-wide, with optional thread context only when the app-server needs it. |
 | App-wide hook diagnostics listing | `CodexAppServer.Inventory`, `CodexAppServer.listHooks(...)` | `hooks/list` reports configured hooks, warnings, and load errors for working directories. Routine UI should consume Inventory while direct reads remain available when a caller intentionally owns timing or cwd selection. |
 | Thread-visible MCP-server summaries | `CodexThread.mcpServers`, `CodexThread.Dashboard.mcpServers` | Thread handles and dashboards expose the effective MCP service list for that thread as `McpServerSummary` values. SwiftASB classifies summaries as global when the server name is present in the global cache and thread-scoped otherwise, because the upstream status response does not currently carry an explicit scope field. |
@@ -202,6 +203,7 @@ Remaining gap inside the observable-only slice:
 | Error notifications | The current public contract keeps lifecycle failures unified under `CodexAppServerError` instead of streaming raw protocol error-notification payloads. |
 | Guardian approval review started / completed notifications | The generated wire comments already mark these payloads as unstable, so they should stay internal until upstream stabilizes them and the package decides on a real public model. |
 | Thread-targeted MCP status update metadata | `v0.139.0` adds an optional `threadId` on `mcpServer/startupStatus/updated`, but SwiftASB keeps the public MCP status surface centered on app-wide snapshots and thread-visible summaries until a dedicated thread-scoped MCP diagnostic model is clearly earned. |
+| Capability roots, plugin sharing metadata, and app auth-state drift | `v0.140.0` adds selected capability roots and additional plugin/app metadata while removing the plugin app-summary `needsAuth` field. SwiftASB keeps capability roots and sharing metadata internal for now, and removes the old public `needsAuth` compatibility field instead of inventing a fallback auth value. |
 
 ## Family Inventory
 

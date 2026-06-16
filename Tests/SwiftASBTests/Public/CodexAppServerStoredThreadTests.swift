@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("lists stored threads and reconciles archive state into the local history store")
@@ -10,7 +10,7 @@ extension CodexAppServerTests {
                 "data": [
                     [
                         "cliVersion": "0.128.0",
-                        "createdAt": 1713350000,
+                        "createdAt": 1_713_350_000,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
                         "id": "thread-123",
@@ -20,7 +20,7 @@ extension CodexAppServerTests {
                         "source": "cli",
                         "status": ["type": "notLoaded"],
                         "turns": [],
-                        "updatedAt": 1713350005,
+                        "updatedAt": 1_713_350_005,
                     ],
                 ],
                 "nextCursor": "cursor-next",
@@ -84,7 +84,7 @@ extension CodexAppServerTests {
             "data": [
                 [
                     "cliVersion": "0.128.0",
-                    "createdAt": 1713350000,
+                    "createdAt": 1_713_350_000,
                     "cwd": "/tmp/project",
                     "ephemeral": false,
                     "id": "thread-123",
@@ -94,7 +94,7 @@ extension CodexAppServerTests {
                     "source": "cli",
                     "status": ["type": "idle"],
                     "turns": [],
-                    "updatedAt": 1713350007,
+                    "updatedAt": 1_713_350_007,
                 ],
             ],
         ])
@@ -129,7 +129,7 @@ extension CodexAppServerTests {
                 "data": [
                     [
                         "cliVersion": "0.128.0",
-                        "createdAt": 1713350100,
+                        "createdAt": 1_713_350_100,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
                         "id": "thread-custom",
@@ -141,11 +141,11 @@ extension CodexAppServerTests {
                         ],
                         "status": ["type": "notLoaded"],
                         "turns": [],
-                        "updatedAt": 1713350105,
+                        "updatedAt": 1_713_350_105,
                     ],
                     [
                         "cliVersion": "0.128.0",
-                        "createdAt": 1713350200,
+                        "createdAt": 1_713_350_200,
                         "cwd": "/tmp/project",
                         "ephemeral": false,
                         "id": "thread-subagent",
@@ -165,7 +165,7 @@ extension CodexAppServerTests {
                         ],
                         "status": ["type": "notLoaded"],
                         "turns": [],
-                        "updatedAt": 1713350205,
+                        "updatedAt": 1_713_350_205,
                     ],
                 ],
             ]
@@ -251,7 +251,7 @@ extension CodexAppServerTests {
                 "serviceTier": "fast",
                 "thread": [
                     "cliVersion": "0.128.0",
-                    "createdAt": 1713350000,
+                    "createdAt": 1_713_350_000,
                     "cwd": "/tmp/project",
                     "ephemeral": false,
                     "id": "thread-123",
@@ -262,7 +262,7 @@ extension CodexAppServerTests {
                     "status": ["type": "idle"],
                     "turns": [
                         [
-                            "completedAt": 1713350005,
+                            "completedAt": 1_713_350_005,
                             "durationMs": 3000,
                             "error": NSNull(),
                             "id": "turn-hydrated-1",
@@ -274,11 +274,11 @@ extension CodexAppServerTests {
                                     "type": "agentMessage",
                                 ],
                             ],
-                            "startedAt": 1713350002,
+                            "startedAt": 1_713_350_002,
                             "status": "completed",
                         ],
                     ],
-                    "updatedAt": 1713350005,
+                    "updatedAt": 1_713_350_005,
                 ],
             ]
         )
@@ -309,12 +309,7 @@ extension CodexAppServerTests {
         let thread = try await client.resumeThread(
             .init(
                 threadID: "thread-123",
-                permissions: .init(
-                    id: ":workspace",
-                    modifications: [
-                        .init(additionalWritableRoot: "/tmp/project-fixtures/resume"),
-                    ]
-                ),
+                permissions: .workspace,
                 personality: .friendly
             )
         )
@@ -369,7 +364,7 @@ extension CodexAppServerTests {
                 "serviceTier": "fast",
                 "thread": [
                     "cliVersion": "0.128.0",
-                    "createdAt": 1713350010,
+                    "createdAt": 1_713_350_010,
                     "cwd": "/tmp/project",
                     "ephemeral": true,
                     "forkedFromId": "thread-123",
@@ -381,7 +376,7 @@ extension CodexAppServerTests {
                     "status": ["type": "idle"],
                     "turns": [
                         [
-                            "completedAt": 1713350005,
+                            "completedAt": 1_713_350_005,
                             "durationMs": 3000,
                             "error": NSNull(),
                             "id": "turn-shared-1",
@@ -393,11 +388,11 @@ extension CodexAppServerTests {
                                     "type": "agentMessage",
                                 ],
                             ],
-                            "startedAt": 1713350002,
+                            "startedAt": 1_713_350_002,
                             "status": "completed",
                         ],
                     ],
-                    "updatedAt": 1713350011,
+                    "updatedAt": 1_713_350_011,
                 ],
             ]
         )
@@ -422,12 +417,7 @@ extension CodexAppServerTests {
             .init(
                 threadID: "thread-123",
                 ephemeral: true,
-                permissions: .init(
-                    id: ":workspace",
-                    modifications: [
-                        .init(additionalWritableRoot: "/tmp/project-fixtures/fork"),
-                    ]
-                ),
+                permissions: .workspace,
                 personality: .pragmatic
             )
         )
@@ -459,5 +449,4 @@ extension CodexAppServerTests {
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
-
 }

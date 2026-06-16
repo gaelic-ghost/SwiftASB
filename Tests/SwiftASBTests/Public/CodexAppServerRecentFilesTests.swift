@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("recent-file descriptors normalize companion intent")
@@ -158,7 +158,7 @@ extension CodexAppServerTests {
             delta: "    .package(url: \"https://example.com\")\n"
         )
 
-        await waitForObservableState(maxAttempts: 2_000) {
+        await waitForObservableState(maxAttempts: 2000) {
             recentFiles.files[0].payloadText?.contains("https://example.com") == true
         }
 
@@ -174,7 +174,7 @@ extension CodexAppServerTests {
             ]
         )
 
-        await waitForObservableState(maxAttempts: 2_000) {
+        await waitForObservableState(maxAttempts: 2000) {
             recentFiles.files[0].status == .completed
                 && recentFiles.files[0].payloadText?.contains("https://example.com") == true
         }
@@ -225,11 +225,11 @@ extension CodexAppServerTests {
             turns: [
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350005,
+                        completedAt: 1_713_350_005,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-older",
-                        startedAt: 1713350000,
+                        startedAt: 1_713_350_000,
                         status: .completed
                     ),
                     items: [
@@ -287,6 +287,7 @@ extension CodexAppServerTests {
             guard let olderFile = recentFiles.files.first(where: { $0.id == "turn-older:item-file-older" }) else {
                 return false
             }
+
             return olderFile.isPayloadComplete == false && olderFile.payloadText == nil
         }
 
@@ -417,5 +418,4 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
-
 }

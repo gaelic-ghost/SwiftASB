@@ -1,44 +1,44 @@
 import Foundation
 
-internal enum CodexRPCInboundMessage: Equatable, Sendable {
+enum CodexRPCInboundMessage: Equatable {
     case response(id: CodexRPCRequestID, payload: Data)
     case serverEvent(CodexRPCServerEvent)
 }
 
-internal enum CodexRPCServerEvent: Equatable, Sendable {
+enum CodexRPCServerEvent: Equatable {
     case notification(method: String, payload: Data)
     case request(id: CodexRPCRequestID, method: String, payload: Data)
 }
 
-internal enum CodexRPCEnvelope {
-    internal static func classifyInboundMessage(_ data: Data) throws -> CodexRPCInboundMessage {
+enum CodexRPCEnvelope {
+    static func classifyInboundMessage(_ data: Data) throws -> CodexRPCInboundMessage {
         let object = try parseJSONObject(from: data)
 
         let method = object["method"] as? String
         let requestID = try object["id"].map(parseRequestID)
 
         switch (method, requestID) {
-        case let (.some(method), .some(id)):
-            return .serverEvent(
-                .request(
-                    id: id,
-                    method: method,
-                    payload: try extractParamsPayload(from: object)
+            case let (.some(method), .some(id)):
+                return try .serverEvent(
+                    .request(
+                        id: id,
+                        method: method,
+                        payload: extractParamsPayload(from: object)
+                    )
                 )
-            )
-        case let (.some(method), .none):
-            return .serverEvent(
-                .notification(
-                    method: method,
-                    payload: try extractParamsPayload(from: object)
+            case let (.some(method), .none):
+                return try .serverEvent(
+                    .notification(
+                        method: method,
+                        payload: extractParamsPayload(from: object)
+                    )
                 )
-            )
-        case let (.none, .some(id)):
-            return .response(id: id, payload: data)
-        case (.none, .none):
-            throw CodexTransportError.invalidJSONRPCEnvelope(
-                reason: "Expected the inbound message to contain either a method, an ID, or both."
-            )
+            case let (.none, .some(id)):
+                return .response(id: id, payload: data)
+            case (.none, .none):
+                throw CodexTransportError.invalidJSONRPCEnvelope(
+                    reason: "Expected the inbound message to contain either a method, an ID, or both."
+                )
         }
     }
 
@@ -49,6 +49,7 @@ internal enum CodexRPCEnvelope {
                 reason: "Expected the inbound JSON-RPC payload to be a top-level object."
             )
         }
+
         return object
     }
 
@@ -78,12 +79,12 @@ internal enum CodexRPCEnvelope {
                     reason: "JSON-RPC numeric request ID \(number) is outside the supported Swift Int range."
                 )
             }
-
             guard let integerValue = Int(exactly: NSDecimalNumber(decimal: decimalValue)) else {
                 throw CodexTransportError.invalidJSONRPCEnvelope(
                     reason: "JSON-RPC numeric request ID \(number) could not be represented exactly as a Swift Int."
                 )
             }
+
             return .int(integerValue)
         }
 

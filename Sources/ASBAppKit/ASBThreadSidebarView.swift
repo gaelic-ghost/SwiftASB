@@ -20,8 +20,8 @@ public final class ASBThreadSidebarView: NSView {
     ) {
         self.snapshot = snapshot
         self.onIntent = onIntent
-        self.scrollView = NSScrollView()
-        self.outlineView = NSOutlineView()
+        scrollView = NSScrollView()
+        outlineView = NSOutlineView()
         super.init(frame: .zero)
         configureViewHierarchy()
         apply(snapshot)
@@ -102,6 +102,7 @@ public final class ASBThreadSidebarView: NSView {
 
         let rowIndex = outlineView.row(forItem: row)
         guard rowIndex >= 0 else { return }
+
         outlineView.selectRowIndexes(IndexSet(integer: rowIndex), byExtendingSelection: false)
     }
 
@@ -111,6 +112,7 @@ public final class ASBThreadSidebarView: NSView {
               let row = outlineView.item(atRow: selectedRow) as? ASBThreadSidebarRow,
               let item = row.threadItem
         else { return }
+
         onIntent?(.openThread(id: item.id))
     }
 }
@@ -144,6 +146,7 @@ extension ASBThreadSidebarView: NSOutlineViewDataSource {
 extension ASBThreadSidebarView: NSOutlineViewDelegate {
     public func outlineViewSelectionDidChange(_ notification: Notification) {
         guard !suppressSelectionIntent else { return }
+
         let selectedRow = outlineView.selectedRow
         guard selectedRow >= 0,
               let row = outlineView.item(atRow: selectedRow) as? ASBThreadSidebarRow,
@@ -152,6 +155,7 @@ extension ASBThreadSidebarView: NSOutlineViewDelegate {
             onIntent?(.selectThread(id: nil))
             return
         }
+
         onIntent?(.selectThread(id: item.id))
     }
 
@@ -161,6 +165,7 @@ extension ASBThreadSidebarView: NSOutlineViewDelegate {
         item: Any
     ) -> NSView? {
         guard let row = item as? ASBThreadSidebarRow else { return nil }
+
         let cell = outlineView.makeView(
             withIdentifier: ASBThreadSidebarRowView.identifier,
             owner: self
@@ -181,11 +186,12 @@ extension ASBThreadSidebarView: NSOutlineViewDelegate {
         heightOfRowByItem item: Any
     ) -> CGFloat {
         guard let row = item as? ASBThreadSidebarRow else { return 28 }
+
         switch row.kind {
-        case .section:
-            return 24
-        case .thread:
-            return 44
+            case .section:
+                return 24
+            case .thread:
+                return 44
         }
     }
 }
@@ -197,16 +203,16 @@ final class ASBThreadSidebarAdapter {
 
     private(set) var sections: [ASBThreadSidebarRow] = []
 
+    var flattenedRows: [ASBThreadSidebarRow] {
+        sections.flatMap { [$0] + $0.children }
+    }
+
     init(snapshot: ThreadSidebarSnapshot = .init()) {
         apply(snapshot)
     }
 
     func apply(_ snapshot: ThreadSidebarSnapshot) {
         sections = snapshot.sections.map(ASBThreadSidebarRow.init(section:))
-    }
-
-    var flattenedRows: [ASBThreadSidebarRow] {
-        sections.flatMap { [$0] + $0.children }
     }
 
     func row(forThreadID threadID: String) -> ASBThreadSidebarRow? {
@@ -219,6 +225,7 @@ final class ASBThreadSidebarAdapter {
         guard let row = item as? ASBThreadSidebarRow else {
             return sections.count
         }
+
         return row.children.count
     }
 
@@ -226,11 +233,13 @@ final class ASBThreadSidebarAdapter {
         guard let row = item as? ASBThreadSidebarRow else {
             return sections[index]
         }
+
         return row.children[index]
     }
 
     func isExpandable(_ item: Any) -> Bool {
         guard let row = item as? ASBThreadSidebarRow else { return false }
+
         return !row.children.isEmpty
     }
 }
@@ -238,7 +247,7 @@ final class ASBThreadSidebarAdapter {
 /// One AppKit outline row derived from a presentation snapshot.
 @MainActor
 final class ASBThreadSidebarRow: NSObject, Identifiable {
-    enum Kind: Sendable, Equatable {
+    enum Kind: Equatable {
         case section
         case thread
     }
@@ -251,22 +260,22 @@ final class ASBThreadSidebarRow: NSObject, Identifiable {
     let children: [ASBThreadSidebarRow]
 
     init(section: ThreadSidebarSection) {
-        self.id = "section:\(section.id)"
-        self.kind = .section
-        self.title = section.title
-        self.subtitle = nil
-        self.threadItem = nil
-        self.children = section.items.map(ASBThreadSidebarRow.init(item:))
+        id = "section:\(section.id)"
+        kind = .section
+        title = section.title
+        subtitle = nil
+        threadItem = nil
+        children = section.items.map(ASBThreadSidebarRow.init(item:))
         super.init()
     }
 
     init(item: ThreadSidebarItem) {
-        self.id = "thread:\(item.id)"
-        self.kind = .thread
-        self.title = item.title
-        self.subtitle = Self.subtitle(for: item)
-        self.threadItem = item
-        self.children = []
+        id = "thread:\(item.id)"
+        kind = .thread
+        title = item.title
+        subtitle = Self.subtitle(for: item)
+        threadItem = item
+        children = []
         super.init()
     }
 

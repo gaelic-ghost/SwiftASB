@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("CodexFS routes read-only filesystem requests through the app-server")
@@ -34,13 +34,13 @@ extension CodexAppServerTests {
         #expect(String(data: file.data, encoding: .utf8) == "hello from CodexFS")
 
         let metadataRequest = try #require(await transport.recordedRequestPayload(for: "fs/getMetadata"))
-        #expect(value(at: ["params", "path"], in: try decodedJSONObject(from: metadataRequest)) as? String == "/tmp/project")
+        #expect(try value(at: ["params", "path"], in: decodedJSONObject(from: metadataRequest)) as? String == "/tmp/project")
 
         let directoryRequest = try #require(await transport.recordedRequestPayload(for: "fs/readDirectory"))
-        #expect(value(at: ["params", "path"], in: try decodedJSONObject(from: directoryRequest)) as? String == "/tmp/project")
+        #expect(try value(at: ["params", "path"], in: decodedJSONObject(from: directoryRequest)) as? String == "/tmp/project")
 
         let fileRequest = try #require(await transport.recordedRequestPayload(for: "fs/readFile"))
-        #expect(value(at: ["params", "path"], in: try decodedJSONObject(from: fileRequest)) as? String == "/tmp/project/README.md")
+        #expect(try value(at: ["params", "path"], in: decodedJSONObject(from: fileRequest)) as? String == "/tmp/project/README.md")
 
         await client.stop()
     }
@@ -90,7 +90,7 @@ extension CodexAppServerTests {
 
         let directoryRequests = await transport.requestPayloads(for: "fs/readDirectory")
         let directoryPaths = try directoryRequests.map {
-            value(at: ["params", "path"], in: try decodedJSONObject(from: $0)) as? String
+            try value(at: ["params", "path"], in: decodedJSONObject(from: $0)) as? String
         }
         #expect(directoryPaths.contains("/tmp/project"))
         #expect(directoryPaths.contains("/tmp/project/Sources"))
@@ -228,7 +228,7 @@ extension CodexAppServerTests {
 
         try await client.fs.unwatch(.init(watchID: "watch-123"))
         let unwatchRequest = try #require(await transport.recordedRequestPayload(for: "fs/unwatch"))
-        #expect(value(at: ["params", "watchId"], in: try decodedJSONObject(from: unwatchRequest)) as? String == "watch-123")
+        #expect(try value(at: ["params", "watchId"], in: decodedJSONObject(from: unwatchRequest)) as? String == "watch-123")
 
         await client.stop()
     }
@@ -337,7 +337,7 @@ extension CodexAppServerTests {
         #expect(plugin.marketplaceName == "openai-curated")
         #expect(plugin.marketplacePath == "/tmp/marketplaces/openai-curated.json")
         #expect(plugin.description == "GitHub plugin detail fixture.")
-        #expect(plugin.apps.first?.needsAuth == true)
+        #expect(plugin.apps.first?.category == "developer-tools")
         #expect(plugin.hooks.map(\.key) == ["github-pre-tool-use", "github-post-tool-use"])
         #expect(plugin.hooks.map(\.eventName) == [.preToolUse, .postToolUse])
         #expect(plugin.skills.first?.displayName == "PR Review")
@@ -372,7 +372,7 @@ extension CodexAppServerTests {
         #expect(value(at: ["params", "remoteMarketplaceName"], in: pluginReadJSON) as? String == "openai-curated")
 
         let collaborationRequest = try #require(await transport.recordedRequestPayload(for: "collaborationMode/list"))
-        #expect(value(at: ["params"], in: try decodedJSONObject(from: collaborationRequest)) as? [String: Any] != nil)
+        #expect(try value(at: ["params"], in: decodedJSONObject(from: collaborationRequest)) as? [String: Any] != nil)
 
         await client.stop()
     }
@@ -408,7 +408,7 @@ extension CodexAppServerTests {
             .init(
                 marketplaceName: "openai-curated",
                 currentDirectoryPaths: ["/tmp/project"],
-                timeoutMilliseconds: 30_000
+                timeoutMilliseconds: 30000
             )
         )
 
@@ -424,12 +424,12 @@ extension CodexAppServerTests {
         #expect(!methods.contains("thread/start"))
 
         let pluginsRequest = try #require(await transport.recordedRequestPayload(for: "plugin/list"))
-        #expect(value(at: ["params", "cwds"], in: try decodedJSONObject(from: pluginsRequest)) as? [String] == ["/tmp/project"])
+        #expect(try value(at: ["params", "cwds"], in: decodedJSONObject(from: pluginsRequest)) as? [String] == ["/tmp/project"])
 
         let commandRequest = try #require(await transport.recordedRequestPayload(for: "command/exec"))
         let commandJSON = try decodedJSONObject(from: commandRequest)
         #expect(value(at: ["params", "command"], in: commandJSON) as? [String] == result.command)
-        #expect(value(at: ["params", "timeoutMs"], in: commandJSON) as? Int == 30_000)
+        #expect(value(at: ["params", "timeoutMs"], in: commandJSON) as? Int == 30000)
         #expect(value(at: ["params", "permissionProfile"], in: commandJSON) == nil)
         #expect(value(at: ["params", "sandboxPolicy"], in: commandJSON) == nil)
 
@@ -510,50 +510,6 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
-    @Test("CodexExtensions rejects removed per-cwd extra skill roots option")
-    func codexExtensionsRejectsRemovedPerCwdExtraSkillRootsOption() async throws {
-        let transport = FakeCodexAppServerTransport()
-        let client = CodexAppServer(transport: transport)
-
-        try await client.start()
-        _ = try await client.initialize(
-            .init(
-                clientInfo: .init(
-                    name: "SwiftASBTests",
-                    title: "SwiftASB Tests",
-                    version: "0.1.0"
-                )
-            )
-        )
-
-        do {
-            _ = try await client.extensions.skills.list(
-                .init(
-                    currentDirectoryPaths: ["/tmp/project"],
-                    perCurrentDirectoryExtraUserRoots: [
-                        .init(currentDirectoryPath: "/tmp/project", extraUserRoots: ["/tmp/extra-skills"]),
-                    ]
-                )
-            )
-            Issue.record("Expected per-cwd extra skill roots to be rejected for Codex CLI 0.130.0.")
-        } catch let error as CodexAppServerError {
-            guard case let .invalidState(reason) = error else {
-                Issue.record("Expected removed per-cwd extra skill roots to throw an invalidState error.")
-                await client.stop()
-                return
-            }
-
-            #expect(
-                reason
-                    == "Codex CLI 0.130.0 removed per-cwd extra user roots from skills/list; pass currentDirectoryPaths and forceReload only."
-            )
-        }
-
-        #expect(await transport.recordedRequestPayload(for: "skills/list") == nil)
-
-        await client.stop()
-    }
-
     @Test("CodexThread reads and updates app-server thread goals")
     func codexThreadReadsAndUpdatesAppServerThreadGoals() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -581,9 +537,9 @@ extension CodexAppServerTests {
         #expect(goal?.objective == "Promote schemas")
         #expect(goal?.status == .active)
 
-        let updated = try await thread.setGoal(.init(status: .budgetLimited, tokenBudget: 30_000))
+        let updated = try await thread.setGoal(.init(status: .budgetLimited, tokenBudget: 30000))
         #expect(updated.status == .budgetLimited)
-        #expect(updated.tokenBudget == 30_000)
+        #expect(updated.tokenBudget == 30000)
 
         let cleared = try await thread.clearGoal()
         #expect(cleared)
@@ -592,7 +548,7 @@ extension CodexAppServerTests {
         let goalSetJSON = try decodedJSONObject(from: goalSetRequest)
         #expect(value(at: ["params", "threadId"], in: goalSetJSON) as? String == thread.id)
         #expect(value(at: ["params", "status"], in: goalSetJSON) as? String == "budgetLimited")
-        #expect(value(at: ["params", "tokenBudget"], in: goalSetJSON) as? Int == 30_000)
+        #expect(value(at: ["params", "tokenBudget"], in: goalSetJSON) as? Int == 30000)
 
         await client.stop()
     }
@@ -612,6 +568,7 @@ private func value(
               let next = dictionary[key] else {
             return nil
         }
+
         current = next
     }
     return current

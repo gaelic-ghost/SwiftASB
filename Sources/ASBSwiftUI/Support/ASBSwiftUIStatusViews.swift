@@ -93,35 +93,35 @@ struct ASBDiagnosticMessage: View {
 extension AgendaGoalStatus {
     var displayTitle: String {
         switch self {
-        case .active:
-            "Active"
-        case .blocked:
-            "Blocked"
-        case .budgetLimited:
-            "Budget Limited"
-        case .complete:
-            "Complete"
-        case .paused:
-            "Paused"
-        case .usageLimited:
-            "Usage Limited"
+            case .active:
+                "Active"
+            case .blocked:
+                "Blocked"
+            case .budgetLimited:
+                "Budget Limited"
+            case .complete:
+                "Complete"
+            case .paused:
+                "Paused"
+            case .usageLimited:
+                "Usage Limited"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .active:
-            "play.circle"
-        case .blocked:
-            "exclamationmark.octagon"
-        case .budgetLimited:
-            "gauge.with.dots.needle.bottom.50percent"
-        case .complete:
-            "checkmark.circle"
-        case .paused:
-            "pause.circle"
-        case .usageLimited:
-            "speedometer"
+            case .active:
+                "play.circle"
+            case .blocked:
+                "exclamationmark.octagon"
+            case .budgetLimited:
+                "gauge.with.dots.needle.bottom.50percent"
+            case .complete:
+                "checkmark.circle"
+            case .paused:
+                "pause.circle"
+            case .usageLimited:
+                "speedometer"
         }
     }
 }
@@ -129,23 +129,23 @@ extension AgendaGoalStatus {
 extension AgendaStepStatus {
     var systemImage: String {
         switch self {
-        case .completed:
-            "checkmark.circle.fill"
-        case .inProgress:
-            "play.circle.fill"
-        case .pending:
-            "circle"
+            case .completed:
+                "checkmark.circle.fill"
+            case .inProgress:
+                "play.circle.fill"
+            case .pending:
+                "circle"
         }
     }
 
     var tint: HierarchicalShapeStyle {
         switch self {
-        case .completed:
-            .primary
-        case .inProgress:
-            .secondary
-        case .pending:
-            .tertiary
+            case .completed:
+                .primary
+            case .inProgress:
+                .secondary
+            case .pending:
+                .tertiary
         }
     }
 }
@@ -153,23 +153,23 @@ extension AgendaStepStatus {
 extension DashboardActivityStatus {
     var displayTitle: String {
         switch self {
-        case .errored:
-            "Errored"
-        case .idle:
-            "Idle"
-        case .inProgress:
-            "In Progress"
+            case .errored:
+                "Errored"
+            case .idle:
+                "Idle"
+            case .inProgress:
+                "In Progress"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .errored:
-            "exclamationmark.triangle"
-        case .idle:
-            "circle"
-        case .inProgress:
-            "play.circle"
+            case .errored:
+                "exclamationmark.triangle"
+            case .idle:
+                "circle"
+            case .inProgress:
+                "play.circle"
         }
     }
 }
@@ -177,35 +177,35 @@ extension DashboardActivityStatus {
 extension DashboardAutoReviewStatus {
     var displayTitle: String {
         switch self {
-        case .aborted:
-            "Aborted"
-        case .approved:
-            "Approved"
-        case .denied:
-            "Denied"
-        case .idle:
-            "Idle"
-        case .inProgress:
-            "In Progress"
-        case .timedOut:
-            "Timed Out"
+            case .aborted:
+                "Aborted"
+            case .approved:
+                "Approved"
+            case .denied:
+                "Denied"
+            case .idle:
+                "Idle"
+            case .inProgress:
+                "In Progress"
+            case .timedOut:
+                "Timed Out"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .aborted:
-            "xmark.octagon"
-        case .approved:
-            "checkmark.seal"
-        case .denied:
-            "hand.raised"
-        case .idle:
-            "circle"
-        case .inProgress:
-            "clock"
-        case .timedOut:
-            "timer"
+            case .aborted:
+                "xmark.octagon"
+            case .approved:
+                "checkmark.seal"
+            case .denied:
+                "hand.raised"
+            case .idle:
+                "circle"
+            case .inProgress:
+                "clock"
+            case .timedOut:
+                "timer"
         }
     }
 }
@@ -213,22 +213,22 @@ extension DashboardAutoReviewStatus {
 extension TurnTimelineItemKind {
     var systemImage: String {
         switch self {
-        case .agentMessage:
-            "text.bubble"
-        case .collabTool:
-            "person.2.wave.2"
-        case .command:
-            "terminal"
-        case .dynamicTool:
-            "wrench.and.screwdriver"
-        case .fileEdit:
-            "doc.text"
-        case .mcp:
-            "point.3.connected.trianglepath.dotted"
-        case .reasoning:
-            "brain"
-        case .unknown:
-            "questionmark.circle"
+            case .agentMessage:
+                "text.bubble"
+            case .collabTool:
+                "person.2.wave.2"
+            case .command:
+                "terminal"
+            case .dynamicTool:
+                "wrench.and.screwdriver"
+            case .fileEdit:
+                "doc.text"
+            case .mcp:
+                "point.3.connected.trianglepath.dotted"
+            case .reasoning:
+                "brain"
+            case .unknown:
+                "questionmark.circle"
         }
     }
 }

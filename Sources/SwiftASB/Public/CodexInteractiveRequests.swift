@@ -16,9 +16,9 @@ public struct CodexInteractiveRequestResolved: Sendable, Equatable {
     public let turnID: String?
     public let kind: CodexInteractiveRequestKind
 
-    internal let requestID: CodexRPCRequestID
+    let requestID: CodexRPCRequestID
 
-    internal init(
+    init(
         requestID: CodexRPCRequestID,
         threadID: String,
         turnID: String?,
@@ -40,53 +40,53 @@ public enum CodexApprovalRequest: Sendable, Equatable {
 
     public var threadID: String {
         switch self {
-        case let .commandExecution(request):
-            request.threadID
-        case let .fileChange(request):
-            request.threadID
-        case let .guardianDeniedAction(request):
-            request.threadID
-        case let .permissions(request):
-            request.threadID
+            case let .commandExecution(request):
+                request.threadID
+            case let .fileChange(request):
+                request.threadID
+            case let .guardianDeniedAction(request):
+                request.threadID
+            case let .permissions(request):
+                request.threadID
         }
     }
 
     public var turnID: String {
         switch self {
-        case let .commandExecution(request):
-            request.turnID
-        case let .fileChange(request):
-            request.turnID
-        case let .guardianDeniedAction(request):
-            request.turnID
-        case let .permissions(request):
-            request.turnID
+            case let .commandExecution(request):
+                request.turnID
+            case let .fileChange(request):
+                request.turnID
+            case let .guardianDeniedAction(request):
+                request.turnID
+            case let .permissions(request):
+                request.turnID
         }
     }
 
     public var kind: CodexInteractiveRequestKind {
         switch self {
-        case .commandExecution:
-            .commandExecutionApproval
-        case .fileChange:
-            .fileChangeApproval
-        case .guardianDeniedAction:
-            .guardianDeniedActionApproval
-        case .permissions:
-            .permissionsApproval
+            case .commandExecution:
+                .commandExecutionApproval
+            case .fileChange:
+                .fileChangeApproval
+            case .guardianDeniedAction:
+                .guardianDeniedActionApproval
+            case .permissions:
+                .permissionsApproval
         }
     }
 
-    internal var requestID: CodexRPCRequestID {
+    var requestID: CodexRPCRequestID {
         switch self {
-        case let .commandExecution(request):
-            request.requestID
-        case let .fileChange(request):
-            request.requestID
-        case let .guardianDeniedAction(request):
-            request.requestID
-        case let .permissions(request):
-            request.requestID
+            case let .commandExecution(request):
+                request.requestID
+            case let .fileChange(request):
+                request.requestID
+            case let .guardianDeniedAction(request):
+                request.requestID
+            case let .permissions(request):
+                request.requestID
         }
     }
 }
@@ -105,9 +105,9 @@ public struct CodexCommandExecutionApprovalRequest: Sendable, Equatable {
     public let proposedNetworkPolicyAmendments: [CodexNetworkPolicyAmendment]?
     public let networkApprovalContext: CodexAppServer.JSONValue?
 
-    internal let requestID: CodexRPCRequestID
+    let requestID: CodexRPCRequestID
 
-    internal init(
+    init(
         requestID: CodexRPCRequestID,
         threadID: String,
         turnID: String,
@@ -144,9 +144,9 @@ public struct CodexFileChangeApprovalRequest: Sendable, Equatable {
     public let grantRoot: String?
     public let reason: String?
 
-    internal let requestID: CodexRPCRequestID
+    let requestID: CodexRPCRequestID
 
-    internal init(
+    init(
         requestID: CodexRPCRequestID,
         threadID: String,
         turnID: String,
@@ -171,9 +171,9 @@ public struct CodexPermissionsApprovalRequest: Sendable, Equatable {
     public let permissions: CodexPermissionProfile
     public let reason: String?
 
-    internal let requestID: CodexRPCRequestID
+    let requestID: CodexRPCRequestID
 
-    internal init(
+    init(
         requestID: CodexRPCRequestID,
         threadID: String,
         turnID: String,
@@ -203,9 +203,9 @@ public struct CodexGuardianDeniedActionApprovalRequest: Sendable, Equatable {
     public let review: CodexGuardianApprovalReview
     public let event: CodexAppServer.JSONValue
 
-    internal let requestID: CodexRPCRequestID
+    let requestID: CodexRPCRequestID
 
-    internal init(
+    init(
         requestID: CodexRPCRequestID,
         threadID: String,
         turnID: String,
@@ -264,46 +264,6 @@ public struct CodexGuardianApprovalReviewAction: Sendable, Equatable {
     public let toolTitle: String?
     public let permissions: CodexPermissionProfile?
     public let reason: String?
-
-    internal init(
-        type: ActionType,
-        command: String?,
-        currentDirectoryPath: String?,
-        source: CommandSource?,
-        argv: [String]?,
-        program: String?,
-        files: [String]?,
-        host: String?,
-        port: Int?,
-        networkProtocol: NetworkProtocol?,
-        target: String?,
-        connectorID: String?,
-        connectorName: String?,
-        server: String?,
-        toolName: String?,
-        toolTitle: String?,
-        permissions: CodexPermissionProfile?,
-        reason: String?
-    ) {
-        self.type = type
-        self.command = command
-        self.currentDirectoryPath = currentDirectoryPath
-        self.source = source
-        self.argv = argv
-        self.program = program
-        self.files = files
-        self.host = host
-        self.port = port
-        self.networkProtocol = networkProtocol
-        self.target = target
-        self.connectorID = connectorID
-        self.connectorName = connectorName
-        self.server = server
-        self.toolName = toolName
-        self.toolTitle = toolTitle
-        self.permissions = permissions
-        self.reason = reason
-    }
 }
 
 /// Guardian auto-review result attached to a reviewed action.
@@ -324,18 +284,6 @@ public struct CodexGuardianApprovalReview: Sendable, Equatable {
     public let riskLevel: RiskLevel?
     public let status: Status
     public let userAuthorization: UserAuthorization?
-
-    internal init(
-        rationale: String?,
-        riskLevel: RiskLevel?,
-        status: Status,
-        userAuthorization: UserAuthorization?
-    ) {
-        self.rationale = rationale
-        self.riskLevel = riskLevel
-        self.status = status
-        self.userAuthorization = userAuthorization
-    }
 }
 
 /// Structured command action attached to a command-execution approval request.
@@ -398,23 +346,23 @@ public struct CodexNetworkPolicyAmendment: Sendable, Equatable {
 
         public init(wireValue: String) {
             switch wireValue {
-            case "allow":
-                self = .allow
-            case "deny":
-                self = .deny
-            default:
-                self = .unknown(wireValue)
+                case "allow":
+                    self = .allow
+                case "deny":
+                    self = .deny
+                default:
+                    self = .unknown(wireValue)
             }
         }
 
         public var wireValue: String {
             switch self {
-            case .allow:
-                "allow"
-            case .deny:
-                "deny"
-            case let .unknown(value):
-                value
+                case .allow:
+                    "allow"
+                case .deny:
+                    "deny"
+                case let .unknown(value):
+                    value
             }
         }
     }
@@ -479,37 +427,37 @@ public enum CodexElicitationRequest: Sendable, Equatable {
 
     public var threadID: String {
         switch self {
-        case let .toolUserInput(request):
-            request.threadID
-        case let .mcpServer(request):
-            request.threadID
+            case let .toolUserInput(request):
+                request.threadID
+            case let .mcpServer(request):
+                request.threadID
         }
     }
 
     public var turnID: String? {
         switch self {
-        case let .toolUserInput(request):
-            request.turnID
-        case let .mcpServer(request):
-            request.turnID
+            case let .toolUserInput(request):
+                request.turnID
+            case let .mcpServer(request):
+                request.turnID
         }
     }
 
     public var kind: CodexInteractiveRequestKind {
         switch self {
-        case .toolUserInput:
-            .toolUserInput
-        case .mcpServer:
-            .mcpServerElicitation
+            case .toolUserInput:
+                .toolUserInput
+            case .mcpServer:
+                .mcpServerElicitation
         }
     }
 
-    internal var requestID: CodexRPCRequestID {
+    var requestID: CodexRPCRequestID {
         switch self {
-        case let .toolUserInput(request):
-            request.requestID
-        case let .mcpServer(request):
-            request.requestID
+            case let .toolUserInput(request):
+                request.requestID
+            case let .mcpServer(request):
+                request.requestID
         }
     }
 }
@@ -562,9 +510,9 @@ public struct CodexToolUserInputRequest: Sendable, Equatable {
     public let itemID: String
     public let questions: [Question]
 
-    internal let requestID: CodexRPCRequestID
+    let requestID: CodexRPCRequestID
 
-    internal init(
+    init(
         requestID: CodexRPCRequestID,
         threadID: String,
         turnID: String,
@@ -623,9 +571,9 @@ public struct CodexMcpServerElicitationRequest: Sendable, Equatable {
     public let turnID: String?
     public let mode: Mode
 
-    internal let requestID: CodexRPCRequestID
+    let requestID: CodexRPCRequestID
 
-    internal init(
+    init(
         requestID: CodexRPCRequestID,
         serverName: String,
         threadID: String,

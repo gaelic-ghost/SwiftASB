@@ -1,9 +1,9 @@
-import Foundation
 import CryptoKit
-import Testing
+import Foundation
 @testable import SwiftASB
+import Testing
 
-@Suite("CodexAppServer live integration", .serialized)
+@Suite(.serialized)
 struct CodexAppServerLiveIntegrationTests {
     @Test(
         "initializes through the raw live transport and protocol stack",
@@ -101,8 +101,8 @@ struct CodexAppServerLiveIntegrationTests {
                             "hook/completed",
                             "hook/started",
                             "mcpServer/startupStatus/updated",
-                        ]
-                    ,
+                        ],
+
                         requestAttestation: nil
                     ),
                     clientInfo: .init(
@@ -152,6 +152,7 @@ struct CodexAppServerLiveIntegrationTests {
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
                     sandbox: .workspaceWrite,
+                    selectedCapabilityRoots: nil,
                     serviceName: nil,
                     serviceTier: nil,
                     sessionStartSource: nil,
@@ -200,7 +201,7 @@ struct CodexAppServerLiveIntegrationTests {
             let diagnostics = try await client.cliExecutableDiagnostics()
             #expect(diagnostics.resolvedExecutablePath == harness.codexExecutableURL.path)
             #expect(diagnostics.versionString.contains("codex-cli"))
-            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.139.x"))
+            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.140.x"))
 
             await client.stop()
         } catch {
@@ -247,8 +248,8 @@ struct CodexAppServerLiveIntegrationTests {
                             "hook/completed",
                             "hook/started",
                             "mcpServer/startupStatus/updated",
-                        ]
-                    ,
+                        ],
+
                         requestAttestation: nil
                     ),
                     clientInfo: .init(
@@ -298,6 +299,7 @@ struct CodexAppServerLiveIntegrationTests {
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
                     sandbox: .workspaceWrite,
+                    selectedCapabilityRoots: nil,
                     serviceName: nil,
                     serviceTier: nil,
                     sessionStartSource: nil,
@@ -336,7 +338,7 @@ struct CodexAppServerLiveIntegrationTests {
                             url: nil,
                             path: nil,
                             name: nil
-                        )
+                        ),
                     ],
                     model: nil,
                     outputSchema: nil,
@@ -371,10 +373,10 @@ struct CodexAppServerLiveIntegrationTests {
                     }
 
                     switch decodedEvent {
-                    case let .turnCompleted(notification) where notification.turn.id == turnResponse.turn.id:
-                        return notification
-                    default:
-                        continue
+                        case let .turnCompleted(notification) where notification.turn.id == turnResponse.turn.id:
+                            return notification
+                        default:
+                            continue
                     }
                 }
 
@@ -772,5 +774,4 @@ struct CodexAppServerLiveIntegrationTests {
             throw error
         }
     }
-
 }

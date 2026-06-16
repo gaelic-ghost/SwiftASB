@@ -1,10 +1,10 @@
 import Foundation
 import Observation
 
-extension CodexThread {
+public extension CodexThread {
     @MainActor
     @Observable
-    public final class RecentFiles {
+    final class RecentFiles {
         public struct CachePolicy: Sendable, Equatable {
             public let maxResidentFiles: Int
             public let minimumResidentFiles: Int
@@ -45,7 +45,13 @@ extension CodexThread {
         }
 
         public struct FileSnapshot: Sendable, Equatable, Identifiable {
-            fileprivate struct PayloadMetrics: Sendable, Equatable {
+            public enum Status: String, Sendable, Equatable {
+                case completed
+                case errored
+                case inProgress
+            }
+
+            fileprivate struct PayloadMetrics: Equatable {
                 let additions: Int
                 let characterCount: Int
                 let deletions: Int
@@ -55,12 +61,6 @@ extension CodexThread {
                 var hasStructuredDiffSignal: Bool {
                     additions > 0 || deletions > 0 || hunkCount > 0
                 }
-            }
-
-            public enum Status: String, Sendable, Equatable {
-                case completed
-                case errored
-                case inProgress
             }
 
             public let id: String
@@ -78,83 +78,9 @@ extension CodexThread {
             public internal(set) var turnOrderIndex: Int?
             public internal(set) var turnStartedAt: Int?
 
-            fileprivate mutating func apply(delta: String) {
-                payloadText = (payloadText ?? "") + delta
-                latestStatusText = latestStatusText ?? "Streaming file change"
-                status = .inProgress
-                isPayloadComplete = false
-            }
-
-            fileprivate mutating func applyPatch(text: String, path: String?) {
-                payloadText = text
-                if let path, !path.isEmpty {
-                    self.path = path
-                    displayName = Self.makeDisplayName(path: path)
-                }
-                latestStatusText = Self.makePayloadSummary(text: text) ?? "Previewing file change"
-                status = .inProgress
-                isPayloadComplete = false
-                omittedPayloadCharacterCount = 0
-            }
-
-            fileprivate mutating func apply(_ item: CodexTurnItem, status: Status) {
-                displayName = Self.makeDisplayName(path: item.path)
-                latestStatusText = Self.makeStatusSummary(status: item.status, text: item.text) ?? latestStatusText
-                path = item.path
-                self.status = status
-                if let text = item.text, !text.isEmpty {
-                    payloadText = text
-                    isPayloadComplete = status != .inProgress
-                    omittedPayloadCharacterCount = 0
-                } else if status != .inProgress {
-                    isPayloadComplete = payloadText?.isEmpty == false
-                }
-            }
-
-            fileprivate mutating func slimPayload() {
-                guard let payloadText, !payloadText.isEmpty else { return }
-                omittedPayloadCharacterCount = payloadText.count
-                self.payloadText = nil
-                isPayloadComplete = false
-            }
-
-            fileprivate mutating func hydratePayload(
-                text: String?,
-                latestStatusText: String?,
-                status: Status
-            ) {
-                if let text, !text.isEmpty {
-                    payloadText = text
-                }
-                self.latestStatusText = latestStatusText ?? self.latestStatusText
-                self.status = status
-                if payloadText != nil {
-                    isPayloadComplete = true
-                    omittedPayloadCharacterCount = 0
-                } else {
-                    isPayloadComplete = false
-                }
-            }
-
-            fileprivate mutating func mergeNewerSnapshot(_ snapshot: Self) {
-                let existingPayloadText = payloadText
-                let existingPayloadComplete = isPayloadComplete
-                let existingOmittedPayloadCharacterCount = omittedPayloadCharacterCount
-
-                self = snapshot
-
-                if (payloadText == nil || payloadText?.isEmpty == true),
-                   let existingPayloadText,
-                   !existingPayloadText.isEmpty
-                {
-                    payloadText = existingPayloadText
-                    isPayloadComplete = existingPayloadComplete
-                    omittedPayloadCharacterCount = existingOmittedPayloadCharacterCount
-                }
-            }
-
             fileprivate static func makeDisplayName(path: String?) -> String {
                 guard let path, !path.isEmpty else { return "File edit" }
+
                 return URL(fileURLWithPath: path).lastPathComponent
             }
 
@@ -175,6 +101,7 @@ extension CodexThread {
 
             fileprivate static func makePayloadSummary(text: String?) -> String? {
                 guard let text, !text.isEmpty else { return nil }
+
                 let metrics = payloadMetrics(text: text)
                 if metrics.hasStructuredDiffSignal {
                     var parts: [String] = []
@@ -229,6 +156,81 @@ extension CodexThread {
                     nonEmptyLineCount: nonEmptyLineCount
                 )
             }
+
+            fileprivate mutating func apply(delta: String) {
+                payloadText = (payloadText ?? "") + delta
+                latestStatusText = latestStatusText ?? "Streaming file change"
+                status = .inProgress
+                isPayloadComplete = false
+            }
+
+            fileprivate mutating func applyPatch(text: String, path: String?) {
+                payloadText = text
+                if let path, !path.isEmpty {
+                    self.path = path
+                    displayName = Self.makeDisplayName(path: path)
+                }
+                latestStatusText = Self.makePayloadSummary(text: text) ?? "Previewing file change"
+                status = .inProgress
+                isPayloadComplete = false
+                omittedPayloadCharacterCount = 0
+            }
+
+            fileprivate mutating func apply(_ item: CodexTurnItem, status: Status) {
+                displayName = Self.makeDisplayName(path: item.path)
+                latestStatusText = Self.makeStatusSummary(status: item.status, text: item.text) ?? latestStatusText
+                path = item.path
+                self.status = status
+                if let text = item.text, !text.isEmpty {
+                    payloadText = text
+                    isPayloadComplete = status != .inProgress
+                    omittedPayloadCharacterCount = 0
+                } else if status != .inProgress {
+                    isPayloadComplete = payloadText?.isEmpty == false
+                }
+            }
+
+            fileprivate mutating func slimPayload() {
+                guard let payloadText, !payloadText.isEmpty else { return }
+
+                omittedPayloadCharacterCount = payloadText.count
+                self.payloadText = nil
+                isPayloadComplete = false
+            }
+
+            fileprivate mutating func hydratePayload(
+                text: String?,
+                latestStatusText: String?,
+                status: Status
+            ) {
+                if let text, !text.isEmpty {
+                    payloadText = text
+                }
+                self.latestStatusText = latestStatusText ?? self.latestStatusText
+                self.status = status
+                if payloadText != nil {
+                    isPayloadComplete = true
+                    omittedPayloadCharacterCount = 0
+                } else {
+                    isPayloadComplete = false
+                }
+            }
+
+            fileprivate mutating func mergeNewerSnapshot(_ snapshot: Self) {
+                let existingPayloadText = payloadText
+                let existingPayloadComplete = isPayloadComplete
+                let existingOmittedPayloadCharacterCount = omittedPayloadCharacterCount
+
+                self = snapshot
+
+                if payloadText == nil || payloadText?.isEmpty == true,
+                   let existingPayloadText,
+                   !existingPayloadText.isEmpty {
+                    payloadText = existingPayloadText
+                    isPayloadComplete = existingPayloadComplete
+                    omittedPayloadCharacterCount = existingOmittedPayloadCharacterCount
+                }
+            }
         }
 
         public let cachePolicy: CachePolicy
@@ -258,7 +260,7 @@ extension CodexThread {
         @ObservationIgnored
         private var residencyTask: Task<Void, Never>?
 
-        internal init(
+        init(
             cachePolicy: CachePolicy,
             threadID: String,
             residentLimit: Int,
@@ -272,12 +274,12 @@ extension CodexThread {
             self.threadID = threadID
             self.residentLimit = residentLimit
             self.nextOlderCursor = nextOlderCursor
-            self.files = initialFiles
-            self.isLoadingOlderFiles = false
-            self.lastLoadErrorDescription = nil
-            self.residentPayloadCost = initialFiles.reduce(0) { $0 + Self.fileResidentCost($1) }
-            self.visibleFileIDs = []
-            self.selectedFileID = nil
+            files = initialFiles
+            isLoadingOlderFiles = false
+            lastLoadErrorDescription = nil
+            residentPayloadCost = initialFiles.reduce(0) { $0 + Self.fileResidentCost($1) }
+            visibleFileIDs = []
+            selectedFileID = nil
             self.appServer = appServer
             trimResidentFilesIfNeeded()
 
@@ -308,6 +310,55 @@ extension CodexThread {
             turnEventTask?.cancel()
             fileDeltaTask?.cancel()
             residencyTask?.cancel()
+        }
+
+        private static func fileSnapshotID(turnID: String, itemID: String) -> String {
+            "\(turnID):\(itemID)"
+        }
+
+        private static func distanceToRange(
+            _ index: Int,
+            lowerBound: Int,
+            upperBound: Int
+        ) -> Int {
+            if index < lowerBound {
+                return lowerBound - index
+            }
+            if index > upperBound {
+                return index - upperBound
+            }
+            return 0
+        }
+
+        private static func fileResidentCost(_ file: FileSnapshot) -> Int {
+            let baseCost = file.status == .inProgress ? 3 : 1
+            guard let payloadText = file.payloadText, !payloadText.isEmpty else {
+                return baseCost
+            }
+
+            let metrics = FileSnapshot.payloadMetrics(text: payloadText)
+            let characterCost = max(1, Int(ceil(Double(metrics.characterCount) / 320.0)))
+            let lineCost = max(1, Int(ceil(Double(metrics.nonEmptyLineCount) / 12.0)))
+            let diffSignalCost = min(metrics.additions + metrics.deletions, 10)
+            let hunkCost = min(metrics.hunkCount, 4)
+            let payloadCost = min(
+                characterCost + lineCost + diffSignalCost + hunkCost,
+                file.isPayloadComplete ? 20 : 10
+            )
+            return baseCost + payloadCost
+        }
+
+        private static func status(from persistedStatus: String?) -> FileSnapshot.Status {
+            guard let persistedStatus else { return .completed }
+
+            switch persistedStatus.lowercased() {
+                case "error", "errored", "failed", "interrupted":
+                    return .errored
+                case "in_progress", "inprogress", "running":
+                    return .inProgress
+                default:
+                    return .completed
+            }
         }
 
         /// Loads files older than the current resident window.
@@ -347,20 +398,22 @@ extension CodexThread {
 
         private func apply(_ event: CodexTurnEvent) async {
             switch event {
-            case let .itemStarted(started):
-                guard started.item.kind == .fileChange else { return }
-                upsertLiveFile(from: started.item, turnID: started.turnID, status: .inProgress)
-            case let .itemCompleted(completed):
-                guard completed.item.kind == .fileChange else { return }
-                upsertLiveFile(
-                    from: completed.item,
-                    turnID: completed.turnID,
-                    status: completed.item.isErrored ? .errored : .completed
-                )
-            case let .completed(completion):
-                await refreshFiles(for: completion.turn.id)
-            default:
-                return
+                case let .itemStarted(started):
+                    guard started.item.kind == .fileChange else { return }
+
+                    upsertLiveFile(from: started.item, turnID: started.turnID, status: .inProgress)
+                case let .itemCompleted(completed):
+                    guard completed.item.kind == .fileChange else { return }
+
+                    upsertLiveFile(
+                        from: completed.item,
+                        turnID: completed.turnID,
+                        status: completed.item.isErrored ? .errored : .completed
+                    )
+                case let .completed(completion):
+                    await refreshFiles(for: completion.turn.id)
+                default:
+                    return
             }
 
             trimResidentFilesIfNeeded()
@@ -370,6 +423,7 @@ extension CodexThread {
         private func apply(_ event: CodexAppServer.FileChangeOutputDeltaEvent) {
             let fileID = Self.fileSnapshotID(turnID: event.turnID, itemID: event.itemID)
             guard let index = files.firstIndex(where: { $0.id == fileID }) else { return }
+
             if event.replacesPayload {
                 files[index].applyPatch(text: event.delta, path: event.path)
             } else {
@@ -467,6 +521,7 @@ extension CodexThread {
             residencyTask?.cancel()
             residencyTask = Task { [weak self] in
                 guard let self else { return }
+
                 await self.hydrateProtectedFilesIfNeeded()
                 self.trimResidentFilesIfNeeded()
             }
@@ -476,6 +531,7 @@ extension CodexThread {
             let protectedIDs = protectedFileIDSet()
             let slimmedProtectedIDs = files.compactMap { file -> String? in
                 guard protectedIDs.contains(file.id), !file.isPayloadComplete else { return nil }
+
                 return file.id
             }
 
@@ -484,6 +540,7 @@ extension CodexThread {
             for fileID in slimmedProtectedIDs {
                 do {
                     guard let index = files.firstIndex(where: { $0.id == fileID }) else { continue }
+
                     let file = files[index]
                     guard let snapshot = try await appServer.turnSnapshot(threadID: threadID, turnID: file.turnID) else {
                         continue
@@ -491,6 +548,7 @@ extension CodexThread {
                     guard let item = snapshot.items.first(where: { $0.id == file.itemID }) else {
                         continue
                     }
+
                     files[index].hydratePayload(
                         text: item.streamedText ?? item.text,
                         latestStatusText: FileSnapshot.makeStatusSummary(
@@ -523,7 +581,7 @@ extension CodexThread {
                     mandatoryIndices.insert(index)
                 }
                 for index in files.indices.prefix(cachePolicy.protectedRecentCompletedFiles)
-                where files[index].status != .inProgress {
+                    where files[index].status != .inProgress {
                     mandatoryIndices.insert(index)
                 }
 
@@ -569,10 +627,12 @@ extension CodexThread {
             let protectedIDs = protectedFileIDSet()
             for index in files.indices.reversed() {
                 guard residentPayloadCost > maximumResidentPayloadCost else { break }
+
                 let file = files[index]
                 guard file.status != .inProgress else { continue }
                 guard !protectedIDs.contains(file.id) else { continue }
                 guard file.isPayloadComplete else { continue }
+
                 files[index].slimPayload()
                 refreshResidentMetrics()
             }
@@ -632,57 +692,7 @@ extension CodexThread {
         private func refreshResidentMetrics() {
             residentPayloadCost = files.reduce(0) { $0 + Self.fileResidentCost($1) }
         }
-
-        private static func fileSnapshotID(turnID: String, itemID: String) -> String {
-            "\(turnID):\(itemID)"
-        }
-
-        private static func distanceToRange(
-            _ index: Int,
-            lowerBound: Int,
-            upperBound: Int
-        ) -> Int {
-            if index < lowerBound {
-                return lowerBound - index
-            }
-            if index > upperBound {
-                return index - upperBound
-            }
-            return 0
-        }
-
-        private static func fileResidentCost(_ file: FileSnapshot) -> Int {
-            let baseCost = file.status == .inProgress ? 3 : 1
-            guard let payloadText = file.payloadText, !payloadText.isEmpty else {
-                return baseCost
-            }
-
-            let metrics = FileSnapshot.payloadMetrics(text: payloadText)
-            let characterCost = max(1, Int(ceil(Double(metrics.characterCount) / 320.0)))
-            let lineCost = max(1, Int(ceil(Double(metrics.nonEmptyLineCount) / 12.0)))
-            let diffSignalCost = min(metrics.additions + metrics.deletions, 10)
-            let hunkCost = min(metrics.hunkCount, 4)
-            let payloadCost = min(
-                characterCost + lineCost + diffSignalCost + hunkCost,
-                file.isPayloadComplete ? 20 : 10
-            )
-            return baseCost + payloadCost
-        }
-
-        private static func status(from persistedStatus: String?) -> FileSnapshot.Status {
-            guard let persistedStatus else { return .completed }
-            switch persistedStatus.lowercased() {
-            case "error", "errored", "failed", "interrupted":
-                return .errored
-            case "in_progress", "inprogress", "running":
-                return .inProgress
-            default:
-                return .completed
-            }
-        }
     }
-
-
 }
 
 extension CodexThread.RecentFiles.FileSnapshot {
@@ -722,13 +732,14 @@ extension CodexThread.RecentFiles.FileSnapshot {
 
     private static func snapshotStatus(from persistedStatus: String?) -> CodexThread.RecentFiles.FileSnapshot.Status {
         guard let persistedStatus else { return .completed }
+
         switch persistedStatus.lowercased() {
-        case "error", "errored", "failed", "interrupted":
-            return .errored
-        case "in_progress", "inprogress", "running":
-            return .inProgress
-        default:
-            return .completed
+            case "error", "errored", "failed", "interrupted":
+                return .errored
+            case "in_progress", "inprogress", "running":
+                return .inProgress
+            default:
+                return .completed
         }
     }
 }

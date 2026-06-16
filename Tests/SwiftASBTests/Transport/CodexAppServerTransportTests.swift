@@ -1,8 +1,8 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
-@Suite("CodexAppServerTransport subprocess edges", .serialized)
+@Suite(.serialized)
 struct CodexAppServerTransportTests {
     @Test("rejects duplicate in-flight request IDs before writing a second request")
     func rejectsDuplicatePendingRequestIDs() async throws {
@@ -60,16 +60,16 @@ struct CodexAppServerTransportTests {
         } catch let error as CodexTransportError {
             let recentStandardError: [String]
             switch error {
-            case let .processTerminated(reason, status, standardError):
-                #expect(reason == "exit")
-                #expect(status == 42)
-                recentStandardError = standardError
-            case let .unexpectedEndOfStream(standardError):
-                recentStandardError = standardError
-            default:
-                Issue.record("Expected process termination or stdout EOF, got \(String(describing: error)).")
-                await transport.stop()
-                return
+                case let .processTerminated(reason, status, standardError):
+                    #expect(reason == "exit")
+                    #expect(status == 42)
+                    recentStandardError = standardError
+                case let .unexpectedEndOfStream(standardError):
+                    recentStandardError = standardError
+                default:
+                    Issue.record("Expected process termination or stdout EOF, got \(String(describing: error)).")
+                    await transport.stop()
+                    return
             }
 
             let recentStandardErrorIndexes = recentStandardError.compactMap { line in
@@ -150,7 +150,8 @@ struct CodexAppServerTransportTests {
 }
 
 private func makeFakeCodexExecutable() throws -> URL {
-    let directoryURL = FileManager.default.temporaryDirectory
+    let directoryURL = FileManager.default
+        .temporaryDirectory
         .appendingPathComponent("SwiftASB-FakeCodex-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
 

@@ -1,10 +1,10 @@
 import Foundation
 import Observation
 
-extension CodexThread {
+public extension CodexThread {
     @MainActor
     @Observable
-    public final class Agenda {
+    final class Agenda {
         public struct Plan: Sendable, Equatable {
             public struct Step: Sendable, Equatable, Identifiable {
                 public enum Status: String, Sendable, Equatable {
@@ -40,6 +40,21 @@ extension CodexThread {
         public private(set) var proposedPlan: ProposedPlan?
         public private(set) var updatedAt: Int?
 
+        @ObservationIgnored
+        private var threadEventTask: Task<Void, Never>?
+
+        @ObservationIgnored
+        private var turnEventTask: Task<Void, Never>?
+
+        @ObservationIgnored
+        private var proposedPlanItemsByID: [String: String]
+
+        @ObservationIgnored
+        private var proposedPlanItemOrder: [String]
+
+        @ObservationIgnored
+        private let appServer: CodexAppServer
+
         public var goalTitle: String {
             goal?.objective ?? ""
         }
@@ -63,22 +78,7 @@ extension CodexThread {
             return ""
         }
 
-        @ObservationIgnored
-        private var threadEventTask: Task<Void, Never>?
-
-        @ObservationIgnored
-        private var turnEventTask: Task<Void, Never>?
-
-        @ObservationIgnored
-        private var proposedPlanItemsByID: [String: String]
-
-        @ObservationIgnored
-        private var proposedPlanItemOrder: [String]
-
-        @ObservationIgnored
-        private let appServer: CodexAppServer
-
-        internal init(
+        init(
             threadID: String,
             initialGoal: Goal?,
             appServer: CodexAppServer,
@@ -87,13 +87,13 @@ extension CodexThread {
         ) {
             self.threadID = threadID
             self.appServer = appServer
-            self.currentPlan = nil
-            self.goal = initialGoal
-            self.goalStatus = initialGoal?.status
-            self.proposedPlan = nil
-            self.updatedAt = initialGoal?.updatedAt
-            self.proposedPlanItemsByID = [:]
-            self.proposedPlanItemOrder = []
+            currentPlan = nil
+            goal = initialGoal
+            goalStatus = initialGoal?.status
+            proposedPlan = nil
+            updatedAt = initialGoal?.updatedAt
+            proposedPlanItemsByID = [:]
+            proposedPlanItemOrder = []
 
             threadEventTask = Task { [weak self] in
                 guard let self else { return }
@@ -179,22 +179,22 @@ extension CodexThread {
 
         private func apply(_ event: CodexThreadEvent) {
             switch event {
-            case let .goalUpdated(update):
-                apply(goal: update.goal)
-            case .goalCleared:
-                applyGoalCleared()
-            case .started,
-                .statusChanged,
-                .diagnostic,
-                .approvalRequested,
-                .elicitationRequested,
-                .serverRequestResolved,
-                .archived,
-                .unarchived,
-                .closed,
-                .nameUpdated,
-                .tokenUsageUpdated:
-                return
+                case let .goalUpdated(update):
+                    apply(goal: update.goal)
+                case .goalCleared:
+                    applyGoalCleared()
+                case .started,
+                     .statusChanged,
+                     .diagnostic,
+                     .approvalRequested,
+                     .elicitationRequested,
+                     .serverRequestResolved,
+                     .archived,
+                     .unarchived,
+                     .closed,
+                     .nameUpdated,
+                     .tokenUsageUpdated:
+                    return
             }
         }
 
@@ -212,27 +212,27 @@ extension CodexThread {
 
         private func apply(_ event: CodexTurnEvent) {
             switch event {
-            case let .planUpdated(update):
-                currentPlan = .init(update)
-                if proposedPlan?.turnID == update.turnID {
-                    clearProposedPlan()
-                }
-            case let .planDelta(delta):
-                applyPlanDelta(delta)
-            case .started,
-                .diffUpdated,
-                .diagnostic,
-                .approvalRequested,
-                .elicitationRequested,
-                .serverRequestResolved,
-                .itemStarted,
-                .itemCompleted,
-                .agentMessageDelta,
-                .reasoningSummaryPartAdded,
-                .reasoningSummaryTextDelta,
-                .reasoningTextDelta,
-                .completed:
-                return
+                case let .planUpdated(update):
+                    currentPlan = .init(update)
+                    if proposedPlan?.turnID == update.turnID {
+                        clearProposedPlan()
+                    }
+                case let .planDelta(delta):
+                    applyPlanDelta(delta)
+                case .started,
+                     .diffUpdated,
+                     .diagnostic,
+                     .approvalRequested,
+                     .elicitationRequested,
+                     .serverRequestResolved,
+                     .itemStarted,
+                     .itemCompleted,
+                     .agentMessageDelta,
+                     .reasoningSummaryPartAdded,
+                     .reasoningSummaryTextDelta,
+                     .reasoningTextDelta,
+                     .completed:
+                    return
             }
         }
 
@@ -282,12 +282,12 @@ extension CodexThread.Agenda.Plan {
 extension CodexThread.Agenda.Plan.Step.Status {
     init(_ status: CodexTurnPlanUpdate.Step.Status) {
         switch status {
-        case .completed:
-            self = .completed
-        case .inProgress:
-            self = .inProgress
-        case .pending:
-            self = .pending
+            case .completed:
+                self = .completed
+            case .inProgress:
+                self = .inProgress
+            case .pending:
+                self = .pending
         }
     }
 }

@@ -10,29 +10,29 @@ public enum CodexDiagnosticEvent: Sendable, Equatable {
 
     public var threadID: String? {
         switch self {
-        case let .warning(warning):
-            warning.threadID
-        case let .guardianWarning(warning):
-            warning.threadID
-        case let .modelRerouted(reroute):
-            reroute.threadID
-        case let .modelVerification(verification):
-            verification.threadID
-        case .configWarning, .deprecationNotice, .mcpServerStatusChanged, .remoteControlStatusChanged:
-            nil
+            case let .warning(warning):
+                warning.threadID
+            case let .guardianWarning(warning):
+                warning.threadID
+            case let .modelRerouted(reroute):
+                reroute.threadID
+            case let .modelVerification(verification):
+                verification.threadID
+            case .configWarning, .deprecationNotice, .mcpServerStatusChanged, .remoteControlStatusChanged:
+                nil
         }
     }
 
     public var turnID: String? {
         switch self {
-        case .warning, .guardianWarning:
-            nil
-        case let .modelRerouted(reroute):
-            reroute.turnID
-        case let .modelVerification(verification):
-            verification.turnID
-        case .configWarning, .deprecationNotice, .mcpServerStatusChanged, .remoteControlStatusChanged:
-            nil
+            case .warning, .guardianWarning:
+                nil
+            case let .modelRerouted(reroute):
+                reroute.turnID
+            case let .modelVerification(verification):
+                verification.turnID
+            case .configWarning, .deprecationNotice, .mcpServerStatusChanged, .remoteControlStatusChanged:
+                nil
         }
     }
 }
@@ -40,21 +40,11 @@ public enum CodexDiagnosticEvent: Sendable, Equatable {
 public struct CodexRuntimeWarning: Sendable, Equatable {
     public let message: String
     public let threadID: String?
-
-    init(message: String, threadID: String?) {
-        self.message = message
-        self.threadID = threadID
-    }
 }
 
 public struct CodexGuardianWarning: Sendable, Equatable {
     public let message: String
     public let threadID: String
-
-    init(message: String, threadID: String) {
-        self.message = message
-        self.threadID = threadID
-    }
 }
 
 public struct CodexModelReroute: Sendable, Equatable {
@@ -63,20 +53,6 @@ public struct CodexModelReroute: Sendable, Equatable {
     public let threadID: String
     public let toModel: String
     public let turnID: String
-
-    init(
-        fromModel: String,
-        reason: Reason,
-        threadID: String,
-        toModel: String,
-        turnID: String
-    ) {
-        self.fromModel = fromModel
-        self.reason = reason
-        self.threadID = threadID
-        self.toModel = toModel
-        self.turnID = turnID
-    }
 
     public enum Reason: Sendable, Equatable {
         case highRiskCyberActivity
@@ -87,16 +63,6 @@ public struct CodexModelVerificationDiagnostic: Sendable, Equatable {
     public let threadID: String
     public let turnID: String
     public let verifications: [CodexModelVerification]
-
-    init(
-        threadID: String,
-        turnID: String,
-        verifications: [CodexModelVerification]
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.verifications = verifications
-    }
 }
 
 public enum CodexModelVerification: Sendable, Equatable {
@@ -250,14 +216,14 @@ extension CodexTextPosition {
 extension CodexMcpServerStatusDiagnostic.Status {
     init(wireValue: CodexWireMCPServerStartupState) {
         switch wireValue {
-        case .cancelled:
-            self = .cancelled
-        case .failed:
-            self = .failed
-        case .ready:
-            self = .ready
-        case .starting:
-            self = .starting
+            case .cancelled:
+                self = .cancelled
+            case .failed:
+                self = .failed
+            case .ready:
+                self = .ready
+            case .starting:
+                self = .starting
         }
     }
 }
@@ -265,14 +231,14 @@ extension CodexMcpServerStatusDiagnostic.Status {
 extension CodexRemoteControlStatusDiagnostic.Status {
     init(wireValue: CodexWireRemoteControlConnectionStatus) {
         switch wireValue {
-        case .connected:
-            self = .connected
-        case .connecting:
-            self = .connecting
-        case .disabled:
-            self = .disabled
-        case .errored:
-            self = .errored
+            case .connected:
+                self = .connected
+            case .connecting:
+                self = .connecting
+            case .disabled:
+                self = .disabled
+            case .errored:
+                self = .errored
         }
     }
 }
@@ -280,8 +246,8 @@ extension CodexRemoteControlStatusDiagnostic.Status {
 extension CodexModelReroute.Reason {
     init(wireValue: CodexWireModelRerouteReason) {
         switch wireValue {
-        case .highRiskCyberActivity:
-            self = .highRiskCyberActivity
+            case .highRiskCyberActivity:
+                self = .highRiskCyberActivity
         }
     }
 }
@@ -289,8 +255,8 @@ extension CodexModelReroute.Reason {
 extension CodexModelVerification {
     init(wireValue: CodexWireModelVerification) {
         switch wireValue {
-        case .trustedAccessForCyber:
-            self = .trustedAccessForCyber
+            case .trustedAccessForCyber:
+                self = .trustedAccessForCyber
         }
     }
 }

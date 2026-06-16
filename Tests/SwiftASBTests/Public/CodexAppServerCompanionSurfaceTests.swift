@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @MainActor
@@ -332,7 +332,7 @@ extension CodexAppServerTests {
         )
         let agenda = try await thread.makeAgenda()
 
-        _ = try await agenda.setGoal("Ship plan mode", tokenBudget: 40_000)
+        _ = try await agenda.setGoal("Ship plan mode", tokenBudget: 40000)
         _ = try await agenda.pauseGoal()
         _ = try await agenda.resumeGoal()
         _ = try await agenda.clearGoal()
@@ -343,7 +343,7 @@ extension CodexAppServerTests {
         let setGoalRequest = try companionDecodedJSONObject(from: goalSetPayloads[0])
         #expect(companionValue(at: ["params", "objective"], in: setGoalRequest) as? String == "Ship plan mode")
         #expect(companionValue(at: ["params", "status"], in: setGoalRequest) as? String == "active")
-        #expect(companionValue(at: ["params", "tokenBudget"], in: setGoalRequest) as? Int == 40_000)
+        #expect(companionValue(at: ["params", "tokenBudget"], in: setGoalRequest) as? Int == 40000)
 
         let pauseRequest = try companionDecodedJSONObject(from: goalSetPayloads[1])
         #expect(companionValue(at: ["params", "status"], in: pauseRequest) as? String == "paused")
@@ -541,7 +541,6 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
-
 }
 
 private func companionDecodedJSONObject(from data: Data) throws -> [String: Any] {
@@ -559,6 +558,7 @@ private func companionValue(
         else {
             return nil
         }
+
         current = next
     }
     return current

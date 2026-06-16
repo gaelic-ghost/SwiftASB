@@ -34,8 +34,6 @@ additions are recorded in the ledger sections below.
 - `CodexAppServer.McpResourceTemplate` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.McpServerStatus` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.McpServerStatus.AuthStatus` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
-- `CodexAppServer.McpServerStatusListRequest` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
-- `CodexAppServer.McpServerStatusListRequest.Detail` (`enum`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.McpServerStatusPage` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.McpTool` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.Model` (`struct`) - Sources/SwiftASB/Public/CodexAppServer+Models.swift
@@ -219,8 +217,6 @@ additions are recorded in the ledger sections below.
 - `CodexTurnReasoningTextDelta` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnStarted` (`struct`) - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexWorkspace` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
-- `CodexWorkspace.ActivePermissionModification` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
-- `CodexWorkspace.ActivePermissionModification.Kind` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.ActivePermissionProfile` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.FileSystemAccessMode` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.FileSystemPath` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
@@ -233,7 +229,6 @@ additions are recorded in the ledger sections below.
 - `CodexWorkspace.PermissionProfile` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.PermissionProfile.Kind` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.PermissionSelection` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
-- `CodexWorkspace.PermissionSelectionModification` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.ProjectInfo` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.ProjectInfo.IdentitySource` (`enum`) - Sources/SwiftASB/Public/CodexWorkspace.swift
 - `CodexWorkspace.RepositoryInfo` (`struct`) - Sources/SwiftASB/Public/CodexWorkspace.swift
@@ -250,8 +245,6 @@ additions are recorded in the ledger sections below.
 - `CodexAppServer.InitializeRequest.init(capabilities:clientInfo:)` - `init(capabilities: CodexAppServer.InitializeCapabilities = .init(), clientInfo: CodexAppServer.ClientInfo)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
 - `CodexAppServer.InputModality.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.McpServerStatus.AuthStatus.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
-- `CodexAppServer.McpServerStatusListRequest.Detail.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
-- `CodexAppServer.McpServerStatusListRequest.init(cursor:limit:detail:threadID:)` - `init(cursor: String? = nil, limit: Int? = nil, detail: CodexAppServer.McpServerStatusListRequest.Detail? = nil, threadID: String? = nil)` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.ModelListRequest.init(cursor:limit:includeHidden:)` - `init(cursor: String? = nil, limit: Int? = nil, includeHidden: Bool? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.Personality.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.ReasoningEffort.init(rawValue:)` - `init?(rawValue: String)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
@@ -342,7 +335,6 @@ additions are recorded in the ledger sections below.
 - `CodexAppServer.init(configuration:)` - `init(configuration: CodexAppServer.Configuration = .init())` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.initialize(_:)` - `func initialize(_ request: CodexAppServer.InitializeRequest) async throws -> CodexAppServer.InitializeSession` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.mcpServerStatusSnapshot()` - `func mcpServerStatusSnapshot() -> CodexAppServer.McpServerStatusPage` - Sources/SwiftASB/Public/CodexAppServer.swift
-- `CodexAppServer.listMcpServerStatuses(_:)` - `@available(*, deprecated) func listMcpServerStatuses(_ request: CodexAppServer.McpServerStatusListRequest = .init()) async throws -> CodexAppServer.McpServerStatusPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listModels(_:)` - `func listModels(_ request: CodexAppServer.ModelListRequest = .init()) async throws -> CodexAppServer.ModelListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listThreadTurns(_:)` - `func listThreadTurns(_ request: CodexAppServer.ThreadTurnsListRequest) async throws -> CodexAppServer.ThreadTurnsPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listThreads(_:)` - `func listThreads(_ request: CodexAppServer.ThreadListRequest = .init()) async throws -> CodexAppServer.ThreadListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
@@ -444,7 +436,6 @@ additions are recorded in the ledger sections below.
 - `CodexAppServer.InitializeCapabilities.init(experimentalAPI:optOutNotificationMethods:)` - `init(experimentalAPI: Bool? = nil, optOutNotificationMethods: [String]? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
 - `CodexAppServer.InitializeRequest.init(capabilities:clientInfo:)` - `init(capabilities: CodexAppServer.InitializeCapabilities = .init(), clientInfo: CodexAppServer.ClientInfo)` - Sources/SwiftASB/Public/CodexAppServer+Bootstrap.swift
 - `CodexAppServer.LoadedThreadListRequest.init(cursor:limit:)` - `init(cursor: String? = nil, limit: Int? = nil)` - Sources/SwiftASB/Public/CodexAppServer+LoadedThreads.swift
-- `CodexAppServer.McpServerStatusListRequest.init(cursor:limit:detail:threadID:)` - `init(cursor: String? = nil, limit: Int? = nil, detail: CodexAppServer.McpServerStatusListRequest.Detail? = nil, threadID: String? = nil)` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.ModelListRequest.init(cursor:limit:includeHidden:)` - `init(cursor: String? = nil, limit: Int? = nil, includeHidden: Bool? = nil)` - Sources/SwiftASB/Public/CodexAppServer+Models.swift
 - `CodexAppServer.ThreadForkRequest.init(threadID:approvalPolicy:approvalsReviewer:baseInstructions:config:currentDirectoryPath:developerInstructions:ephemeral:excludeTurns:model:modelProvider:personality:sandboxMode:serviceName:serviceTier:)` - `init(threadID: String, approvalPolicy: CodexAppServer.ApprovalPolicy? = nil, approvalsReviewer: CodexAppServer.ApprovalsReviewer? = nil, baseInstructions: String? = nil, config: [String : CodexAppServer.JSONValue]? = nil, currentDirectoryPath: String? = nil, developerInstructions: String? = nil, ephemeral: Bool? = nil, excludeTurns: Bool? = nil, model: String? = nil, modelProvider: String? = nil, personality: CodexAppServer.Personality? = nil, sandboxMode: CodexAppServer.SandboxMode? = nil, serviceName: String? = nil, serviceTier: CodexAppServer.ServiceTier? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
 - `CodexAppServer.ThreadListRequest.init(cursor:limit:sortKey:sortDirection:modelProviders:sourceKinds:archived:currentDirectoryPath:searchTerm:)` - `init(cursor: String? = nil, limit: Int? = nil, sortKey: CodexAppServer.ThreadListSortKey? = nil, sortDirection: CodexAppServer.ThreadListSortDirection? = nil, modelProviders: [String]? = nil, sourceKinds: [CodexAppServer.ThreadListSourceKind]? = nil, archived: Bool? = nil, currentDirectoryPath: String? = nil, searchTerm: String? = nil)` - Sources/SwiftASB/Public/CodexAppServer+ThreadLifecycle.swift
@@ -461,7 +452,6 @@ additions are recorded in the ledger sections below.
 - `CodexAppServer.init(configuration:)` - `init(configuration: CodexAppServer.Configuration = .init())` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listLoadedThreads(_:)` - `func listLoadedThreads(_ request: CodexAppServer.LoadedThreadListRequest = .init()) async throws -> CodexAppServer.LoadedThreadListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.mcpServerStatusSnapshot()` - `func mcpServerStatusSnapshot() -> CodexAppServer.McpServerStatusPage` - Sources/SwiftASB/Public/CodexAppServer.swift
-- `CodexAppServer.listMcpServerStatuses(_:)` - `@available(*, deprecated) func listMcpServerStatuses(_ request: CodexAppServer.McpServerStatusListRequest = .init()) async throws -> CodexAppServer.McpServerStatusPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listModels(_:)` - `func listModels(_ request: CodexAppServer.ModelListRequest = .init()) async throws -> CodexAppServer.ModelListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.listThreads(_:)` - `func listThreads(_ request: CodexAppServer.ThreadListRequest = .init()) async throws -> CodexAppServer.ThreadListPage` - Sources/SwiftASB/Public/CodexAppServer.swift
 - `CodexAppServer.startThread(_:)` - `func startThread(_ request: CodexAppServer.ThreadStartRequest = .init()) async throws -> CodexThread` - Sources/SwiftASB/Public/CodexAppServer.swift
@@ -543,8 +533,6 @@ additions are recorded in the ledger sections below.
 - `CodexAppServer.McpServerStatus.AuthStatus.notLoggedIn` - `case notLoggedIn` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.McpServerStatus.AuthStatus.oAuth` - `case oAuth` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.McpServerStatus.AuthStatus.unsupported` - `case unsupported` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
-- `CodexAppServer.McpServerStatusListRequest.Detail.full` - `case full` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
-- `CodexAppServer.McpServerStatusListRequest.Detail.toolsAndAuthOnly` - `case toolsAndAuthOnly` - Sources/SwiftASB/Public/CodexAppServer+MCP.swift
 - `CodexAppServer.NetworkAccess.enabled` - `case enabled` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.NetworkAccess.explicit(_:)` - `case explicit(Bool)` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
 - `CodexAppServer.NetworkAccess.restricted` - `case restricted` - Sources/SwiftASB/Public/CodexAppServer+Compatibility.swift
@@ -765,6 +753,7 @@ additions are recorded in the ledger sections below.
 - `CodexTurnItem.Kind.mcpToolCall` - `case mcpToolCall` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnItem.Kind.plan` - `case plan` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnItem.Kind.reasoning` - `case reasoning` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.subAgentActivity` - `case subAgentActivity` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnItem.Kind.userMessage` - `case userMessage` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnItem.Kind.webSearch` - `case webSearch` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnPlanUpdate.Step.Status.completed` - `case completed` - Sources/SwiftASB/Public/CodexTurnHandle.swift
@@ -791,7 +780,7 @@ The 2026-05-06 app-server schema promotion added several hand-owned public names
 - `CodexThread.RecentFilesQD` and `CodexThread.RecentCommandsQD` describe repeatable recent-activity companion startup intent.
 - `CodexAppServer.Library.GroupedBy.repository` groups app-wide library snapshots by `CodexWorkspace.ProjectInfo` identity: app-server Git origin metadata with cwd fallback.
 - `CodexAppServer.Library` exposes stable worktree groups, selected worktree/repository context, and sorted repository/worktree thread filters for sidebar and project-browser UIs independent of the caller-selected visible grouping mode.
-- `CodexWorkspace` owns app-server-owned permission selections, runtime workspace permission facts, project identity, worktree snapshots, and selected-worktree Git observability values: `PermissionSelection`, `PermissionSelectionModification`, `ActivePermissionProfile`, `ActivePermissionModification`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, `ProjectInfo`, `RepositoryInfo`, `SessionSnapshot`, `WorktreeSnapshot`, `GitStatusSnapshot`, `GitStatusSummary`, `GitRemoteInfo`, and `GitFactSource`.
+- `CodexWorkspace` owns app-server-owned permission selections, runtime workspace permission facts, project identity, worktree snapshots, and selected-worktree Git observability values: `PermissionSelection`, `ActivePermissionProfile`, `PermissionProfile`, `FileSystemPermissions`, `FileSystemSandboxEntry`, `FileSystemAccessMode`, `FileSystemPath`, `FileSystemSpecialPath`, `NetworkPermissions`, `ProjectInfo`, `RepositoryInfo`, `SessionSnapshot`, `WorktreeSnapshot`, `GitStatusSnapshot`, `GitStatusSummary`, `GitRemoteInfo`, and `GitFactSource`.
 - `CodexAppServer.ThreadStartRequest`, `ThreadResumeRequest`, `ThreadForkRequest`, `TurnStartRequest`, `CodexThread.TurnStartRequest`, and `CodexThread.startTextTurn(...)` now accept optional `CodexWorkspace.PermissionSelection` values.
 - `CodexAppServer.ThreadSession` and `CodexThread` now expose active permission-profile provenance, runtime permission facts, app-server-owned project identity, app-server-owned worktree snapshots, and a `CodexWorkspace.SessionSnapshot`.
 - `CodexAppServer.ThreadInfo` and `CodexAppServer.Library.ThreadSnapshot` now expose `CodexAppServer.ThreadSource` so launcher UIs can badge CLI, app-server, editor, custom, and sub-agent threads without reading generated wire values.

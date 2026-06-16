@@ -5,12 +5,6 @@ import Foundation
 /// `CodexConfig` reads effective Codex configuration through the app-server so
 /// sandboxed clients do not need to inspect config files directly.
 public struct CodexConfig: Sendable {
-    private let appServer: CodexAppServer
-
-    init(appServer: CodexAppServer) {
-        self.appServer = appServer
-    }
-
     /// Request used to read effective app-server configuration.
     public struct ReadRequest: Sendable, Equatable {
         public var currentDirectoryPath: String?
@@ -77,6 +71,12 @@ public struct CodexConfig: Sendable {
         public let requirements: CodexAppServer.JSONValue?
     }
 
+    private let appServer: CodexAppServer
+
+    init(appServer: CodexAppServer) {
+        self.appServer = appServer
+    }
+
     /// Reads effective app-server configuration.
     public func read(_ request: ReadRequest = .init()) async throws -> Snapshot {
         try await appServer.readConfig(request)
@@ -97,11 +97,11 @@ public extension CodexAppServer {
 
 extension CodexConfig.Snapshot {
     init(wireValue: CodexWireConfigReadResponse) throws {
-        self.init(
-            config: try CodexConfig.jsonValue(from: wireValue.config),
-            layers: try wireValue.layers?.map(CodexConfig.Layer.init(wireValue:)),
+        try self.init(
+            config: CodexConfig.jsonValue(from: wireValue.config),
+            layers: wireValue.layers?.map(CodexConfig.Layer.init(wireValue:)),
             origins: Dictionary(
-                uniqueKeysWithValues: try wireValue.origins.map { key, value in
+                uniqueKeysWithValues: wireValue.origins.map { key, value in
                     try (key, CodexConfig.LayerMetadata(wireValue: value))
                 }
             )
@@ -111,8 +111,8 @@ extension CodexConfig.Snapshot {
 
 extension CodexConfig.Layer {
     init(wireValue: CodexWireConfigLayer) throws {
-        self.init(
-            config: try CodexConfig.jsonValue(from: wireValue.config),
+        try self.init(
+            config: CodexConfig.jsonValue(from: wireValue.config),
             disabledReason: wireValue.disabledReason,
             name: .init(wireValue: wireValue.name),
             version: wireValue.version
@@ -146,29 +146,29 @@ extension CodexConfig.LayerSource {
 extension CodexConfig.LayerSource.Kind {
     init(wireValue: CodexWireConfigLayerSourceType) {
         switch wireValue {
-        case .enterpriseManaged:
-            self = .enterpriseManaged
-        case .legacyManagedConfigTomlFromFile:
-            self = .legacyManagedConfigTomlFromFile
-        case .legacyManagedConfigTomlFromMdm:
-            self = .legacyManagedConfigTomlFromMdm
-        case .mdm:
-            self = .mdm
-        case .project:
-            self = .project
-        case .sessionFlags:
-            self = .sessionFlags
-        case .system:
-            self = .system
-        case .user:
-            self = .user
+            case .enterpriseManaged:
+                self = .enterpriseManaged
+            case .legacyManagedConfigTomlFromFile:
+                self = .legacyManagedConfigTomlFromFile
+            case .legacyManagedConfigTomlFromMdm:
+                self = .legacyManagedConfigTomlFromMdm
+            case .mdm:
+                self = .mdm
+            case .project:
+                self = .project
+            case .sessionFlags:
+                self = .sessionFlags
+            case .system:
+                self = .system
+            case .user:
+                self = .user
         }
     }
 }
 
 extension CodexConfig.RequirementsSnapshot {
     init(wireValue: CodexWireConfigRequirementsReadResponse) throws {
-        self.init(requirements: try wireValue.requirements.map(CodexConfig.jsonValue(from:)))
+        try self.init(requirements: wireValue.requirements.map(CodexConfig.jsonValue(from:)))
     }
 }
 
@@ -183,31 +183,31 @@ extension CodexConfig {
 extension CodexAppServer.JSONValue {
     init(jsonObject: Any) throws {
         switch jsonObject {
-        case is NSNull:
-            self = .null
-        case let value as Bool:
-            self = .bool(value)
-        case let value as Int:
-            self = .integer(value)
-        case let value as NSNumber:
-            let doubleValue = value.doubleValue
-            let integerValue = value.int64Value
-            if doubleValue.rounded(.towardZero) == doubleValue, let exactInteger = Int(exactly: integerValue) {
-                self = .integer(exactInteger)
-            } else {
-                self = .double(doubleValue)
-            }
-        case let value as String:
-            self = .string(value)
-        case let value as [Any]:
-            self = .array(try value.map(Self.init(jsonObject:)))
-        case let value as [String: Any]:
-            self = .object(try value.mapValues(Self.init(jsonObject:)))
-        default:
-            throw CodexAppServerError.protocolFailure(
-                operation: "config/read",
-                reason: "The app-server returned a config value that SwiftASB could not represent as JSON."
-            )
+            case is NSNull:
+                self = .null
+            case let value as Bool:
+                self = .bool(value)
+            case let value as Int:
+                self = .integer(value)
+            case let value as NSNumber:
+                let doubleValue = value.doubleValue
+                let integerValue = value.int64Value
+                if doubleValue.rounded(.towardZero) == doubleValue, let exactInteger = Int(exactly: integerValue) {
+                    self = .integer(exactInteger)
+                } else {
+                    self = .double(doubleValue)
+                }
+            case let value as String:
+                self = .string(value)
+            case let value as [Any]:
+                self = try .array(value.map(Self.init(jsonObject:)))
+            case let value as [String: Any]:
+                self = try .object(value.mapValues(Self.init(jsonObject:)))
+            default:
+                throw CodexAppServerError.protocolFailure(
+                    operation: "config/read",
+                    reason: "The app-server returned a config value that SwiftASB could not represent as JSON."
+                )
         }
     }
 }

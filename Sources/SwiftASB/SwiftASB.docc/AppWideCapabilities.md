@@ -106,7 +106,6 @@ These types are public because a consumer can use them directly today. Other gen
 - ``CodexAppServer/readMcpResource(_:)``
 - ``CodexExtensions/MCP/statusSnapshot()``
 - ``CodexExtensions/MCP/readResource(server:uri:threadID:)``
-- ``CodexAppServer/McpServerStatusListRequest``
 - ``CodexAppServer/McpServerStatusPage``
 - ``CodexAppServer/McpServerStatus``
 - ``CodexAppServer/McpServerSummary``

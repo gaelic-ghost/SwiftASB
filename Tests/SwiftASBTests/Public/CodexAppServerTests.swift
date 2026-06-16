@@ -1,8 +1,8 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
-@Suite("CodexAppServer", .serialized)
+@Suite(.serialized)
 struct CodexAppServerTests {
     @Test("preserves unknown reasoning effort wire values")
     func preservesUnknownReasoningEffortWireValues() {
@@ -93,8 +93,8 @@ struct CodexAppServerTests {
                 launchArgumentsPrefix: [],
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
-                versionString: "codex-cli 0.139.0",
-                compatibility: .supported(documentedWindow: "0.139.x")
+                versionString: "codex-cli 0.140.0",
+                compatibility: .supported(documentedWindow: "0.140.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -104,8 +104,8 @@ struct CodexAppServerTests {
         let diagnostics = try await client.cliExecutableDiagnostics()
         #expect(diagnostics.source == .homebrewAppleSilicon)
         #expect(diagnostics.resolvedExecutablePath == "/opt/homebrew/bin/codex")
-        #expect(diagnostics.versionString == "codex-cli 0.139.0")
-        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.139.x"))
+        #expect(diagnostics.versionString == "codex-cli 0.140.0")
+        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.140.x"))
 
         await client.stop()
     }
@@ -118,8 +118,8 @@ struct CodexAppServerTests {
                 launchArgumentsPrefix: [],
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
-                versionString: "codex-cli 0.139.0",
-                compatibility: .supported(documentedWindow: "0.139.x")
+                versionString: "codex-cli 0.140.0",
+                compatibility: .supported(documentedWindow: "0.140.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -134,7 +134,7 @@ struct CodexAppServerTests {
             )
         )
 
-        #expect(startup.cliExecutableDiagnostics.versionString == "codex-cli 0.139.0")
+        #expect(startup.cliExecutableDiagnostics.versionString == "codex-cli 0.140.0")
         #expect(startup.initializeSession.codexHome == "/Users/galew/.codex")
         #expect(await transport.recordedMethods == ["initialize", "initialized"])
 
@@ -150,7 +150,7 @@ struct CodexAppServerTests {
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.139.x")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.140.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -160,7 +160,7 @@ struct CodexAppServerTests {
                 source: .homebrewAppleSilicon,
                 resolvedExecutablePath: "/opt/homebrew/bin/codex",
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.139.x")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.140.x")
             )
         )) {
             try await client.start(
@@ -187,7 +187,7 @@ struct CodexAppServerTests {
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.139.x")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.140.x")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -285,7 +285,7 @@ struct CodexAppServerTests {
     }
 
     @Test("replays buffered feature operation events to later subscribers")
-    func replaysBufferedFeatureOperationEventsToLaterSubscribers() async throws {
+    func replaysBufferedFeatureOperationEventsToLaterSubscribers() async {
         let client = CodexAppServer(transport: FakeCodexAppServerTransport())
         let event = SwiftASBFeatureOperationEvent(
             categoryID: .gitActions,
@@ -296,7 +296,7 @@ struct CodexAppServerTests {
             startedAt: Date(timeIntervalSince1970: 1_700_000_000),
             completedAt: Date(timeIntervalSince1970: 1_700_000_001),
             commands: [
-                .init(argv: ["git", "switch", "-c", "docs/example"])
+                .init(argv: ["git", "switch", "-c", "docs/example"]),
             ],
             appServerMethod: "command/exec",
             intentKind: "gitBranchCreate",
@@ -341,7 +341,7 @@ struct CodexAppServerTests {
                 command: ["git", "status", "--short", "--branch"],
                 currentDirectoryPath: "/tmp/project",
                 outputBytesCap: 4096,
-                timeoutMilliseconds: 5_000
+                timeoutMilliseconds: 5000
             )
         )
 
@@ -623,45 +623,6 @@ struct CodexAppServerTests {
         await client.stop()
     }
 
-    @Test("lists app-wide MCP server status through the compatibility request")
-    func listsAppWideMcpServerStatusThroughCompatibilityRequest() async throws {
-        let transport = FakeCodexAppServerTransport()
-        let client = CodexAppServer(transport: transport)
-
-        try await client.start()
-        _ = try await client.initialize(
-            .init(
-                clientInfo: .init(
-                    name: "SwiftASBTests",
-                    title: "SwiftASB Tests",
-                    version: "0.1.0"
-                )
-            )
-        )
-
-        let page = try await client.listMcpServerStatuses(
-            .init(cursor: "cursor-start", limit: 4, detail: .toolsAndAuthOnly)
-        )
-
-        #expect(page.nextCursor == nil)
-        #expect(page.servers.count == 1)
-        #expect(page.servers[0].name == "calendar")
-        #expect(page.servers[0].authStatus == .oAuth)
-        #expect(page.servers[0].resources[0].uri == "calendar://events/today")
-        #expect(page.servers[0].resourceTemplates[0].uriTemplate == "calendar://events/{date}")
-        #expect(page.servers[0].tools["list_events"]?.title == "List Events")
-        #expect(page.servers[0].tools["list_events"]?.inputSchema == .object(["type": .string("object")]))
-
-        let requestPayload = try #require(await transport.recordedRequestPayload(for: "mcpServerStatus/list"))
-        let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
-        let params = try #require(request["params"] as? [String: Any])
-        #expect(params["cursor"] as? String == "cursor-start")
-        #expect(params["limit"] as? Int == 4)
-        #expect(params["detail"] as? String == "toolsAndAuthOnly")
-
-        await client.stop()
-    }
-
     @Test("reads MCP resources through the public client")
     func readsMcpResource() async throws {
         let transport = FakeCodexAppServerTransport()
@@ -754,5 +715,4 @@ struct CodexAppServerTests {
 
         await client.stop()
     }
-
 }

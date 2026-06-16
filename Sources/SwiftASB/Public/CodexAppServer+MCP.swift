@@ -1,21 +1,21 @@
 public extension CodexAppServer {
     /// Request used to read app-server MCP status snapshots.
-    struct McpServerStatusListRequest: Sendable, Equatable {
-        public enum Detail: String, Sendable, Equatable {
+    internal struct McpServerStatusListRequest: Equatable {
+        enum Detail: String, Equatable {
             case full
             case toolsAndAuthOnly
         }
 
-        public var cursor: String?
-        public var detail: Detail?
-        public var limit: Int?
-        public var threadID: String?
+        var cursor: String?
+        var detail: Detail?
+        var limit: Int?
+        var threadID: String?
 
         /// Creates an MCP status-list request.
         ///
         /// Nil pagination and detail fields are omitted, which lets the
         /// app-server choose its default page and detail level.
-        public init(
+        init(
             cursor: String? = nil,
             limit: Int? = nil,
             detail: Detail? = nil,
@@ -139,10 +139,10 @@ public extension CodexAppServer {
 extension CodexAppServer.McpServerStatusListRequest.Detail {
     var wireValue: CodexWireMCPServerStatusDetail {
         switch self {
-        case .full:
-            .full
-        case .toolsAndAuthOnly:
-            .toolsAndAuthOnly
+            case .full:
+                .full
+            case .toolsAndAuthOnly:
+                .toolsAndAuthOnly
         }
     }
 }
@@ -178,14 +178,14 @@ extension CodexAppServer.McpServerSummary {
 extension CodexAppServer.McpServerStatus.AuthStatus {
     init(wireValue: CodexWireMCPAuthStatus) {
         switch wireValue {
-        case .bearerToken:
-            self = .bearerToken
-        case .notLoggedIn:
-            self = .notLoggedIn
-        case .oAuth:
-            self = .oAuth
-        case .unsupported:
-            self = .unsupported
+            case .bearerToken:
+                self = .bearerToken
+            case .notLoggedIn:
+                self = .notLoggedIn
+            case .oAuth:
+                self = .oAuth
+            case .unsupported:
+                self = .unsupported
         }
     }
 }

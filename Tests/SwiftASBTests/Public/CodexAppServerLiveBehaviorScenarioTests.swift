@@ -1,7 +1,7 @@
-import Foundation
 import CryptoKit
-import Testing
+import Foundation
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerLiveIntegrationTests {
     @Test(
@@ -21,9 +21,11 @@ extension CodexAppServerLiveIntegrationTests {
             .appendingPathComponent("behavior-matrix-read.txt", isDirectory: false)
         let readFixtureText = "behavior-matrix-\(UUID().uuidString)\n"
         try Data(readFixtureText.utf8).write(to: readFixtureURL)
-        let expectedDigest = Data(SHA256.hash(data: Data(readFixtureText.utf8))).map {
-            String(format: "%02x", $0)
-        }.joined()
+        let expectedDigest = Data(SHA256.hash(data: Data(readFixtureText.utf8)))
+            .map {
+                String(format: "%02x", $0)
+            }
+            .joined()
 
         let untrustedCreateURL = harness.approvalProbeWorkspace
             .appendingPathComponent("behavior-matrix-untrusted-create.txt", isDirectory: false)
@@ -297,7 +299,7 @@ extension CodexAppServerLiveIntegrationTests {
             let commandSnapshots = await MainActor.run { recentCommands.commands }
             #expect(fileSnapshots.isEmpty == false || commandSnapshots.isEmpty == false)
 
-            let report = LiveFileMutationScenarioReport(
+            let report = try LiveFileMutationScenarioReport(
                 threadID: thread.id,
                 workspacePath: harness.fileScenarioWorkspace.path,
                 turns: [
@@ -314,7 +316,7 @@ extension CodexAppServerLiveIntegrationTests {
                     .init(
                         path: auditURL.lastPathComponent,
                         exists: FileManager.default.fileExists(atPath: auditURL.path),
-                        contents: try String(contentsOf: auditURL, encoding: .utf8)
+                        contents: String(contentsOf: auditURL, encoding: .utf8)
                     ),
                 ],
                 recentFiles: fileSnapshots.map(LiveFileMutationScenarioReport.RecentFile.init),
@@ -364,28 +366,28 @@ extension CodexAppServerLiveIntegrationTests {
             )
 
             switch secondSameThreadOutcome {
-            case .started:
-                Issue.record(
-                    """
-                    SwiftASB should reject overlapping same-thread turns before they reach the live \
-                    Codex app-server because the live same-thread lifecycle is not independently \
-                    routable today.
-                    """
-                )
-            case let .failed(errorDescription):
-                #expect(
-                    errorDescription.contains("overlapping same-thread turns")
-                        || errorDescription.contains("another turn start in flight")
-                        || errorDescription.contains("already has an active turn")
-                )
-                #expect(errorDescription.isEmpty == false)
+                case .started:
+                    Issue.record(
+                        """
+                        SwiftASB should reject overlapping same-thread turns before they reach the live \
+                        Codex app-server because the live same-thread lifecycle is not independently \
+                        routable today.
+                        """
+                    )
+                case let .failed(errorDescription):
+                    #expect(
+                        errorDescription.contains("overlapping same-thread turns")
+                            || errorDescription.contains("another turn start in flight")
+                            || errorDescription.contains("already has an active turn")
+                    )
+                    #expect(errorDescription.isEmpty == false)
 
-                let firstCompletion = try await awaitCompletion(
-                    of: firstSameThreadTurn,
-                    timeoutSeconds: 45,
-                    operation: "waiting for the first same-thread turn to complete after the second start was rejected"
-                )
-                #expect(firstCompletion.turn.status.isTerminal)
+                    let firstCompletion = try await awaitCompletion(
+                        of: firstSameThreadTurn,
+                        timeoutSeconds: 45,
+                        operation: "waiting for the first same-thread turn to complete after the second start was rejected"
+                    )
+                    #expect(firstCompletion.turn.status.isTerminal)
             }
 
             await client.stop()

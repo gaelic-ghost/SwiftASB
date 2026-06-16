@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("reads a stored thread and hydrates returned turns into the local history store")
@@ -66,7 +66,7 @@ extension CodexAppServerTests {
             threadReadResult: [
                 "thread": [
                     "cliVersion": "0.128.0",
-                    "createdAt": 1713350000,
+                    "createdAt": 1_713_350_000,
                     "cwd": "/tmp/project",
                     "ephemeral": false,
                     "id": "thread-123",
@@ -76,7 +76,7 @@ extension CodexAppServerTests {
                     "status": ["type": "notLoaded"],
                     "turns": [
                         [
-                            "completedAt": 1713350005,
+                            "completedAt": 1_713_350_005,
                             "durationMs": 3000,
                             "error": NSNull(),
                             "id": "turn-123",
@@ -87,11 +87,11 @@ extension CodexAppServerTests {
                                     "type": "agentMessage",
                                 ],
                             ],
-                            "startedAt": 1713350002,
+                            "startedAt": 1_713_350_002,
                             "status": "completed",
                         ],
                     ],
-                    "updatedAt": 1713350005,
+                    "updatedAt": 1_713_350_005,
                 ],
             ]
         )
@@ -181,7 +181,7 @@ extension CodexAppServerTests {
             threadReadResult: [
                 "thread": [
                     "cliVersion": "0.128.0",
-                    "createdAt": 1713350000,
+                    "createdAt": 1_713_350_000,
                     "cwd": "/tmp/project",
                     "ephemeral": false,
                     "id": "thread-123",
@@ -191,7 +191,7 @@ extension CodexAppServerTests {
                     "status": ["type": "notLoaded"],
                     "turns": [
                         [
-                            "completedAt": 1713350005,
+                            "completedAt": 1_713_350_005,
                             "durationMs": 3000,
                             "error": NSNull(),
                             "id": "turn-123",
@@ -202,11 +202,11 @@ extension CodexAppServerTests {
                                     "type": "commandExecution",
                                 ],
                             ],
-                            "startedAt": 1713350002,
+                            "startedAt": 1_713_350_002,
                             "status": "completed",
                         ],
                     ],
-                    "updatedAt": 1713350005,
+                    "updatedAt": 1_713_350_005,
                 ],
             ]
         )
@@ -473,63 +473,62 @@ extension CodexAppServerTests {
         }
 
         switch receivedEvents[0] {
-        case let .started(started):
-            #expect(started.thread.id == thread.id)
-            #expect(started.thread.preview == "Hello from thread/started")
-        default:
-            Issue.record("Expected the first thread event to be .started.")
+            case let .started(started):
+                #expect(started.thread.id == thread.id)
+                #expect(started.thread.preview == "Hello from thread/started")
+            default:
+                Issue.record("Expected the first thread event to be .started.")
         }
 
         switch receivedEvents[1] {
-        case let .statusChanged(change):
-            #expect(change.threadID == thread.id)
-            #expect(change.status.type == .active)
-            #expect(change.status.activeFlags == [.waitingOnApproval])
-        default:
-            Issue.record("Expected the second thread event to be .statusChanged.")
+            case let .statusChanged(change):
+                #expect(change.threadID == thread.id)
+                #expect(change.status.type == .active)
+                #expect(change.status.activeFlags == [.waitingOnApproval])
+            default:
+                Issue.record("Expected the second thread event to be .statusChanged.")
         }
 
         switch receivedEvents[2] {
-        case let .archived(event):
-            #expect(event.threadID == thread.id)
-        default:
-            Issue.record("Expected the third thread event to be .archived.")
+            case let .archived(event):
+                #expect(event.threadID == thread.id)
+            default:
+                Issue.record("Expected the third thread event to be .archived.")
         }
 
         switch receivedEvents[3] {
-        case let .unarchived(event):
-            #expect(event.threadID == thread.id)
-        default:
-            Issue.record("Expected the fourth thread event to be .unarchived.")
+            case let .unarchived(event):
+                #expect(event.threadID == thread.id)
+            default:
+                Issue.record("Expected the fourth thread event to be .unarchived.")
         }
 
         switch receivedEvents[4] {
-        case let .nameUpdated(update):
-            #expect(update.threadID == thread.id)
-            #expect(update.threadName == "Planning Thread")
-        default:
-            Issue.record("Expected the fifth thread event to be .nameUpdated.")
+            case let .nameUpdated(update):
+                #expect(update.threadID == thread.id)
+                #expect(update.threadName == "Planning Thread")
+            default:
+                Issue.record("Expected the fifth thread event to be .nameUpdated.")
         }
 
         switch receivedEvents[5] {
-        case let .tokenUsageUpdated(update):
-            #expect(update.threadID == thread.id)
-            #expect(update.turnID == "turn-123")
-            #expect(update.last.totalTokens == 65)
-            #expect(update.total.totalTokens == 650)
-            #expect(update.modelContextWindow == 200000)
-        default:
-            Issue.record("Expected the sixth thread event to be .tokenUsageUpdated.")
+            case let .tokenUsageUpdated(update):
+                #expect(update.threadID == thread.id)
+                #expect(update.turnID == "turn-123")
+                #expect(update.last.totalTokens == 65)
+                #expect(update.total.totalTokens == 650)
+                #expect(update.modelContextWindow == 200_000)
+            default:
+                Issue.record("Expected the sixth thread event to be .tokenUsageUpdated.")
         }
 
         switch receivedEvents[6] {
-        case let .closed(event):
-            #expect(event.threadID == thread.id)
-        default:
-            Issue.record("Expected the seventh thread event to be .closed.")
+            case let .closed(event):
+                #expect(event.threadID == thread.id)
+            default:
+                Issue.record("Expected the seventh thread event to be .closed.")
         }
 
         await client.stop()
     }
-
 }

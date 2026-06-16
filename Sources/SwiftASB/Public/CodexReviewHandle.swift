@@ -12,18 +12,4 @@ public struct CodexReviewHandle: Sendable {
     public let subject: CodexThread.ReviewSubject
     /// The active review turn.
     public let turn: CodexTurnHandle
-
-    internal init(
-        sourceThreadID: String,
-        reviewThreadID: String,
-        placement: CodexThread.ReviewPlacement,
-        subject: CodexThread.ReviewSubject,
-        turn: CodexTurnHandle
-    ) {
-        self.sourceThreadID = sourceThreadID
-        self.reviewThreadID = reviewThreadID
-        self.placement = placement
-        self.subject = subject
-        self.turn = turn
-    }
 }

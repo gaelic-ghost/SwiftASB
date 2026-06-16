@@ -2,18 +2,18 @@
 import Foundation
 
 actor ThreadHistoryStore {
-    enum Completeness: String, Sendable {
+    enum Completeness: String {
         case partial
         case serverParity
         case richerThanServer
     }
 
-    enum LocalState: String, Sendable {
+    enum LocalState: String {
         case available
         case removed
     }
 
-    struct Configuration: Sendable {
+    struct Configuration {
         let inMemory: Bool
         let storeURL: URL
 
@@ -32,8 +32,8 @@ actor ThreadHistoryStore {
         }
     }
 
-    struct ThreadSnapshot: Sendable, Equatable {
-        struct DefaultsSnapshot: Sendable, Equatable {
+    struct ThreadSnapshot: Equatable {
+        struct DefaultsSnapshot: Equatable {
             let approvalPolicy: String
             let approvalsReviewer: String
             let currentDirectoryPath: String
@@ -45,12 +45,12 @@ actor ThreadHistoryStore {
             let serviceTier: String?
         }
 
-        struct StateSnapshot: Sendable, Equatable {
+        struct StateSnapshot: Equatable {
             let completeness: String
             let localState: String
         }
 
-        struct RollbackSnapshot: Sendable, Equatable {
+        struct RollbackSnapshot: Equatable {
             let id: String
             let previousNewestTurnID: String?
             let recordedAt: Int
@@ -60,8 +60,8 @@ actor ThreadHistoryStore {
             let serverUpdatedAt: Int
         }
 
-        struct TurnSnapshot: Sendable, Equatable {
-            struct TokenUsageSnapshot: Codable, Sendable, Equatable {
+        struct TurnSnapshot: Equatable {
+            struct TokenUsageSnapshot: Codable, Equatable {
                 let cachedInputTokens: Int?
                 let inputTokens: Int?
                 let outputTokens: Int?
@@ -70,7 +70,7 @@ actor ThreadHistoryStore {
                 let modelContextWindow: Int?
             }
 
-            struct ItemSnapshot: Sendable, Equatable {
+            struct ItemSnapshot: Equatable {
                 let id: String
                 let orderIndex: Int
                 let kind: String
@@ -120,8 +120,8 @@ actor ThreadHistoryStore {
         let updatedAt: Int
     }
 
-    struct SandboxPolicySnapshot: Codable, Sendable, Equatable {
-        enum NetworkAccessSnapshot: Codable, Sendable, Equatable {
+    struct SandboxPolicySnapshot: Codable, Equatable {
+        enum NetworkAccessSnapshot: Codable, Equatable {
             case explicit(Bool)
             case enabled
             case restricted
@@ -134,27 +134,12 @@ actor ThreadHistoryStore {
         let writableRoots: [String]
     }
 
-    private struct ActiveTurnBuilder: Sendable {
-        struct ActiveItem: Sendable {
-            let orderIndex: Int
-            var latestItem: CodexTurnItem
-            var streamedText: String
-        }
-
-        let threadID: String
-        var diff: String?
-        var items: [String: ActiveItem]
-        var nextItemOrderIndex: Int
-        let orderIndex: Int
-        var turn: CodexAppServer.TurnInfo
-    }
-
-    struct HydratedTurn: Sendable {
+    struct HydratedTurn {
         let turn: CodexAppServer.TurnInfo
         let items: [CodexTurnItem]
     }
 
-    struct ThreadListSnapshot: Sendable, Equatable {
+    struct ThreadListSnapshot: Equatable {
         let id: String
         let cliVersion: String
         let createdAt: Int
@@ -177,784 +162,38 @@ actor ThreadHistoryStore {
         let updatedAt: Int
     }
 
-    private struct HydrationMergeOutcome: Sendable {
+    private struct ActiveTurnBuilder {
+        struct ActiveItem {
+            let orderIndex: Int
+            var latestItem: CodexTurnItem
+            var streamedText: String
+        }
+
+        let threadID: String
+        var diff: String?
+        var items: [String: ActiveItem]
+        var nextItemOrderIndex: Int
+        let orderIndex: Int
+        var turn: CodexAppServer.TurnInfo
+    }
+
+    private struct HydrationMergeOutcome {
         let preservedRicherLocalDetail: Bool
     }
+
+    private struct MergedString {
+        let value: String?
+        let preservedExistingDetail: Bool
+    }
+
+    private static let sharedManagedObjectModel: NSManagedObjectModel = makeManagedObjectModel()
 
     private let container: NSPersistentContainer
     private var activeTurns: [String: ActiveTurnBuilder] = [:]
     private var nextTurnOrderByThreadID: [String: Int] = [:]
-    private static let sharedManagedObjectModel: NSManagedObjectModel = makeManagedObjectModel()
 
     init(configuration: Configuration = .live()) throws {
-        self.container = try Self.makePersistentContainer(configuration: configuration)
-    }
-
-    func detachPersistentStoresForTeardown() throws {
-        container.viewContext.performAndWait {
-            container.viewContext.reset()
-        }
-
-        let coordinator = container.persistentStoreCoordinator
-        for store in coordinator.persistentStores {
-            try coordinator.remove(store)
-        }
-    }
-
-    func recordThreadStarted(session: CodexAppServer.ThreadSession) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
-            Self.applyThreadInfo(session.thread, to: thread)
-            thread.isArchived = false
-
-            let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
-            Self.applyThreadDefaults(session, to: defaults)
-            defaults.thread = thread
-            thread.defaults = defaults
-
-            let state = thread.state ?? HistoryThreadState(context: context)
-            state.completeness = Completeness.partial.rawValue
-            state.localState = LocalState.available.rawValue
-            state.thread = thread
-            thread.state = state
-
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordThreadResumed(
-        session: CodexAppServer.ThreadSession,
-        turns: [HydratedTurn]
-    ) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
-            Self.applyThreadInfo(session.thread, to: thread)
-
-            let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
-            Self.applyThreadDefaults(session, to: defaults)
-            defaults.thread = thread
-            thread.defaults = defaults
-
-            let state = thread.state ?? HistoryThreadState(context: context)
-            state.localState = LocalState.available.rawValue
-            state.thread = thread
-            thread.state = state
-
-            if turns.isEmpty {
-                if state.completeness.isEmpty {
-                    state.completeness = Completeness.partial.rawValue
-                }
-            } else {
-                let outcome = try Self.upsertHydratedTurns(
-                    turns,
-                    for: thread,
-                    in: context
-                )
-                state.completeness = outcome.preservedRicherLocalDetail
-                    ? Completeness.richerThanServer.rawValue
-                    : Completeness.serverParity.rawValue
-            }
-
-            try context.saveIfChanged()
-        }
-
-        if let maxOrderIndex = try snapshot(threadID: session.thread.id)?.turns.map(\.orderIndex).max() {
-            nextTurnOrderByThreadID[session.thread.id] = maxOrderIndex + 1
-        }
-    }
-
-    func recordThreadForked(
-        session: CodexAppServer.ThreadSession,
-        turns: [HydratedTurn]
-    ) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
-            Self.applyThreadInfo(session.thread, to: thread)
-            thread.isArchived = false
-            if thread.forkedFromTurnID == nil {
-                thread.forkedFromTurnID = turns.last?.turn.id
-            }
-
-            let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
-            Self.applyThreadDefaults(session, to: defaults)
-            defaults.thread = thread
-            thread.defaults = defaults
-
-            let state = thread.state ?? HistoryThreadState(context: context)
-            state.localState = LocalState.available.rawValue
-            state.thread = thread
-            thread.state = state
-
-            if turns.isEmpty {
-                if state.completeness.isEmpty {
-                    state.completeness = Completeness.partial.rawValue
-                }
-            } else {
-                let outcome = try Self.upsertHydratedTurns(
-                    turns,
-                    for: thread,
-                    in: context
-                )
-                state.completeness = outcome.preservedRicherLocalDetail
-                    ? Completeness.richerThanServer.rawValue
-                    : Completeness.serverParity.rawValue
-            }
-
-            try context.saveIfChanged()
-        }
-
-        if let maxOrderIndex = try snapshot(threadID: session.thread.id)?.turns.map(\.orderIndex).max() {
-            nextTurnOrderByThreadID[session.thread.id] = maxOrderIndex + 1
-        }
-    }
-
-    func recordThreadMetadataUpdated(_ threadInfo: CodexAppServer.ThreadInfo) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            let thread = try Self.fetchOrInsertThread(id: threadInfo.id, in: context)
-            Self.applyThreadInfo(threadInfo, to: thread)
-            if let state = thread.state {
-                state.completeness = state.completeness.isEmpty ? Completeness.partial.rawValue : state.completeness
-                state.localState = LocalState.available.rawValue
-            } else {
-                let state = HistoryThreadState(context: context)
-                state.completeness = Completeness.partial.rawValue
-                state.localState = LocalState.available.rawValue
-                state.thread = thread
-                thread.state = state
-            }
-            try context.saveIfChanged()
-        }
-    }
-
-    func reconcileThreadListPage(
-        _ threads: [CodexAppServer.ThreadInfo],
-        archived: Bool?
-    ) throws {
-        guard !threads.isEmpty else { return }
-
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            for threadInfo in threads {
-                let thread = try Self.fetchOrInsertThread(id: threadInfo.id, in: context)
-                Self.applyThreadInfo(threadInfo, to: thread)
-                Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
-                thread.state?.localState = LocalState.available.rawValue
-                if let archived {
-                    thread.isArchived = archived
-                }
-            }
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordThreadStatusChanged(
-        threadID: String,
-        status: CodexAppServer.ThreadStatus
-    ) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else { return }
-            thread.statusType = status.type.rawValue
-            thread.statusFlagsData = try Self.encode(status.activeFlags.map(\.rawValue))
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordThreadArchived(threadID: String, isArchived: Bool) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else { return }
-            thread.isArchived = isArchived
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordThreadNameUpdated(threadID: String, name: String?) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else { return }
-            thread.name = name
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordThreadClosed(threadID: String) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else { return }
-            thread.isClosed = true
-            try context.saveIfChanged()
-        }
-    }
-
-    func markMissingThreadsRemoved(
-        visibleThreadIDs: Set<String>,
-        archived: Bool
-    ) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            let request = HistoryThread.fetchRequest()
-            request.predicate = NSPredicate(format: "isArchived == %@", NSNumber(value: archived))
-            let threads = try context.fetch(request)
-            for thread in threads where !visibleThreadIDs.contains(thread.id) && Self.canMarkRemoved(thread) {
-                Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
-                thread.state?.localState = LocalState.removed.rawValue
-            }
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordTurnStarted(threadID: String, turn: CodexAppServer.TurnInfo) throws {
-        let orderIndex: Int
-        if var existingBuilder = activeTurns[turn.id] {
-            existingBuilder.turn = turn
-            activeTurns[turn.id] = existingBuilder
-            orderIndex = existingBuilder.orderIndex
-        } else {
-            orderIndex = nextTurnOrderByThreadID[threadID] ?? 0
-            nextTurnOrderByThreadID[threadID] = orderIndex + 1
-            activeTurns[turn.id] = .init(
-                threadID: threadID,
-                diff: nil,
-                items: [:],
-                nextItemOrderIndex: 0,
-                orderIndex: orderIndex,
-                turn: turn
-            )
-        }
-
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
-                throw ThreadHistoryStoreError.missingThread(
-                    "Cannot record turn \(turn.id) because thread \(threadID) is missing from the local history store."
-                )
-            }
-            let turnObject = try Self.fetchOrInsertTurn(
-                turnID: turn.id,
-                threadID: threadID,
-                in: context
-            )
-            Self.applyTurnInfo(turn, orderIndex: orderIndex, to: turnObject)
-            turnObject.thread = thread
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordTurnDiffUpdated(turnID: String, diff: String) throws {
-        guard var builder = activeTurns[turnID] else { return }
-        builder.diff = diff
-        activeTurns[turnID] = builder
-        let threadID = builder.threadID
-
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let turn = try Self.fetchTurn(
-                turnID: turnID,
-                threadID: threadID,
-                in: context
-            ) else { return }
-            turn.diff = diff
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordItemStarted(
-        threadID: String,
-        turnID: String,
-        item: CodexTurnItem
-    ) throws {
-        guard var builder = activeTurns[turnID] else { return }
-        let orderIndex = builder.nextItemOrderIndex
-        builder.nextItemOrderIndex += 1
-        builder.items[item.id] = .init(
-            orderIndex: orderIndex,
-            latestItem: item,
-            streamedText: item.text ?? ""
-        )
-        activeTurns[turnID] = builder
-
-        let stableID = Self.stableItemID(threadID: threadID, turnID: turnID, itemID: item.id)
-        let streamedText = builder.items[item.id]?.streamedText
-
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let turn = try Self.fetchTurn(turnID: turnID, threadID: threadID, in: context) else {
-                throw ThreadHistoryStoreError.missingTurn(
-                    "Cannot record item \(item.id) because turn \(turnID) is missing from the local history store."
-                )
-            }
-            let persistedItem = try Self.fetchOrInsertItem(stableID: stableID, in: context)
-            Self.applyItem(item, stableID: stableID, orderIndex: orderIndex, streamedText: streamedText, to: persistedItem)
-            persistedItem.turn = turn
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordItemDelta(turnID: String, itemID: String, delta: String) throws {
-        guard var builder = activeTurns[turnID], var activeItem = builder.items[itemID] else { return }
-        activeItem.streamedText += delta
-        builder.items[itemID] = activeItem
-        activeTurns[turnID] = builder
-
-        let stableID = Self.stableItemID(threadID: builder.threadID, turnID: turnID, itemID: itemID)
-        let streamedText = activeItem.streamedText
-
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let item = try Self.fetchItem(stableID: stableID, in: context) else { return }
-            item.streamedText = streamedText
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordItemReplacement(turnID: String, itemID: String, text: String, path: String?) throws {
-        guard var builder = activeTurns[turnID], var activeItem = builder.items[itemID] else { return }
-        activeItem.streamedText = text
-        if let path {
-            let latestItem = activeItem.latestItem
-            activeItem.latestItem = CodexTurnItem(
-                id: latestItem.id,
-                kind: latestItem.kind,
-                command: latestItem.command,
-                path: path,
-                serverName: latestItem.serverName,
-                text: latestItem.text,
-                status: latestItem.status,
-                toolName: latestItem.toolName
-            )
-        }
-        builder.items[itemID] = activeItem
-        activeTurns[turnID] = builder
-
-        let stableID = Self.stableItemID(threadID: builder.threadID, turnID: turnID, itemID: itemID)
-        let streamedText = activeItem.streamedText
-        let replacementPath = activeItem.latestItem.path
-
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let item = try Self.fetchItem(stableID: stableID, in: context) else { return }
-            item.path = replacementPath
-            item.streamedText = streamedText
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordItemCompleted(
-        threadID: String,
-        turnID: String,
-        item: CodexTurnItem
-    ) throws {
-        guard var builder = activeTurns[turnID], var activeItem = builder.items[item.id] else { return }
-        activeItem.latestItem = item
-        if activeItem.streamedText.isEmpty, let text = item.text {
-            activeItem.streamedText = text
-        }
-        builder.items[item.id] = activeItem
-        activeTurns[turnID] = builder
-
-        let stableID = Self.stableItemID(threadID: threadID, turnID: turnID, itemID: item.id)
-        let orderIndex = activeItem.orderIndex
-        let streamedText = activeItem.streamedText
-
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let persistedItem = try Self.fetchItem(stableID: stableID, in: context) else { return }
-            Self.applyItem(item, stableID: stableID, orderIndex: orderIndex, streamedText: streamedText, to: persistedItem)
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordTurnTokenUsageUpdated(
-        threadID: String,
-        turnID: String,
-        usage: CodexThreadTokenUsageUpdated.Usage,
-        modelContextWindow: Int?
-    ) throws {
-        let snapshot = ThreadSnapshot.TurnSnapshot.TokenUsageSnapshot(
-            cachedInputTokens: usage.cachedInputTokens,
-            inputTokens: usage.inputTokens,
-            outputTokens: usage.outputTokens,
-            reasoningOutputTokens: usage.reasoningOutputTokens,
-            totalTokens: usage.totalTokens,
-            modelContextWindow: modelContextWindow
-        )
-
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let turn = try Self.fetchTurn(turnID: turnID, threadID: threadID, in: context) else { return }
-            turn.tokenUsageData = try Self.encode(snapshot)
-            if turn.thread == nil, let thread = try Self.fetchThread(id: threadID, in: context) {
-                turn.thread = thread
-            }
-            try context.saveIfChanged()
-        }
-    }
-
-    func recordTurnCompleted(
-        threadID: String,
-        turn: CodexAppServer.TurnInfo
-    ) throws {
-        let builder = activeTurns.removeValue(forKey: turn.id)
-
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            guard let turnObject = try Self.fetchTurn(turnID: turn.id, threadID: threadID, in: context) else { return }
-            Self.applyTurnInfo(turn, orderIndex: Int(turnObject.orderIndex), to: turnObject)
-            if let builder {
-                turnObject.diff = builder.diff
-            }
-            if turnObject.thread == nil, let thread = try Self.fetchThread(id: threadID, in: context) {
-                turnObject.thread = thread
-            }
-            try context.saveIfChanged()
-        }
-    }
-
-    func snapshot(threadID: String) throws -> ThreadSnapshot? {
-        let context = container.newBackgroundContext()
-        return try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
-                return nil
-            }
-            guard let defaults = thread.defaults, let state = thread.state else {
-                return nil
-            }
-
-            let instructionSources = try Self.decode([String].self, from: defaults.instructionSourcesData) ?? []
-            let sandboxPolicy = try Self.decode(SandboxPolicySnapshot.self, from: defaults.sandboxPolicyData)
-                ?? .init(
-                    type: "",
-                    networkAccess: nil,
-                    excludeSlashTmp: nil,
-                    excludeTmpdirEnvVar: nil,
-                    writableRoots: []
-                )
-            let turnRequest = HistoryTurn.fetchRequest()
-            turnRequest.predicate = NSPredicate(format: "thread == %@", thread)
-            let turns = try context.fetch(turnRequest)
-                .sorted { $0.orderIndex < $1.orderIndex }
-                .map { turn in
-                    try Self.makeTurnSnapshot(turn, in: context)
-                }
-            let rollbackRequest = HistoryThreadRollback.fetchRequest()
-            rollbackRequest.predicate = NSPredicate(format: "thread == %@", thread)
-            let rollbacks = try context.fetch(rollbackRequest)
-                .sorted { $0.recordedAt < $1.recordedAt }
-                .map { rollback in
-                    ThreadSnapshot.RollbackSnapshot(
-                        id: rollback.id,
-                        previousNewestTurnID: rollback.previousNewestTurnID,
-                        recordedAt: Int(rollback.recordedAt),
-                        removedTurnIDs: try Self.decode([String].self, from: rollback.removedTurnIDsData) ?? [],
-                        requestedTurnCount: Int(rollback.requestedTurnCount),
-                        resultingNewestTurnID: rollback.resultingNewestTurnID,
-                        serverUpdatedAt: Int(rollback.serverUpdatedAt)
-                    )
-                }
-
-            return .init(
-                id: thread.id,
-                cliVersion: thread.cliVersion,
-                createdAt: Int(thread.createdAt),
-                currentDirectoryPath: thread.currentDirectoryPath,
-                defaults: .init(
-                    approvalPolicy: defaults.approvalPolicy,
-                    approvalsReviewer: defaults.approvalsReviewer,
-                    currentDirectoryPath: defaults.currentDirectoryPath,
-                    instructionSources: instructionSources,
-                    model: defaults.model,
-                    modelProvider: defaults.modelProvider,
-                    reasoningEffort: defaults.reasoningEffort,
-                    sandboxPolicy: sandboxPolicy,
-                    serviceTier: defaults.serviceTier
-                ),
-                ephemeral: thread.ephemeral,
-                forkedFromThreadID: thread.forkedFromThreadID,
-                forkedFromTurnID: thread.forkedFromTurnID,
-                gitBranch: thread.gitBranch,
-                gitOriginURL: thread.gitOriginURL,
-                gitSHA: thread.gitSHA,
-                isArchived: thread.isArchived,
-                isClosed: thread.isClosed,
-                modelProvider: thread.modelProvider,
-                name: thread.name,
-                preview: thread.preview,
-                rollbacks: rollbacks,
-                source: (try Self.decode(CodexAppServer.ThreadSource.self, from: thread.sourceData)) ?? .unknown,
-                state: .init(
-                    completeness: state.completeness,
-                    localState: Self.localState(for: thread).rawValue
-                ),
-                statusFlags: (try Self.decode([String].self, from: thread.statusFlagsData)) ?? [],
-                statusType: thread.statusType,
-                turns: turns,
-                updatedAt: Int(thread.updatedAt)
-            )
-        }
-    }
-
-    func threadListSnapshots() throws -> [ThreadListSnapshot] {
-        let context = container.newBackgroundContext()
-        return try context.performAndWaitReturning {
-            let request = HistoryThread.fetchRequest()
-            let threads = try context.fetch(request)
-            return try threads.map(Self.makeThreadListSnapshot)
-        }
-    }
-
-    func turnSnapshot(
-        threadID: String,
-        turnID: String
-    ) throws -> ThreadSnapshot.TurnSnapshot? {
-        let context = container.newBackgroundContext()
-        return try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
-                return nil
-            }
-
-            let request = HistoryTurn.fetchRequest()
-            request.fetchLimit = 1
-            request.predicate = NSPredicate(
-                format: "thread == %@ AND turnID == %@",
-                thread,
-                turnID
-            )
-
-            guard let turn = try context.fetch(request).first else {
-                return nil
-            }
-
-            return try Self.makeTurnSnapshot(turn, in: context)
-        }
-    }
-
-    func recentTurnSnapshots(
-        threadID: String,
-        limit: Int
-    ) throws -> [ThreadSnapshot.TurnSnapshot] {
-        guard limit > 0 else { return [] }
-
-        let context = container.newBackgroundContext()
-        return try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
-                return []
-            }
-
-            let request = HistoryTurn.fetchRequest()
-            request.predicate = NSPredicate(format: "thread == %@", thread)
-            request.fetchLimit = limit
-            request.sortDescriptors = [
-                NSSortDescriptor(key: "orderIndex", ascending: false)
-            ]
-
-            let turns = try context.fetch(request)
-            return try turns
-                .sorted { $0.orderIndex > $1.orderIndex }
-                .map { try Self.makeTurnSnapshot($0, in: context) }
-        }
-    }
-
-    func olderTurnSnapshots(
-        threadID: String,
-        olderThanOrderIndex: Int,
-        limit: Int
-    ) throws -> [ThreadSnapshot.TurnSnapshot] {
-        guard limit > 0 else { return [] }
-
-        let context = container.newBackgroundContext()
-        return try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
-                return []
-            }
-
-            let request = HistoryTurn.fetchRequest()
-            request.predicate = NSPredicate(
-                format: "thread == %@ AND orderIndex < %d",
-                thread,
-                olderThanOrderIndex
-            )
-            request.fetchLimit = limit
-            request.sortDescriptors = [
-                NSSortDescriptor(key: "orderIndex", ascending: false)
-            ]
-
-            return try context.fetch(request).map { try Self.makeTurnSnapshot($0, in: context) }
-        }
-    }
-
-    func newerTurnSnapshots(
-        threadID: String,
-        newerThanOrderIndex: Int,
-        limit: Int
-    ) throws -> [ThreadSnapshot.TurnSnapshot] {
-        guard limit > 0 else { return [] }
-
-        let context = container.newBackgroundContext()
-        return try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
-                return []
-            }
-
-            let request = HistoryTurn.fetchRequest()
-            request.predicate = NSPredicate(
-                format: "thread == %@ AND orderIndex > %d",
-                thread,
-                newerThanOrderIndex
-            )
-            request.fetchLimit = limit
-            request.sortDescriptors = [
-                NSSortDescriptor(key: "orderIndex", ascending: true)
-            ]
-
-            return try context.fetch(request)
-                .map { try Self.makeTurnSnapshot($0, in: context) }
-                .sorted { $0.orderIndex > $1.orderIndex }
-        }
-    }
-
-    func turnSnapshots(
-        threadID: String,
-        turnIDs: [String]
-    ) throws -> [ThreadSnapshot.TurnSnapshot] {
-        guard !turnIDs.isEmpty else { return [] }
-
-        let context = container.newBackgroundContext()
-        return try context.performAndWaitReturning {
-            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
-                return []
-            }
-
-            let request = HistoryTurn.fetchRequest()
-            request.predicate = NSPredicate(
-                format: "thread == %@ AND turnID IN %@",
-                thread,
-                turnIDs
-            )
-
-            let fetchedTurns = try context.fetch(request)
-            let byTurnID = try Dictionary(
-                uniqueKeysWithValues: fetchedTurns.map { turn in
-                    (turn.turnID, try Self.makeTurnSnapshot(turn, in: context))
-                }
-            )
-
-            return turnIDs.compactMap { byTurnID[$0] }
-        }
-    }
-
-    func hydrateThreadRead(
-        thread: CodexAppServer.ThreadInfo,
-        turns: [HydratedTurn]
-    ) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            let threadObject = try Self.fetchOrInsertThread(id: thread.id, in: context)
-            Self.applyThreadInfo(thread, to: threadObject)
-            Self.ensureThreadPersistenceScaffolding(for: threadObject, in: context)
-            threadObject.state?.localState = LocalState.available.rawValue
-            let outcome = try Self.upsertHydratedTurns(
-                turns,
-                for: threadObject,
-                in: context
-            )
-            threadObject.state?.completeness = outcome.preservedRicherLocalDetail
-                ? Completeness.richerThanServer.rawValue
-                : Completeness.serverParity.rawValue
-            try context.saveIfChanged()
-        }
-
-        if let maxOrderIndex = try snapshot(threadID: thread.id)?.turns.map(\.orderIndex).max() {
-            nextTurnOrderByThreadID[thread.id] = maxOrderIndex + 1
-        }
-    }
-
-    func recordThreadRollback(
-        requestedTurnCount: Int,
-        thread: CodexAppServer.ThreadInfo,
-        turns: [HydratedTurn]
-    ) throws {
-        let threadID = thread.id
-        let visibleTurnIDs = Set(turns.map(\.turn.id))
-
-        let context = container.newBackgroundContext()
-        let maxOrderIndex = try context.performAndWaitReturning {
-            let threadObject = try Self.fetchOrInsertThread(id: thread.id, in: context)
-            Self.applyThreadInfo(thread, to: threadObject)
-            Self.ensureThreadPersistenceScaffolding(for: threadObject, in: context)
-            threadObject.state?.localState = LocalState.available.rawValue
-
-            let existingTurns = try Self.fetchTurns(for: threadObject, in: context)
-            let previousNewestTurnID = existingTurns.last?.turnID
-            let removedTurnIDs = existingTurns
-                .map(\.turnID)
-                .filter { !visibleTurnIDs.contains($0) }
-
-            let rollback = HistoryThreadRollback(context: context)
-            rollback.id = UUID().uuidString
-            rollback.previousNewestTurnID = previousNewestTurnID
-            rollback.recordedAt = Int64(Date().timeIntervalSince1970)
-            rollback.removedTurnIDsData = try Self.encode(removedTurnIDs)
-            rollback.requestedTurnCount = Int64(requestedTurnCount)
-            rollback.resultingNewestTurnID = turns.last?.turn.id
-            rollback.serverUpdatedAt = Int64(thread.updatedAt)
-            rollback.thread = threadObject
-
-            _ = try Self.upsertHydratedTurns(turns, for: threadObject, in: context)
-
-            for turnObject in existingTurns where !visibleTurnIDs.contains(turnObject.turnID) {
-                context.delete(turnObject)
-            }
-
-            try Self.reindexTurns(for: threadObject, in: context)
-            threadObject.state?.completeness = Completeness.serverParity.rawValue
-            try context.saveIfChanged()
-
-            return try Self.fetchTurns(for: threadObject, in: context)
-                .map(\.orderIndex)
-                .max()
-                .map(Int.init)
-        }
-
-        if let maxOrderIndex {
-            nextTurnOrderByThreadID[threadID] = maxOrderIndex + 1
-        } else {
-            nextTurnOrderByThreadID[threadID] = 0
-        }
-        activeTurns = activeTurns.filter { visibleTurnIDs.contains($0.key) }
-    }
-
-    func hydrateHistoricalTurns(
-        threadID: String,
-        turns: [HydratedTurn]
-    ) throws {
-        let context = container.newBackgroundContext()
-        try context.performAndWaitReturning {
-            let thread = try Self.fetchOrInsertThread(id: threadID, in: context)
-            Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
-            thread.state?.localState = LocalState.available.rawValue
-            let outcome = try Self.upsertHydratedTurns(
-                turns,
-                for: thread,
-                in: context
-            )
-            if let state = thread.state, state.completeness != Completeness.richerThanServer.rawValue {
-                if outcome.preservedRicherLocalDetail {
-                    state.completeness = Completeness.richerThanServer.rawValue
-                } else if state.completeness.isEmpty {
-                    state.completeness = Completeness.partial.rawValue
-                }
-            }
-            try context.saveIfChanged()
-        }
-
-        if let maxOrderIndex = try snapshot(threadID: threadID)?.turns.map(\.orderIndex).max() {
-            nextTurnOrderByThreadID[threadID] = maxOrderIndex + 1
-        }
+        container = try Self.makePersistentContainer(configuration: configuration)
     }
 
     private static func stableTurnID(threadID: String, turnID: String) -> String {
@@ -1014,6 +253,7 @@ actor ThreadHistoryStore {
         else {
             return .available
         }
+
         return state
     }
 
@@ -1111,7 +351,7 @@ actor ThreadHistoryStore {
     ) throws -> ThreadSnapshot.TurnSnapshot {
         let itemRequest = HistoryItem.fetchRequest()
         itemRequest.predicate = NSPredicate(format: "turn == %@", turn)
-        let items = (try context.fetch(itemRequest))
+        let items = try (context.fetch(itemRequest))
             .sorted { $0.orderIndex < $1.orderIndex }
             .map {
                 ThreadSnapshot.TurnSnapshot.ItemSnapshot(
@@ -1148,7 +388,7 @@ actor ThreadHistoryStore {
     private static func makeThreadListSnapshot(
         _ thread: HistoryThread
     ) throws -> ThreadListSnapshot {
-        .init(
+        try .init(
             id: thread.id,
             cliVersion: thread.cliVersion,
             createdAt: Int(thread.createdAt),
@@ -1161,12 +401,12 @@ actor ThreadHistoryStore {
             isArchived: thread.isArchived,
             isClosed: thread.isClosed,
             localState: localState(for: thread),
-            lastCompletedTurnAt: Self.lastCompletedTurnAt(for: thread),
+            lastCompletedTurnAt: lastCompletedTurnAt(for: thread),
             modelProvider: thread.modelProvider,
             name: thread.name,
             preview: thread.preview,
-            source: try decode(CodexAppServer.ThreadSource.self, from: thread.sourceData) ?? .unknown,
-            statusFlags: try decode([String].self, from: thread.statusFlagsData) ?? [],
+            source: decode(CodexAppServer.ThreadSource.self, from: thread.sourceData) ?? .unknown,
+            statusFlags: decode([String].self, from: thread.statusFlagsData) ?? [],
             statusType: thread.statusType,
             updatedAt: Int(thread.updatedAt)
         )
@@ -1301,22 +541,17 @@ actor ThreadHistoryStore {
         return preservedRicherLocalDetail
     }
 
-    private struct MergedString: Sendable {
-        let value: String?
-        let preservedExistingDetail: Bool
-    }
-
     private static func mergeIncomingPreferredString(existing: String?, incoming: String?) -> MergedString {
         let existing = normalizedMeaningfulString(existing)
         let incoming = normalizedMeaningfulString(incoming)
 
         switch (existing, incoming) {
-        case let (nil, incoming):
-            return .init(value: incoming, preservedExistingDetail: false)
-        case let (existing, nil):
-            return .init(value: existing, preservedExistingDetail: existing != nil)
-        case let (.some(_), .some(incoming)):
-            return .init(value: incoming, preservedExistingDetail: false)
+            case let (nil, incoming):
+                return .init(value: incoming, preservedExistingDetail: false)
+            case let (existing, nil):
+                return .init(value: existing, preservedExistingDetail: existing != nil)
+            case let (.some(_), .some(incoming)):
+                return .init(value: incoming, preservedExistingDetail: false)
         }
     }
 
@@ -1325,18 +560,18 @@ actor ThreadHistoryStore {
         let incoming = normalizedMeaningfulString(incoming)
 
         switch (existing, incoming) {
-        case let (nil, incoming):
-            return .init(value: incoming, preservedExistingDetail: false)
-        case let (existing, nil):
-            return .init(value: existing, preservedExistingDetail: existing != nil)
-        case let (.some(existing), .some(incoming)):
-            if incoming == existing {
+            case let (nil, incoming):
                 return .init(value: incoming, preservedExistingDetail: false)
-            }
-            if existing.hasPrefix(incoming) {
-                return .init(value: existing, preservedExistingDetail: true)
-            }
-            return .init(value: incoming, preservedExistingDetail: false)
+            case let (existing, nil):
+                return .init(value: existing, preservedExistingDetail: existing != nil)
+            case let (.some(existing), .some(incoming)):
+                if incoming == existing {
+                    return .init(value: incoming, preservedExistingDetail: false)
+                }
+                if existing.hasPrefix(incoming) {
+                    return .init(value: existing, preservedExistingDetail: true)
+                }
+                return .init(value: incoming, preservedExistingDetail: false)
         }
     }
 
@@ -1345,18 +580,18 @@ actor ThreadHistoryStore {
         let incoming = normalizedMeaningfulString(incoming)
 
         switch (existing, incoming) {
-        case let (nil, incoming):
-            return .init(value: incoming, preservedExistingDetail: false)
-        case let (existing, nil):
-            return .init(value: existing, preservedExistingDetail: existing != nil)
-        case let (.some(existing), .some(incoming)):
-            if incoming == existing {
+            case let (nil, incoming):
                 return .init(value: incoming, preservedExistingDetail: false)
-            }
-            if incoming.hasPrefix(existing) {
-                return .init(value: incoming, preservedExistingDetail: false)
-            }
-            return .init(value: existing, preservedExistingDetail: true)
+            case let (existing, nil):
+                return .init(value: existing, preservedExistingDetail: existing != nil)
+            case let (.some(existing), .some(incoming)):
+                if incoming == existing {
+                    return .init(value: incoming, preservedExistingDetail: false)
+                }
+                if incoming.hasPrefix(existing) {
+                    return .init(value: incoming, preservedExistingDetail: false)
+                }
+                return .init(value: existing, preservedExistingDetail: true)
         }
     }
 
@@ -1365,28 +600,29 @@ actor ThreadHistoryStore {
         let incoming = normalizedMeaningfulString(incoming)
 
         switch (existing, incoming) {
-        case let (nil, incoming):
-            return .init(value: incoming, preservedExistingDetail: false)
-        case let (existing, nil):
-            return .init(value: existing, preservedExistingDetail: existing != nil)
-        case let (.some(existing), .some(incoming)):
-            let normalizedExisting = existing.lowercased()
-            let normalizedIncoming = incoming.lowercased()
-            let incomingTerminal = isTerminalItemStatus(normalizedIncoming)
-            let existingTerminal = isTerminalItemStatus(normalizedExisting)
-
-            if incomingTerminal {
+            case let (nil, incoming):
                 return .init(value: incoming, preservedExistingDetail: false)
-            }
-            if existingTerminal {
-                return .init(value: existing, preservedExistingDetail: normalizedIncoming != normalizedExisting)
-            }
-            return .init(value: incoming, preservedExistingDetail: false)
+            case let (existing, nil):
+                return .init(value: existing, preservedExistingDetail: existing != nil)
+            case let (.some(existing), .some(incoming)):
+                let normalizedExisting = existing.lowercased()
+                let normalizedIncoming = incoming.lowercased()
+                let incomingTerminal = isTerminalItemStatus(normalizedIncoming)
+                let existingTerminal = isTerminalItemStatus(normalizedExisting)
+
+                if incomingTerminal {
+                    return .init(value: incoming, preservedExistingDetail: false)
+                }
+                if existingTerminal {
+                    return .init(value: existing, preservedExistingDetail: normalizedIncoming != normalizedExisting)
+                }
+                return .init(value: incoming, preservedExistingDetail: false)
         }
     }
 
     private static func normalizedMeaningfulString(_ value: String?) -> String? {
         guard let value else { return nil }
+
         return value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : value
     }
 
@@ -1405,21 +641,21 @@ actor ThreadHistoryStore {
 
     private static func isTerminalTurnStatus(_ status: String) -> Bool {
         switch status {
-        case CodexAppServer.TurnStatus.completed.rawValue,
-             CodexAppServer.TurnStatus.failed.rawValue,
-             CodexAppServer.TurnStatus.interrupted.rawValue:
-            true
-        default:
-            false
+            case CodexAppServer.TurnStatus.completed.rawValue,
+                 CodexAppServer.TurnStatus.failed.rawValue,
+                 CodexAppServer.TurnStatus.interrupted.rawValue:
+                true
+            default:
+                false
         }
     }
 
     private static func isTerminalItemStatus(_ status: String) -> Bool {
         switch status {
-        case "completed", "failed", "error", "errored", "interrupted", "cancelled", "canceled":
-            true
-        default:
-            false
+            case "completed", "failed", "error", "errored", "interrupted", "cancelled", "canceled":
+                true
+            default:
+                false
         }
     }
 
@@ -1502,6 +738,7 @@ actor ThreadHistoryStore {
 
     private static func decode<T: Decodable>(_ type: T.Type, from data: Data?) throws -> T? {
         guard let data else { return nil }
+
         return try JSONDecoder().decode(type, from: data)
     }
 
@@ -1674,6 +911,790 @@ actor ThreadHistoryStore {
         model.entities = [threadEntity, defaultsEntity, stateEntity, rollbackEntity, turnEntity, itemEntity]
         return model
     }
+
+    func detachPersistentStoresForTeardown() throws {
+        container.viewContext.performAndWait {
+            container.viewContext.reset()
+        }
+
+        let coordinator = container.persistentStoreCoordinator
+        for store in coordinator.persistentStores {
+            try coordinator.remove(store)
+        }
+    }
+
+    func recordThreadStarted(session: CodexAppServer.ThreadSession) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
+            Self.applyThreadInfo(session.thread, to: thread)
+            thread.isArchived = false
+
+            let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
+            Self.applyThreadDefaults(session, to: defaults)
+            defaults.thread = thread
+            thread.defaults = defaults
+
+            let state = thread.state ?? HistoryThreadState(context: context)
+            state.completeness = Completeness.partial.rawValue
+            state.localState = LocalState.available.rawValue
+            state.thread = thread
+            thread.state = state
+
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordThreadResumed(
+        session: CodexAppServer.ThreadSession,
+        turns: [HydratedTurn]
+    ) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
+            Self.applyThreadInfo(session.thread, to: thread)
+
+            let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
+            Self.applyThreadDefaults(session, to: defaults)
+            defaults.thread = thread
+            thread.defaults = defaults
+
+            let state = thread.state ?? HistoryThreadState(context: context)
+            state.localState = LocalState.available.rawValue
+            state.thread = thread
+            thread.state = state
+
+            if turns.isEmpty {
+                if state.completeness.isEmpty {
+                    state.completeness = Completeness.partial.rawValue
+                }
+            } else {
+                let outcome = try Self.upsertHydratedTurns(
+                    turns,
+                    for: thread,
+                    in: context
+                )
+                state.completeness = outcome.preservedRicherLocalDetail
+                    ? Completeness.richerThanServer.rawValue
+                    : Completeness.serverParity.rawValue
+            }
+
+            try context.saveIfChanged()
+        }
+
+        if let maxOrderIndex = try snapshot(threadID: session.thread.id)?.turns.map(\.orderIndex).max() {
+            nextTurnOrderByThreadID[session.thread.id] = maxOrderIndex + 1
+        }
+    }
+
+    func recordThreadForked(
+        session: CodexAppServer.ThreadSession,
+        turns: [HydratedTurn]
+    ) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let thread = try Self.fetchOrInsertThread(id: session.thread.id, in: context)
+            Self.applyThreadInfo(session.thread, to: thread)
+            thread.isArchived = false
+            if thread.forkedFromTurnID == nil {
+                thread.forkedFromTurnID = turns.last?.turn.id
+            }
+
+            let defaults = thread.defaults ?? HistoryThreadDefaults(context: context)
+            Self.applyThreadDefaults(session, to: defaults)
+            defaults.thread = thread
+            thread.defaults = defaults
+
+            let state = thread.state ?? HistoryThreadState(context: context)
+            state.localState = LocalState.available.rawValue
+            state.thread = thread
+            thread.state = state
+
+            if turns.isEmpty {
+                if state.completeness.isEmpty {
+                    state.completeness = Completeness.partial.rawValue
+                }
+            } else {
+                let outcome = try Self.upsertHydratedTurns(
+                    turns,
+                    for: thread,
+                    in: context
+                )
+                state.completeness = outcome.preservedRicherLocalDetail
+                    ? Completeness.richerThanServer.rawValue
+                    : Completeness.serverParity.rawValue
+            }
+
+            try context.saveIfChanged()
+        }
+
+        if let maxOrderIndex = try snapshot(threadID: session.thread.id)?.turns.map(\.orderIndex).max() {
+            nextTurnOrderByThreadID[session.thread.id] = maxOrderIndex + 1
+        }
+    }
+
+    func recordThreadMetadataUpdated(_ threadInfo: CodexAppServer.ThreadInfo) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let thread = try Self.fetchOrInsertThread(id: threadInfo.id, in: context)
+            Self.applyThreadInfo(threadInfo, to: thread)
+            if let state = thread.state {
+                state.completeness = state.completeness.isEmpty ? Completeness.partial.rawValue : state.completeness
+                state.localState = LocalState.available.rawValue
+            } else {
+                let state = HistoryThreadState(context: context)
+                state.completeness = Completeness.partial.rawValue
+                state.localState = LocalState.available.rawValue
+                state.thread = thread
+                thread.state = state
+            }
+            try context.saveIfChanged()
+        }
+    }
+
+    func reconcileThreadListPage(
+        _ threads: [CodexAppServer.ThreadInfo],
+        archived: Bool?
+    ) throws {
+        guard !threads.isEmpty else { return }
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            for threadInfo in threads {
+                let thread = try Self.fetchOrInsertThread(id: threadInfo.id, in: context)
+                Self.applyThreadInfo(threadInfo, to: thread)
+                Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
+                thread.state?.localState = LocalState.available.rawValue
+                if let archived {
+                    thread.isArchived = archived
+                }
+            }
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordThreadStatusChanged(
+        threadID: String,
+        status: CodexAppServer.ThreadStatus
+    ) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else { return }
+
+            thread.statusType = status.type.rawValue
+            thread.statusFlagsData = try Self.encode(status.activeFlags.map(\.rawValue))
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordThreadArchived(threadID: String, isArchived: Bool) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else { return }
+
+            thread.isArchived = isArchived
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordThreadNameUpdated(threadID: String, name: String?) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else { return }
+
+            thread.name = name
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordThreadClosed(threadID: String) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else { return }
+
+            thread.isClosed = true
+            try context.saveIfChanged()
+        }
+    }
+
+    func markMissingThreadsRemoved(
+        visibleThreadIDs: Set<String>,
+        archived: Bool
+    ) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let request = HistoryThread.fetchRequest()
+            request.predicate = NSPredicate(format: "isArchived == %@", NSNumber(value: archived))
+            let threads = try context.fetch(request)
+            for thread in threads where !visibleThreadIDs.contains(thread.id) && Self.canMarkRemoved(thread) {
+                Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
+                thread.state?.localState = LocalState.removed.rawValue
+            }
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordTurnStarted(threadID: String, turn: CodexAppServer.TurnInfo) throws {
+        let orderIndex: Int
+        if var existingBuilder = activeTurns[turn.id] {
+            existingBuilder.turn = turn
+            activeTurns[turn.id] = existingBuilder
+            orderIndex = existingBuilder.orderIndex
+        } else {
+            orderIndex = nextTurnOrderByThreadID[threadID] ?? 0
+            nextTurnOrderByThreadID[threadID] = orderIndex + 1
+            activeTurns[turn.id] = .init(
+                threadID: threadID,
+                diff: nil,
+                items: [:],
+                nextItemOrderIndex: 0,
+                orderIndex: orderIndex,
+                turn: turn
+            )
+        }
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                throw ThreadHistoryStoreError.missingThread(
+                    "Cannot record turn \(turn.id) because thread \(threadID) is missing from the local history store."
+                )
+            }
+
+            let turnObject = try Self.fetchOrInsertTurn(
+                turnID: turn.id,
+                threadID: threadID,
+                in: context
+            )
+            Self.applyTurnInfo(turn, orderIndex: orderIndex, to: turnObject)
+            turnObject.thread = thread
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordTurnDiffUpdated(turnID: String, diff: String) throws {
+        guard var builder = activeTurns[turnID] else { return }
+
+        builder.diff = diff
+        activeTurns[turnID] = builder
+        let threadID = builder.threadID
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let turn = try Self.fetchTurn(
+                turnID: turnID,
+                threadID: threadID,
+                in: context
+            ) else { return }
+
+            turn.diff = diff
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordItemStarted(
+        threadID: String,
+        turnID: String,
+        item: CodexTurnItem
+    ) throws {
+        guard var builder = activeTurns[turnID] else { return }
+
+        let orderIndex = builder.nextItemOrderIndex
+        builder.nextItemOrderIndex += 1
+        builder.items[item.id] = .init(
+            orderIndex: orderIndex,
+            latestItem: item,
+            streamedText: item.text ?? ""
+        )
+        activeTurns[turnID] = builder
+
+        let stableID = Self.stableItemID(threadID: threadID, turnID: turnID, itemID: item.id)
+        let streamedText = builder.items[item.id]?.streamedText
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let turn = try Self.fetchTurn(turnID: turnID, threadID: threadID, in: context) else {
+                throw ThreadHistoryStoreError.missingTurn(
+                    "Cannot record item \(item.id) because turn \(turnID) is missing from the local history store."
+                )
+            }
+
+            let persistedItem = try Self.fetchOrInsertItem(stableID: stableID, in: context)
+            Self.applyItem(item, stableID: stableID, orderIndex: orderIndex, streamedText: streamedText, to: persistedItem)
+            persistedItem.turn = turn
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordItemDelta(turnID: String, itemID: String, delta: String) throws {
+        guard var builder = activeTurns[turnID], var activeItem = builder.items[itemID] else { return }
+
+        activeItem.streamedText += delta
+        builder.items[itemID] = activeItem
+        activeTurns[turnID] = builder
+
+        let stableID = Self.stableItemID(threadID: builder.threadID, turnID: turnID, itemID: itemID)
+        let streamedText = activeItem.streamedText
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let item = try Self.fetchItem(stableID: stableID, in: context) else { return }
+
+            item.streamedText = streamedText
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordItemReplacement(turnID: String, itemID: String, text: String, path: String?) throws {
+        guard var builder = activeTurns[turnID], var activeItem = builder.items[itemID] else { return }
+
+        activeItem.streamedText = text
+        if let path {
+            let latestItem = activeItem.latestItem
+            activeItem.latestItem = CodexTurnItem(
+                id: latestItem.id,
+                kind: latestItem.kind,
+                command: latestItem.command,
+                path: path,
+                serverName: latestItem.serverName,
+                text: latestItem.text,
+                status: latestItem.status,
+                toolName: latestItem.toolName
+            )
+        }
+        builder.items[itemID] = activeItem
+        activeTurns[turnID] = builder
+
+        let stableID = Self.stableItemID(threadID: builder.threadID, turnID: turnID, itemID: itemID)
+        let streamedText = activeItem.streamedText
+        let replacementPath = activeItem.latestItem.path
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let item = try Self.fetchItem(stableID: stableID, in: context) else { return }
+
+            item.path = replacementPath
+            item.streamedText = streamedText
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordItemCompleted(
+        threadID: String,
+        turnID: String,
+        item: CodexTurnItem
+    ) throws {
+        guard var builder = activeTurns[turnID], var activeItem = builder.items[item.id] else { return }
+
+        activeItem.latestItem = item
+        if activeItem.streamedText.isEmpty, let text = item.text {
+            activeItem.streamedText = text
+        }
+        builder.items[item.id] = activeItem
+        activeTurns[turnID] = builder
+
+        let stableID = Self.stableItemID(threadID: threadID, turnID: turnID, itemID: item.id)
+        let orderIndex = activeItem.orderIndex
+        let streamedText = activeItem.streamedText
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let persistedItem = try Self.fetchItem(stableID: stableID, in: context) else { return }
+
+            Self.applyItem(item, stableID: stableID, orderIndex: orderIndex, streamedText: streamedText, to: persistedItem)
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordTurnTokenUsageUpdated(
+        threadID: String,
+        turnID: String,
+        usage: CodexThreadTokenUsageUpdated.Usage,
+        modelContextWindow: Int?
+    ) throws {
+        let snapshot = ThreadSnapshot.TurnSnapshot.TokenUsageSnapshot(
+            cachedInputTokens: usage.cachedInputTokens,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            reasoningOutputTokens: usage.reasoningOutputTokens,
+            totalTokens: usage.totalTokens,
+            modelContextWindow: modelContextWindow
+        )
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let turn = try Self.fetchTurn(turnID: turnID, threadID: threadID, in: context) else { return }
+
+            turn.tokenUsageData = try Self.encode(snapshot)
+            if turn.thread == nil, let thread = try Self.fetchThread(id: threadID, in: context) {
+                turn.thread = thread
+            }
+            try context.saveIfChanged()
+        }
+    }
+
+    func recordTurnCompleted(
+        threadID: String,
+        turn: CodexAppServer.TurnInfo
+    ) throws {
+        let builder = activeTurns.removeValue(forKey: turn.id)
+
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            guard let turnObject = try Self.fetchTurn(turnID: turn.id, threadID: threadID, in: context) else { return }
+
+            Self.applyTurnInfo(turn, orderIndex: Int(turnObject.orderIndex), to: turnObject)
+            if let builder {
+                turnObject.diff = builder.diff
+            }
+            if turnObject.thread == nil, let thread = try Self.fetchThread(id: threadID, in: context) {
+                turnObject.thread = thread
+            }
+            try context.saveIfChanged()
+        }
+    }
+
+    func snapshot(threadID: String) throws -> ThreadSnapshot? {
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return nil
+            }
+            guard let defaults = thread.defaults, let state = thread.state else {
+                return nil
+            }
+
+            let instructionSources = try Self.decode([String].self, from: defaults.instructionSourcesData) ?? []
+            let sandboxPolicy = try Self.decode(SandboxPolicySnapshot.self, from: defaults.sandboxPolicyData)
+                ?? .init(
+                    type: "",
+                    networkAccess: nil,
+                    excludeSlashTmp: nil,
+                    excludeTmpdirEnvVar: nil,
+                    writableRoots: []
+                )
+            let turnRequest = HistoryTurn.fetchRequest()
+            turnRequest.predicate = NSPredicate(format: "thread == %@", thread)
+            let turns = try context.fetch(turnRequest)
+                .sorted { $0.orderIndex < $1.orderIndex }
+                .map { turn in
+                    try Self.makeTurnSnapshot(turn, in: context)
+                }
+            let rollbackRequest = HistoryThreadRollback.fetchRequest()
+            rollbackRequest.predicate = NSPredicate(format: "thread == %@", thread)
+            let rollbacks = try context.fetch(rollbackRequest)
+                .sorted { $0.recordedAt < $1.recordedAt }
+                .map { rollback in
+                    try ThreadSnapshot.RollbackSnapshot(
+                        id: rollback.id,
+                        previousNewestTurnID: rollback.previousNewestTurnID,
+                        recordedAt: Int(rollback.recordedAt),
+                        removedTurnIDs: Self.decode([String].self, from: rollback.removedTurnIDsData) ?? [],
+                        requestedTurnCount: Int(rollback.requestedTurnCount),
+                        resultingNewestTurnID: rollback.resultingNewestTurnID,
+                        serverUpdatedAt: Int(rollback.serverUpdatedAt)
+                    )
+                }
+
+            return try .init(
+                id: thread.id,
+                cliVersion: thread.cliVersion,
+                createdAt: Int(thread.createdAt),
+                currentDirectoryPath: thread.currentDirectoryPath,
+                defaults: .init(
+                    approvalPolicy: defaults.approvalPolicy,
+                    approvalsReviewer: defaults.approvalsReviewer,
+                    currentDirectoryPath: defaults.currentDirectoryPath,
+                    instructionSources: instructionSources,
+                    model: defaults.model,
+                    modelProvider: defaults.modelProvider,
+                    reasoningEffort: defaults.reasoningEffort,
+                    sandboxPolicy: sandboxPolicy,
+                    serviceTier: defaults.serviceTier
+                ),
+                ephemeral: thread.ephemeral,
+                forkedFromThreadID: thread.forkedFromThreadID,
+                forkedFromTurnID: thread.forkedFromTurnID,
+                gitBranch: thread.gitBranch,
+                gitOriginURL: thread.gitOriginURL,
+                gitSHA: thread.gitSHA,
+                isArchived: thread.isArchived,
+                isClosed: thread.isClosed,
+                modelProvider: thread.modelProvider,
+                name: thread.name,
+                preview: thread.preview,
+                rollbacks: rollbacks,
+                source: (Self.decode(CodexAppServer.ThreadSource.self, from: thread.sourceData)) ?? .unknown,
+                state: .init(
+                    completeness: state.completeness,
+                    localState: Self.localState(for: thread).rawValue
+                ),
+                statusFlags: (Self.decode([String].self, from: thread.statusFlagsData)) ?? [],
+                statusType: thread.statusType,
+                turns: turns,
+                updatedAt: Int(thread.updatedAt)
+            )
+        }
+    }
+
+    func threadListSnapshots() throws -> [ThreadListSnapshot] {
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            let request = HistoryThread.fetchRequest()
+            let threads = try context.fetch(request)
+            return try threads.map(Self.makeThreadListSnapshot)
+        }
+    }
+
+    func turnSnapshot(
+        threadID: String,
+        turnID: String
+    ) throws -> ThreadSnapshot.TurnSnapshot? {
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return nil
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.fetchLimit = 1
+            request.predicate = NSPredicate(
+                format: "thread == %@ AND turnID == %@",
+                thread,
+                turnID
+            )
+
+            guard let turn = try context.fetch(request).first else {
+                return nil
+            }
+
+            return try Self.makeTurnSnapshot(turn, in: context)
+        }
+    }
+
+    func recentTurnSnapshots(
+        threadID: String,
+        limit: Int
+    ) throws -> [ThreadSnapshot.TurnSnapshot] {
+        guard limit > 0 else { return [] }
+
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return []
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.predicate = NSPredicate(format: "thread == %@", thread)
+            request.fetchLimit = limit
+            request.sortDescriptors = [
+                NSSortDescriptor(key: "orderIndex", ascending: false),
+            ]
+
+            let turns = try context.fetch(request)
+            return try turns
+                .sorted { $0.orderIndex > $1.orderIndex }
+                .map { try Self.makeTurnSnapshot($0, in: context) }
+        }
+    }
+
+    func olderTurnSnapshots(
+        threadID: String,
+        olderThanOrderIndex: Int,
+        limit: Int
+    ) throws -> [ThreadSnapshot.TurnSnapshot] {
+        guard limit > 0 else { return [] }
+
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return []
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.predicate = NSPredicate(
+                format: "thread == %@ AND orderIndex < %d",
+                thread,
+                olderThanOrderIndex
+            )
+            request.fetchLimit = limit
+            request.sortDescriptors = [
+                NSSortDescriptor(key: "orderIndex", ascending: false),
+            ]
+
+            return try context.fetch(request).map { try Self.makeTurnSnapshot($0, in: context) }
+        }
+    }
+
+    func newerTurnSnapshots(
+        threadID: String,
+        newerThanOrderIndex: Int,
+        limit: Int
+    ) throws -> [ThreadSnapshot.TurnSnapshot] {
+        guard limit > 0 else { return [] }
+
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return []
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.predicate = NSPredicate(
+                format: "thread == %@ AND orderIndex > %d",
+                thread,
+                newerThanOrderIndex
+            )
+            request.fetchLimit = limit
+            request.sortDescriptors = [
+                NSSortDescriptor(key: "orderIndex", ascending: true),
+            ]
+
+            return try context.fetch(request)
+                .map { try Self.makeTurnSnapshot($0, in: context) }
+                .sorted { $0.orderIndex > $1.orderIndex }
+        }
+    }
+
+    func turnSnapshots(
+        threadID: String,
+        turnIDs: [String]
+    ) throws -> [ThreadSnapshot.TurnSnapshot] {
+        guard !turnIDs.isEmpty else { return [] }
+
+        let context = container.newBackgroundContext()
+        return try context.performAndWaitReturning {
+            guard let thread = try Self.fetchThread(id: threadID, in: context) else {
+                return []
+            }
+
+            let request = HistoryTurn.fetchRequest()
+            request.predicate = NSPredicate(
+                format: "thread == %@ AND turnID IN %@",
+                thread,
+                turnIDs
+            )
+
+            let fetchedTurns = try context.fetch(request)
+            let byTurnID = try Dictionary(
+                uniqueKeysWithValues: fetchedTurns.map { turn in
+                    try (turn.turnID, Self.makeTurnSnapshot(turn, in: context))
+                }
+            )
+
+            return turnIDs.compactMap { byTurnID[$0] }
+        }
+    }
+
+    func hydrateThreadRead(
+        thread: CodexAppServer.ThreadInfo,
+        turns: [HydratedTurn]
+    ) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let threadObject = try Self.fetchOrInsertThread(id: thread.id, in: context)
+            Self.applyThreadInfo(thread, to: threadObject)
+            Self.ensureThreadPersistenceScaffolding(for: threadObject, in: context)
+            threadObject.state?.localState = LocalState.available.rawValue
+            let outcome = try Self.upsertHydratedTurns(
+                turns,
+                for: threadObject,
+                in: context
+            )
+            threadObject.state?.completeness = outcome.preservedRicherLocalDetail
+                ? Completeness.richerThanServer.rawValue
+                : Completeness.serverParity.rawValue
+            try context.saveIfChanged()
+        }
+
+        if let maxOrderIndex = try snapshot(threadID: thread.id)?.turns.map(\.orderIndex).max() {
+            nextTurnOrderByThreadID[thread.id] = maxOrderIndex + 1
+        }
+    }
+
+    func recordThreadRollback(
+        requestedTurnCount: Int,
+        thread: CodexAppServer.ThreadInfo,
+        turns: [HydratedTurn]
+    ) throws {
+        let threadID = thread.id
+        let visibleTurnIDs = Set(turns.map(\.turn.id))
+
+        let context = container.newBackgroundContext()
+        let maxOrderIndex = try context.performAndWaitReturning {
+            let threadObject = try Self.fetchOrInsertThread(id: thread.id, in: context)
+            Self.applyThreadInfo(thread, to: threadObject)
+            Self.ensureThreadPersistenceScaffolding(for: threadObject, in: context)
+            threadObject.state?.localState = LocalState.available.rawValue
+
+            let existingTurns = try Self.fetchTurns(for: threadObject, in: context)
+            let previousNewestTurnID = existingTurns.last?.turnID
+            let removedTurnIDs = existingTurns
+                .map(\.turnID)
+                .filter { !visibleTurnIDs.contains($0) }
+
+            let rollback = HistoryThreadRollback(context: context)
+            rollback.id = UUID().uuidString
+            rollback.previousNewestTurnID = previousNewestTurnID
+            rollback.recordedAt = Int64(Date().timeIntervalSince1970)
+            rollback.removedTurnIDsData = try Self.encode(removedTurnIDs)
+            rollback.requestedTurnCount = Int64(requestedTurnCount)
+            rollback.resultingNewestTurnID = turns.last?.turn.id
+            rollback.serverUpdatedAt = Int64(thread.updatedAt)
+            rollback.thread = threadObject
+
+            _ = try Self.upsertHydratedTurns(turns, for: threadObject, in: context)
+
+            for turnObject in existingTurns where !visibleTurnIDs.contains(turnObject.turnID) {
+                context.delete(turnObject)
+            }
+
+            try Self.reindexTurns(for: threadObject, in: context)
+            threadObject.state?.completeness = Completeness.serverParity.rawValue
+            try context.saveIfChanged()
+
+            return try Self.fetchTurns(for: threadObject, in: context)
+                .map(\.orderIndex)
+                .max()
+                .map(Int.init)
+        }
+
+        if let maxOrderIndex {
+            nextTurnOrderByThreadID[threadID] = maxOrderIndex + 1
+        } else {
+            nextTurnOrderByThreadID[threadID] = 0
+        }
+        activeTurns = activeTurns.filter { visibleTurnIDs.contains($0.key) }
+    }
+
+    func hydrateHistoricalTurns(
+        threadID: String,
+        turns: [HydratedTurn]
+    ) throws {
+        let context = container.newBackgroundContext()
+        try context.performAndWaitReturning {
+            let thread = try Self.fetchOrInsertThread(id: threadID, in: context)
+            Self.ensureThreadPersistenceScaffolding(for: thread, in: context)
+            thread.state?.localState = LocalState.available.rawValue
+            let outcome = try Self.upsertHydratedTurns(
+                turns,
+                for: thread,
+                in: context
+            )
+            if let state = thread.state, state.completeness != Completeness.richerThanServer.rawValue {
+                if outcome.preservedRicherLocalDetail {
+                    state.completeness = Completeness.richerThanServer.rawValue
+                } else if state.completeness.isEmpty {
+                    state.completeness = Completeness.partial.rawValue
+                }
+            }
+            try context.saveIfChanged()
+        }
+
+        if let maxOrderIndex = try snapshot(threadID: threadID)?.turns.map(\.orderIndex).max() {
+            nextTurnOrderByThreadID[threadID] = maxOrderIndex + 1
+        }
+    }
 }
 
 private enum ThreadHistoryStoreError: Error {
@@ -1726,6 +1747,7 @@ private extension NSManagedObjectContext {
                 "Core Data did not produce a result while synchronously executing work on the managed object context."
             )
         }
+
         return try outcome.get()
     }
 
@@ -1743,16 +1765,16 @@ private final class ManagedObjectContextResultBox<T: Sendable>: @unchecked Senda
 private extension CodexAppServer.ApprovalPolicy {
     var persistedLabel: String {
         switch self {
-        case .never:
-            "never"
-        case .onFailure:
-            "onFailure"
-        case .onRequest:
-            "onRequest"
-        case .untrusted:
-            "untrusted"
-        case .granular:
-            "granular"
+            case .never:
+                "never"
+            case .onFailure:
+                "onFailure"
+            case .onRequest:
+                "onRequest"
+            case .untrusted:
+                "untrusted"
+            case .granular:
+                "granular"
         }
     }
 }
@@ -1772,12 +1794,12 @@ private extension ThreadHistoryStore.SandboxPolicySnapshot {
 private extension ThreadHistoryStore.SandboxPolicySnapshot.NetworkAccessSnapshot {
     init(_ access: CodexAppServer.NetworkAccess) {
         switch access {
-        case let .explicit(value):
-            self = .explicit(value)
-        case .enabled:
-            self = .enabled
-        case .restricted:
-            self = .restricted
+            case let .explicit(value):
+                self = .explicit(value)
+            case .enabled:
+                self = .enabled
+            case .restricted:
+                self = .restricted
         }
     }
 }

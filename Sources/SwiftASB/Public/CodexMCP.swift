@@ -9,16 +9,19 @@ public extension CodexExtensions {
     /// `CodexExtensions.MCP` exposes opinionated MCP server installation without
     /// exposing the app-server's raw config editing API.
     struct MCP: Sendable {
-        private let appServer: CodexAppServer
-
-        init(appServer: CodexAppServer) {
-            self.appServer = appServer
-        }
-
         /// Transport-specific MCP server definition to install into Codex config.
         public enum ServerDefinition: Sendable, Equatable {
             case stdio(StdioServer)
             case http(HTTPServer)
+
+            public var name: String {
+                switch self {
+                    case let .stdio(server):
+                        server.name
+                    case let .http(server):
+                        server.name
+                }
+            }
 
             /// Creates a stdio MCP server definition.
             public static func stdio(
@@ -62,15 +65,6 @@ public extension CodexExtensions {
                         options: options
                     )
                 )
-            }
-
-            public var name: String {
-                switch self {
-                case let .stdio(server):
-                    server.name
-                case let .http(server):
-                    server.name
-                }
             }
         }
 
@@ -211,6 +205,12 @@ public extension CodexExtensions {
             public let version: String
         }
 
+        private let appServer: CodexAppServer
+
+        init(appServer: CodexAppServer) {
+            self.appServer = appServer
+        }
+
         /// Installs an MCP server into user-level Codex configuration.
         @discardableResult
         public func install(_ definition: ServerDefinition) async throws -> InstallResult {
@@ -253,10 +253,10 @@ public extension CodexAppServer {
 extension CodexExtensions.MCP.ServerDefinition {
     var configValue: CodexAppServer.JSONValue {
         switch self {
-        case let .stdio(server):
-            server.configValue
-        case let .http(server):
-            server.configValue
+            case let .stdio(server):
+                server.configValue
+            case let .http(server):
+                server.configValue
         }
     }
 }
@@ -294,10 +294,10 @@ extension CodexExtensions.MCP.HTTPServer {
         ]
 
         switch authorization {
-        case let .bearerTokenEnvironmentVariable(environmentVariable)?:
-            object["bearer_token_env_var"] = .string(environmentVariable)
-        case nil:
-            break
+            case let .bearerTokenEnvironmentVariable(environmentVariable)?:
+                object["bearer_token_env_var"] = .string(environmentVariable)
+            case nil:
+                break
         }
 
         if headers.isEmpty == false {
@@ -351,10 +351,10 @@ extension CodexExtensions.MCP.ToolPolicy {
 extension CodexExtensions.MCP.InstallResult.WriteStatus {
     init(protocolValue: CodexProtocolConfigWriteStatus) {
         switch protocolValue {
-        case .ok:
-            self = .ok
-        case .okOverridden:
-            self = .okOverridden
+            case .ok:
+                self = .ok
+            case .okOverridden:
+                self = .okOverridden
         }
     }
 }

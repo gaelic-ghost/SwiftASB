@@ -1,7 +1,7 @@
 import Foundation
 
 extension CodexAppServer {
-    internal func refreshGitStatus(
+    func refreshGitStatus(
         for worktree: CodexWorkspace.WorktreeSnapshot
     ) async throws -> CodexWorkspace.GitStatusSnapshot? {
         let cwd = worktree.currentDirectoryPath.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -48,13 +48,14 @@ extension CodexAppServer {
         let result = try await executeCommand(
             .init(
                 command: ["git", "-C", cwd] + arguments,
-                outputBytesCap: 65_536,
-                timeoutMilliseconds: 5_000
+                outputBytesCap: 65536,
+                timeoutMilliseconds: 5000
             )
         )
         guard result.exitCode == 0 else {
             return nil
         }
+
         return CodexWorkspace.RepositoryInfo.normalizedFact(result.stdout)
     }
 
@@ -63,12 +64,12 @@ extension CodexAppServer {
         hasCommandExecFacts: Bool
     ) -> CodexWorkspace.GitFactSource {
         switch (hasAppServerFacts, hasCommandExecFacts) {
-        case (true, true):
-            return .appServerAndCommandExec
-        case (true, false):
-            return .appServer
-        case (false, _):
-            return .commandExec
+            case (true, true):
+                return .appServerAndCommandExec
+            case (true, false):
+                return .appServer
+            case (false, _):
+                return .commandExec
         }
     }
 
@@ -85,6 +86,7 @@ extension CodexAppServer {
             let purpose = columns.dropFirst(2).first.map(String.init).map(Self.remotePurpose) ?? .unknown
             let key = "\(name)||\(url)||\(purpose.rawValue)"
             guard seen.insert(key).inserted else { continue }
+
             remotes.append(.init(name: name, url: url, purpose: purpose))
         }
 
@@ -93,12 +95,12 @@ extension CodexAppServer {
 
     private static func remotePurpose(_ marker: String) -> CodexWorkspace.GitRemoteInfo.Purpose {
         switch marker {
-        case "(fetch)":
-            return .fetch
-        case "(push)":
-            return .push
-        default:
-            return .unknown
+            case "(fetch)":
+                return .fetch
+            case "(push)":
+                return .push
+            default:
+                return .unknown
         }
     }
 
@@ -143,6 +145,7 @@ extension CodexAppServer {
 
     private static func trackingCount(named name: String, in text: String) -> Int? {
         guard let range = text.range(of: "\(name) ") else { return nil }
+
         let suffix = text[range.upperBound...]
         let digits = suffix.prefix { $0.isNumber }
         return digits.isEmpty ? nil : Int(digits)
@@ -152,6 +155,7 @@ extension CodexAppServer {
         guard let range = text.range(of: "...") else {
             return (text, nil)
         }
+
         return (
             String(text[..<range.lowerBound]),
             String(text[range.upperBound...])

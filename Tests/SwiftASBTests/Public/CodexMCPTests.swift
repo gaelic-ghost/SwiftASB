@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("MCP install writes a stdio server through config batch write")
@@ -44,8 +44,8 @@ extension CodexAppServerTests {
         )
         let result: CodexExtensions.MCP.InstallResult
         switch installResult {
-        case let .mcp(mcpResult):
-            result = mcpResult
+            case let .mcp(mcpResult):
+                result = mcpResult
         }
 
         #expect(result.configFilePath == "/Users/example/.codex/config.toml")
@@ -101,7 +101,7 @@ extension CodexAppServerTests {
             .mcp(
                 .http(
                     name: "search",
-                    url: try #require(URL(string: "https://example.com/mcp")),
+                    url: #require(URL(string: "https://example.com/mcp")),
                     authorization: .bearerTokenEnvironmentVariable("SEARCH_MCP_TOKEN"),
                     headers: ["X-Static": "yes"],
                     environmentHeaders: ["Authorization": "SEARCH_MCP_AUTH_HEADER"],

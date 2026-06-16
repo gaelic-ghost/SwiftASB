@@ -1,7 +1,6 @@
 import ASBPresentation
 import Testing
 
-@Suite("Recent activity presentation")
 struct RecentActivityPresentationTests {
     @Test("activity snapshot keeps command and file identity distinct")
     func activityIDsIncludeKindPrefix() {

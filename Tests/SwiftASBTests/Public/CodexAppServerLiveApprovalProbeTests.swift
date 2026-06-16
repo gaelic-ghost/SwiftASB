@@ -1,7 +1,7 @@
-import Foundation
 import CryptoKit
-import Testing
+import Foundation
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerLiveIntegrationTests {
     @Test(
@@ -22,9 +22,11 @@ extension CodexAppServerLiveIntegrationTests {
             .appendingPathComponent("approval-target.txt", isDirectory: false)
         let fixtureText = "approval-fixture-\(UUID().uuidString)\n"
         try Data(fixtureText.utf8).write(to: approvalFixtureURL)
-        let expectedDigest = Data(SHA256.hash(data: Data(fixtureText.utf8))).map {
-            String(format: "%02x", $0)
-        }.joined()
+        let expectedDigest = Data(SHA256.hash(data: Data(fixtureText.utf8)))
+            .map {
+                String(format: "%02x", $0)
+            }
+            .joined()
 
         let client = try await makeInitializedLiveClient(using: harness)
         do {
@@ -61,46 +63,46 @@ extension CodexAppServerLiveIntegrationTests {
             )
 
             switch approvalOutcome {
-            case let .approvalRequested(approvalRequest):
-                switch approvalRequest {
-                case let .commandExecution(commandRequest):
-                    #expect(commandRequest.threadID == approvalThread.id)
-                    #expect(commandRequest.turnID == approvalTurn.turn.id)
-                    #expect(commandRequest.reason?.isEmpty == false)
-                case let .fileChange(fileRequest):
-                    #expect(fileRequest.threadID == approvalThread.id)
-                    #expect(fileRequest.turnID == approvalTurn.turn.id)
-                case let .guardianDeniedAction(guardianRequest):
-                    #expect(guardianRequest.threadID == approvalThread.id)
-                    #expect(guardianRequest.turnID == approvalTurn.turn.id)
-                case let .permissions(permissionsRequest):
-                    #expect(permissionsRequest.threadID == approvalThread.id)
-                    #expect(permissionsRequest.turnID == approvalTurn.turn.id)
-                }
+                case let .approvalRequested(approvalRequest):
+                    switch approvalRequest {
+                        case let .commandExecution(commandRequest):
+                            #expect(commandRequest.threadID == approvalThread.id)
+                            #expect(commandRequest.turnID == approvalTurn.turn.id)
+                            #expect(commandRequest.reason?.isEmpty == false)
+                        case let .fileChange(fileRequest):
+                            #expect(fileRequest.threadID == approvalThread.id)
+                            #expect(fileRequest.turnID == approvalTurn.turn.id)
+                        case let .guardianDeniedAction(guardianRequest):
+                            #expect(guardianRequest.threadID == approvalThread.id)
+                            #expect(guardianRequest.turnID == approvalTurn.turn.id)
+                        case let .permissions(permissionsRequest):
+                            #expect(permissionsRequest.threadID == approvalThread.id)
+                            #expect(permissionsRequest.turnID == approvalTurn.turn.id)
+                    }
 
-                try await approvalTurn.respond(
-                    to: approvalRequest,
-                    with: acceptanceResponse(for: approvalRequest)
-                )
+                    try await approvalTurn.respond(
+                        to: approvalRequest,
+                        with: acceptanceResponse(for: approvalRequest)
+                    )
 
-                let resolution = try await awaitRequestResolution(
-                    in: minimap,
-                    expectedKind: approvalRequest.kind,
-                    timeoutSeconds: 20,
-                    operation: "waiting for the accepted live approval request to resolve"
-                )
-                #expect(resolution.threadID == approvalThread.id)
-                #expect(resolution.turnID == approvalTurn.turn.id)
+                    let resolution = try await awaitRequestResolution(
+                        in: minimap,
+                        expectedKind: approvalRequest.kind,
+                        timeoutSeconds: 20,
+                        operation: "waiting for the accepted live approval request to resolve"
+                    )
+                    #expect(resolution.threadID == approvalThread.id)
+                    #expect(resolution.turnID == approvalTurn.turn.id)
 
-                let completion = try await awaitCompletion(
-                    of: approvalTurn,
-                    timeoutSeconds: 45,
-                    operation: "waiting for the live approval-path turn to complete"
-                )
-                #expect(completion.turn.status == .completed)
-            case let .completedWithoutApproval(status, completedText):
-                #expect(status == .completed)
-                #expect(completedText == expectedDigest)
+                    let completion = try await awaitCompletion(
+                        of: approvalTurn,
+                        timeoutSeconds: 45,
+                        operation: "waiting for the live approval-path turn to complete"
+                    )
+                    #expect(completion.turn.status == .completed)
+                case let .completedWithoutApproval(status, completedText):
+                    #expect(status == .completed)
+                    #expect(completedText == expectedDigest)
             }
 
             let latestCompletedItemText = await MainActor.run(body: { minimap.latestCompletedItem?.item.text })
@@ -130,9 +132,11 @@ extension CodexAppServerLiveIntegrationTests {
             .appendingPathComponent("approval-read-target.txt", isDirectory: false)
         let readFixtureText = "approval-probe-\(UUID().uuidString)\n"
         try Data(readFixtureText.utf8).write(to: readFixtureURL)
-        let expectedDigest = Data(SHA256.hash(data: Data(readFixtureText.utf8))).map {
-            String(format: "%02x", $0)
-        }.joined()
+        let expectedDigest = Data(SHA256.hash(data: Data(readFixtureText.utf8)))
+            .map {
+                String(format: "%02x", $0)
+            }
+            .joined()
 
         let editFixtureURL = harness.approvalProbeWorkspace
             .appendingPathComponent("approval-edit-target.txt", isDirectory: false)
@@ -187,7 +191,7 @@ extension CodexAppServerLiveIntegrationTests {
                         label: "approval-probe-\(probeCase.label)",
                         sandboxMode: .workspaceWrite
                     )
-                    results.append(try await runApprovalProbeCaseReport(probeCase, on: caseThread))
+                    try results.append(await runApprovalProbeCaseReport(probeCase, on: caseThread))
                 } catch {
                     results.append(.init(probeCase, error: error))
                 }
@@ -213,7 +217,7 @@ extension CodexAppServerLiveIntegrationTests {
                     label: "approval-probe-read-only",
                     sandboxMode: .readOnly
                 )
-                results.append(try await runApprovalProbeCaseReport(readOnlyWriteCase, on: readOnlyThread))
+                try results.append(await runApprovalProbeCaseReport(readOnlyWriteCase, on: readOnlyThread))
             } catch {
                 results.append(.init(readOnlyWriteCase, error: error))
             }
@@ -284,8 +288,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/completed",
                             "hook/started",
                             "mcpServer/startupStatus/updated",
-                        ]
-                    ,
+                        ],
+
                         requestAttestation: nil
                     ),
                     clientInfo: .init(
@@ -307,7 +311,7 @@ extension CodexAppServerLiveIntegrationTests {
             )
 
             try await transport.sendNotification(
-                try protocolLayer.makeInitializedNotification(),
+                protocolLayer.makeInitializedNotification(),
                 method: "initialized"
             )
 
@@ -332,6 +336,7 @@ extension CodexAppServerLiveIntegrationTests {
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
+                    selectedCapabilityRoots: nil,
                     serviceName: nil,
                     serviceTier: nil,
                     sessionStartSource: nil,
@@ -370,7 +375,7 @@ extension CodexAppServerLiveIntegrationTests {
                             url: nil,
                             path: nil,
                             name: nil
-                        )
+                        ),
                     ],
                     model: nil,
                     outputSchema: nil,
@@ -474,8 +479,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/completed",
                             "hook/started",
                             "mcpServer/startupStatus/updated",
-                        ]
-                    ,
+                        ],
+
                         requestAttestation: nil
                     ),
                     clientInfo: .init(
@@ -497,7 +502,7 @@ extension CodexAppServerLiveIntegrationTests {
             )
 
             try await transport.sendNotification(
-                try protocolLayer.makeInitializedNotification(),
+                protocolLayer.makeInitializedNotification(),
                 method: "initialized"
             )
 
@@ -522,6 +527,7 @@ extension CodexAppServerLiveIntegrationTests {
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
+                    selectedCapabilityRoots: nil,
                     serviceName: nil,
                     serviceTier: nil,
                     sessionStartSource: nil,
@@ -560,7 +566,7 @@ extension CodexAppServerLiveIntegrationTests {
                             url: nil,
                             path: nil,
                             name: nil
-                        )
+                        ),
                     ],
                     model: nil,
                     outputSchema: nil,
@@ -609,5 +615,4 @@ extension CodexAppServerLiveIntegrationTests {
             throw error
         }
     }
-
 }

@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("interrupts a turn through CodexTurnHandle")
@@ -178,10 +178,10 @@ extension CodexAppServerTests {
                 Issue.record("Expected overlapping same-thread turn start to be rejected.")
             } catch let error as CodexAppServerError {
                 switch error {
-                case let .invalidState(reason):
-                    #expect(reason.contains("overlapping same-thread turns") || reason.contains("already has an active turn"))
-                default:
-                    Issue.record("Expected overlapping same-thread turn start to throw an invalidState error.")
+                    case let .invalidState(reason):
+                        #expect(reason.contains("overlapping same-thread turns") || reason.contains("already has an active turn"))
+                    default:
+                        Issue.record("Expected overlapping same-thread turn start to throw an invalidState error.")
                 }
             }
 
@@ -259,7 +259,6 @@ extension CodexAppServerTests {
             await client.stop()
             return
         }
-
         guard case let .commandExecution(commandRequest) = approvalRequest else {
             Issue.record("Expected the buffered approval request to be a command execution approval.")
             await client.stop()
@@ -348,7 +347,6 @@ extension CodexAppServerTests {
             await client.stop()
             return
         }
-
         guard case let .guardianDeniedAction(guardianRequest) = approvalRequest else {
             Issue.record("Expected a guardian denied-action approval request.")
             await client.stop()
@@ -446,6 +444,7 @@ extension CodexAppServerTests {
                 await client.stop()
                 return
             }
+
             #expect(reason.contains("belongs to a specific turn"))
             #expect(reason.contains("CodexTurnHandle"))
         }
@@ -506,6 +505,7 @@ extension CodexAppServerTests {
                 await client.stop()
                 return
             }
+
             #expect(reason.contains("response kind did not match"))
         }
 
@@ -538,6 +538,7 @@ extension CodexAppServerTests {
                 await client.stop()
                 return
             }
+
             #expect(reason.contains("No outstanding interactive server request"))
         }
 
@@ -606,6 +607,7 @@ extension CodexAppServerTests {
                 await client.stop()
                 return
             }
+
             #expect(reason.contains("belongs to thread \(firstThread.id)"))
             #expect(reason.contains("not thread \(secondThread.id)"))
         }
@@ -653,7 +655,6 @@ extension CodexAppServerTests {
             await client.stop()
             return
         }
-
         guard case let .mcpServer(mcpRequest) = request else {
             Issue.record("Expected the thread elicitation event to contain an MCP server request.")
             await client.stop()
@@ -739,7 +740,6 @@ extension CodexAppServerTests {
             await client.stop()
             return
         }
-
         guard case let .toolUserInput(inputRequest) = request else {
             Issue.record("Expected the elicitation event to contain a tool user input request.")
             await client.stop()
@@ -755,7 +755,7 @@ extension CodexAppServerTests {
             with: .toolUserInput(
                 .init(
                     answers: [
-                        "goal": .init(answers: ["Ship it"])
+                        "goal": .init(answers: ["Ship it"]),
                     ]
                 )
             )
@@ -774,5 +774,4 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
-
 }

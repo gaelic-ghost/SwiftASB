@@ -249,9 +249,9 @@ Use these decisions for every public symbol:
 - [x] Review `listModels(_:)` and MCP status as app-wide capability surfaces.
   Decision: keep model listing public, make routine app-wide state observable
   through `CodexAppServer.Inventory`, keep MCP summaries in observable
-  companions, and expose MCP detail reads through `CodexAppServer.mcp`.
-  Keep `listMcpServerStatuses(_:)` compatibility-only while consumers move
-  away from raw MCP list requests.
+  companions, and expose MCP detail reads through `CodexAppServer.mcp`. The
+  later 0.140 compatibility cleanup removed the raw MCP status-list public
+  convenience in favor of SwiftASB-owned snapshots.
 - [x] Review whether `CodexAppServer.swift` should keep all nested app-server
   request/result/domain values, or split more values into dedicated files.
   Decision: split by responsibility before v1; no new owners were introduced.

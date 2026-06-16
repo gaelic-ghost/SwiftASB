@@ -1,10 +1,10 @@
 import Foundation
 import Observation
 
-extension CodexThread {
+public extension CodexThread {
     @MainActor
     @Observable
-    public final class RecentCommands {
+    final class RecentCommands {
         public struct CachePolicy: Sendable, Equatable {
             public let maxResidentCommands: Int
             public let minimumResidentCommands: Int
@@ -66,6 +66,52 @@ extension CodexThread {
             public internal(set) var turnOrderIndex: Int?
             public internal(set) var turnStartedAt: Int?
 
+            fileprivate static func makeDisplayName(command: String?) -> String {
+                guard let command, !command.isEmpty else { return "Command" }
+
+                return command
+            }
+
+            fileprivate static func makeStatusSummary(
+                command: String?,
+                status: String?,
+                text: String?
+            ) -> String? {
+                let normalizedStatus = status?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let lowercasedStatus = normalizedStatus?.lowercased()
+
+                if lowercasedStatus == "completed", let outputSummary = makeOutputSummary(text: text) {
+                    return outputSummary
+                }
+
+                if let normalizedStatus, !normalizedStatus.isEmpty {
+                    return normalizedStatus
+                }
+
+                if let outputSummary = makeOutputSummary(text: text) {
+                    return outputSummary
+                }
+
+                return command
+            }
+
+            fileprivate static func makeOutputSummary(text: String?) -> String? {
+                guard let text, !text.isEmpty else { return nil }
+
+                let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+                let nonEmptyLines = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+                if nonEmptyLines.count > 1 {
+                    return "\(nonEmptyLines.count) output lines"
+                }
+
+                guard let firstNonEmptyLine = nonEmptyLines.first else {
+                    return nil
+                }
+
+                return String(firstNonEmptyLine.prefix(160))
+            }
+
             fileprivate mutating func apply(delta: String) {
                 outputText = (outputText ?? "") + delta
                 latestStatusText = latestStatusText ?? "Streaming command output"
@@ -93,6 +139,7 @@ extension CodexThread {
 
             fileprivate mutating func slimOutput() {
                 guard let outputText, !outputText.isEmpty else { return }
+
                 omittedOutputCharacterCount = outputText.count
                 self.outputText = nil
                 isOutputComplete = false
@@ -126,58 +173,13 @@ extension CodexThread {
 
                 self = snapshot
 
-                if (outputText == nil || outputText?.isEmpty == true),
+                if outputText == nil || outputText?.isEmpty == true,
                    let existingOutputText,
-                   !existingOutputText.isEmpty
-                {
+                   !existingOutputText.isEmpty {
                     outputText = existingOutputText
                     isOutputComplete = existingOutputComplete
                     omittedOutputCharacterCount = existingOmittedOutputCharacterCount
                 }
-            }
-
-            fileprivate static func makeDisplayName(command: String?) -> String {
-                guard let command, !command.isEmpty else { return "Command" }
-                return command
-            }
-
-            fileprivate static func makeStatusSummary(
-                command: String?,
-                status: String?,
-                text: String?
-            ) -> String? {
-                let normalizedStatus = status?.trimmingCharacters(in: .whitespacesAndNewlines)
-                let lowercasedStatus = normalizedStatus?.lowercased()
-
-                if lowercasedStatus == "completed", let outputSummary = makeOutputSummary(text: text) {
-                    return outputSummary
-                }
-
-                if let normalizedStatus, !normalizedStatus.isEmpty {
-                    return normalizedStatus
-                }
-
-                if let outputSummary = makeOutputSummary(text: text) {
-                    return outputSummary
-                }
-
-                return command
-            }
-
-            fileprivate static func makeOutputSummary(text: String?) -> String? {
-                guard let text, !text.isEmpty else { return nil }
-                let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-                let nonEmptyLines = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-
-                if nonEmptyLines.count > 1 {
-                    return "\(nonEmptyLines.count) output lines"
-                }
-
-                guard let firstNonEmptyLine = nonEmptyLines.first else {
-                    return nil
-                }
-
-                return String(firstNonEmptyLine.prefix(160))
             }
         }
 
@@ -208,7 +210,7 @@ extension CodexThread {
         @ObservationIgnored
         private var residencyTask: Task<Void, Never>?
 
-        internal init(
+        init(
             cachePolicy: CachePolicy,
             threadID: String,
             residentLimit: Int,
@@ -222,12 +224,12 @@ extension CodexThread {
             self.threadID = threadID
             self.residentLimit = residentLimit
             self.nextOlderCursor = nextOlderCursor
-            self.commands = initialCommands
-            self.isLoadingOlderCommands = false
-            self.lastLoadErrorDescription = nil
-            self.residentOutputCost = initialCommands.reduce(0) { $0 + Self.commandResidentCost($1) }
-            self.visibleCommandIDs = []
-            self.selectedCommandID = nil
+            commands = initialCommands
+            isLoadingOlderCommands = false
+            lastLoadErrorDescription = nil
+            residentOutputCost = initialCommands.reduce(0) { $0 + Self.commandResidentCost($1) }
+            visibleCommandIDs = []
+            selectedCommandID = nil
             self.appServer = appServer
             trimResidentCommandsIfNeeded()
 
@@ -258,6 +260,51 @@ extension CodexThread {
             turnEventTask?.cancel()
             commandDeltaTask?.cancel()
             residencyTask?.cancel()
+        }
+
+        private static func commandSnapshotID(turnID: String, itemID: String) -> String {
+            "\(turnID):\(itemID)"
+        }
+
+        private static func distanceToRange(
+            _ index: Int,
+            lowerBound: Int,
+            upperBound: Int
+        ) -> Int {
+            if index < lowerBound {
+                return lowerBound - index
+            }
+            if index > upperBound {
+                return index - upperBound
+            }
+            return 0
+        }
+
+        private static func commandResidentCost(_ command: CommandSnapshot) -> Int {
+            let baseCost = command.status == .inProgress ? 3 : 1
+            guard let outputText = command.outputText, !outputText.isEmpty else {
+                return baseCost
+            }
+
+            let lines = outputText.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+            let nonEmptyLineCount = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+            let characterCost = max(1, Int(ceil(Double(outputText.count) / 480.0)))
+            let lineCost = max(1, Int(ceil(Double(nonEmptyLineCount) / 20.0)))
+            let payloadCost = min(characterCost + lineCost, command.isOutputComplete ? 18 : 9)
+            return baseCost + payloadCost
+        }
+
+        private static func status(from persistedStatus: String?) -> CommandSnapshot.Status {
+            guard let persistedStatus else { return .completed }
+
+            switch persistedStatus.lowercased() {
+                case "error", "errored", "failed", "interrupted":
+                    return .errored
+                case "in_progress", "inprogress", "running":
+                    return .inProgress
+                default:
+                    return .completed
+            }
         }
 
         /// Loads commands older than the current resident window.
@@ -297,20 +344,22 @@ extension CodexThread {
 
         private func apply(_ event: CodexTurnEvent) async {
             switch event {
-            case let .itemStarted(started):
-                guard started.item.kind == .commandExecution else { return }
-                upsertLiveCommand(from: started.item, turnID: started.turnID, status: .inProgress)
-            case let .itemCompleted(completed):
-                guard completed.item.kind == .commandExecution else { return }
-                upsertLiveCommand(
-                    from: completed.item,
-                    turnID: completed.turnID,
-                    status: completed.item.isErrored ? .errored : .completed
-                )
-            case let .completed(completion):
-                await refreshCommands(for: completion.turn.id)
-            default:
-                return
+                case let .itemStarted(started):
+                    guard started.item.kind == .commandExecution else { return }
+
+                    upsertLiveCommand(from: started.item, turnID: started.turnID, status: .inProgress)
+                case let .itemCompleted(completed):
+                    guard completed.item.kind == .commandExecution else { return }
+
+                    upsertLiveCommand(
+                        from: completed.item,
+                        turnID: completed.turnID,
+                        status: completed.item.isErrored ? .errored : .completed
+                    )
+                case let .completed(completion):
+                    await refreshCommands(for: completion.turn.id)
+                default:
+                    return
             }
 
             trimResidentCommandsIfNeeded()
@@ -320,6 +369,7 @@ extension CodexThread {
         private func apply(_ event: CodexAppServer.CommandExecutionOutputDeltaEvent) {
             let commandID = Self.commandSnapshotID(turnID: event.turnID, itemID: event.itemID)
             guard let index = commands.firstIndex(where: { $0.id == commandID }) else { return }
+
             commands[index].apply(delta: event.delta)
             refreshResidentMetrics()
             trimResidentCommandsIfNeeded()
@@ -418,6 +468,7 @@ extension CodexThread {
             residencyTask?.cancel()
             residencyTask = Task { [weak self] in
                 guard let self else { return }
+
                 await self.hydrateProtectedCommandsIfNeeded()
                 self.trimResidentCommandsIfNeeded()
             }
@@ -427,6 +478,7 @@ extension CodexThread {
             let protectedIDs = protectedCommandIDSet()
             let slimmedProtectedIDs = commands.compactMap { command -> String? in
                 guard protectedIDs.contains(command.id), !command.isOutputComplete else { return nil }
+
                 return command.id
             }
 
@@ -435,6 +487,7 @@ extension CodexThread {
             for commandID in slimmedProtectedIDs {
                 do {
                     guard let index = commands.firstIndex(where: { $0.id == commandID }) else { continue }
+
                     let command = commands[index]
                     guard let snapshot = try await appServer.turnSnapshot(threadID: threadID, turnID: command.turnID) else {
                         continue
@@ -442,6 +495,7 @@ extension CodexThread {
                     guard let item = snapshot.items.first(where: { $0.id == command.itemID }) else {
                         continue
                     }
+
                     commands[index].hydrateOutput(
                         command: item.command,
                         text: item.streamedText ?? item.text,
@@ -476,7 +530,7 @@ extension CodexThread {
                     mandatoryIndices.insert(index)
                 }
                 for index in commands.indices.prefix(cachePolicy.protectedRecentCompletedCommands)
-                where commands[index].status != .inProgress {
+                    where commands[index].status != .inProgress {
                     mandatoryIndices.insert(index)
                 }
 
@@ -522,10 +576,12 @@ extension CodexThread {
             let protectedIDs = protectedCommandIDSet()
             for index in commands.indices.reversed() {
                 guard residentOutputCost > maximumResidentOutputCost else { break }
+
                 let command = commands[index]
                 guard command.status != .inProgress else { continue }
                 guard !protectedIDs.contains(command.id) else { continue }
                 guard command.isOutputComplete else { continue }
+
                 commands[index].slimOutput()
                 refreshResidentMetrics()
             }
@@ -585,53 +641,7 @@ extension CodexThread {
         private func refreshResidentMetrics() {
             residentOutputCost = commands.reduce(0) { $0 + Self.commandResidentCost($1) }
         }
-
-        private static func commandSnapshotID(turnID: String, itemID: String) -> String {
-            "\(turnID):\(itemID)"
-        }
-
-        private static func distanceToRange(
-            _ index: Int,
-            lowerBound: Int,
-            upperBound: Int
-        ) -> Int {
-            if index < lowerBound {
-                return lowerBound - index
-            }
-            if index > upperBound {
-                return index - upperBound
-            }
-            return 0
-        }
-
-        private static func commandResidentCost(_ command: CommandSnapshot) -> Int {
-            let baseCost = command.status == .inProgress ? 3 : 1
-            guard let outputText = command.outputText, !outputText.isEmpty else {
-                return baseCost
-            }
-
-            let lines = outputText.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-            let nonEmptyLineCount = lines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
-            let characterCost = max(1, Int(ceil(Double(outputText.count) / 480.0)))
-            let lineCost = max(1, Int(ceil(Double(nonEmptyLineCount) / 20.0)))
-            let payloadCost = min(characterCost + lineCost, command.isOutputComplete ? 18 : 9)
-            return baseCost + payloadCost
-        }
-
-        private static func status(from persistedStatus: String?) -> CommandSnapshot.Status {
-            guard let persistedStatus else { return .completed }
-            switch persistedStatus.lowercased() {
-            case "error", "errored", "failed", "interrupted":
-                return .errored
-            case "in_progress", "inprogress", "running":
-                return .inProgress
-            default:
-                return .completed
-            }
-        }
     }
-
-
 }
 
 extension CodexThread.RecentCommands.CommandSnapshot {
@@ -671,13 +681,14 @@ extension CodexThread.RecentCommands.CommandSnapshot {
 
     private static func snapshotStatus(from persistedStatus: String?) -> CodexThread.RecentCommands.CommandSnapshot.Status {
         guard let persistedStatus else { return .completed }
+
         switch persistedStatus.lowercased() {
-        case "error", "errored", "failed", "interrupted":
-            return .errored
-        case "in_progress", "inprogress", "running":
-            return .inProgress
-        default:
-            return .completed
+            case "error", "errored", "failed", "interrupted":
+                return .errored
+            case "in_progress", "inprogress", "running":
+                return .inProgress
+            default:
+                return .completed
         }
     }
 }

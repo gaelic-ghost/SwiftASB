@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("builds a recent-turns observable from the local history store")
@@ -114,11 +114,11 @@ extension CodexAppServerTests {
             turns: [
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350005,
+                        completedAt: 1_713_350_005,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-older",
-                        startedAt: 1713350000,
+                        startedAt: 1_713_350_000,
                         status: .completed
                     ),
                     items: [
@@ -136,11 +136,11 @@ extension CodexAppServerTests {
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350105,
+                        completedAt: 1_713_350_105,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-middle",
-                        startedAt: 1713350100,
+                        startedAt: 1_713_350_100,
                         status: .completed
                     ),
                     items: [
@@ -158,11 +158,11 @@ extension CodexAppServerTests {
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350255,
+                        completedAt: 1_713_350_255,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-newest",
-                        startedAt: 1713350250,
+                        startedAt: 1_713_350_250,
                         status: .completed
                     ),
                     items: [
@@ -180,11 +180,11 @@ extension CodexAppServerTests {
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350205,
+                        completedAt: 1_713_350_205,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-newer",
-                        startedAt: 1713350200,
+                        startedAt: 1_713_350_200,
                         status: .completed
                     ),
                     items: [
@@ -318,5 +318,4 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
-
 }

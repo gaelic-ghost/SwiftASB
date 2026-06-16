@@ -1,8 +1,7 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
-@Suite("SwiftASB feature policy")
 struct SwiftASBFeaturePolicyTests {
     @Test("built-in feature categories have stable ids and defaults")
     func builtInFeatureCategoriesHaveStableIDsAndDefaults() {

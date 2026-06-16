@@ -1,7 +1,6 @@
-import Testing
 @testable import SwiftASB
+import Testing
 
-@Suite("Codex workspace facts")
 struct CodexWorkspaceTests {
     @Test("worktree snapshot uses Codex-reported Git origin when available")
     func worktreeSnapshotUsesGitOriginWhenAvailable() {

@@ -57,7 +57,7 @@ public struct SwiftASBFeatureCategory: Sendable, Equatable, Identifiable {
         }
 
         public init(stringLiteral value: String) {
-            self.rawValue = value
+            rawValue = value
         }
 
         public static let gitObservability: Self = "gitObservability"
@@ -69,33 +69,6 @@ public struct SwiftASBFeatureCategory: Sendable, Equatable, Identifiable {
         public static let extensionMutation: Self = "extensionMutation"
         public static let worktreeAutomation: Self = "worktreeAutomation"
         public static let shellCommandExecution: Self = "shellCommandExecution"
-    }
-
-    public let id: ID
-    public let displayName: String
-    public let description: String
-    public let permissionReason: String
-    public let defaultMode: SwiftASBFeatureMode
-    public let sensitivity: SwiftASBFeatureSensitivity
-    public let eventPolicy: SwiftASBFeatureEventPolicy
-
-    /// Creates a feature category descriptor.
-    public init(
-        id: ID,
-        displayName: String,
-        description: String,
-        permissionReason: String,
-        defaultMode: SwiftASBFeatureMode,
-        sensitivity: SwiftASBFeatureSensitivity,
-        eventPolicy: SwiftASBFeatureEventPolicy
-    ) {
-        self.id = id
-        self.displayName = displayName
-        self.description = description
-        self.permissionReason = permissionReason
-        self.defaultMode = defaultMode
-        self.sensitivity = sensitivity
-        self.eventPolicy = eventPolicy
     }
 
     /// Built-in SwiftASB feature categories.
@@ -183,6 +156,33 @@ public struct SwiftASBFeatureCategory: Sendable, Equatable, Identifiable {
         ),
     ]
 
+    public let id: ID
+    public let displayName: String
+    public let description: String
+    public let permissionReason: String
+    public let defaultMode: SwiftASBFeatureMode
+    public let sensitivity: SwiftASBFeatureSensitivity
+    public let eventPolicy: SwiftASBFeatureEventPolicy
+
+    /// Creates a feature category descriptor.
+    public init(
+        id: ID,
+        displayName: String,
+        description: String,
+        permissionReason: String,
+        defaultMode: SwiftASBFeatureMode,
+        sensitivity: SwiftASBFeatureSensitivity,
+        eventPolicy: SwiftASBFeatureEventPolicy
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.description = description
+        self.permissionReason = permissionReason
+        self.defaultMode = defaultMode
+        self.sensitivity = sensitivity
+        self.eventPolicy = eventPolicy
+    }
+
     /// Returns a built-in category by id.
     public static func builtInCategory(id: ID) -> Self? {
         builtIn.first { $0.id == id }
@@ -206,6 +206,20 @@ public enum SwiftASBFeatureEventPolicy: String, Sendable, Equatable {
 
 /// Host filesystem access declared by a consuming app.
 public struct SwiftASBHostAccess: Sendable, Equatable {
+    /// Where the consuming app says its broad host access came from.
+    public enum AccessSource: String, Sendable, Equatable {
+        case declaredByHostApp
+        case fullDiskAccess
+        case securityScopedBookmark
+        case unknown
+        case unsandboxed
+        case userSelectedDirectory
+    }
+
+    public static var unknown: Self {
+        .init()
+    }
+
     public var homeDirectoryReadWriteGranted: Bool
     public var homeDirectoryURL: URL?
     public var accessSource: AccessSource
@@ -219,10 +233,6 @@ public struct SwiftASBHostAccess: Sendable, Equatable {
         self.homeDirectoryReadWriteGranted = homeDirectoryReadWriteGranted
         self.homeDirectoryURL = homeDirectoryURL
         self.accessSource = accessSource
-    }
-
-    public static var unknown: Self {
-        .init()
     }
 
     /// Declares an unsandboxed host application.
@@ -244,15 +254,5 @@ public struct SwiftASBHostAccess: Sendable, Equatable {
             homeDirectoryURL: url,
             accessSource: source
         )
-    }
-
-    /// Where the consuming app says its broad host access came from.
-    public enum AccessSource: String, Sendable, Equatable {
-        case declaredByHostApp
-        case fullDiskAccess
-        case securityScopedBookmark
-        case unknown
-        case unsandboxed
-        case userSelectedDirectory
     }
 }

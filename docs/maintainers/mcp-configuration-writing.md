@@ -28,8 +28,6 @@ MCP service reads are already owned by SwiftASB:
 - `CodexAppServer.mcp.install(_:)` writes user-level MCP server definitions
   through app-server `config/batchWrite`, reloads user config, and refreshes
   SwiftASB's global MCP status snapshot.
-- `CodexAppServer.listMcpServerStatuses(_:)` remains a deprecated
-  compatibility method for callers that still need a direct list request.
 
 Thread summaries classify a service as `global` when its name appears in
 SwiftASB's global status cache and as `thread` otherwise. That is an inference,

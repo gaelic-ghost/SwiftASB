@@ -1,8 +1,7 @@
-@testable import ASBSwiftUI
 import ASBPresentation
+@testable import ASBSwiftUI
 import Testing
 
-@Suite("ASBSwiftUI components")
 @MainActor
 struct ASBSwiftUIComponentTests {
     @Test("thread sidebar stores snapshot and intent handler")

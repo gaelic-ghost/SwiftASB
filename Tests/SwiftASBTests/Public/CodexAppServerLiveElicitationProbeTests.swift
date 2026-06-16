@@ -1,7 +1,7 @@
-import Foundation
 import CryptoKit
-import Testing
+import Foundation
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerLiveIntegrationTests {
     @Test(
@@ -52,8 +52,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/completed",
                             "hook/started",
                             "mcpServer/startupStatus/updated",
-                        ]
-                    ,
+                        ],
+
                         requestAttestation: nil
                     ),
                     clientInfo: .init(
@@ -75,7 +75,7 @@ extension CodexAppServerLiveIntegrationTests {
             )
 
             try await transport.sendNotification(
-                try protocolLayer.makeInitializedNotification(),
+                protocolLayer.makeInitializedNotification(),
                 method: "initialized"
             )
 
@@ -100,6 +100,7 @@ extension CodexAppServerLiveIntegrationTests {
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
+                    selectedCapabilityRoots: nil,
                     serviceName: nil,
                     serviceTier: nil,
                     sessionStartSource: nil,
@@ -145,7 +146,7 @@ extension CodexAppServerLiveIntegrationTests {
                             url: nil,
                             path: nil,
                             name: nil
-                        )
+                        ),
                     ],
                     model: nil,
                     outputSchema: nil,
@@ -240,8 +241,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/completed",
                             "hook/started",
                             "mcpServer/startupStatus/updated",
-                        ]
-                    ,
+                        ],
+
                         requestAttestation: nil
                     ),
                     clientInfo: .init(
@@ -263,7 +264,7 @@ extension CodexAppServerLiveIntegrationTests {
             )
 
             try await transport.sendNotification(
-                try protocolLayer.makeInitializedNotification(),
+                protocolLayer.makeInitializedNotification(),
                 method: "initialized"
             )
 
@@ -288,6 +289,7 @@ extension CodexAppServerLiveIntegrationTests {
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
+                    selectedCapabilityRoots: nil,
                     serviceName: nil,
                     serviceTier: nil,
                     sessionStartSource: nil,
@@ -326,7 +328,7 @@ extension CodexAppServerLiveIntegrationTests {
                             url: nil,
                             path: nil,
                             name: nil
-                        )
+                        ),
                     ],
                     model: nil,
                     outputSchema: nil,
@@ -428,8 +430,8 @@ extension CodexAppServerLiveIntegrationTests {
                             "hook/completed",
                             "hook/started",
                             "mcpServer/startupStatus/updated",
-                        ]
-                    ,
+                        ],
+
                         requestAttestation: nil
                     ),
                     clientInfo: .init(
@@ -451,7 +453,7 @@ extension CodexAppServerLiveIntegrationTests {
             )
 
             try await transport.sendNotification(
-                try protocolLayer.makeInitializedNotification(),
+                protocolLayer.makeInitializedNotification(),
                 method: "initialized"
             )
 
@@ -476,6 +478,7 @@ extension CodexAppServerLiveIntegrationTests {
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
                     sandbox: .readOnly,
+                    selectedCapabilityRoots: nil,
                     serviceName: nil,
                     serviceTier: nil,
                     sessionStartSource: nil,
@@ -514,7 +517,7 @@ extension CodexAppServerLiveIntegrationTests {
                             url: nil,
                             path: nil,
                             name: nil
-                        )
+                        ),
                     ],
                     model: "mock-model",
                     outputSchema: nil,
@@ -568,7 +571,7 @@ extension CodexAppServerLiveIntegrationTests {
                             url: nil,
                             path: nil,
                             name: nil
-                        )
+                        ),
                     ],
                     model: "mock-model",
                     outputSchema: nil,
@@ -622,5 +625,4 @@ extension CodexAppServerLiveIntegrationTests {
             throw error
         }
     }
-
 }

@@ -30,12 +30,12 @@ public extension CodexAppServer {
 
     /// Configured hook diagnostics for one working directory.
     struct HookListEntry: Sendable, Equatable, Identifiable {
-        public var id: String { currentDirectoryPath }
-
         public let currentDirectoryPath: String
         public let errors: [HookError]
         public let hooks: [HookMetadata]
         public let warnings: [String]
+
+        public var id: String { currentDirectoryPath }
 
         /// Hook warnings and errors combined into one list for diagnostics UI.
         public var diagnostics: [HookDiagnostic] {
@@ -131,8 +131,6 @@ public extension CodexAppServer {
             case user
         }
 
-        public var id: String { key }
-
         public let command: String?
         public let displayOrder: Int
         public let enabled: Bool
@@ -146,6 +144,8 @@ public extension CodexAppServer {
         public let sourcePath: String
         public let statusMessage: String?
         public let timeoutSeconds: UInt64
+
+        public var id: String { key }
     }
 }
 
@@ -192,22 +192,22 @@ extension CodexAppServer.HookMetadata {
 extension CodexAppServer.HookMetadata.EventName {
     init(protocolValue: CodexProtocolHooksListResponse.EventName) {
         switch protocolValue {
-        case .permissionRequest:
-            self = .permissionRequest
-        case .postCompact:
-            self = .postCompact
-        case .postToolUse:
-            self = .postToolUse
-        case .preCompact:
-            self = .preCompact
-        case .preToolUse:
-            self = .preToolUse
-        case .sessionStart:
-            self = .sessionStart
-        case .stop:
-            self = .stop
-        case .userPromptSubmit:
-            self = .userPromptSubmit
+            case .permissionRequest:
+                self = .permissionRequest
+            case .postCompact:
+                self = .postCompact
+            case .postToolUse:
+                self = .postToolUse
+            case .preCompact:
+                self = .preCompact
+            case .preToolUse:
+                self = .preToolUse
+            case .sessionStart:
+                self = .sessionStart
+            case .stop:
+                self = .stop
+            case .userPromptSubmit:
+                self = .userPromptSubmit
         }
     }
 }
@@ -215,12 +215,12 @@ extension CodexAppServer.HookMetadata.EventName {
 extension CodexAppServer.HookMetadata.HandlerType {
     init(protocolValue: CodexProtocolHooksListResponse.HandlerType) {
         switch protocolValue {
-        case .agent:
-            self = .agent
-        case .command:
-            self = .command
-        case .prompt:
-            self = .prompt
+            case .agent:
+                self = .agent
+            case .command:
+                self = .command
+            case .prompt:
+                self = .prompt
         }
     }
 }
@@ -228,26 +228,26 @@ extension CodexAppServer.HookMetadata.HandlerType {
 extension CodexAppServer.HookMetadata.Source {
     init(protocolValue: CodexProtocolHooksListResponse.Source) {
         switch protocolValue {
-        case .cloudRequirements:
-            self = .cloudRequirements
-        case .legacyManagedConfigFile:
-            self = .legacyManagedConfigFile
-        case .legacyManagedConfigMdm:
-            self = .legacyManagedConfigMdm
-        case .mdm:
-            self = .mdm
-        case .plugin:
-            self = .plugin
-        case .project:
-            self = .project
-        case .sessionFlags:
-            self = .sessionFlags
-        case .system:
-            self = .system
-        case .unknown:
-            self = .unknown
-        case .user:
-            self = .user
+            case .cloudRequirements:
+                self = .cloudRequirements
+            case .legacyManagedConfigFile:
+                self = .legacyManagedConfigFile
+            case .legacyManagedConfigMdm:
+                self = .legacyManagedConfigMdm
+            case .mdm:
+                self = .mdm
+            case .plugin:
+                self = .plugin
+            case .project:
+                self = .project
+            case .sessionFlags:
+                self = .sessionFlags
+            case .system:
+                self = .system
+            case .unknown:
+                self = .unknown
+            case .user:
+                self = .user
         }
     }
 }

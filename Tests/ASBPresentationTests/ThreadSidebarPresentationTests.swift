@@ -1,7 +1,6 @@
 import ASBPresentation
 import Testing
 
-@Suite("Thread sidebar presentation")
 struct ThreadSidebarPresentationTests {
     @Test("items keep stable thread identity")
     func itemIdentityIsStableThreadID() {

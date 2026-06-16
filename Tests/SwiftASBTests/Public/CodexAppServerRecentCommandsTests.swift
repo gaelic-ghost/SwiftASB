@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("recent-command descriptors normalize companion intent")
@@ -202,7 +202,7 @@ extension CodexAppServerTests {
                     "backwardsCursor": "cursor-newer-1",
                     "data": [
                         [
-                            "completedAt": 1713350100,
+                            "completedAt": 1_713_350_100,
                             "durationMs": 2500,
                             "error": NSNull(),
                             "id": "turn-older",
@@ -215,7 +215,7 @@ extension CodexAppServerTests {
                                     "type": "commandExecution",
                                 ],
                             ],
-                            "startedAt": 1713350050,
+                            "startedAt": 1_713_350_050,
                             "status": "completed",
                         ],
                     ],
@@ -257,11 +257,11 @@ extension CodexAppServerTests {
             turns: [
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350200,
+                        completedAt: 1_713_350_200,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-newer",
-                        startedAt: 1713350150,
+                        startedAt: 1_713_350_150,
                         status: .completed
                     ),
                     items: [
@@ -317,7 +317,7 @@ extension CodexAppServerTests {
                     "backwardsCursor": "cursor-newer-1",
                     "data": [
                         [
-                            "completedAt": 1713350300,
+                            "completedAt": 1_713_350_300,
                             "durationMs": 2500,
                             "error": NSNull(),
                             "id": "turn-3",
@@ -330,7 +330,7 @@ extension CodexAppServerTests {
                                     "type": "commandExecution",
                                 ],
                             ],
-                            "startedAt": 1713350250,
+                            "startedAt": 1_713_350_250,
                             "status": "completed",
                         ],
                     ],
@@ -340,7 +340,7 @@ extension CodexAppServerTests {
                     "backwardsCursor": "cursor-newer-2",
                     "data": [
                         [
-                            "completedAt": 1713350005,
+                            "completedAt": 1_713_350_005,
                             "durationMs": 2500,
                             "error": NSNull(),
                             "id": "turn-0",
@@ -353,7 +353,7 @@ extension CodexAppServerTests {
                                     "type": "commandExecution",
                                 ],
                             ],
-                            "startedAt": 1713350000,
+                            "startedAt": 1_713_350_000,
                             "status": "completed",
                         ],
                     ],
@@ -395,11 +395,11 @@ extension CodexAppServerTests {
             turns: [
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350300,
+                        completedAt: 1_713_350_300,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-3",
-                        startedAt: 1713350250,
+                        startedAt: 1_713_350_250,
                         status: .completed
                     ),
                     items: [
@@ -417,11 +417,11 @@ extension CodexAppServerTests {
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350200,
+                        completedAt: 1_713_350_200,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-2",
-                        startedAt: 1713350150,
+                        startedAt: 1_713_350_150,
                         status: .completed
                     ),
                     items: [
@@ -439,11 +439,11 @@ extension CodexAppServerTests {
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350100,
+                        completedAt: 1_713_350_100,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-1",
-                        startedAt: 1713350050,
+                        startedAt: 1_713_350_050,
                         status: .completed
                     ),
                     items: [
@@ -535,11 +535,11 @@ extension CodexAppServerTests {
             turns: [
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350005,
+                        completedAt: 1_713_350_005,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-older",
-                        startedAt: 1713350000,
+                        startedAt: 1_713_350_000,
                         status: .completed
                     ),
                     items: [
@@ -597,6 +597,7 @@ extension CodexAppServerTests {
             guard let olderCommand = recentCommands.commands.first(where: { $0.id == "turn-older:item-command-older" }) else {
                 return false
             }
+
             return olderCommand.isOutputComplete == false && olderCommand.outputText == nil
         }
 
@@ -610,5 +611,4 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
-
 }

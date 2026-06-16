@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @MainActor
@@ -22,7 +22,7 @@ extension CodexAppServerTests {
             )
         )
 
-        try await waitForCondition(maxAttempts: 2_000) {
+        try await waitForCondition(maxAttempts: 2000) {
             await MainActor.run {
                 inventory.appListPage != nil
                     && inventory.skillListSnapshot != nil

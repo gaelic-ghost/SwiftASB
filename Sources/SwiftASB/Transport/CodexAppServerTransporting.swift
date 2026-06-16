@@ -1,6 +1,6 @@
 import Foundation
 
-internal protocol CodexAppServerTransporting: Actor {
+protocol CodexAppServerTransporting: Actor {
     func start() throws
     func stop()
     func send(_ requestPayload: Data, id: CodexRPCRequestID) async throws -> Data

@@ -1,8 +1,8 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
-@Suite("LineDelimitedDataBuffer", .serialized)
+@Suite(.serialized)
 struct LineDelimitedDataBufferTests {
     @Test("drains complete lines and preserves partial trailing data")
     func drainsCompleteLines() {

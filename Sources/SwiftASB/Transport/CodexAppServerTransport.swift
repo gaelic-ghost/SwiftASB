@@ -1,13 +1,13 @@
 import Foundation
 
-internal actor CodexAppServerTransport: CodexAppServerTransporting {
-    internal struct Configuration: Equatable, Sendable {
-        internal var codexExecutableURL: URL?
-        internal var arguments: [String]
-        internal var currentDirectoryURL: URL?
-        internal var environment: [String: String]?
+actor CodexAppServerTransport: CodexAppServerTransporting {
+    struct Configuration: Equatable {
+        var codexExecutableURL: URL?
+        var arguments: [String]
+        var currentDirectoryURL: URL?
+        var environment: [String: String]?
 
-        internal init(
+        init(
             codexExecutableURL: URL? = nil,
             arguments: [String] = ["app-server", "--listen", "stdio://"],
             currentDirectoryURL: URL? = nil,
@@ -34,11 +34,11 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
     private var lastExecutableResolution: CodexCLIExecutableResolver.Resolution?
     private var hasFinished = false
 
-    internal init(configuration: Configuration = .init()) {
+    init(configuration: Configuration = .init()) {
         self.configuration = configuration
     }
 
-    internal func start() throws {
+    func start() throws {
         guard process == nil else {
             throw CodexTransportError.alreadyStarted
         }
@@ -92,7 +92,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         startStandardErrorLoop(fileHandle: errorPipe.fileHandleForReading)
     }
 
-    internal func stop() {
+    func stop() {
         guard let process else { return }
 
         if process.isRunning {
@@ -108,7 +108,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         }
     }
 
-    internal func send(_ requestPayload: Data, id: CodexRPCRequestID) async throws -> Data {
+    func send(_ requestPayload: Data, id: CodexRPCRequestID) async throws -> Data {
         guard process != nil, let standardInputHandle else {
             throw CodexTransportError.notStarted
         }
@@ -140,7 +140,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         }
     }
 
-    internal func sendNotification(_ notificationPayload: Data, method: String) throws {
+    func sendNotification(_ notificationPayload: Data, method: String) throws {
         guard process != nil, let standardInputHandle else {
             throw CodexTransportError.notStarted
         }
@@ -155,7 +155,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         }
     }
 
-    internal func sendResponse(_ responsePayload: Data, requestID: CodexRPCRequestID) throws {
+    func sendResponse(_ responsePayload: Data, requestID: CodexRPCRequestID) throws {
         guard process != nil, let standardInputHandle else {
             throw CodexTransportError.notStarted
         }
@@ -170,7 +170,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         }
     }
 
-    internal func serverEvents() -> AsyncStream<CodexRPCServerEvent> {
+    func serverEvents() -> AsyncStream<CodexRPCServerEvent> {
         let streamID = UUID()
         return AsyncStream { continuation in
             self.registerServerEventContinuation(continuation, id: streamID)
@@ -182,7 +182,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
         }
     }
 
-    internal func executableResolution() -> CodexCLIExecutableResolver.Resolution? {
+    func executableResolution() -> CodexCLIExecutableResolver.Resolution? {
         lastExecutableResolution
     }
 
@@ -228,13 +228,14 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
         do {
             switch try CodexRPCEnvelope.classifyInboundMessage(payload) {
-            case let .response(id, responsePayload):
-                guard let continuation = pendingResponses.removeValue(forKey: id) else {
-                    return
-                }
-                continuation.resume(returning: responsePayload)
-            case let .serverEvent(event):
-                broadcastServerEvent(event)
+                case let .response(id, responsePayload):
+                    guard let continuation = pendingResponses.removeValue(forKey: id) else {
+                        return
+                    }
+
+                    continuation.resume(returning: responsePayload)
+                case let .serverEvent(event):
+                    broadcastServerEvent(event)
             }
         } catch let error as CodexTransportError {
             finishTransport(with: error)
@@ -252,6 +253,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
     private func handleStandardOutputEOF() {
         guard !hasFinished else { return }
+
         if let partialLine = standardOutputBuffer.finishPartialLine() {
             handleStandardOutputDataLine(partialLine)
         }
@@ -289,6 +291,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
         for lineData in standardOutputBuffer.append(chunk) {
             guard !hasFinished else { return }
+
             handleStandardOutputDataLine(lineData)
         }
     }
@@ -304,6 +307,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
         for lineData in standardErrorBuffer.append(chunk) {
             guard !hasFinished else { return }
+
             appendStandardErrorDataLine(lineData)
         }
     }
@@ -323,12 +327,12 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
     private func handleProcessTermination(_ process: Process) {
         let reasonDescription: String
         switch process.terminationReason {
-        case .exit:
-            reasonDescription = "exit"
-        case .uncaughtSignal:
-            reasonDescription = "uncaught-signal"
-        @unknown default:
-            reasonDescription = "unknown"
+            case .exit:
+                reasonDescription = "exit"
+            case .uncaughtSignal:
+                reasonDescription = "uncaught-signal"
+            @unknown default:
+                reasonDescription = "unknown"
         }
 
         finishTransport(
@@ -342,6 +346,7 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
     private func finishTransport(with error: CodexTransportError) {
         guard !hasFinished else { return }
+
         hasFinished = true
 
         standardOutputHandle?.readabilityHandler = nil
@@ -373,27 +378,27 @@ internal actor CodexAppServerTransport: CodexAppServerTransporting {
 
     private func describe(_ source: CodexCLIExecutableResolver.Source) -> String {
         switch source {
-        case .explicit:
-            return "explicit executable URL"
-        case .path:
-            return "PATH lookup via /usr/bin/env codex"
-        case .homebrewAppleSilicon:
-            return "Homebrew Apple Silicon path /opt/homebrew/bin/codex"
-        case .homebrewIntel:
-            return "Homebrew Intel path /usr/local/bin/codex"
-        case let .npmGlobal(prefix):
-            return "npm global prefix \(prefix)"
+            case .explicit:
+                return "explicit executable URL"
+            case .path:
+                return "PATH lookup via /usr/bin/env codex"
+            case .homebrewAppleSilicon:
+                return "Homebrew Apple Silicon path /opt/homebrew/bin/codex"
+            case .homebrewIntel:
+                return "Homebrew Intel path /usr/local/bin/codex"
+            case let .npmGlobal(prefix):
+                return "npm global prefix \(prefix)"
         }
     }
 
     private func describe(_ compatibility: CodexCLIExecutableResolver.Compatibility) -> String {
         switch compatibility {
-        case let .supported(documentedWindow):
-            return "Version is within SwiftASB's documented reviewed support window (\(documentedWindow))."
-        case let .outsideDocumentedWindow(documentedWindow):
-            return "Version is outside SwiftASB's documented reviewed support window (\(documentedWindow))."
-        case let .unknownVersionFormat(documentedWindow):
-            return "Version string could not be parsed against SwiftASB's documented reviewed support window (\(documentedWindow))."
+            case let .supported(documentedWindow):
+                return "Version is within SwiftASB's documented reviewed support window (\(documentedWindow))."
+            case let .outsideDocumentedWindow(documentedWindow):
+                return "Version is outside SwiftASB's documented reviewed support window (\(documentedWindow))."
+            case let .unknownVersionFormat(documentedWindow):
+                return "Version string could not be parsed against SwiftASB's documented reviewed support window (\(documentedWindow))."
         }
     }
 }

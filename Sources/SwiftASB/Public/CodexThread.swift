@@ -11,7 +11,7 @@ public struct CodexThread: Sendable {
         public let oldestTurnID: String?
         public let newestTurnID: String?
 
-        internal init(
+        init(
             threadID: String,
             turns: [CodexTurnHandle.ClosedTurn],
             hasOlderTurns: Bool,
@@ -21,8 +21,8 @@ public struct CodexThread: Sendable {
             self.turns = turns
             self.hasOlderTurns = hasOlderTurns
             self.hasNewerTurns = hasNewerTurns
-            self.oldestTurnID = turns.last?.id
-            self.newestTurnID = turns.first?.id
+            oldestTurnID = turns.last?.id
+            newestTurnID = turns.first?.id
         }
     }
 
@@ -187,7 +187,7 @@ public struct CodexThread: Sendable {
         private let appServer: CodexAppServer
         private let threadID: String
 
-        internal init(appServer: CodexAppServer, threadID: String) {
+        init(appServer: CodexAppServer, threadID: String) {
             self.appServer = appServer
             self.threadID = threadID
         }
@@ -358,35 +358,35 @@ public struct CodexThread: Sendable {
     /// app-server event feed fails unexpectedly.
     public let events: AsyncThrowingStream<CodexThreadEvent, Error>
 
+    private let appServer: CodexAppServer
+
     /// Thread-scoped MCP status and resource surface.
     public var mcp: MCP {
         MCP(appServer: appServer, threadID: id)
     }
 
-    private let appServer: CodexAppServer
-
-    internal init(
+    init(
         appServer: CodexAppServer,
         session: CodexAppServer.ThreadSession,
         mcpServers: [CodexAppServer.McpServerSummary],
         events: AsyncThrowingStream<CodexThreadEvent, Error>
     ) {
         self.appServer = appServer
-        self.id = session.thread.id
-        self.info = session.thread
-        self.approvalPolicy = session.approvalPolicy
-        self.approvalsReviewer = session.approvalsReviewer
-        self.currentDirectoryPath = session.currentDirectoryPath
-        self.instructionSources = session.instructionSources
+        id = session.thread.id
+        info = session.thread
+        approvalPolicy = session.approvalPolicy
+        approvalsReviewer = session.approvalsReviewer
+        currentDirectoryPath = session.currentDirectoryPath
+        instructionSources = session.instructionSources
         self.mcpServers = mcpServers
-        self.model = session.model
-        self.modelProvider = session.modelProvider
-        self.activePermissionProfile = session.activePermissionProfile
-        self.permissionProfile = session.permissionProfile
-        self.reasoningEffort = session.reasoningEffort
-        self.sandboxPolicy = session.sandboxPolicy
-        self.serviceTier = session.serviceTier
-        self.workspace = session.workspace
+        model = session.model
+        modelProvider = session.modelProvider
+        activePermissionProfile = session.activePermissionProfile
+        permissionProfile = session.permissionProfile
+        reasoningEffort = session.reasoningEffort
+        sandboxPolicy = session.sandboxPolicy
+        serviceTier = session.serviceTier
+        workspace = session.workspace
         self.events = events
     }
 
@@ -660,16 +660,16 @@ public struct CodexThread: Sendable {
     /// been refreshed or a selection changes.
     public func readHistoryWindow(_ query: HistoryWindowQD = .recent()) async throws -> HistoryWindow {
         switch query.anchor {
-        case .recent:
-            try await readRecentTurnHistoryWindow(limit: query.limit)
-        case let .olderThanTurn(turnID):
-            try await readOlderTurnHistoryWindow(olderThan: turnID, limit: query.limit)
-        case let .newerThanTurn(turnID):
-            try await readNewerTurnHistoryWindow(newerThan: turnID, limit: query.limit)
-        case let .aroundTurn(turnID):
-            try await windowAroundTurn(turnID, limit: query.limit)
-        case let .aroundItem(itemID):
-            try await windowAroundItem(itemID, limit: query.limit)
+            case .recent:
+                try await readRecentTurnHistoryWindow(limit: query.limit)
+            case let .olderThanTurn(turnID):
+                try await readOlderTurnHistoryWindow(olderThan: turnID, limit: query.limit)
+            case let .newerThanTurn(turnID):
+                try await readNewerTurnHistoryWindow(newerThan: turnID, limit: query.limit)
+            case let .aroundTurn(turnID):
+                try await windowAroundTurn(turnID, limit: query.limit)
+            case let .aroundItem(itemID):
+                try await windowAroundItem(itemID, limit: query.limit)
         }
     }
 
@@ -881,7 +881,6 @@ public struct CodexThread: Sendable {
             expectedTurnID: nil
         )
     }
-
 }
 
 public enum CodexThreadEvent: Sendable, Equatable {
@@ -902,60 +901,28 @@ public enum CodexThreadEvent: Sendable, Equatable {
 
 public struct CodexThreadStarted: Sendable, Equatable {
     public let thread: CodexAppServer.ThreadInfo
-
-    internal init(thread: CodexAppServer.ThreadInfo) {
-        self.thread = thread
-    }
 }
 
 public struct CodexThreadStatusChanged: Sendable, Equatable {
     public let threadID: String
     public let status: CodexAppServer.ThreadStatus
-
-    internal init(
-        threadID: String,
-        status: CodexAppServer.ThreadStatus
-    ) {
-        self.threadID = threadID
-        self.status = status
-    }
 }
 
 public struct CodexThreadNameUpdated: Sendable, Equatable {
     public let threadID: String
     public let threadName: String?
-
-    internal init(
-        threadID: String,
-        threadName: String?
-    ) {
-        self.threadID = threadID
-        self.threadName = threadName
-    }
 }
 
 public struct CodexThreadArchived: Sendable, Equatable {
     public let threadID: String
-
-    internal init(threadID: String) {
-        self.threadID = threadID
-    }
 }
 
 public struct CodexThreadUnarchived: Sendable, Equatable {
     public let threadID: String
-
-    internal init(threadID: String) {
-        self.threadID = threadID
-    }
 }
 
 public struct CodexThreadClosed: Sendable, Equatable {
     public let threadID: String
-
-    internal init(threadID: String) {
-        self.threadID = threadID
-    }
 }
 
 public struct CodexThreadTokenUsageUpdated: Sendable, Equatable {
@@ -966,7 +933,7 @@ public struct CodexThreadTokenUsageUpdated: Sendable, Equatable {
         public let reasoningOutputTokens: Int
         public let totalTokens: Int
 
-        internal init(
+        init(
             cachedInputTokens: Int,
             inputTokens: Int,
             outputTokens: Int,
@@ -986,44 +953,16 @@ public struct CodexThreadTokenUsageUpdated: Sendable, Equatable {
     public let last: Usage
     public let modelContextWindow: Int?
     public let total: Usage
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        last: Usage,
-        modelContextWindow: Int?,
-        total: Usage
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.last = last
-        self.modelContextWindow = modelContextWindow
-        self.total = total
-    }
 }
 
 public struct CodexThreadGoalUpdated: Sendable, Equatable {
     public let threadID: String
     public let turnID: String?
     public let goal: CodexThread.Goal
-
-    internal init(
-        threadID: String,
-        turnID: String?,
-        goal: CodexThread.Goal
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.goal = goal
-    }
 }
 
 public struct CodexThreadGoalCleared: Sendable, Equatable {
     public let threadID: String
-
-    internal init(threadID: String) {
-        self.threadID = threadID
-    }
 }
 
 extension CodexThread.Goal {
@@ -1044,35 +983,35 @@ extension CodexThread.Goal {
 extension CodexThread.Goal.Status {
     init(wireValue: CodexWireThreadGoalStatus) {
         switch wireValue {
-        case .active:
-            self = .active
-        case .blocked:
-            self = .blocked
-        case .budgetLimited:
-            self = .budgetLimited
-        case .complete:
-            self = .complete
-        case .paused:
-            self = .paused
-        case .usageLimited:
-            self = .usageLimited
+            case .active:
+                self = .active
+            case .blocked:
+                self = .blocked
+            case .budgetLimited:
+                self = .budgetLimited
+            case .complete:
+                self = .complete
+            case .paused:
+                self = .paused
+            case .usageLimited:
+                self = .usageLimited
         }
     }
 
     var wireValue: CodexWireThreadGoalStatus {
         switch self {
-        case .active:
-            .active
-        case .blocked:
-            .blocked
-        case .budgetLimited:
-            .budgetLimited
-        case .complete:
-            .complete
-        case .paused:
-            .paused
-        case .usageLimited:
-            .usageLimited
+            case .active:
+                .active
+            case .blocked:
+                .blocked
+            case .budgetLimited:
+                .budgetLimited
+            case .complete:
+                .complete
+            case .paused:
+                .paused
+            case .usageLimited:
+                .usageLimited
         }
     }
 }

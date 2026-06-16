@@ -1,7 +1,6 @@
 import ASBPresentation
 import Testing
 
-@Suite("Turn timeline presentation")
 struct TurnTimelinePresentationTests {
     @Test("snapshot flattens sections and preserves viewport hints")
     func snapshotFlattensSectionsAndViewport() {
