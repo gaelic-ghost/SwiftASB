@@ -1182,13 +1182,13 @@ runtime can be driven with a mock Responses provider.
   completion.
 - [x] MCP server elicitation.
   Decision: deterministic fake-transport coverage proves public routing and
-  response behavior, and the opt-in live server-request runner now drives an
-  app-connector MCP fixture through the real app-server. The probe asserts MCP
-  tool-call delivery, `mcpServer/elicitation/request` delivery, SwiftASB's
-  JSON-RPC response, `serverRequest/resolved`, and terminal turn completion.
-  The regular stdio MCP fixture remains available as an explicitly opted-in
-  observational probe, while app-connector MCP is the deterministic live
-  elicitation coverage source.
+  response behavior. The opt-in live server-request runner keeps an
+  app-connector MCP fixture in the release gate, but current Codex CLI behavior
+  may complete the turn without routing that fixture to the MCP event stream.
+  When the app-server emits the MCP tool call, the probe still asserts
+  `mcpServer/elicitation/request` delivery, SwiftASB's JSON-RPC response,
+  `serverRequest/resolved`, and terminal turn completion. The regular stdio MCP
+  fixture remains available as an explicitly opted-in observational probe.
 - [ ] Guardian denied-action approval after SwiftASB owns a stable public model.
 - [x] Model capability snapshot through `CodexAppServer.readModelCapabilities()`.
 
