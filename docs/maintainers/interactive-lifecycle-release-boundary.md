@@ -49,15 +49,21 @@ runtime while the app-server schema is moving quickly before v1.
 
 Current policy:
 
-- support the latest reviewed public Codex CLI minor release
+- support the reviewed current public Codex CLI minor release
+- also support the latest prior public Codex CLI minor release when it remains
+  compatible with SwiftASB's shipped public API and validation surface
 - current reviewed minor release: `0.140.x`
-- widen back to a rolling window only after the latest generated-wire and public
-  API boundaries have caught up with the current app-server shape
+- latest prior minor supported for this release: `0.139.x`
+- widen beyond current-plus-prior only after the latest generated-wire and
+  public API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
 
 Practical implications:
 
 - do not require exact CLI-version pinning as the normal package contract
+- when a Codex CLI refresh removes or changes fields, prefer breaking cleanup in
+  SwiftASB over carrying old public shims, then keep the prior minor supported
+  only if the resulting public API still runs against that prior app-server
 - expect many upstream releases to be additive rather than immediately breaking
 - when a newer CLI exposes extra app-server behavior, treat that as a possible
   late additive promotion or gated capability rather than as proof that the

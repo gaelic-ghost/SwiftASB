@@ -30,11 +30,17 @@ struct CodexCLIExecutableResolver {
         let patch: Int
 
         private static let regex = try! NSRegularExpression(pattern: #"(\d+)\.(\d+)\.(\d+)"#)
+        static let oldestSupportedPublicRelease = Version(major: 0, minor: 139, patch: 0)
         static let latestSupportedPublicRelease = Version(major: 0, minor: 140, patch: 0)
 
         static var documentedWindowDescription: String {
+            let oldest = oldestSupportedPublicRelease
             let latest = latestSupportedPublicRelease
+            if oldest == latest {
+                return "\(latest.major).\(latest.minor).x"
+            }
             return "\(latest.major).\(latest.minor).x"
+                + " plus \(oldest.major).\(oldest.minor).x when feasible"
         }
 
         static func parse(from text: String) -> Version? {
@@ -333,12 +339,13 @@ struct CodexCLIExecutableResolver {
         }
 
         let latest = Version.latestSupportedPublicRelease
+        let oldest = Version.oldestSupportedPublicRelease
 
-        guard parsedVersion.major == latest.major else {
+        guard parsedVersion.major == latest.major, parsedVersion.major == oldest.major else {
             return .outsideDocumentedWindow(documentedWindow: documentedWindow)
         }
 
-        if parsedVersion.minor == latest.minor {
+        if parsedVersion.minor >= oldest.minor, parsedVersion.minor <= latest.minor {
             return .supported(documentedWindow: documentedWindow)
         }
 

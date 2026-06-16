@@ -248,6 +248,8 @@ def _compatibility_alignment_patch(facts: dict[str, Any], schema_diff: dict[str,
     if not current_window or not target_window or target_window == current_window or target_minor is None:
         return None
 
+    prior_window = f"0.{target_minor - 1}.x" if target_minor > 0 else "none"
+
     return "\n".join(
         [
             "diff --git a/scripts/generate-wire-types.sh b/scripts/generate-wire-types.sh",
@@ -266,8 +268,8 @@ def _compatibility_alignment_patch(facts: dict[str, Any], schema_diff: dict[str,
             "--- a/README.md",
             "+++ b/README.md",
             "@@",
-            f"-*Note: SwiftASB currently supports the latest reviewed Codex CLI minor release, `{current_window}`.*",
-            f"+*Note: SwiftASB currently supports the latest reviewed Codex CLI minor release, `{target_window}`.*",
+            f"-*Note: SwiftASB currently supports the reviewed current Codex CLI minor release, `{current_window}`.*",
+            f"+*Note: SwiftASB currently supports the reviewed current Codex CLI minor release, `{target_window}`, and the latest prior minor, `{prior_window}`, when that prior runtime remains compatible.*",
             "diff --git a/ROADMAP.md b/ROADMAP.md",
             "--- a/ROADMAP.md",
             "+++ b/ROADMAP.md",
@@ -284,6 +286,7 @@ def _compatibility_alignment_patch(facts: dict[str, Any], schema_diff: dict[str,
             "@@",
             f"-- current reviewed minor release: `{current_window}`",
             f"+- current reviewed minor release: `{target_window}`",
+            f"+- latest prior minor supported when feasible: `{prior_window}`",
             "diff --git a/Tools/AgentSB/tests/test_cli.py b/Tools/AgentSB/tests/test_cli.py",
             "--- a/Tools/AgentSB/tests/test_cli.py",
             "+++ b/Tools/AgentSB/tests/test_cli.py",
