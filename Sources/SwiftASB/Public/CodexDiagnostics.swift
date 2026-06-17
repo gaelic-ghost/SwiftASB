@@ -40,11 +40,21 @@ public enum CodexDiagnosticEvent: Sendable, Equatable {
 public struct CodexRuntimeWarning: Sendable, Equatable {
     public let message: String
     public let threadID: String?
+
+    public init(message: String, threadID: String?) {
+        self.message = message
+        self.threadID = threadID
+    }
 }
 
 public struct CodexGuardianWarning: Sendable, Equatable {
     public let message: String
     public let threadID: String
+
+    public init(message: String, threadID: String) {
+        self.message = message
+        self.threadID = threadID
+    }
 }
 
 public struct CodexModelReroute: Sendable, Equatable {
@@ -57,12 +67,36 @@ public struct CodexModelReroute: Sendable, Equatable {
     public enum Reason: Sendable, Equatable {
         case highRiskCyberActivity
     }
+
+    public init(
+        fromModel: String,
+        reason: Reason,
+        threadID: String,
+        toModel: String,
+        turnID: String
+    ) {
+        self.fromModel = fromModel
+        self.reason = reason
+        self.threadID = threadID
+        self.toModel = toModel
+        self.turnID = turnID
+    }
 }
 
 public struct CodexModelVerificationDiagnostic: Sendable, Equatable {
     public let threadID: String
     public let turnID: String
     public let verifications: [CodexModelVerification]
+
+    public init(
+        threadID: String,
+        turnID: String,
+        verifications: [CodexModelVerification]
+    ) {
+        self.threadID = threadID
+        self.turnID = turnID
+        self.verifications = verifications
+    }
 }
 
 public enum CodexModelVerification: Sendable, Equatable {

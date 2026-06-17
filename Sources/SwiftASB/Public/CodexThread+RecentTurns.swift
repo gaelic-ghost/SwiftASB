@@ -626,6 +626,8 @@ public extension CodexThread {
         }
 
         private func protectedTurnIDSet() -> Set<String> {
+            guard !turns.isEmpty else { return [] }
+
             let focusIndices = focusIndices()
             let focusLowerBound = max(0, focusIndices.lowerBound - cachePolicy.protectedTurnBuffer)
             let focusUpperBound = min(turns.count - 1, focusIndices.upperBound + cachePolicy.protectedTurnBuffer)

@@ -249,6 +249,7 @@ def _compatibility_alignment_patch(facts: dict[str, Any], schema_diff: dict[str,
         return None
 
     prior_window = f"0.{target_minor - 1}.x" if target_minor > 0 else "none"
+    supported_window = f"{target_window} plus {prior_window} when feasible"
 
     return "\n".join(
         [
@@ -292,13 +293,13 @@ def _compatibility_alignment_patch(facts: dict[str, Any], schema_diff: dict[str,
             "+++ b/Tools/AgentSB/tests/test_cli.py",
             "@@",
             f'-    assert facts["reviewed_codex_cli_window"]["window"] == "{current_window}"',
-            f'+    assert facts["reviewed_codex_cli_window"]["window"] == "{target_window}"',
+            f'+    assert facts["reviewed_codex_cli_window"]["window"] == "{supported_window}"',
             "diff --git a/Tools/AgentSB/tests/test_tools.py b/Tools/AgentSB/tests/test_tools.py",
             "--- a/Tools/AgentSB/tests/test_tools.py",
             "+++ b/Tools/AgentSB/tests/test_tools.py",
             "@@",
             f'-    assert facts["reviewed_codex_cli_window"]["window"] == "{current_window}"',
-            f'+    assert facts["reviewed_codex_cli_window"]["window"] == "{target_window}"',
+            f'+    assert facts["reviewed_codex_cli_window"]["window"] == "{supported_window}"',
         ]
     )
 

@@ -190,6 +190,8 @@ public struct CodexTurnHandle: Sendable {
                     .fileEdit
                 case .mcpToolCall:
                     .mcp
+                case .subAgentActivity:
+                    nil
                 default:
                     nil
             }

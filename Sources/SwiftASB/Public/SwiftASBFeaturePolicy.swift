@@ -49,6 +49,31 @@ public struct SwiftASBFeaturePolicy: Sendable, Equatable {
 
 /// One SwiftASB feature category a consuming app can describe and configure.
 public struct SwiftASBFeatureCategory: Sendable, Equatable, Identifiable {
+    public struct Configuration: Sendable, Equatable {
+        public var displayName: String
+        public var description: String
+        public var permissionReason: String
+        public var defaultMode: SwiftASBFeatureMode
+        public var sensitivity: SwiftASBFeatureSensitivity
+        public var eventPolicy: SwiftASBFeatureEventPolicy
+
+        public init(
+            displayName: String,
+            description: String,
+            permissionReason: String,
+            defaultMode: SwiftASBFeatureMode,
+            sensitivity: SwiftASBFeatureSensitivity,
+            eventPolicy: SwiftASBFeatureEventPolicy
+        ) {
+            self.displayName = displayName
+            self.description = description
+            self.permissionReason = permissionReason
+            self.defaultMode = defaultMode
+            self.sensitivity = sensitivity
+            self.eventPolicy = eventPolicy
+        }
+    }
+
     public struct ID: RawRepresentable, Sendable, Equatable, Hashable, ExpressibleByStringLiteral {
         public let rawValue: String
 
@@ -167,6 +192,20 @@ public struct SwiftASBFeatureCategory: Sendable, Equatable, Identifiable {
     /// Creates a feature category descriptor.
     public init(
         id: ID,
+        configuration: Configuration
+    ) {
+        self.id = id
+        displayName = configuration.displayName
+        description = configuration.description
+        permissionReason = configuration.permissionReason
+        defaultMode = configuration.defaultMode
+        sensitivity = configuration.sensitivity
+        eventPolicy = configuration.eventPolicy
+    }
+
+    /// Creates a feature category descriptor.
+    public init(
+        id: ID,
         displayName: String,
         description: String,
         permissionReason: String,
@@ -174,13 +213,17 @@ public struct SwiftASBFeatureCategory: Sendable, Equatable, Identifiable {
         sensitivity: SwiftASBFeatureSensitivity,
         eventPolicy: SwiftASBFeatureEventPolicy
     ) {
-        self.id = id
-        self.displayName = displayName
-        self.description = description
-        self.permissionReason = permissionReason
-        self.defaultMode = defaultMode
-        self.sensitivity = sensitivity
-        self.eventPolicy = eventPolicy
+        self.init(
+            id: id,
+            configuration: .init(
+                displayName: displayName,
+                description: description,
+                permissionReason: permissionReason,
+                defaultMode: defaultMode,
+                sensitivity: sensitivity,
+                eventPolicy: eventPolicy
+            )
+        )
     }
 
     /// Returns a built-in category by id.
