@@ -2,12 +2,6 @@ import Foundation
 
 /// App-server-owned extension, MCP, app, skill, plugin, and collaboration-mode surface.
 public struct CodexExtensions: Sendable {
-    let appServer: CodexAppServer
-
-    init(appServer: CodexAppServer) {
-        self.appServer = appServer
-    }
-
     /// Install intent for one Codex extension family.
     public enum InstallRequest: Sendable, Equatable {
         case mcp(MCP.ServerDefinition)
@@ -16,15 +10,6 @@ public struct CodexExtensions: Sendable {
     /// Result returned after installing one Codex extension family item.
     public enum InstallResult: Sendable, Equatable {
         case mcp(MCP.InstallResult)
-    }
-
-    /// Installs one extension-family item through SwiftASB's preferred unified install surface.
-    @discardableResult
-    public func install(_ request: InstallRequest) async throws -> InstallResult {
-        switch request {
-        case let .mcp(definition):
-            return .mcp(try await mcp.install(definition))
-        }
     }
 
     /// App and connector inventory family.
@@ -87,31 +72,6 @@ public struct CodexExtensions: Sendable {
         public func list() async throws -> CollaborationModeList {
             try await appServer.listExtensionCollaborationModes()
         }
-    }
-
-    /// MCP server configuration, status, and resource family.
-    public var mcp: MCP {
-        MCP(appServer: appServer)
-    }
-
-    /// App and connector inventory family.
-    public var apps: Apps {
-        Apps(appServer: appServer)
-    }
-
-    /// Skill inventory family.
-    public var skills: Skills {
-        Skills(appServer: appServer)
-    }
-
-    /// Plugin and marketplace inventory and maintenance family.
-    public var plugins: Plugins {
-        Plugins(appServer: appServer)
-    }
-
-    /// Collaboration-mode inventory family.
-    public var collaborationModes: CollaborationModes {
-        CollaborationModes(appServer: appServer)
     }
 
     /// Request used to list available apps and connectors.
@@ -179,30 +139,15 @@ public struct CodexExtensions: Sendable {
 
     /// Request used to list skills visible from one or more working directories.
     public struct SkillListRequest: Sendable, Equatable {
-        public struct ExtraUserRootsForCurrentDirectory: Sendable, Equatable {
-            public var currentDirectoryPath: String
-            public var extraUserRoots: [String]
-
-            public init(currentDirectoryPath: String, extraUserRoots: [String]) {
-                self.currentDirectoryPath = currentDirectoryPath
-                self.extraUserRoots = extraUserRoots
-            }
-        }
-
         public var currentDirectoryPaths: [String]?
         public var forceReload: Bool?
-        /// Deprecated by Codex CLI 0.130.0. The app-server no longer accepts
-        /// per-cwd extra skill roots on `skills/list`.
-        public var perCurrentDirectoryExtraUserRoots: [ExtraUserRootsForCurrentDirectory]?
 
         public init(
             currentDirectoryPaths: [String]? = nil,
-            forceReload: Bool? = nil,
-            perCurrentDirectoryExtraUserRoots: [ExtraUserRootsForCurrentDirectory]? = nil
+            forceReload: Bool? = nil
         ) {
             self.currentDirectoryPaths = currentDirectoryPaths
             self.forceReload = forceReload
-            self.perCurrentDirectoryExtraUserRoots = perCurrentDirectoryExtraUserRoots
         }
     }
 
@@ -338,7 +283,7 @@ public struct CodexExtensions: Sendable {
         ) {
             self.marketplaceName = marketplaceName
             self.currentDirectoryPaths = currentDirectoryPaths
-            self.timeoutMilliseconds = max(1_000, timeoutMilliseconds)
+            self.timeoutMilliseconds = max(1000, timeoutMilliseconds)
         }
     }
 
@@ -371,11 +316,11 @@ public struct CodexExtensions: Sendable {
     }
 
     public struct AppSummary: Sendable, Equatable, Identifiable {
+        public let category: String?
         public let description: String?
         public let id: String
         public let installURL: String?
         public let name: String
-        public let needsAuth: Bool
     }
 
     public struct SkillSummary: Sendable, Equatable, Identifiable {
@@ -405,6 +350,42 @@ public struct CodexExtensions: Sendable {
         public let model: String?
         public let name: String
         public let reasoningEffort: CodexAppServer.ReasoningEffort?
+    }
+
+    let appServer: CodexAppServer
+
+    /// MCP server configuration, status, and resource family.
+    public var mcp: MCP {
+        MCP(appServer: appServer)
+    }
+
+    /// App and connector inventory family.
+    public var apps: Apps {
+        Apps(appServer: appServer)
+    }
+
+    /// Skill inventory family.
+    public var skills: Skills {
+        Skills(appServer: appServer)
+    }
+
+    /// Plugin and marketplace inventory and maintenance family.
+    public var plugins: Plugins {
+        Plugins(appServer: appServer)
+    }
+
+    /// Collaboration-mode inventory family.
+    public var collaborationModes: CollaborationModes {
+        CollaborationModes(appServer: appServer)
+    }
+
+    /// Installs one extension-family item through SwiftASB's preferred unified install surface.
+    @discardableResult
+    public func install(_ request: InstallRequest) async throws -> InstallResult {
+        switch request {
+            case let .mcp(definition):
+                return try .mcp(await mcp.install(definition))
+        }
     }
 
     @available(*, deprecated, message: "Use appServer.extensions.apps.list(...) instead.")
@@ -494,7 +475,7 @@ extension CodexAppServer {
         let result = try await executeCommand(
             .init(
                 command: command,
-                outputBytesCap: 32_768,
+                outputBytesCap: 32768,
                 timeoutMilliseconds: request.timeoutMilliseconds
             )
         )
@@ -520,7 +501,7 @@ extension CodexAppServer {
                 completedAt: completedAt,
                 affectedPaths: affectedPaths,
                 commands: [
-                    .init(argv: command)
+                    .init(argv: command),
                 ],
                 appServerMethod: "command/exec",
                 intentKind: "extensionMarketplaceUpgrade",
@@ -648,14 +629,14 @@ extension CodexExtensions.SkillMetadata {
 extension CodexExtensions.SkillMetadata.Scope {
     init(wireValue: CodexWireSkillScope) {
         switch wireValue {
-        case .admin:
-            self = .admin
-        case .repo:
-            self = .repo
-        case .system:
-            self = .system
-        case .user:
-            self = .user
+            case .admin:
+                self = .admin
+            case .repo:
+                self = .repo
+            case .system:
+                self = .system
+            case .user:
+                self = .user
         }
     }
 }
@@ -711,10 +692,10 @@ extension CodexExtensions.PluginSummary {
 extension CodexExtensions.PluginSummary.AuthPolicy {
     init(wireValue: CodexWirePluginAuthPolicy) {
         switch wireValue {
-        case .onInstall:
-            self = .onInstall
-        case .onUse:
-            self = .onUse
+            case .onInstall:
+                self = .onInstall
+            case .onUse:
+                self = .onUse
         }
     }
 }
@@ -722,12 +703,12 @@ extension CodexExtensions.PluginSummary.AuthPolicy {
 extension CodexExtensions.PluginSummary.InstallPolicy {
     init(wireValue: CodexWirePluginInstallPolicy) {
         switch wireValue {
-        case .available:
-            self = .available
-        case .installedByDefault:
-            self = .installedByDefault
-        case .notAvailable:
-            self = .notAvailable
+            case .available:
+                self = .available
+            case .installedByDefault:
+                self = .installedByDefault
+            case .notAvailable:
+                self = .notAvailable
         }
     }
 }
@@ -735,12 +716,12 @@ extension CodexExtensions.PluginSummary.InstallPolicy {
 extension CodexExtensions.PluginSummary.SourceKind {
     init(wireValue: CodexWirePluginSourceType) {
         switch wireValue {
-        case .git:
-            self = .git
-        case .local:
-            self = .local
-        case .remote:
-            self = .remote
+            case .git:
+                self = .git
+            case .local:
+                self = .local
+            case .remote:
+                self = .remote
         }
     }
 }
@@ -787,26 +768,26 @@ extension CodexExtensions.PluginHookSummary {
 extension CodexAppServer.HookMetadata.EventName {
     init(wireValue: CodexWireHookEventName) {
         switch wireValue {
-        case .permissionRequest:
-            self = .permissionRequest
-        case .postCompact:
-            self = .postCompact
-        case .postToolUse:
-            self = .postToolUse
-        case .preCompact:
-            self = .preCompact
-        case .preToolUse:
-            self = .preToolUse
-        case .sessionStart:
-            self = .sessionStart
-        case .stop:
-            self = .stop
-        case .subagentStart:
-            self = .subagentStart
-        case .subagentStop:
-            self = .subagentStop
-        case .userPromptSubmit:
-            self = .userPromptSubmit
+            case .permissionRequest:
+                self = .permissionRequest
+            case .postCompact:
+                self = .postCompact
+            case .postToolUse:
+                self = .postToolUse
+            case .preCompact:
+                self = .preCompact
+            case .preToolUse:
+                self = .preToolUse
+            case .sessionStart:
+                self = .sessionStart
+            case .stop:
+                self = .stop
+            case .subagentStart:
+                self = .subagentStart
+            case .subagentStop:
+                self = .subagentStop
+            case .userPromptSubmit:
+                self = .userPromptSubmit
         }
     }
 }
@@ -814,11 +795,11 @@ extension CodexAppServer.HookMetadata.EventName {
 extension CodexExtensions.AppSummary {
     init(wireValue: CodexWireAppSummary) {
         self.init(
+            category: wireValue.category,
             description: wireValue.description,
             id: wireValue.id,
             installURL: wireValue.installURL,
-            name: wireValue.name,
-            needsAuth: wireValue.needsAuth
+            name: wireValue.name
         )
     }
 }
@@ -858,10 +839,10 @@ extension CodexExtensions.CollaborationMode {
 extension CodexExtensions.CollaborationMode.Kind {
     init(wireValue: CodexWireModeKind) {
         switch wireValue {
-        case .modeKindDefault:
-            self = .defaultMode
-        case .plan:
-            self = .plan
+            case .modeKindDefault:
+                self = .defaultMode
+            case .plan:
+                self = .plan
         }
     }
 }

@@ -1,382 +1,16 @@
 import CryptoKit
 import Darwin
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 final class LiveCodexHarness {
-    let rootDirectoryURL: URL
-    let codexHomeURL: URL
-    let codexConfigSummary: LiveApprovalProbeReport.CodexConfig?
-    let threadAWorkspace: URL
-    let threadBWorkspace: URL
-    let approvalProbeWorkspace: URL
-    let fileScenarioWorkspace: URL
-    let rollbackWorkspace: URL
-    let sameThreadWorkspace: URL
-    let codexExecutableURL: URL
-
     enum ConfigMode {
         case standard
         case approvalProbe
         case mockResponses(baseURL: String, requestPermissionsTool: Bool = false)
         case mockResponsesWithMcpElicitation(baseURL: String)
         case mockResponsesWithAppConnectorMcpElicitation(baseURL: String, appsBaseURL: String)
-    }
-
-    init(configMode: ConfigMode = .standard, fileManager: FileManager = .default) throws {
-        let rootDirectoryURL = fileManager.temporaryDirectory
-            .appendingPathComponent("SwiftASB-LiveCodex-\(UUID().uuidString)", isDirectory: true)
-        try fileManager.createDirectory(at: rootDirectoryURL, withIntermediateDirectories: true)
-
-        self.rootDirectoryURL = rootDirectoryURL
-        self.codexHomeURL = rootDirectoryURL.appendingPathComponent(".codex", isDirectory: true)
-        self.codexConfigSummary = Self.makeCodexConfigSummary(
-            configMode: configMode,
-            projectRootURL: rootDirectoryURL
-        )
-        self.threadAWorkspace = rootDirectoryURL.appendingPathComponent("thread-a", isDirectory: true)
-        self.threadBWorkspace = rootDirectoryURL.appendingPathComponent("thread-b", isDirectory: true)
-        self.approvalProbeWorkspace = rootDirectoryURL.appendingPathComponent("approval-probe", isDirectory: true)
-        self.fileScenarioWorkspace = rootDirectoryURL.appendingPathComponent("file-scenario", isDirectory: true)
-        self.rollbackWorkspace = rootDirectoryURL.appendingPathComponent("rollback", isDirectory: true)
-        self.sameThreadWorkspace = rootDirectoryURL.appendingPathComponent("same-thread", isDirectory: true)
-        self.codexExecutableURL = try Self.resolveCodexExecutableURL()
-
-        try fileManager.createDirectory(at: codexHomeURL, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: threadAWorkspace, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: threadBWorkspace, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: approvalProbeWorkspace, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: fileScenarioWorkspace, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: rollbackWorkspace, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: sameThreadWorkspace, withIntermediateDirectories: true)
-        let mcpElicitationServerScriptURL = rootDirectoryURL
-            .appendingPathComponent("swiftasb_mcp_elicitation_server.py", isDirectory: false)
-        if case .mockResponsesWithMcpElicitation = configMode {
-            try Data(Self.mcpElicitationServerPythonScript.utf8).write(to: mcpElicitationServerScriptURL)
-        }
-        try Self.seedIsolatedCodexHome(
-            at: codexHomeURL,
-            configMode: configMode,
-            projectRootURL: rootDirectoryURL,
-            mcpElicitationServerScriptURL: mcpElicitationServerScriptURL,
-            fileManager: fileManager
-        )
-    }
-
-    var configuration: CodexAppServer.Configuration {
-        .init(
-            codexExecutableURL: codexExecutableURL,
-            currentDirectoryURL: rootDirectoryURL,
-            environment: Self.makeCodexEnvironment(codexHomeURL: codexHomeURL)
-        )
-    }
-
-    func cleanup(fileManager: FileManager = .default) {
-        if ProcessInfo.processInfo.environment["SWIFTASB_LIVE_CODEX_KEEP_WORKSPACES"] == "1" {
-            return
-        }
-        try? fileManager.removeItem(at: rootDirectoryURL)
-    }
-
-    func writeReport<T: Encodable>(
-        _ report: T,
-        fileName: String,
-        fileManager: FileManager = .default
-    ) throws {
-        guard let reportDirectoryPath = ProcessInfo.processInfo.environment["SWIFTASB_LIVE_CODEX_REPORT_DIR"],
-              reportDirectoryPath.isEmpty == false else {
-            return
-        }
-
-        let reportDirectoryURL = URL(fileURLWithPath: reportDirectoryPath, isDirectory: true)
-        try fileManager.createDirectory(at: reportDirectoryURL, withIntermediateDirectories: true)
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let reportData = try encoder.encode(report)
-        try reportData.write(to: reportDirectoryURL.appendingPathComponent(fileName))
-    }
-
-    private static func resolveCodexExecutableURL() throws -> URL {
-        if let overridePath = ProcessInfo.processInfo.environment["SWIFTASB_LIVE_CODEX_BIN"],
-           overridePath.isEmpty == false {
-            return URL(fileURLWithPath: overridePath)
-        }
-
-        let process = Process()
-        let standardOutput = Pipe()
-        let standardError = Pipe()
-
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-lc", "command -v codex"]
-        process.standardOutput = standardOutput
-        process.standardError = standardError
-
-        try process.run()
-        process.waitUntilExit()
-
-        let outputData = standardOutput.fileHandleForReading.readDataToEndOfFile()
-        let errorData = standardError.fileHandleForReading.readDataToEndOfFile()
-
-        guard process.terminationStatus == 0 else {
-            let errorText = String(decoding: errorData, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-            throw LiveIntegrationError.executableResolutionFailed(
-                reason: errorText.isEmpty ? "zsh could not locate a `codex` executable on PATH." : errorText
-            )
-        }
-
-        let outputText = String(decoding: outputData, as: UTF8.self)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard outputText.isEmpty == false else {
-            throw LiveIntegrationError.executableResolutionFailed(
-                reason: "`command -v codex` returned an empty result."
-            )
-        }
-
-        return URL(fileURLWithPath: outputText)
-    }
-
-    private static func makeCodexEnvironment(codexHomeURL: URL) -> [String: String] {
-        let environment = ProcessInfo.processInfo.environment
-        let allowedKeys = [
-            "HOME",
-            "LANG",
-            "LC_ALL",
-            "LOGNAME",
-            "PATH",
-            "SHELL",
-            "TERM",
-            "TMPDIR",
-            "USER",
-        ]
-
-        var isolatedEnvironment = environment.reduce(into: [String: String]()) { partialResult, entry in
-            guard allowedKeys.contains(entry.key) else {
-                return
-            }
-            partialResult[entry.key] = entry.value
-        }
-
-        isolatedEnvironment["CODEX_HOME"] = codexHomeURL.path
-        return isolatedEnvironment
-    }
-
-    private static func seedIsolatedCodexHome(
-        at codexHomeURL: URL,
-        configMode: ConfigMode,
-        projectRootURL: URL,
-        mcpElicitationServerScriptURL: URL,
-        fileManager: FileManager
-    ) throws {
-        let sourceCodexHomeURL = fileManager.homeDirectoryForCurrentUser
-            .appendingPathComponent(".codex", isDirectory: true)
-        let sourceAuthURL = sourceCodexHomeURL.appendingPathComponent("auth.json")
-        let destinationAuthURL = codexHomeURL.appendingPathComponent("auth.json")
-
-        if fileManager.fileExists(atPath: sourceAuthURL.path) {
-            try fileManager.copyItem(at: sourceAuthURL, to: destinationAuthURL)
-        }
-
-        let configURL = codexHomeURL.appendingPathComponent("config.toml")
-        let isolatedConfig: String
-        switch configMode {
-        case .standard:
-            isolatedConfig = """
-            model = "gpt-5.4"
-
-            [features]
-            apps = false
-
-            [apps._default]
-            enabled = false
-            """
-        case .approvalProbe:
-            isolatedConfig = """
-            model = "gpt-5.4"
-            approval_policy = "untrusted"
-            approvals_reviewer = "user"
-            sandbox_mode = "workspace-write"
-
-            [auto_review]
-            policy = ""
-
-            [features]
-            apps = false
-
-            [apps._default]
-            enabled = false
-
-            [projects.\(tomlQuotedString(projectRootURL.path))]
-            trust_level = "untrusted"
-            """
-        case let .mockResponses(baseURL, requestPermissionsTool):
-            isolatedConfig = """
-            model = "mock-model"
-            approval_policy = "untrusted"
-            approvals_reviewer = "user"
-            sandbox_mode = "read-only"
-            model_provider = "mock_provider"
-            suppress_unstable_features_warning = true
-
-            [features]
-            apps = false
-            exec_permission_approvals = true
-            request_permissions_tool = \(requestPermissionsTool)
-
-            [apps._default]
-            enabled = false
-
-            [model_providers.mock_provider]
-            name = "SwiftASB Mock Responses Provider"
-            base_url = "\(baseURL)/v1"
-            wire_api = "responses"
-            request_max_retries = 0
-            stream_max_retries = 0
-            supports_websockets = false
-
-            [projects.\(tomlQuotedString(projectRootURL.path))]
-            trust_level = "untrusted"
-            """
-        case let .mockResponsesWithMcpElicitation(baseURL):
-            isolatedConfig = """
-            model = "mock-model"
-            approval_policy = "untrusted"
-            approvals_reviewer = "user"
-            sandbox_mode = "read-only"
-            model_provider = "mock_provider"
-            suppress_unstable_features_warning = true
-
-            [features]
-            apps = false
-            exec_permission_approvals = true
-
-            [apps._default]
-            enabled = false
-
-            [model_providers.mock_provider]
-            name = "SwiftASB Mock Responses Provider"
-            base_url = "\(baseURL)/v1"
-            wire_api = "responses"
-            request_max_retries = 0
-            stream_max_retries = 0
-            supports_websockets = false
-
-            [mcp_servers.swiftasb_elicitation]
-            command = "/usr/bin/env"
-            args = ["python3", "\(tomlEscapedString(mcpElicitationServerScriptURL.path))"]
-            startup_timeout_sec = 5
-            enabled = true
-
-            [mcp_servers.swiftasb_elicitation.tools.ask]
-            approval_mode = "approve"
-
-            [projects.\(tomlQuotedString(projectRootURL.path))]
-            trust_level = "trusted"
-            """
-        case let .mockResponsesWithAppConnectorMcpElicitation(baseURL, appsBaseURL):
-            try writeFakeChatGPTAuth(to: codexHomeURL)
-            isolatedConfig = """
-            model = "mock-model"
-            approval_policy = "on-request"
-            approvals_reviewer = "user"
-            sandbox_mode = "read-only"
-            model_provider = "mock_provider"
-            chatgpt_base_url = "\(appsBaseURL)"
-            mcp_oauth_credentials_store = "file"
-            suppress_unstable_features_warning = true
-
-            [features]
-            apps = true
-            exec_permission_approvals = true
-
-            [model_providers.mock_provider]
-            name = "SwiftASB Mock Responses Provider"
-            base_url = "\(baseURL)/v1"
-            wire_api = "responses"
-            request_max_retries = 0
-            stream_max_retries = 0
-            supports_websockets = false
-
-            [projects.\(tomlQuotedString(projectRootURL.path))]
-            trust_level = "untrusted"
-            """
-        }
-        try Data(isolatedConfig.utf8).write(to: configURL)
-    }
-
-    private static func makeCodexConfigSummary(
-        configMode: ConfigMode,
-        projectRootURL: URL
-    ) -> LiveApprovalProbeReport.CodexConfig? {
-        switch configMode {
-        case .standard, .mockResponses, .mockResponsesWithMcpElicitation, .mockResponsesWithAppConnectorMcpElicitation:
-            nil
-        case .approvalProbe:
-            .init(
-                approvalPolicy: "untrusted",
-                approvalsReviewer: "user",
-                autoReviewPolicy: "",
-                projectTrustLevel: "untrusted",
-                sandboxMode: "workspace-write"
-            )
-        }
-    }
-
-    private static func tomlQuotedString(_ value: String) -> String {
-        let escapedValue = value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        return "\"\(escapedValue)\""
-    }
-
-    private static func tomlEscapedString(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-    }
-
-    private static func writeFakeChatGPTAuth(to codexHomeURL: URL) throws {
-        let idToken = try fakeChatGPTIDToken(
-            accountID: "account-123",
-            userID: "user-123"
-        )
-        let authObject: [String: Any] = [
-            "auth_mode": "chatgpt",
-            "tokens": [
-                "id_token": idToken,
-                "access_token": "chatgpt-token",
-                "refresh_token": "refresh-token",
-                "account_id": "account-123",
-            ],
-            "last_refresh": "2026-05-03T00:00:00Z",
-        ]
-        let authData = try JSONSerialization.data(
-            withJSONObject: authObject,
-            options: [.prettyPrinted, .sortedKeys]
-        )
-        try authData.write(to: codexHomeURL.appendingPathComponent("auth.json"))
-    }
-
-    private static func fakeChatGPTIDToken(accountID: String, userID: String) throws -> String {
-        let header = try jsonBase64URLString([
-            "alg": "none",
-            "typ": "JWT",
-        ])
-        let payload = try jsonBase64URLString([
-            "https://api.openai.com/auth": [
-                "chatgpt_account_id": accountID,
-                "chatgpt_user_id": userID,
-            ],
-        ])
-        let signature = Data("signature".utf8).base64URLEncodedString()
-        return "\(header).\(payload).\(signature)"
-    }
-
-    private static func jsonBase64URLString(_ object: [String: Any]) throws -> String {
-        let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
-        return data.base64URLEncodedString()
     }
 
     private static let mcpElicitationServerPythonScript = """
@@ -463,6 +97,373 @@ final class LiveCodexHarness {
         elif request_id is not None:
             error(request_id, -32601, f"Unsupported method: {method}")
     """
+
+    let rootDirectoryURL: URL
+    let codexHomeURL: URL
+    let codexConfigSummary: LiveApprovalProbeReport.CodexConfig?
+    let threadAWorkspace: URL
+    let threadBWorkspace: URL
+    let approvalProbeWorkspace: URL
+    let fileScenarioWorkspace: URL
+    let rollbackWorkspace: URL
+    let sameThreadWorkspace: URL
+    let codexExecutableURL: URL
+
+    var configuration: CodexAppServer.Configuration {
+        .init(
+            codexExecutableURL: codexExecutableURL,
+            currentDirectoryURL: rootDirectoryURL,
+            environment: Self.makeCodexEnvironment(codexHomeURL: codexHomeURL)
+        )
+    }
+
+    init(configMode: ConfigMode = .standard, fileManager: FileManager = .default) throws {
+        let rootDirectoryURL = fileManager.temporaryDirectory
+            .appendingPathComponent("SwiftASB-LiveCodex-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: rootDirectoryURL, withIntermediateDirectories: true)
+
+        self.rootDirectoryURL = rootDirectoryURL
+        codexHomeURL = rootDirectoryURL.appendingPathComponent(".codex", isDirectory: true)
+        codexConfigSummary = Self.makeCodexConfigSummary(
+            configMode: configMode,
+            projectRootURL: rootDirectoryURL
+        )
+        threadAWorkspace = rootDirectoryURL.appendingPathComponent("thread-a", isDirectory: true)
+        threadBWorkspace = rootDirectoryURL.appendingPathComponent("thread-b", isDirectory: true)
+        approvalProbeWorkspace = rootDirectoryURL.appendingPathComponent("approval-probe", isDirectory: true)
+        fileScenarioWorkspace = rootDirectoryURL.appendingPathComponent("file-scenario", isDirectory: true)
+        rollbackWorkspace = rootDirectoryURL.appendingPathComponent("rollback", isDirectory: true)
+        sameThreadWorkspace = rootDirectoryURL.appendingPathComponent("same-thread", isDirectory: true)
+        codexExecutableURL = try Self.resolveCodexExecutableURL()
+
+        try fileManager.createDirectory(at: codexHomeURL, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: threadAWorkspace, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: threadBWorkspace, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: approvalProbeWorkspace, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: fileScenarioWorkspace, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: rollbackWorkspace, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: sameThreadWorkspace, withIntermediateDirectories: true)
+        let mcpElicitationServerScriptURL = rootDirectoryURL
+            .appendingPathComponent("swiftasb_mcp_elicitation_server.py", isDirectory: false)
+        if case .mockResponsesWithMcpElicitation = configMode {
+            try Data(Self.mcpElicitationServerPythonScript.utf8).write(to: mcpElicitationServerScriptURL)
+        }
+        try Self.seedIsolatedCodexHome(
+            at: codexHomeURL,
+            configMode: configMode,
+            projectRootURL: rootDirectoryURL,
+            mcpElicitationServerScriptURL: mcpElicitationServerScriptURL,
+            fileManager: fileManager
+        )
+    }
+
+    private static func resolveCodexExecutableURL() throws -> URL {
+        if let overridePath = ProcessInfo.processInfo.environment["SWIFTASB_LIVE_CODEX_BIN"],
+           overridePath.isEmpty == false {
+            return URL(fileURLWithPath: overridePath)
+        }
+
+        let process = Process()
+        let standardOutput = Pipe()
+        let standardError = Pipe()
+
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-lc", "command -v codex"]
+        process.standardOutput = standardOutput
+        process.standardError = standardError
+
+        try process.run()
+        process.waitUntilExit()
+
+        let outputData = standardOutput.fileHandleForReading.readDataToEndOfFile()
+        let errorData = standardError.fileHandleForReading.readDataToEndOfFile()
+
+        guard process.terminationStatus == 0 else {
+            let errorText = String(decoding: errorData, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+            throw LiveIntegrationError.executableResolutionFailed(
+                reason: errorText.isEmpty ? "zsh could not locate a `codex` executable on PATH." : errorText
+            )
+        }
+
+        let outputText = String(decoding: outputData, as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard outputText.isEmpty == false else {
+            throw LiveIntegrationError.executableResolutionFailed(
+                reason: "`command -v codex` returned an empty result."
+            )
+        }
+
+        return URL(fileURLWithPath: outputText)
+    }
+
+    private static func makeCodexEnvironment(codexHomeURL: URL) -> [String: String] {
+        let environment = ProcessInfo.processInfo.environment
+        let allowedKeys = [
+            "HOME",
+            "LANG",
+            "LC_ALL",
+            "LOGNAME",
+            "PATH",
+            "SHELL",
+            "TERM",
+            "TMPDIR",
+            "USER",
+        ]
+
+        var isolatedEnvironment = environment.reduce(into: [String: String]()) { partialResult, entry in
+            guard allowedKeys.contains(entry.key) else {
+                return
+            }
+
+            partialResult[entry.key] = entry.value
+        }
+
+        isolatedEnvironment["CODEX_HOME"] = codexHomeURL.path
+        return isolatedEnvironment
+    }
+
+    private static func seedIsolatedCodexHome(
+        at codexHomeURL: URL,
+        configMode: ConfigMode,
+        projectRootURL: URL,
+        mcpElicitationServerScriptURL: URL,
+        fileManager: FileManager
+    ) throws {
+        let sourceCodexHomeURL = fileManager.homeDirectoryForCurrentUser
+            .appendingPathComponent(".codex", isDirectory: true)
+        let sourceAuthURL = sourceCodexHomeURL.appendingPathComponent("auth.json")
+        let destinationAuthURL = codexHomeURL.appendingPathComponent("auth.json")
+
+        if fileManager.fileExists(atPath: sourceAuthURL.path) {
+            try fileManager.copyItem(at: sourceAuthURL, to: destinationAuthURL)
+        }
+
+        let configURL = codexHomeURL.appendingPathComponent("config.toml")
+        let isolatedConfig: String
+        switch configMode {
+            case .standard:
+                isolatedConfig = """
+                model = "gpt-5.4"
+
+                [features]
+                apps = false
+
+                [apps._default]
+                enabled = false
+                """
+            case .approvalProbe:
+                isolatedConfig = """
+                model = "gpt-5.4"
+                approval_policy = "untrusted"
+                approvals_reviewer = "user"
+                sandbox_mode = "workspace-write"
+
+                [auto_review]
+                policy = ""
+
+                [features]
+                apps = false
+
+                [apps._default]
+                enabled = false
+
+                [projects.\(tomlQuotedString(projectRootURL.path))]
+                trust_level = "untrusted"
+                """
+            case let .mockResponses(baseURL, requestPermissionsTool):
+                isolatedConfig = """
+                model = "mock-model"
+                approval_policy = "untrusted"
+                approvals_reviewer = "user"
+                sandbox_mode = "read-only"
+                model_provider = "mock_provider"
+                suppress_unstable_features_warning = true
+
+                [features]
+                apps = false
+                exec_permission_approvals = true
+                request_permissions_tool = \(requestPermissionsTool)
+
+                [apps._default]
+                enabled = false
+
+                [model_providers.mock_provider]
+                name = "SwiftASB Mock Responses Provider"
+                base_url = "\(baseURL)/v1"
+                wire_api = "responses"
+                request_max_retries = 0
+                stream_max_retries = 0
+                supports_websockets = false
+
+                [projects.\(tomlQuotedString(projectRootURL.path))]
+                trust_level = "untrusted"
+                """
+            case let .mockResponsesWithMcpElicitation(baseURL):
+                isolatedConfig = """
+                model = "mock-model"
+                approval_policy = "untrusted"
+                approvals_reviewer = "user"
+                sandbox_mode = "read-only"
+                model_provider = "mock_provider"
+                suppress_unstable_features_warning = true
+
+                [features]
+                apps = false
+                exec_permission_approvals = true
+
+                [apps._default]
+                enabled = false
+
+                [model_providers.mock_provider]
+                name = "SwiftASB Mock Responses Provider"
+                base_url = "\(baseURL)/v1"
+                wire_api = "responses"
+                request_max_retries = 0
+                stream_max_retries = 0
+                supports_websockets = false
+
+                [mcp_servers.swiftasb_elicitation]
+                command = "/usr/bin/env"
+                args = ["python3", "\(tomlEscapedString(mcpElicitationServerScriptURL.path))"]
+                startup_timeout_sec = 5
+                enabled = true
+
+                [mcp_servers.swiftasb_elicitation.tools.ask]
+                approval_mode = "approve"
+
+                [projects.\(tomlQuotedString(projectRootURL.path))]
+                trust_level = "trusted"
+                """
+            case let .mockResponsesWithAppConnectorMcpElicitation(baseURL, appsBaseURL):
+                try writeFakeChatGPTAuth(to: codexHomeURL)
+                isolatedConfig = """
+                model = "mock-model"
+                approval_policy = "on-request"
+                approvals_reviewer = "user"
+                sandbox_mode = "read-only"
+                model_provider = "mock_provider"
+                chatgpt_base_url = "\(appsBaseURL)"
+                mcp_oauth_credentials_store = "file"
+                suppress_unstable_features_warning = true
+
+                [features]
+                apps = true
+                exec_permission_approvals = true
+
+                [model_providers.mock_provider]
+                name = "SwiftASB Mock Responses Provider"
+                base_url = "\(baseURL)/v1"
+                wire_api = "responses"
+                request_max_retries = 0
+                stream_max_retries = 0
+                supports_websockets = false
+
+                [projects.\(tomlQuotedString(projectRootURL.path))]
+                trust_level = "untrusted"
+                """
+        }
+        try Data(isolatedConfig.utf8).write(to: configURL)
+    }
+
+    private static func makeCodexConfigSummary(
+        configMode: ConfigMode,
+        projectRootURL: URL
+    ) -> LiveApprovalProbeReport.CodexConfig? {
+        switch configMode {
+            case .standard, .mockResponses, .mockResponsesWithMcpElicitation, .mockResponsesWithAppConnectorMcpElicitation:
+                nil
+            case .approvalProbe:
+                .init(
+                    approvalPolicy: "untrusted",
+                    approvalsReviewer: "user",
+                    autoReviewPolicy: "",
+                    projectTrustLevel: "untrusted",
+                    sandboxMode: "workspace-write"
+                )
+        }
+    }
+
+    private static func tomlQuotedString(_ value: String) -> String {
+        let escapedValue = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "\"\(escapedValue)\""
+    }
+
+    private static func tomlEscapedString(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+    }
+
+    private static func writeFakeChatGPTAuth(to codexHomeURL: URL) throws {
+        let idToken = try fakeChatGPTIDToken(
+            accountID: "account-123",
+            userID: "user-123"
+        )
+        let authObject: [String: Any] = [
+            "auth_mode": "chatgpt",
+            "tokens": [
+                "id_token": idToken,
+                "access_token": "chatgpt-token",
+                "refresh_token": "refresh-token",
+                "account_id": "account-123",
+            ],
+            "last_refresh": "2026-05-03T00:00:00Z",
+        ]
+        let authData = try JSONSerialization.data(
+            withJSONObject: authObject,
+            options: [.prettyPrinted, .sortedKeys]
+        )
+        try authData.write(to: codexHomeURL.appendingPathComponent("auth.json"))
+    }
+
+    private static func fakeChatGPTIDToken(accountID: String, userID: String) throws -> String {
+        let header = try jsonBase64URLString([
+            "alg": "none",
+            "typ": "JWT",
+        ])
+        let payload = try jsonBase64URLString([
+            "https://api.openai.com/auth": [
+                "chatgpt_account_id": accountID,
+                "chatgpt_user_id": userID,
+            ],
+        ])
+        let signature = Data("signature".utf8).base64URLEncodedString()
+        return "\(header).\(payload).\(signature)"
+    }
+
+    private static func jsonBase64URLString(_ object: [String: Any]) throws -> String {
+        let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        return data.base64URLEncodedString()
+    }
+
+    func cleanup(fileManager: FileManager = .default) {
+        if ProcessInfo.processInfo.environment["SWIFTASB_LIVE_CODEX_KEEP_WORKSPACES"] == "1" {
+            return
+        }
+        try? fileManager.removeItem(at: rootDirectoryURL)
+    }
+
+    func writeReport<T: Encodable>(
+        _ report: T,
+        fileName: String,
+        fileManager: FileManager = .default
+    ) throws {
+        guard let reportDirectoryPath = ProcessInfo.processInfo.environment["SWIFTASB_LIVE_CODEX_REPORT_DIR"],
+              reportDirectoryPath.isEmpty == false else {
+            return
+        }
+
+        let reportDirectoryURL = URL(fileURLWithPath: reportDirectoryPath, isDirectory: true)
+        try fileManager.createDirectory(at: reportDirectoryURL, withIntermediateDirectories: true)
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let reportData = try encoder.encode(report)
+        try reportData.write(to: reportDirectoryURL.appendingPathComponent(fileName))
+    }
 }
 
 enum LiveApprovalPathOutcome {
@@ -535,16 +536,16 @@ struct LiveApprovalProbeReport: Codable, Equatable {
             thread: CodexThread,
             result: LiveScenarioTurnResult
         ) {
-            self.label = probeCase.label
-            self.threadID = thread.id
-            self.turnID = result.completion.turn.id
-            self.status = result.completion.turn.status.rawValue
-            self.acceptedApprovalKinds = result.acceptedApprovalKinds
-            self.callKinds = result.callSnapshots.map(\.kind.rawValue)
-            self.callDisplayNames = result.callSnapshots.map(\.displayName)
-            self.latestCompletedItemText = result.latestCompletedItemText
-            self.inspectedFile = .init(url: probeCase.inspectedPath)
-            self.errorDescription = nil
+            label = probeCase.label
+            threadID = thread.id
+            turnID = result.completion.turn.id
+            status = result.completion.turn.status.rawValue
+            acceptedApprovalKinds = result.acceptedApprovalKinds
+            callKinds = result.callSnapshots.map(\.kind.rawValue)
+            callDisplayNames = result.callSnapshots.map(\.displayName)
+            latestCompletedItemText = result.latestCompletedItemText
+            inspectedFile = .init(url: probeCase.inspectedPath)
+            errorDescription = nil
         }
 
         init(
@@ -556,29 +557,29 @@ struct LiveApprovalProbeReport: Codable, Equatable {
             latestCompletedItemText: String?,
             error: Error
         ) {
-            self.label = probeCase.label
-            self.threadID = thread.id
+            label = probeCase.label
+            threadID = thread.id
             self.turnID = turnID
             self.status = status
-            self.acceptedApprovalKinds = []
-            self.callKinds = callSnapshots.map(\.kind.rawValue)
-            self.callDisplayNames = callSnapshots.map(\.displayName)
+            acceptedApprovalKinds = []
+            callKinds = callSnapshots.map(\.kind.rawValue)
+            callDisplayNames = callSnapshots.map(\.displayName)
             self.latestCompletedItemText = latestCompletedItemText
-            self.inspectedFile = .init(url: probeCase.inspectedPath)
-            self.errorDescription = String(describing: error)
+            inspectedFile = .init(url: probeCase.inspectedPath)
+            errorDescription = String(describing: error)
         }
 
         init(_ probeCase: LiveApprovalProbeCase, error: Error) {
-            self.label = probeCase.label
-            self.threadID = ""
-            self.turnID = ""
-            self.status = "failed"
-            self.acceptedApprovalKinds = []
-            self.callKinds = []
-            self.callDisplayNames = []
-            self.latestCompletedItemText = nil
-            self.inspectedFile = .init(url: probeCase.inspectedPath)
-            self.errorDescription = String(describing: error)
+            label = probeCase.label
+            threadID = ""
+            turnID = ""
+            status = "failed"
+            acceptedApprovalKinds = []
+            callKinds = []
+            callDisplayNames = []
+            latestCompletedItemText = nil
+            inspectedFile = .init(url: probeCase.inspectedPath)
+            errorDescription = String(describing: error)
         }
     }
 
@@ -588,9 +589,9 @@ struct LiveApprovalProbeReport: Codable, Equatable {
         let contents: String?
 
         init(url: URL) {
-            self.path = url.lastPathComponent
-            self.exists = FileManager.default.fileExists(atPath: url.path)
-            self.contents = try? String(contentsOf: url, encoding: .utf8)
+            path = url.lastPathComponent
+            exists = FileManager.default.fileExists(atPath: url.path)
+            contents = try? String(contentsOf: url, encoding: .utf8)
         }
     }
 
@@ -687,9 +688,9 @@ struct LiveFileMutationScenarioReport: Codable, Equatable {
         let latestStatusText: String?
 
         init(_ snapshot: CodexThread.RecentFiles.FileSnapshot) {
-            self.path = snapshot.path
-            self.status = snapshot.status.rawValue
-            self.latestStatusText = snapshot.latestStatusText
+            path = snapshot.path
+            status = snapshot.status.rawValue
+            latestStatusText = snapshot.latestStatusText
         }
     }
 
@@ -699,9 +700,9 @@ struct LiveFileMutationScenarioReport: Codable, Equatable {
         let latestStatusText: String?
 
         init(_ snapshot: CodexThread.RecentCommands.CommandSnapshot) {
-            self.command = snapshot.command
-            self.status = snapshot.status.rawValue
-            self.latestStatusText = snapshot.latestStatusText
+            command = snapshot.command
+            status = snapshot.status.rawValue
+            latestStatusText = snapshot.latestStatusText
         }
     }
 
@@ -714,82 +715,6 @@ struct LiveFileMutationScenarioReport: Codable, Equatable {
 }
 
 final class MockResponsesServer: @unchecked Sendable {
-    private let process: Process
-    private let rootDirectoryURL: URL
-    private let requestCountFileURL: URL
-
-    let baseURL: URL
-
-    var requestCount: Int {
-        guard let text = try? String(contentsOf: requestCountFileURL, encoding: .utf8) else {
-            return 0
-        }
-        return Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-    }
-
-    init(responses: [MockResponsesEventStream]) async throws {
-        let fileManager = FileManager.default
-        self.rootDirectoryURL = fileManager.temporaryDirectory
-            .appendingPathComponent("SwiftASB-MockResponses-\(UUID().uuidString)", isDirectory: true)
-        try fileManager.createDirectory(at: rootDirectoryURL, withIntermediateDirectories: true)
-
-        let responsesFileURL = rootDirectoryURL.appendingPathComponent("responses.json")
-        self.requestCountFileURL = rootDirectoryURL.appendingPathComponent("request-count.txt")
-        let portFileURL = rootDirectoryURL.appendingPathComponent("port.txt")
-        let scriptURL = rootDirectoryURL.appendingPathComponent("mock_responses_server.py")
-
-        let responseData = try JSONEncoder().encode(responses.map(\.body))
-        try responseData.write(to: responsesFileURL)
-        try Data("0\n".utf8).write(to: requestCountFileURL)
-        try Data(Self.pythonScript.utf8).write(to: scriptURL)
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "python3",
-            scriptURL.path,
-            responsesFileURL.path,
-            portFileURL.path,
-            requestCountFileURL.path,
-        ]
-        self.process = process
-        try process.run()
-
-        let port = try await Self.waitForPortFile(portFileURL)
-        self.baseURL = URL(string: "http://127.0.0.1:\(port)")!
-    }
-
-    func stop() {
-        if process.isRunning {
-            process.terminate()
-            let deadline = Date().addingTimeInterval(2)
-            while process.isRunning && Date() < deadline {
-                Thread.sleep(forTimeInterval: 0.05)
-            }
-            if process.isRunning {
-                Darwin.kill(process.processIdentifier, SIGKILL)
-            }
-            process.waitUntilExit()
-        }
-        try? FileManager.default.removeItem(at: rootDirectoryURL)
-    }
-
-    fileprivate static func waitForPortFile(_ portFileURL: URL) async throws -> Int {
-        let deadline = ContinuousClock.now + .seconds(5)
-        while ContinuousClock.now < deadline {
-            if let text = try? String(contentsOf: portFileURL, encoding: .utf8),
-               let port = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) {
-                return port
-            }
-            try await Task.sleep(nanoseconds: 50_000_000)
-        }
-
-        throw LiveIntegrationError.timedOut(
-            operation: "waiting for the local mock Responses server to report its port",
-            seconds: 5
-        )
-    }
-
     private static let pythonScript = """
     import json
     import sys
@@ -846,44 +771,35 @@ final class MockResponsesServer: @unchecked Sendable {
         handle.write(f"{server.server_address[1]}\\n")
     server.serve_forever()
     """
-}
-
-final class MockAppConnectorMcpServer: @unchecked Sendable {
-    private let process: Process
-    private let rootDirectoryURL: URL
-    private let directoryRequestCountFileURL: URL
-    private let toolCallRequestCountFileURL: URL
-    private let debugLogFileURL: URL
 
     let baseURL: URL
 
-    var directoryRequestCount: Int {
-        Self.readCount(from: directoryRequestCountFileURL)
+    private let process: Process
+    private let rootDirectoryURL: URL
+    private let requestCountFileURL: URL
+
+    var requestCount: Int {
+        guard let text = try? String(contentsOf: requestCountFileURL, encoding: .utf8) else {
+            return 0
+        }
+
+        return Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
     }
 
-    var toolCallRequestCount: Int {
-        Self.readCount(from: toolCallRequestCountFileURL)
-    }
-
-    var debugLog: String {
-        (try? String(contentsOf: debugLogFileURL, encoding: .utf8)) ?? ""
-    }
-
-    init() async throws {
+    init(responses: [MockResponsesEventStream]) async throws {
         let fileManager = FileManager.default
-        self.rootDirectoryURL = fileManager.temporaryDirectory
-            .appendingPathComponent("SwiftASB-MockAppConnectorMCP-\(UUID().uuidString)", isDirectory: true)
+        rootDirectoryURL = fileManager.temporaryDirectory
+            .appendingPathComponent("SwiftASB-MockResponses-\(UUID().uuidString)", isDirectory: true)
         try fileManager.createDirectory(at: rootDirectoryURL, withIntermediateDirectories: true)
 
+        let responsesFileURL = rootDirectoryURL.appendingPathComponent("responses.json")
+        requestCountFileURL = rootDirectoryURL.appendingPathComponent("request-count.txt")
         let portFileURL = rootDirectoryURL.appendingPathComponent("port.txt")
-        self.directoryRequestCountFileURL = rootDirectoryURL.appendingPathComponent("directory-request-count.txt")
-        self.toolCallRequestCountFileURL = rootDirectoryURL.appendingPathComponent("tool-call-request-count.txt")
-        self.debugLogFileURL = rootDirectoryURL.appendingPathComponent("debug.log")
-        let scriptURL = rootDirectoryURL.appendingPathComponent("mock_app_connector_mcp_server.py")
+        let scriptURL = rootDirectoryURL.appendingPathComponent("mock_responses_server.py")
 
-        try Data("0\n".utf8).write(to: directoryRequestCountFileURL)
-        try Data("0\n".utf8).write(to: toolCallRequestCountFileURL)
-        try Data().write(to: debugLogFileURL)
+        let responseData = try JSONEncoder().encode(responses.map(\.body))
+        try responseData.write(to: responsesFileURL)
+        try Data("0\n".utf8).write(to: requestCountFileURL)
         try Data(Self.pythonScript.utf8).write(to: scriptURL)
 
         let process = Process()
@@ -891,33 +807,50 @@ final class MockAppConnectorMcpServer: @unchecked Sendable {
         process.arguments = [
             "python3",
             scriptURL.path,
+            responsesFileURL.path,
             portFileURL.path,
-            directoryRequestCountFileURL.path,
-            toolCallRequestCountFileURL.path,
-            debugLogFileURL.path,
+            requestCountFileURL.path,
         ]
         self.process = process
         try process.run()
 
-        let port = try await MockResponsesServer.waitForPortFile(portFileURL)
-        self.baseURL = URL(string: "http://127.0.0.1:\(port)")!
+        let port = try await Self.waitForPortFile(portFileURL)
+        baseURL = URL(string: "http://127.0.0.1:\(port)")!
+    }
+
+    fileprivate static func waitForPortFile(_ portFileURL: URL) async throws -> Int {
+        let deadline = ContinuousClock.now + .seconds(5)
+        while ContinuousClock.now < deadline {
+            if let text = try? String(contentsOf: portFileURL, encoding: .utf8),
+               let port = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                return port
+            }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+
+        throw LiveIntegrationError.timedOut(
+            operation: "waiting for the local mock Responses server to report its port",
+            seconds: 5
+        )
     }
 
     func stop() {
         if process.isRunning {
             process.terminate()
+            let deadline = Date().addingTimeInterval(2)
+            while process.isRunning, Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+            if process.isRunning {
+                Darwin.kill(process.processIdentifier, SIGKILL)
+            }
             process.waitUntilExit()
         }
         try? FileManager.default.removeItem(at: rootDirectoryURL)
     }
+}
 
-    private static func readCount(from url: URL) -> Int {
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
-            return 0
-        }
-        return Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-    }
-
+final class MockAppConnectorMcpServer: @unchecked Sendable {
     private static let pythonScript = """
     import json
     import sys
@@ -1208,16 +1141,100 @@ final class MockAppConnectorMcpServer: @unchecked Sendable {
         handle.write(f"{server.server_address[1]}\\n")
     server.serve_forever()
     """
+
+    let baseURL: URL
+
+    private let process: Process
+    private let rootDirectoryURL: URL
+    private let directoryRequestCountFileURL: URL
+    private let toolCallRequestCountFileURL: URL
+    private let debugLogFileURL: URL
+
+    var directoryRequestCount: Int {
+        Self.readCount(from: directoryRequestCountFileURL)
+    }
+
+    var toolCallRequestCount: Int {
+        Self.readCount(from: toolCallRequestCountFileURL)
+    }
+
+    var debugLog: String {
+        (try? String(contentsOf: debugLogFileURL, encoding: .utf8)) ?? ""
+    }
+
+    init() async throws {
+        let fileManager = FileManager.default
+        rootDirectoryURL = fileManager.temporaryDirectory
+            .appendingPathComponent("SwiftASB-MockAppConnectorMCP-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: rootDirectoryURL, withIntermediateDirectories: true)
+
+        let portFileURL = rootDirectoryURL.appendingPathComponent("port.txt")
+        directoryRequestCountFileURL = rootDirectoryURL.appendingPathComponent("directory-request-count.txt")
+        toolCallRequestCountFileURL = rootDirectoryURL.appendingPathComponent("tool-call-request-count.txt")
+        debugLogFileURL = rootDirectoryURL.appendingPathComponent("debug.log")
+        let scriptURL = rootDirectoryURL.appendingPathComponent("mock_app_connector_mcp_server.py")
+
+        try Data("0\n".utf8).write(to: directoryRequestCountFileURL)
+        try Data("0\n".utf8).write(to: toolCallRequestCountFileURL)
+        try Data().write(to: debugLogFileURL)
+        try Data(Self.pythonScript.utf8).write(to: scriptURL)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = [
+            "python3",
+            scriptURL.path,
+            portFileURL.path,
+            directoryRequestCountFileURL.path,
+            toolCallRequestCountFileURL.path,
+            debugLogFileURL.path,
+        ]
+        self.process = process
+        try process.run()
+
+        let port = try await MockResponsesServer.waitForPortFile(portFileURL)
+        baseURL = URL(string: "http://127.0.0.1:\(port)")!
+    }
+
+    private static func readCount(from url: URL) -> Int {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+            return 0
+        }
+
+        return Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+    }
+
+    func stop() {
+        if process.isRunning {
+            process.terminate()
+            process.waitUntilExit()
+        }
+        try? FileManager.default.removeItem(at: rootDirectoryURL)
+    }
 }
 
 struct MockResponsesEventStream: Encodable, Equatable {
     let body: String
 
+    private init(events: [[String: Any]]) throws {
+        var body = ""
+        for event in events {
+            guard let eventType = event["type"] as? String else {
+                continue
+            }
+
+            body += "event: \(eventType)\n"
+            let data = try JSONSerialization.data(withJSONObject: event, options: [.sortedKeys])
+            body += "data: \(String(decoding: data, as: UTF8.self))\n\n"
+        }
+        self.body = body
+    }
+
     static func shellCommand(callID: String, command: String) throws -> Self {
         let arguments = try jsonString([
             "command": command,
-            "workdir": Optional<String>.none,
-            "timeout_ms": 5_000,
+            "workdir": String?.none,
+            "timeout_ms": 5000,
         ] as [String: Any?])
         return try .init(events: [
             responseCreated(id: "resp-shell"),
@@ -1320,19 +1337,6 @@ struct MockResponsesEventStream: Encodable, Equatable {
         ])
     }
 
-    private init(events: [[String: Any]]) throws {
-        var body = ""
-        for event in events {
-            guard let eventType = event["type"] as? String else {
-                continue
-            }
-            body += "event: \(eventType)\n"
-            let data = try JSONSerialization.data(withJSONObject: event, options: [.sortedKeys])
-            body += "data: \(String(decoding: data, as: UTF8.self))\n\n"
-        }
-        self.body = body
-    }
-
     private static func responseCreated(id: String) -> [String: Any] {
         [
             "type": "response.created",
@@ -1396,12 +1400,12 @@ enum LiveIntegrationError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case let .timedOut(operation, seconds):
-            return "The live Codex integration test timed out after \(seconds) seconds while \(operation)."
-        case let .eventStreamEnded(operation):
-            return "The live Codex integration test lost the expected event stream while \(operation)."
-        case let .executableResolutionFailed(reason):
-            return "The live Codex integration test could not resolve the local `codex` executable: \(reason)"
+            case let .timedOut(operation, seconds):
+                return "The live Codex integration test timed out after \(seconds) seconds while \(operation)."
+            case let .eventStreamEnded(operation):
+                return "The live Codex integration test lost the expected event stream while \(operation)."
+            case let .executableResolutionFailed(reason):
+                return "The live Codex integration test could not resolve the local `codex` executable: \(reason)"
         }
     }
 }
@@ -1640,27 +1644,27 @@ func probeLiveSameThreadMatrix(
         )
 
         switch outcome {
-        case let .failed(errorDescription):
-            let completion = try? await awaitCompletion(
-                of: firstTurn,
-                timeoutSeconds: liveTimeoutSeconds(default: 45),
-                operation: "waiting for the first behavior-matrix same-thread turn to complete"
-            )
-            return .init(
-                threadID: thread.id,
-                firstTurnID: firstTurn.turn.id,
-                outcome: "rejected",
-                errorDescription: errorDescription,
-                firstTurnStatus: completion?.turn.status.rawValue
-            )
-        case .started:
-            return .init(
-                threadID: thread.id,
-                firstTurnID: firstTurn.turn.id,
-                outcome: "unexpectedly-started",
-                errorDescription: nil,
-                firstTurnStatus: nil
-            )
+            case let .failed(errorDescription):
+                let completion = try? await awaitCompletion(
+                    of: firstTurn,
+                    timeoutSeconds: liveTimeoutSeconds(default: 45),
+                    operation: "waiting for the first behavior-matrix same-thread turn to complete"
+                )
+                return .init(
+                    threadID: thread.id,
+                    firstTurnID: firstTurn.turn.id,
+                    outcome: "rejected",
+                    errorDescription: errorDescription,
+                    firstTurnStatus: completion?.turn.status.rawValue
+                )
+            case .started:
+                return .init(
+                    threadID: thread.id,
+                    firstTurnID: firstTurn.turn.id,
+                    outcome: "unexpectedly-started",
+                    errorDescription: nil,
+                    firstTurnStatus: nil
+                )
         }
     } catch {
         return .init(
@@ -1810,7 +1814,7 @@ func completeLiveTurnAcceptingApprovals(
     throw LiveIntegrationError.timedOut(operation: operation, seconds: timeoutSeconds)
 }
 
-struct RawCommandApprovalResult: Equatable, Sendable {
+struct RawCommandApprovalResult: Equatable {
     let completion: CodexWireTurnCompletedNotification
     let threadID: String
     let turnID: String
@@ -1820,7 +1824,7 @@ struct RawCommandApprovalResult: Equatable, Sendable {
     let sawWaitingOnApproval: Bool
 }
 
-struct RawPermissionsApprovalResult: Equatable, Sendable {
+struct RawPermissionsApprovalResult: Equatable {
     let completion: CodexWireTurnCompletedNotification
     let threadID: String
     let turnID: String
@@ -1831,7 +1835,7 @@ struct RawPermissionsApprovalResult: Equatable, Sendable {
     let sawWaitingOnApproval: Bool
 }
 
-struct RawToolUserInputResult: Equatable, Sendable {
+struct RawToolUserInputResult: Equatable {
     let completion: CodexWireTurnCompletedNotification
     let threadID: String
     let turnID: String
@@ -1840,7 +1844,7 @@ struct RawToolUserInputResult: Equatable, Sendable {
     let sawServerRequestResolved: Bool
 }
 
-struct RawMcpElicitationResult: Equatable, Sendable {
+struct RawMcpElicitationResult: Equatable {
     let completion: CodexWireTurnCompletedNotification
     let threadID: String
     let turnID: String
@@ -1870,42 +1874,43 @@ func awaitRawCommandApprovalCompletion(
         guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
             continue
         }
+
         observedEvents.append(String(describing: decodedEvent))
 
         switch decodedEvent {
-        case let .itemStarted(started)
+            case let .itemStarted(started)
             where started.threadID == threadID
-                && started.turnID == turnID
-                && started.item.type == .commandExecution:
-            sawCommandItem = true
-        case let .threadStatusChanged(status)
+            && started.turnID == turnID
+            && started.item.type == .commandExecution:
+                sawCommandItem = true
+            case let .threadStatusChanged(status)
             where status.threadID == threadID
-                && status.status.activeFlags?.contains(.waitingOnApproval) == true:
-            continue
-        case let .commandExecutionApprovalRequested(request)
+            && status.status.activeFlags?.contains(.waitingOnApproval) == true:
+                continue
+            case let .commandExecutionApprovalRequested(request)
             where request.threadID == threadID && request.turnID == turnID:
-            sawApprovalRequest = true
-            let responsePayload = try protocolLayer.makeServerResponse(
-                id: request.requestID,
-                result: RawCommandExecutionApprovalResponse(decision: "accept")
-            )
-            try await transport.sendResponse(responsePayload, requestID: request.requestID)
-        case let .serverRequestResolved(notification)
+                sawApprovalRequest = true
+                let responsePayload = try protocolLayer.makeServerResponse(
+                    id: request.requestID,
+                    result: RawCommandExecutionApprovalResponse(decision: "accept")
+                )
+                try await transport.sendResponse(responsePayload, requestID: request.requestID)
+            case let .serverRequestResolved(notification)
             where notification.threadID == threadID:
-            sawServerRequestResolved = true
-        case let .turnCompleted(completed)
+                sawServerRequestResolved = true
+            case let .turnCompleted(completed)
             where completed.threadID == threadID && completed.turn.id == turnID:
-            return .init(
-                completion: completed,
-                threadID: threadID,
-                turnID: turnID,
-                sawCommandItem: sawCommandItem,
-                sawApprovalRequest: sawApprovalRequest,
-                sawServerRequestResolved: sawServerRequestResolved,
-                sawWaitingOnApproval: observedEvents.contains { $0.contains("waitingOnApproval") }
-            )
-        default:
-            continue
+                return .init(
+                    completion: completed,
+                    threadID: threadID,
+                    turnID: turnID,
+                    sawCommandItem: sawCommandItem,
+                    sawApprovalRequest: sawApprovalRequest,
+                    sawServerRequestResolved: sawServerRequestResolved,
+                    sawWaitingOnApproval: observedEvents.contains { $0.contains("waitingOnApproval") }
+                )
+            default:
+                continue
         }
     }
 
@@ -1930,46 +1935,47 @@ func awaitRawPermissionsApprovalCompletion(
         guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
             continue
         }
+
         observedEvents.append(String(describing: decodedEvent))
 
         switch decodedEvent {
-        case let .threadStatusChanged(status)
+            case let .threadStatusChanged(status)
             where status.threadID == threadID
-                && status.status.activeFlags?.contains(.waitingOnApproval) == true:
-            continue
-        case let .permissionsApprovalRequested(request)
+            && status.status.activeFlags?.contains(.waitingOnApproval) == true:
+                continue
+            case let .permissionsApprovalRequested(request)
             where request.threadID == threadID && request.turnID == turnID:
-            sawApprovalRequest = true
-            requestedWritePaths = request.permissions.fileSystem?.write
-            requestReason = request.reason
-            let responsePayload = try protocolLayer.makeServerResponse(
-                id: request.requestID,
-                result: RawPermissionsApprovalResponse(
-                    permissions: .init(
-                        fileSystem: .init(read: nil, write: request.permissions.fileSystem?.write),
-                        network: request.permissions.network.map { .init(enabled: $0.enabled) }
-                    ),
-                    scope: "turn"
+                sawApprovalRequest = true
+                requestedWritePaths = request.permissions.fileSystem?.write
+                requestReason = request.reason
+                let responsePayload = try protocolLayer.makeServerResponse(
+                    id: request.requestID,
+                    result: RawPermissionsApprovalResponse(
+                        permissions: .init(
+                            fileSystem: .init(read: nil, write: request.permissions.fileSystem?.write),
+                            network: request.permissions.network.map { .init(enabled: $0.enabled) }
+                        ),
+                        scope: "turn"
+                    )
                 )
-            )
-            try await transport.sendResponse(responsePayload, requestID: request.requestID)
-        case let .serverRequestResolved(notification)
+                try await transport.sendResponse(responsePayload, requestID: request.requestID)
+            case let .serverRequestResolved(notification)
             where notification.threadID == threadID:
-            sawServerRequestResolved = true
-        case let .turnCompleted(completed)
+                sawServerRequestResolved = true
+            case let .turnCompleted(completed)
             where completed.threadID == threadID && completed.turn.id == turnID:
-            return .init(
-                completion: completed,
-                threadID: threadID,
-                turnID: turnID,
-                requestedWritePaths: requestedWritePaths,
-                requestReason: requestReason,
-                sawApprovalRequest: sawApprovalRequest,
-                sawServerRequestResolved: sawServerRequestResolved,
-                sawWaitingOnApproval: observedEvents.contains { $0.contains("waitingOnApproval") }
-            )
-        default:
-            continue
+                return .init(
+                    completion: completed,
+                    threadID: threadID,
+                    turnID: turnID,
+                    requestedWritePaths: requestedWritePaths,
+                    requestReason: requestReason,
+                    sawApprovalRequest: sawApprovalRequest,
+                    sawServerRequestResolved: sawServerRequestResolved,
+                    sawWaitingOnApproval: observedEvents.contains { $0.contains("waitingOnApproval") }
+                )
+            default:
+                continue
         }
     }
 
@@ -1993,40 +1999,42 @@ func awaitRawToolUserInputCompletion(
         guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
             continue
         }
+
         observedEvents.append(String(describing: decodedEvent))
 
         switch decodedEvent {
-        case let .toolUserInputRequested(request)
+            case let .toolUserInputRequested(request)
             where request.threadID == threadID && request.turnID == turnID:
-            sawElicitationRequest = true
-            questionIDs = request.questions.map(\.id)
-            let responsePayload = try protocolLayer.makeServerResponse(
-                id: request.requestID,
-                result: RawToolUserInputResponse(
-                    answers: [
-                        "direction": .init(answers: ["Continue (Recommended)"]),
-                    ]
+                sawElicitationRequest = true
+                questionIDs = request.questions.map(\.id)
+                let responsePayload = try protocolLayer.makeServerResponse(
+                    id: request.requestID,
+                    result: RawToolUserInputResponse(
+                        answers: [
+                            "direction": .init(answers: ["Continue (Recommended)"]),
+                        ]
+                    )
                 )
-            )
-            try await transport.sendResponse(responsePayload, requestID: request.requestID)
-        case let .serverRequestResolved(notification)
+                try await transport.sendResponse(responsePayload, requestID: request.requestID)
+            case let .serverRequestResolved(notification)
             where notification.threadID == threadID:
-            sawServerRequestResolved = true
-        case let .turnCompleted(completed)
+                sawServerRequestResolved = true
+            case let .turnCompleted(completed)
             where completed.threadID == threadID && completed.turn.id == turnID:
-            guard sawElicitationRequest else {
-                throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
-            }
-            return .init(
-                completion: completed,
-                threadID: threadID,
-                turnID: turnID,
-                questionIDs: questionIDs,
-                sawElicitationRequest: sawElicitationRequest,
-                sawServerRequestResolved: sawServerRequestResolved
-            )
-        default:
-            continue
+                guard sawElicitationRequest else {
+                    throw LiveIntegrationError.eventStreamEnded(operation: "\(operation): observedEvents=\(observedEvents)")
+                }
+
+                return .init(
+                    completion: completed,
+                    threadID: threadID,
+                    turnID: turnID,
+                    questionIDs: questionIDs,
+                    sawElicitationRequest: sawElicitationRequest,
+                    sawServerRequestResolved: sawServerRequestResolved
+                )
+            default:
+                continue
         }
     }
 
@@ -2054,58 +2062,59 @@ func awaitRawMcpElicitationCompletion(
         guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
             continue
         }
+
         observedEvents.append(String(describing: decodedEvent))
 
         switch decodedEvent {
-        case let .itemStarted(started)
+            case let .itemStarted(started)
             where started.threadID == threadID
-                && started.turnID == turnID
-                && started.item.type == .mcpToolCall:
-            sawMcpToolCall = true
-            serverName = started.item.server
-            toolName = started.item.tool
-            itemStatus = started.item.status
-        case let .itemCompleted(completed)
+            && started.turnID == turnID
+            && started.item.type == .mcpToolCall:
+                sawMcpToolCall = true
+                serverName = started.item.server
+                toolName = started.item.tool
+                itemStatus = started.item.status
+            case let .itemCompleted(completed)
             where completed.threadID == threadID
-                && completed.turnID == turnID
-                && completed.item.type == .mcpToolCall:
-            sawMcpToolCall = true
-            serverName = completed.item.server
-            toolName = completed.item.tool
-            itemStatus = completed.item.status
-            itemErrorDescription = completed.item.error.map { String(describing: $0) }
-        case let .mcpServerElicitationRequested(request)
+            && completed.turnID == turnID
+            && completed.item.type == .mcpToolCall:
+                sawMcpToolCall = true
+                serverName = completed.item.server
+                toolName = completed.item.tool
+                itemStatus = completed.item.status
+                itemErrorDescription = completed.item.error.map { String(describing: $0) }
+            case let .mcpServerElicitationRequested(request)
             where request.threadID == threadID && (request.turnID == nil || request.turnID == turnID):
-            sawElicitationRequest = true
-            serverName = request.serverName
-            let responsePayload = try protocolLayer.makeServerResponse(
-                id: request.requestID,
-                result: RawMcpServerElicitationResponse(
-                    action: "accept",
-                    content: ["confirmed": true],
-                    meta: nil
+                sawElicitationRequest = true
+                serverName = request.serverName
+                let responsePayload = try protocolLayer.makeServerResponse(
+                    id: request.requestID,
+                    result: RawMcpServerElicitationResponse(
+                        action: "accept",
+                        content: ["confirmed": true],
+                        meta: nil
+                    )
                 )
-            )
-            try await transport.sendResponse(responsePayload, requestID: request.requestID)
-        case let .serverRequestResolved(notification)
+                try await transport.sendResponse(responsePayload, requestID: request.requestID)
+            case let .serverRequestResolved(notification)
             where notification.threadID == threadID:
-            sawServerRequestResolved = true
-        case let .turnCompleted(completed)
+                sawServerRequestResolved = true
+            case let .turnCompleted(completed)
             where completed.threadID == threadID && completed.turn.id == turnID:
-            return .init(
-                completion: completed,
-                threadID: threadID,
-                turnID: turnID,
-                serverName: serverName,
-                toolName: toolName,
-                itemStatus: itemStatus,
-                itemErrorDescription: itemErrorDescription,
-                sawMcpToolCall: sawMcpToolCall,
-                sawElicitationRequest: sawElicitationRequest,
-                sawServerRequestResolved: sawServerRequestResolved
-            )
-        default:
-            continue
+                return .init(
+                    completion: completed,
+                    threadID: threadID,
+                    turnID: turnID,
+                    serverName: serverName,
+                    toolName: toolName,
+                    itemStatus: itemStatus,
+                    itemErrorDescription: itemErrorDescription,
+                    sawMcpToolCall: sawMcpToolCall,
+                    sawElicitationRequest: sawElicitationRequest,
+                    sawServerRequestResolved: sawServerRequestResolved
+                )
+            default:
+                continue
         }
     }
 
@@ -2125,6 +2134,7 @@ func awaitRawTurnCompletion(
         guard let decodedEvent = try protocolLayer.decodeServerEvent(serverEvent) else {
             continue
         }
+
         observedEvents.append(String(describing: decodedEvent))
 
         if case let .turnCompleted(completed) = decodedEvent,
@@ -2182,19 +2192,19 @@ struct RawMcpServerElicitationResponse: Encodable {
 
 func acceptanceResponse(for request: CodexApprovalRequest) -> CodexApprovalResponse {
     switch request {
-    case .commandExecution:
-        return .commandExecution(.accept)
-    case .fileChange:
-        return .fileChange(.accept)
-    case .guardianDeniedAction:
-        return .guardianDeniedAction(.approve)
-    case let .permissions(permissionsRequest):
-        return .permissions(
-            .init(
-                permissions: permissionsRequest.permissions,
-                scope: .turn
+        case .commandExecution:
+            return .commandExecution(.accept)
+        case .fileChange:
+            return .fileChange(.accept)
+        case .guardianDeniedAction:
+            return .guardianDeniedAction(.approve)
+        case let .permissions(permissionsRequest):
+            return .permissions(
+                .init(
+                    permissions: permissionsRequest.permissions,
+                    scope: .turn
+                )
             )
-        )
     }
 }
 
@@ -2225,6 +2235,7 @@ func liveTimeoutSeconds(default defaultSeconds: Double) -> Double {
     else {
         return defaultSeconds
     }
+
     return seconds
 }
 
@@ -2250,10 +2261,10 @@ extension Data {
 extension CodexAppServer.TurnStatus {
     var isTerminal: Bool {
         switch self {
-        case .completed, .failed, .interrupted:
-            return true
-        case .inProgress:
-            return false
+            case .completed, .failed, .interrupted:
+                return true
+            case .inProgress:
+                return false
         }
     }
 }
@@ -2261,27 +2272,27 @@ extension CodexAppServer.TurnStatus {
 extension CodexAppServer.ApprovalPolicy {
     var reportLabel: String {
         switch self {
-        case .never:
-            return "never"
-        case .onFailure:
-            return "onFailure"
-        case .onRequest:
-            return "onRequest"
-        case .untrusted:
-            return "untrusted"
-        case let .granular(policy):
-            return """
-            granular(mcpElicitations:\(policy.mcpElicitations),requestPermissions:\(String(describing: policy.requestPermissions)),rules:\(policy.rules),sandboxApproval:\(policy.sandboxApproval),skillApproval:\(String(describing: policy.skillApproval)))
-            """
+            case .never:
+                return "never"
+            case .onFailure:
+                return "onFailure"
+            case .onRequest:
+                return "onRequest"
+            case .untrusted:
+                return "untrusted"
+            case let .granular(policy):
+                return """
+                granular(mcpElicitations:\(policy.mcpElicitations),requestPermissions:\(String(describing: policy.requestPermissions)),rules:\(policy.rules),sandboxApproval:\(policy.sandboxApproval),skillApproval:\(String(describing: policy.skillApproval)))
+                """
         }
     }
 
     var requiresUserReviewer: Bool {
         switch self {
-        case .never:
-            return false
-        case .onFailure, .onRequest, .untrusted, .granular:
-            return true
+            case .never:
+                return false
+            case .onFailure, .onRequest, .untrusted, .granular:
+                return true
         }
     }
 }

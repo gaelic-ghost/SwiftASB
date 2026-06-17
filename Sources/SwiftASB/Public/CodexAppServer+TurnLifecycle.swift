@@ -1,8 +1,8 @@
 import Foundation
 
-extension CodexAppServer {
+public extension CodexAppServer {
     /// Request used to start a turn in an existing thread.
-    public struct TurnStartRequest: Sendable, Equatable {
+    struct TurnStartRequest: Sendable, Equatable {
         public var approvalPolicy: ApprovalPolicy?
         public var approvalsReviewer: ApprovalsReviewer?
         public var collaborationMode: TurnCollaborationMode?
@@ -58,7 +58,7 @@ extension CodexAppServer {
     /// The app-server currently treats collaboration presets as experimental,
     /// but plan mode is useful enough for SwiftASB to expose behind a small
     /// Swift-owned value instead of asking callers to emulate slash commands.
-    public struct TurnCollaborationMode: Sendable, Equatable {
+    struct TurnCollaborationMode: Sendable, Equatable {
         public enum Kind: String, Sendable, Equatable {
             case defaultMode = "default"
             case plan
@@ -102,12 +102,12 @@ extension CodexAppServer {
     }
 
     /// App-server response for a newly started turn.
-    public struct TurnSession: Sendable, Equatable {
+    struct TurnSession: Sendable, Equatable {
         public let turn: TurnInfo
     }
 
     /// Metadata for a turn known to the app-server.
-    public struct TurnInfo: Sendable, Equatable {
+    struct TurnInfo: Sendable, Equatable {
         public let completedAt: Int?
         public let durationMS: Int?
         public let errorMessage: String?
@@ -117,7 +117,7 @@ extension CodexAppServer {
     }
 
     /// One input item for a turn-start request.
-    public struct TurnInput: Sendable, Equatable {
+    struct TurnInput: Sendable, Equatable {
         public enum Kind: String, Sendable, Equatable {
             case image, localImage, mention, skill, text
         }
@@ -152,5 +152,4 @@ extension CodexAppServer {
             .init(kind: .text, text: text)
         }
     }
-
 }

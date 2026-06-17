@@ -14,6 +14,7 @@ from pathlib import Path
 
 
 JSON_VALUE_DECLARATION = """
+// swiftformat:disable redundantSendable
 indirect enum CodexWireJSONValue: Codable, Equatable, Sendable {
     case null
     case bool(Bool)
@@ -69,6 +70,7 @@ indirect enum CodexWireJSONValue: Codable, Equatable, Sendable {
         }
     }
 }
+// swiftformat:enable redundantSendable
 """.strip()
 
 

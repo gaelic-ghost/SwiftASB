@@ -130,7 +130,6 @@ Set ``ThreadResumeRequest/excludeTurns`` or ``ThreadForkRequest/excludeTurns`` w
 - ``HookError``
 - ``HookMetadata``
 - ``mcpServerStatusSnapshot()``
-- ``McpServerStatusListRequest``
 - ``McpServerStatusPage``
 - ``McpServerStatus``
 - ``McpServerSummary``

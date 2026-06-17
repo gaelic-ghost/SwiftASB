@@ -9,6 +9,10 @@ public struct RecentActivitySnapshot: Sendable, Equatable {
     public var canLoadOlderItems: Bool
     public var errorDescription: String?
 
+    public var isEmpty: Bool {
+        items.isEmpty
+    }
+
     public init(
         items: [RecentActivityItem] = [],
         selectedItemID: String? = nil,
@@ -23,10 +27,6 @@ public struct RecentActivitySnapshot: Sendable, Equatable {
         self.isLoadingOlderItems = isLoadingOlderItems
         self.canLoadOlderItems = canLoadOlderItems
         self.errorDescription = errorDescription
-    }
-
-    public var isEmpty: Bool {
-        items.isEmpty
     }
 
     @MainActor
@@ -55,36 +55,36 @@ public struct RecentActivitySnapshot: Sendable, Equatable {
 
     private static func sort(_ lhs: RecentActivityItem, _ rhs: RecentActivityItem) -> Bool {
         switch (lhs.turnStartedAt, rhs.turnStartedAt) {
-        case let (left?, right?) where left != right:
-            return left > right
-        case (nil, _?):
-            return false
-        case (_?, nil):
-            return true
-        default:
-            break
+            case let (left?, right?) where left != right:
+                return left > right
+            case (nil, _?):
+                return false
+            case (_?, nil):
+                return true
+            default:
+                break
         }
 
         switch (lhs.turnOrderIndex, rhs.turnOrderIndex) {
-        case let (left?, right?) where left != right:
-            return left > right
-        case (nil, _?):
-            return false
-        case (_?, nil):
-            return true
-        default:
-            break
+            case let (left?, right?) where left != right:
+                return left > right
+            case (nil, _?):
+                return false
+            case (_?, nil):
+                return true
+            default:
+                break
         }
 
         switch (lhs.itemOrderIndex, rhs.itemOrderIndex) {
-        case let (left?, right?) where left != right:
-            return left < right
-        case (nil, _?):
-            return false
-        case (_?, nil):
-            return true
-        default:
-            return lhs.id < rhs.id
+            case let (left?, right?) where left != right:
+                return left < right
+            case (nil, _?):
+                return false
+            case (_?, nil):
+                return true
+            default:
+                return lhs.id < rhs.id
         }
     }
 }
@@ -192,23 +192,23 @@ public enum RecentActivityStatus: String, Sendable, Equatable {
 
     public init(_ status: CodexThread.RecentFiles.FileSnapshot.Status) {
         switch status {
-        case .completed:
-            self = .completed
-        case .errored:
-            self = .errored
-        case .inProgress:
-            self = .inProgress
+            case .completed:
+                self = .completed
+            case .errored:
+                self = .errored
+            case .inProgress:
+                self = .inProgress
         }
     }
 
     public init(_ status: CodexThread.RecentCommands.CommandSnapshot.Status) {
         switch status {
-        case .completed:
-            self = .completed
-        case .errored:
-            self = .errored
-        case .inProgress:
-            self = .inProgress
+            case .completed:
+                self = .completed
+            case .errored:
+                self = .errored
+            case .inProgress:
+                self = .inProgress
         }
     }
 }

@@ -9,20 +9,10 @@ public enum CodexWorkspace {
     /// Named permissions profile selection for thread and turn requests.
     public struct PermissionSelection: Sendable, Equatable {
         public var id: String
-        public var modifications: [PermissionSelectionModification]
 
         /// Creates a named permissions profile selection.
-        ///
-        /// `modifications` is retained as source-compatible local metadata for
-        /// callers that still construct older selections. Codex CLI v0.135.0
-        /// accepts the selected profile id on thread and turn starts, but no
-        /// longer accepts request-side bounded permission modifications.
-        public init(
-            id: String,
-            modifications: [PermissionSelectionModification] = []
-        ) {
+        public init(id: String) {
             self.id = id
-            self.modifications = modifications
         }
 
         /// Built-in workspace profile selection.
@@ -31,38 +21,10 @@ public enum CodexWorkspace {
         }
     }
 
-    /// Bounded modification for a selected permissions profile.
-    public struct PermissionSelectionModification: Sendable, Equatable {
-        public let path: String
-
-        /// Adds a concrete writable root to the selected profile.
-        public init(additionalWritableRoot path: String) {
-            self.path = path
-        }
-    }
-
     /// Named profile currently active for a session.
     public struct ActivePermissionProfile: Sendable, Equatable {
         public let id: String
         public let extends: String?
-        /// Bounded modifications reported by older app-server schemas.
-        ///
-        /// Codex CLI v0.135 no longer reports these in the active profile
-        /// payload, so SwiftASB surfaces an empty collection for v0.135
-        /// sessions.
-        public let modifications: [ActivePermissionModification]
-    }
-
-    /// Bounded runtime modification applied to the active profile.
-    public struct ActivePermissionModification: Sendable, Equatable {
-        /// Runtime modification kind reported by Codex.
-        public enum Kind: String, Sendable, Equatable {
-            case additionalWritableRoot
-            case unknown
-        }
-
-        public let kind: Kind
-        public let path: String
     }
 
     /// Full runtime permissions profile reported for a thread session.
@@ -161,9 +123,9 @@ public enum CodexWorkspace {
                 currentDirectoryPath: currentDirectoryPath,
                 repository: repository
             )
-            self.id = worktree.id
-            self.identitySource = worktree.identitySource
-            self.displayName = worktree.displayName
+            id = worktree.id
+            identitySource = worktree.identitySource
+            displayName = worktree.displayName
             self.currentDirectoryPath = worktree.currentDirectoryPath
             self.repository = worktree.repository
             self.worktree = worktree
@@ -181,6 +143,11 @@ public enum CodexWorkspace {
         public let currentDirectoryPath: String
         public let repository: RepositoryInfo?
 
+        /// True when the app-server reported any Git metadata for this worktree.
+        public var hasRepositoryFacts: Bool {
+            repository?.hasFacts == true
+        }
+
         /// Creates a worktree snapshot from an app-server cwd and optional Git facts.
         public init(
             currentDirectoryPath: String,
@@ -190,19 +157,14 @@ public enum CodexWorkspace {
             self.repository = repository?.normalized
 
             if let originURL = self.repository?.originURL, !originURL.isEmpty {
-                self.id = originURL
-                self.identitySource = .gitOrigin
-                self.displayName = Self.displayName(forGitOriginURL: originURL)
+                id = originURL
+                identitySource = .gitOrigin
+                displayName = Self.displayName(forGitOriginURL: originURL)
             } else {
-                self.id = currentDirectoryPath
-                self.identitySource = .currentDirectory
-                self.displayName = currentDirectoryPath.isEmpty ? "Unknown Project" : currentDirectoryPath
+                id = currentDirectoryPath
+                identitySource = .currentDirectory
+                displayName = currentDirectoryPath.isEmpty ? "Unknown Project" : currentDirectoryPath
             }
-        }
-
-        /// True when the app-server reported any Git metadata for this worktree.
-        public var hasRepositoryFacts: Bool {
-            repository?.hasFacts == true
         }
 
         private static func displayName(forGitOriginURL originURL: String) -> String {
@@ -225,6 +187,26 @@ public enum CodexWorkspace {
         public let branch: String?
         public let sha: String?
 
+        /// True when Codex reported at least one Git fact for this thread.
+        public var hasFacts: Bool {
+            !isEmpty
+        }
+
+        /// Short display form for the reported commit SHA.
+        public var shortSHA: String? {
+            guard let sha, !sha.isEmpty else { return nil }
+
+            return String(sha.prefix(12))
+        }
+
+        var isEmpty: Bool {
+            originURL == nil && branch == nil && sha == nil
+        }
+
+        var normalized: Self? {
+            isEmpty ? nil : self
+        }
+
         /// Creates repository facts reported by Codex.
         public init(
             originURL: String? = nil,
@@ -236,30 +218,12 @@ public enum CodexWorkspace {
             self.sha = Self.normalizedFact(sha)
         }
 
-        /// True when Codex reported at least one Git fact for this thread.
-        public var hasFacts: Bool {
-            !isEmpty
-        }
-
-        /// Short display form for the reported commit SHA.
-        public var shortSHA: String? {
-            guard let sha, !sha.isEmpty else { return nil }
-            return String(sha.prefix(12))
-        }
-
-        internal var isEmpty: Bool {
-            originURL == nil && branch == nil && sha == nil
-        }
-
-        internal var normalized: Self? {
-            isEmpty ? nil : self
-        }
-
-        internal static func normalizedFact(_ value: String?) -> String? {
+        static func normalizedFact(_ value: String?) -> String? {
             guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !trimmed.isEmpty else {
                 return nil
             }
+
             return trimmed
         }
     }
@@ -354,7 +318,7 @@ public enum CodexWorkspace {
             self.remotes = remotes
             self.status = status
             self.source = source
-            self.id = worktreeID
+            id = worktreeID
         }
 
         public var isDirty: Bool {
@@ -384,8 +348,7 @@ extension CodexWorkspace.ActivePermissionProfile {
     init(wireValue: CodexWireActivePermissionProfile) {
         self.init(
             id: wireValue.id,
-            extends: wireValue.extends,
-            modifications: []
+            extends: wireValue.extends
         )
     }
 }
@@ -402,12 +365,12 @@ extension CodexWorkspace.FileSystemSandboxEntry {
 extension CodexWorkspace.FileSystemAccessMode {
     init(_ wireValue: CodexWireFileSystemAccessMode) {
         switch wireValue {
-        case .deny:
-            self = .none
-        case .read:
-            self = .read
-        case .write:
-            self = .write
+            case .deny:
+                self = .none
+            case .read:
+                self = .read
+            case .write:
+                self = .write
         }
     }
 }
@@ -415,12 +378,12 @@ extension CodexWorkspace.FileSystemAccessMode {
 extension CodexWorkspace.FileSystemPath {
     init(_ wireValue: CodexWireFileSystemPath) {
         switch wireValue.type {
-        case .globPattern:
-            self = wireValue.pattern.map(Self.globPattern) ?? .unknown
-        case .path:
-            self = wireValue.path.map(Self.path) ?? .unknown
-        case .special:
-            self = wireValue.value.map(CodexWorkspace.FileSystemSpecialPath.init(wireValue:)).map(Self.special) ?? .unknown
+            case .globPattern:
+                self = wireValue.pattern.map(Self.globPattern) ?? .unknown
+            case .path:
+                self = wireValue.path.map(Self.path) ?? .unknown
+            case .special:
+                self = wireValue.value.map(CodexWorkspace.FileSystemSpecialPath.init(wireValue:)).map(Self.special) ?? .unknown
         }
     }
 }
@@ -438,18 +401,18 @@ extension CodexWorkspace.FileSystemSpecialPath {
 extension CodexWorkspace.FileSystemSpecialPath.Kind {
     init(_ wireValue: CodexWireKind) {
         switch wireValue {
-        case .minimal:
-            self = .minimal
-        case .projectRoots:
-            self = .projectRoots
-        case .root:
-            self = .root
-        case .slashTmp:
-            self = .slashTmp
-        case .tmpdir:
-            self = .tmpdir
-        case .unknown:
-            self = .unknown
+            case .minimal:
+                self = .minimal
+            case .projectRoots:
+                self = .projectRoots
+            case .root:
+                self = .root
+            case .slashTmp:
+                self = .slashTmp
+            case .tmpdir:
+                self = .tmpdir
+            case .unknown:
+                self = .unknown
         }
     }
 }

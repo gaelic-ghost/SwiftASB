@@ -1,8 +1,8 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
-@Suite("CodexRPCEnvelope", .serialized)
+@Suite(.serialized)
 struct CodexRPCEnvelopeTests {
     @Test("classifies JSON-RPC responses using string request IDs")
     func classifiesResponse() throws {

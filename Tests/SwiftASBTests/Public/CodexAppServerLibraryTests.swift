@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @MainActor
@@ -17,7 +17,7 @@ extension CodexAppServerTests {
                             name: "Newest active",
                             preview: "Fresh unarchived thread",
                             statusType: "notLoaded",
-                            updatedAt: 1713350030
+                            updatedAt: 1_713_350_030
                         ),
                     ],
                     "nextCursor": NSNull(),
@@ -30,7 +30,7 @@ extension CodexAppServerTests {
                             name: "Archived work",
                             preview: "Stored archived thread",
                             statusType: "notLoaded",
-                            updatedAt: 1713350010
+                            updatedAt: 1_713_350_010
                         ),
                     ],
                     "nextCursor": NSNull(),
@@ -111,7 +111,7 @@ extension CodexAppServerTests {
                         name: "Deleted in GUI",
                         preview: "Locally cached history",
                         statusType: "notLoaded",
-                        updatedAt: 1713350030
+                        updatedAt: 1_713_350_030
                     ),
                 ],
                 "nextCursor": NSNull(),
@@ -186,7 +186,7 @@ extension CodexAppServerTests {
                         name: "Package A",
                         preview: "First repo thread",
                         statusType: "notLoaded",
-                        updatedAt: 1713350030
+                        updatedAt: 1_713_350_030
                     ),
                     storedThread(
                         id: "thread-package-b",
@@ -196,7 +196,7 @@ extension CodexAppServerTests {
                         name: "Package B",
                         preview: "Second repo thread",
                         statusType: "notLoaded",
-                        updatedAt: 1713350020
+                        updatedAt: 1_713_350_020
                     ),
                     storedThread(
                         id: "thread-standalone",
@@ -204,7 +204,7 @@ extension CodexAppServerTests {
                         name: "Standalone",
                         preview: "No Git origin",
                         statusType: "notLoaded",
-                        updatedAt: 1713350010
+                        updatedAt: 1_713_350_010
                     ),
                 ],
                 "nextCursor": NSNull(),
@@ -270,7 +270,7 @@ extension CodexAppServerTests {
                             name: "Active package",
                             preview: "Active repo thread",
                             statusType: "notLoaded",
-                            updatedAt: 1713350030
+                            updatedAt: 1_713_350_030
                         ),
                         storedThread(
                             id: "thread-standalone",
@@ -278,7 +278,7 @@ extension CodexAppServerTests {
                             name: "Standalone",
                             preview: "Standalone thread",
                             statusType: "notLoaded",
-                            updatedAt: 1713350020
+                            updatedAt: 1_713_350_020
                         ),
                     ],
                     "nextCursor": NSNull(),
@@ -293,7 +293,7 @@ extension CodexAppServerTests {
                             name: "Archived package",
                             preview: "Archived repo thread",
                             statusType: "notLoaded",
-                            updatedAt: 1713350010
+                            updatedAt: 1_713_350_010
                         ),
                     ],
                     "nextCursor": NSNull(),
@@ -324,12 +324,16 @@ extension CodexAppServerTests {
             "/tmp/standalone",
             "https://github.com/gaelic-ghost/SwiftASB.git",
         ])
-        #expect(library.worktreeGroups.first(where: {
-            $0.id == "https://github.com/gaelic-ghost/SwiftASB.git"
-        })?.worktree?.repository?.shortSHA == "abcdef123456")
-        let repositoryWorktree = try #require(library.worktreeGroups.first(where: {
-            $0.id == "https://github.com/gaelic-ghost/SwiftASB.git"
-        })?.worktree)
+        #expect(library.worktreeGroups
+            .first(where: {
+                $0.id == "https://github.com/gaelic-ghost/SwiftASB.git"
+            })?.worktree?
+            .repository?
+            .shortSHA == "abcdef123456")
+        let repositoryWorktree = try #require(library.worktreeGroups
+            .first(where: {
+                $0.id == "https://github.com/gaelic-ghost/SwiftASB.git"
+            })?.worktree)
         #expect(library.threads(inRepositoryOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git").map(\.id) == [
             "thread-active",
         ])
@@ -342,7 +346,8 @@ extension CodexAppServerTests {
         #expect(library.threads(
             inRepositoryOriginURL: "https://github.com/gaelic-ghost/SwiftASB.git",
             includeArchived: true
-        ).map(\.id) == [
+        )
+        .map(\.id) == [
             "thread-active",
             "thread-archived",
         ])
@@ -395,7 +400,7 @@ extension CodexAppServerTests {
                     name: "Alpha",
                     preview: "Alpha preview",
                     statusType: "idle",
-                    updatedAt: 1713350002
+                    updatedAt: 1_713_350_002
                 ),
             ],
             "nextCursor": NSNull(),
@@ -498,17 +503,17 @@ extension CodexAppServerTests {
         await transport.emitTurnCompleted(
             threadID: alpha.id,
             turnID: "turn-alpha",
-            completedAt: 1713350005
+            completedAt: 1_713_350_005
         )
         _ = try await beta.startTextTurn("Second prompt")
         await transport.emitTurnCompleted(
             threadID: beta.id,
             turnID: "turn-beta",
-            completedAt: 1713350010
+            completedAt: 1_713_350_010
         )
         try await waitForCondition {
             let snapshot = try await client.debugThreadHistorySnapshot(threadID: beta.id)
-            return snapshot?.turns.contains { $0.id == "turn-beta" && $0.completedAt == 1713350010 } == true
+            return snapshot?.turns.contains { $0.id == "turn-beta" && $0.completedAt == 1_713_350_010 } == true
         }
 
         let library = try await client.makeLibrary(
@@ -537,7 +542,7 @@ extension CodexAppServerTests {
                         name: "Alpha",
                         preview: "Alpha preview",
                         statusType: "notLoaded",
-                        updatedAt: 1713350001
+                        updatedAt: 1_713_350_001
                     ),
                     storedThread(
                         id: "thread-beta",
@@ -545,7 +550,7 @@ extension CodexAppServerTests {
                         name: "Beta",
                         preview: "Beta preview",
                         statusType: "notLoaded",
-                        updatedAt: 1713350002
+                        updatedAt: 1_713_350_002
                     ),
                 ],
                 "nextCursor": NSNull(),
@@ -894,7 +899,7 @@ private func storedThread(
 ) -> [String: Any] {
     var thread: [String: Any] = [
         "cliVersion": "0.128.0",
-        "createdAt": 1713350000,
+        "createdAt": 1_713_350_000,
         "cwd": cwd,
         "ephemeral": false,
         "id": id,
@@ -948,6 +953,7 @@ private func value(
               let next = dictionary[component] else {
             return nil
         }
+
         current = next
     }
     return current

@@ -1,10 +1,10 @@
 import Foundation
 import Observation
 
-extension CodexThread {
+public extension CodexThread {
     @MainActor
     @Observable
-    public final class Dashboard {
+    final class Dashboard {
         public struct HookRun: Sendable, Equatable, Identifiable {
             public struct Entry: Sendable, Equatable {
                 public enum Kind: String, Sendable, Equatable {
@@ -87,7 +87,7 @@ extension CodexThread {
             case timedOut
         }
 
-        internal struct ActivityState: Sendable, Equatable {
+        struct ActivityState: Equatable {
             var activeAutoReviewIDs: Set<String> = []
             var activeMcpItemIDs: Set<String> = []
             var activeToolLikeItemIDs: Set<String> = []
@@ -127,7 +127,7 @@ extension CodexThread {
         @ObservationIgnored
         private var activityState: ActivityState
 
-        internal init(
+        init(
             threadID: String,
             initialInfo: CodexAppServer.ThreadInfo,
             initialMcpServers: [CodexAppServer.McpServerSummary],
@@ -137,25 +137,25 @@ extension CodexThread {
             activityUpdates: AsyncStream<ActivityState>
         ) {
             self.threadID = threadID
-            self.isArchived = false
-            self.isClosed = false
-            self.latestDiagnostic = nil
-            self.goalTitle = ""
-            self.latestTokenUsage = nil
-            self.mcpServers = initialMcpServers
-            self.name = initialInfo.name
-            self.planTitle = ""
-            self.preview = initialInfo.preview
-            self.status = initialInfo.status
-            self.activityState = initialActivityState
-            self.autoReviewStatus = initialActivityState.autoReviewStatus
-            self.hookRuns = initialActivityState.hookRuns
-            self.isCompactingThreadContext = initialActivityState.isCompactingThreadContext
-            self.mcpCallingStatus = Self.activityStatus(
+            isArchived = false
+            isClosed = false
+            latestDiagnostic = nil
+            goalTitle = ""
+            latestTokenUsage = nil
+            mcpServers = initialMcpServers
+            name = initialInfo.name
+            planTitle = ""
+            preview = initialInfo.preview
+            status = initialInfo.status
+            activityState = initialActivityState
+            autoReviewStatus = initialActivityState.autoReviewStatus
+            hookRuns = initialActivityState.hookRuns
+            isCompactingThreadContext = initialActivityState.isCompactingThreadContext
+            mcpCallingStatus = Self.activityStatus(
                 activeIDs: initialActivityState.activeMcpItemIDs,
                 hasErrorResidue: initialActivityState.hasMcpErrorResidue
             )
-            self.toolCallingStatus = Self.activityStatus(
+            toolCallingStatus = Self.activityStatus(
                 activeIDs: initialActivityState.activeToolLikeItemIDs,
                 hasErrorResidue: initialActivityState.hasToolErrorResidue
             )
@@ -203,80 +203,6 @@ extension CodexThread {
             activityTask?.cancel()
         }
 
-        private func apply(_ event: CodexThreadEvent) {
-            switch event {
-            case let .started(started):
-                name = started.thread.name
-                preview = started.thread.preview
-                status = started.thread.status
-            case let .statusChanged(change):
-                status = change.status
-            case let .diagnostic(diagnostic):
-                latestDiagnostic = diagnostic
-            case .approvalRequested:
-                return
-            case .elicitationRequested:
-                return
-            case .serverRequestResolved:
-                return
-            case .archived:
-                isArchived = true
-            case .unarchived:
-                isArchived = false
-            case .closed:
-                isClosed = true
-            case let .nameUpdated(update):
-                name = update.threadName
-            case let .tokenUsageUpdated(update):
-                latestTokenUsage = update
-            case let .goalUpdated(update):
-                goalTitle = update.goal.objective
-            case .goalCleared:
-                goalTitle = ""
-            }
-        }
-
-        private func apply(_ event: CodexTurnEvent) {
-            switch event {
-            case let .planUpdated(update):
-                planTitle = Self.planTitle(from: update)
-            case .started,
-                .planDelta,
-                .diffUpdated,
-                .diagnostic,
-                .approvalRequested,
-                .elicitationRequested,
-                .serverRequestResolved,
-                .itemStarted,
-                .itemCompleted,
-                .agentMessageDelta,
-                .reasoningSummaryPartAdded,
-                .reasoningSummaryTextDelta,
-                .reasoningTextDelta,
-                .completed:
-                return
-            }
-        }
-
-        private func apply(activityState: ActivityState) {
-            self.activityState = activityState
-            syncActivityPresentation()
-        }
-
-        private func syncActivityPresentation() {
-            hookRuns = activityState.hookRuns
-            autoReviewStatus = activityState.autoReviewStatus
-            isCompactingThreadContext = activityState.isCompactingThreadContext
-            toolCallingStatus = Self.activityStatus(
-                activeIDs: activityState.activeToolLikeItemIDs,
-                hasErrorResidue: activityState.hasToolErrorResidue
-            )
-            mcpCallingStatus = Self.activityStatus(
-                activeIDs: activityState.activeMcpItemIDs,
-                hasErrorResidue: activityState.hasMcpErrorResidue
-            )
-        }
-
         private static func activityStatus(
             activeIDs: Set<String>,
             hasErrorResidue: Bool
@@ -302,6 +228,79 @@ extension CodexThread {
             }
             return update.explanation ?? ""
         }
-    }
 
+        private func apply(_ event: CodexThreadEvent) {
+            switch event {
+                case let .started(started):
+                    name = started.thread.name
+                    preview = started.thread.preview
+                    status = started.thread.status
+                case let .statusChanged(change):
+                    status = change.status
+                case let .diagnostic(diagnostic):
+                    latestDiagnostic = diagnostic
+                case .approvalRequested:
+                    return
+                case .elicitationRequested:
+                    return
+                case .serverRequestResolved:
+                    return
+                case .archived:
+                    isArchived = true
+                case .unarchived:
+                    isArchived = false
+                case .closed:
+                    isClosed = true
+                case let .nameUpdated(update):
+                    name = update.threadName
+                case let .tokenUsageUpdated(update):
+                    latestTokenUsage = update
+                case let .goalUpdated(update):
+                    goalTitle = update.goal.objective
+                case .goalCleared:
+                    goalTitle = ""
+            }
+        }
+
+        private func apply(_ event: CodexTurnEvent) {
+            switch event {
+                case let .planUpdated(update):
+                    planTitle = Self.planTitle(from: update)
+                case .started,
+                     .planDelta,
+                     .diffUpdated,
+                     .diagnostic,
+                     .approvalRequested,
+                     .elicitationRequested,
+                     .serverRequestResolved,
+                     .itemStarted,
+                     .itemCompleted,
+                     .agentMessageDelta,
+                     .reasoningSummaryPartAdded,
+                     .reasoningSummaryTextDelta,
+                     .reasoningTextDelta,
+                     .completed:
+                    return
+            }
+        }
+
+        private func apply(activityState: ActivityState) {
+            self.activityState = activityState
+            syncActivityPresentation()
+        }
+
+        private func syncActivityPresentation() {
+            hookRuns = activityState.hookRuns
+            autoReviewStatus = activityState.autoReviewStatus
+            isCompactingThreadContext = activityState.isCompactingThreadContext
+            toolCallingStatus = Self.activityStatus(
+                activeIDs: activityState.activeToolLikeItemIDs,
+                hasErrorResidue: activityState.hasToolErrorResidue
+            )
+            mcpCallingStatus = Self.activityStatus(
+                activeIDs: activityState.activeMcpItemIDs,
+                hasErrorResidue: activityState.hasMcpErrorResidue
+            )
+        }
+    }
 }

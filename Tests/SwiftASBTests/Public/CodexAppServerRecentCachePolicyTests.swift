@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("recent-turn cache policy presets scale by UI density")
@@ -76,7 +76,7 @@ extension CodexAppServerTests {
                 "backwardsCursor": "cursor-newer-1",
                 "data": [
                     [
-                        "completedAt": 1713350300,
+                        "completedAt": 1_713_350_300,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-3",
@@ -94,11 +94,11 @@ extension CodexAppServerTests {
                                 "type": "agentMessage",
                             ],
                         ],
-                        "startedAt": 1713350250,
+                        "startedAt": 1_713_350_250,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350200,
+                        "completedAt": 1_713_350_200,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-2",
@@ -116,11 +116,11 @@ extension CodexAppServerTests {
                                 "type": "agentMessage",
                             ],
                         ],
-                        "startedAt": 1713350150,
+                        "startedAt": 1_713_350_150,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350100,
+                        "completedAt": 1_713_350_100,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-1",
@@ -138,7 +138,7 @@ extension CodexAppServerTests {
                                 "type": "agentMessage",
                             ],
                         ],
-                        "startedAt": 1713350050,
+                        "startedAt": 1_713_350_050,
                         "status": "completed",
                     ],
                 ],
@@ -210,7 +210,7 @@ extension CodexAppServerTests {
                 "backwardsCursor": "cursor-newer-1",
                 "data": [
                     [
-                        "completedAt": 1713350200,
+                        "completedAt": 1_713_350_200,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-2",
@@ -228,11 +228,11 @@ extension CodexAppServerTests {
                                 "type": "agentMessage",
                             ],
                         ],
-                        "startedAt": 1713350150,
+                        "startedAt": 1_713_350_150,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350100,
+                        "completedAt": 1_713_350_100,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-1",
@@ -250,7 +250,7 @@ extension CodexAppServerTests {
                                 "type": "agentMessage",
                             ],
                         ],
-                        "startedAt": 1713350050,
+                        "startedAt": 1_713_350_050,
                         "status": "completed",
                     ],
                 ],
@@ -321,7 +321,7 @@ extension CodexAppServerTests {
                 "backwardsCursor": "cursor-newer-1",
                 "data": [
                     [
-                        "completedAt": 1713350200,
+                        "completedAt": 1_713_350_200,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-2",
@@ -338,11 +338,11 @@ extension CodexAppServerTests {
                                 "type": "commandExecution",
                             ],
                         ],
-                        "startedAt": 1713350150,
+                        "startedAt": 1_713_350_150,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350100,
+                        "completedAt": 1_713_350_100,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-1",
@@ -359,7 +359,7 @@ extension CodexAppServerTests {
                                 "type": "mcpToolCall",
                             ],
                         ],
-                        "startedAt": 1713350050,
+                        "startedAt": 1_713_350_050,
                         "status": "completed",
                     ],
                 ],
@@ -437,7 +437,7 @@ extension CodexAppServerTests {
                 "backwardsCursor": "cursor-newer-1",
                 "data": [
                     [
-                        "completedAt": 1713350200,
+                        "completedAt": 1_713_350_200,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-2",
@@ -454,11 +454,11 @@ extension CodexAppServerTests {
                                 "type": "commandExecution",
                             ],
                         ],
-                        "startedAt": 1713350150,
+                        "startedAt": 1_713_350_150,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350100,
+                        "completedAt": 1_713_350_100,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-1",
@@ -475,7 +475,7 @@ extension CodexAppServerTests {
                                 "type": "mcpToolCall",
                             ],
                         ],
-                        "startedAt": 1713350050,
+                        "startedAt": 1_713_350_050,
                         "status": "completed",
                     ],
                 ],
@@ -548,5 +548,4 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
-
 }

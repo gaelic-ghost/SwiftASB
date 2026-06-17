@@ -3,12 +3,12 @@ import Foundation
 extension CodexTurnPlanUpdate.Step.Status {
     init(wireValue: CodexWireTurnPlanStepStatus) {
         switch wireValue {
-        case .completed:
-            self = .completed
-        case .inProgress:
-            self = .inProgress
-        case .pending:
-            self = .pending
+            case .completed:
+                self = .completed
+            case .inProgress:
+                self = .inProgress
+            case .pending:
+                self = .pending
         }
     }
 }
@@ -31,38 +31,40 @@ extension CodexTurnItem {
 extension CodexTurnItem.Kind {
     init(wireValue: CodexWireThreadItemType) {
         switch wireValue {
-        case .agentMessage:
-            self = .agentMessage
-        case .collabAgentToolCall:
-            self = .collabAgentToolCall
-        case .commandExecution:
-            self = .commandExecution
-        case .contextCompaction:
-            self = .contextCompaction
-        case .dynamicToolCall:
-            self = .dynamicToolCall
-        case .enteredReviewMode:
-            self = .enteredReviewMode
-        case .exitedReviewMode:
-            self = .exitedReviewMode
-        case .fileChange:
-            self = .fileChange
-        case .hookPrompt:
-            self = .hookPrompt
-        case .imageGeneration:
-            self = .imageGeneration
-        case .imageView:
-            self = .imageView
-        case .mcpToolCall:
-            self = .mcpToolCall
-        case .plan:
-            self = .plan
-        case .reasoning:
-            self = .reasoning
-        case .userMessage:
-            self = .userMessage
-        case .webSearch:
-            self = .webSearch
+            case .agentMessage:
+                self = .agentMessage
+            case .collabAgentToolCall:
+                self = .collabAgentToolCall
+            case .commandExecution:
+                self = .commandExecution
+            case .contextCompaction:
+                self = .contextCompaction
+            case .dynamicToolCall:
+                self = .dynamicToolCall
+            case .enteredReviewMode:
+                self = .enteredReviewMode
+            case .exitedReviewMode:
+                self = .exitedReviewMode
+            case .fileChange:
+                self = .fileChange
+            case .hookPrompt:
+                self = .hookPrompt
+            case .imageGeneration:
+                self = .imageGeneration
+            case .imageView:
+                self = .imageView
+            case .mcpToolCall:
+                self = .mcpToolCall
+            case .plan:
+                self = .plan
+            case .reasoning:
+                self = .reasoning
+            case .subAgentActivity:
+                self = .subAgentActivity
+            case .userMessage:
+                self = .userMessage
+            case .webSearch:
+                self = .webSearch
         }
     }
 }
@@ -82,10 +84,10 @@ extension CodexThreadTokenUsageUpdated.Usage {
 extension CodexThread.ReviewPlacement {
     var wireValue: CodexWireReviewDelivery {
         switch self {
-        case .inline:
-            .inline
-        case .detached:
-            .detached
+            case .inline:
+                .inline
+            case .detached:
+                .detached
         }
     }
 }
@@ -93,38 +95,38 @@ extension CodexThread.ReviewPlacement {
 extension CodexThread.ReviewSubject {
     var wireValue: CodexWireReviewTarget {
         switch self {
-        case .uncommittedChanges:
-            CodexWireReviewTarget(
-                type: .uncommittedChanges,
-                branch: nil,
-                sha: nil,
-                title: nil,
-                instructions: nil
-            )
-        case let .baseBranch(branch):
-            CodexWireReviewTarget(
-                type: .baseBranch,
-                branch: branch,
-                sha: nil,
-                title: nil,
-                instructions: nil
-            )
-        case let .commit(sha, title):
-            CodexWireReviewTarget(
-                type: .commit,
-                branch: nil,
-                sha: sha,
-                title: title,
-                instructions: nil
-            )
-        case let .custom(instructions):
-            CodexWireReviewTarget(
-                type: .custom,
-                branch: nil,
-                sha: nil,
-                title: nil,
-                instructions: instructions
-            )
+            case .uncommittedChanges:
+                CodexWireReviewTarget(
+                    type: .uncommittedChanges,
+                    branch: nil,
+                    sha: nil,
+                    title: nil,
+                    instructions: nil
+                )
+            case let .baseBranch(branch):
+                CodexWireReviewTarget(
+                    type: .baseBranch,
+                    branch: branch,
+                    sha: nil,
+                    title: nil,
+                    instructions: nil
+                )
+            case let .commit(sha, title):
+                CodexWireReviewTarget(
+                    type: .commit,
+                    branch: nil,
+                    sha: sha,
+                    title: title,
+                    instructions: nil
+                )
+            case let .custom(instructions):
+                CodexWireReviewTarget(
+                    type: .custom,
+                    branch: nil,
+                    sha: nil,
+                    title: nil,
+                    instructions: instructions
+                )
         }
     }
 }
@@ -166,6 +168,7 @@ extension CodexAppServer.ThreadStartRequest {
             personality: personality?.wireValue,
             runtimeWorkspaceRoots: nil,
             sandbox: sandboxMode?.wireValue,
+            selectedCapabilityRoots: nil,
             serviceName: serviceName,
             serviceTier: serviceTier?.wireValue,
             sessionStartSource: sessionStartSource?.wireValue,
@@ -261,10 +264,10 @@ extension CodexAppServer.TurnCollaborationMode {
 extension CodexAppServer.TurnCollaborationMode.Kind {
     var wireValue: CodexWireModeKind {
         switch self {
-        case .defaultMode:
-            .modeKindDefault
-        case .plan:
-            .plan
+            case .defaultMode:
+                .modeKindDefault
+            case .plan:
+                .plan
         }
     }
 }
@@ -286,16 +289,16 @@ extension CodexAppServer.TurnInput {
 extension CodexAppServer.TurnInput.Kind {
     var wireValue: CodexWireUserInputType {
         switch self {
-        case .image:
-            .image
-        case .localImage:
-            .localImage
-        case .mention:
-            .mention
-        case .skill:
-            .skill
-        case .text:
-            .text
+            case .image:
+                .image
+            case .localImage:
+                .localImage
+            case .mention:
+                .mention
+            case .skill:
+                .skill
+            case .text:
+                .text
         }
     }
 }
@@ -303,39 +306,39 @@ extension CodexAppServer.TurnInput.Kind {
 extension CodexAppServer.JSONValue {
     init(wireValue: CodexWireJSONValue) {
         switch wireValue {
-        case .null:
-            self = .null
-        case let .bool(value):
-            self = .bool(value)
-        case let .integer(value):
-            self = .integer(value)
-        case let .double(value):
-            self = .double(value)
-        case let .string(value):
-            self = .string(value)
-        case let .array(value):
-            self = .array(value.map(Self.init(wireValue:)))
-        case let .object(value):
-            self = .object(value.mapValues(Self.init(wireValue:)))
+            case .null:
+                self = .null
+            case let .bool(value):
+                self = .bool(value)
+            case let .integer(value):
+                self = .integer(value)
+            case let .double(value):
+                self = .double(value)
+            case let .string(value):
+                self = .string(value)
+            case let .array(value):
+                self = .array(value.map(Self.init(wireValue:)))
+            case let .object(value):
+                self = .object(value.mapValues(Self.init(wireValue:)))
         }
     }
 
     var wireValue: CodexWireJSONValue {
         switch self {
-        case .null:
-            .null
-        case let .bool(value):
-            .bool(value)
-        case let .integer(value):
-            .integer(value)
-        case let .double(value):
-            .double(value)
-        case let .string(value):
-            .string(value)
-        case let .array(value):
-            .array(value.map(\.wireValue))
-        case let .object(value):
-            .object(value.mapValues(\.wireValue))
+            case .null:
+                .null
+            case let .bool(value):
+                .bool(value)
+            case let .integer(value):
+                .integer(value)
+            case let .double(value):
+                .double(value)
+            case let .string(value):
+                .string(value)
+            case let .array(value):
+                .array(value.map(\.wireValue))
+            case let .object(value):
+                .object(value.mapValues(\.wireValue))
         }
     }
 }
@@ -343,40 +346,40 @@ extension CodexAppServer.JSONValue {
 extension CodexAppServer.ApprovalPolicy {
     init(wireValue: CodexWireAskForApproval) {
         switch wireValue {
-        case let .enumeration(value):
-            self = Self(wireEnum: value)
-        case let .codexWireGranularAskForApproval(value):
-            self = .granular(.init(wireValue: value.granular))
+            case let .enumeration(value):
+                self = Self(wireEnum: value)
+            case let .codexWireGranularAskForApproval(value):
+                self = .granular(.init(wireValue: value.granular))
         }
     }
 
     init(wireEnum: CodexWireApprovalPolicyEnum) {
         switch wireEnum {
-        case .never:
-            self = .never
-        case .onFailure:
-            self = .onFailure
-        case .onRequest:
-            self = .onRequest
-        case .untrusted:
-            self = .untrusted
+            case .never:
+                self = .never
+            case .onFailure:
+                self = .onFailure
+            case .onRequest:
+                self = .onRequest
+            case .untrusted:
+                self = .untrusted
         }
     }
 
     var wireValue: CodexWireApprovalPolicyUnion {
         switch self {
-        case .never:
-            .enumeration(.never)
-        case .onFailure:
-            .enumeration(.onFailure)
-        case .onRequest:
-            .enumeration(.onRequest)
-        case .untrusted:
-            .enumeration(.untrusted)
-        case let .granular(policy):
-            .codexWireGranularAskForApproval(
-                CodexWireGranularAskForApproval(granular: policy.wireValue)
-            )
+            case .never:
+                .enumeration(.never)
+            case .onFailure:
+                .enumeration(.onFailure)
+            case .onRequest:
+                .enumeration(.onRequest)
+            case .untrusted:
+                .enumeration(.untrusted)
+            case let .granular(policy):
+                .codexWireGranularAskForApproval(
+                    CodexWireGranularAskForApproval(granular: policy.wireValue)
+                )
         }
     }
 }
@@ -406,23 +409,23 @@ extension CodexAppServer.GranularApprovalPolicy {
 extension CodexAppServer.ApprovalsReviewer {
     init(wireValue: CodexWireApprovalsReviewer) {
         switch wireValue {
-        case .autoReview:
-            self = .autoReview
-        case .guardianSubagent:
-            self = .guardianSubagent
-        case .user:
-            self = .user
+            case .autoReview:
+                self = .autoReview
+            case .guardianSubagent:
+                self = .guardianSubagent
+            case .user:
+                self = .user
         }
     }
 
     var wireValue: CodexWireApprovalsReviewer {
         switch self {
-        case .autoReview:
-            .autoReview
-        case .guardianSubagent:
-            .guardianSubagent
-        case .user:
-            .user
+            case .autoReview:
+                .autoReview
+            case .guardianSubagent:
+                .guardianSubagent
+            case .user:
+                .user
         }
     }
 }
@@ -430,23 +433,23 @@ extension CodexAppServer.ApprovalsReviewer {
 extension CodexAppServer.Personality {
     init(wireValue: CodexWirePersonality) {
         switch wireValue {
-        case .friendly:
-            self = .friendly
-        case .none:
-            self = .none
-        case .pragmatic:
-            self = .pragmatic
+            case .friendly:
+                self = .friendly
+            case .none:
+                self = .none
+            case .pragmatic:
+                self = .pragmatic
         }
     }
 
     var wireValue: CodexWirePersonality {
         switch self {
-        case .friendly:
-            .friendly
-        case .none:
-            .none
-        case .pragmatic:
-            .pragmatic
+            case .friendly:
+                .friendly
+            case .none:
+                .none
+            case .pragmatic:
+                .pragmatic
         }
     }
 }
@@ -454,12 +457,12 @@ extension CodexAppServer.Personality {
 extension CodexAppServer.SandboxMode {
     var wireValue: CodexWireSandboxMode {
         switch self {
-        case .dangerFullAccess:
-            .dangerFullAccess
-        case .readOnly:
-            .readOnly
-        case .workspaceWrite:
-            .workspaceWrite
+            case .dangerFullAccess:
+                .dangerFullAccess
+            case .readOnly:
+                .readOnly
+            case .workspaceWrite:
+                .workspaceWrite
         }
     }
 }
@@ -467,6 +470,7 @@ extension CodexAppServer.SandboxMode {
 extension CodexAppServer.ServiceTier {
     init?(wireValue: String?) {
         guard let wireValue else { return nil }
+
         self.init(rawValue: wireValue)
     }
 
@@ -478,10 +482,10 @@ extension CodexAppServer.ServiceTier {
 extension CodexAppServer.SessionStartSource {
     var wireValue: CodexWireThreadStartSource {
         switch self {
-        case .clear:
-            .clear
-        case .startup:
-            .startup
+            case .clear:
+                .clear
+            case .startup:
+                .startup
         }
     }
 }
@@ -489,44 +493,45 @@ extension CodexAppServer.SessionStartSource {
 extension CodexAppServer.ReasoningEffort {
     init(wireValue: String) {
         switch wireValue {
-        case "high":
-            self = .high
-        case "low":
-            self = .low
-        case "medium":
-            self = .medium
-        case "minimal":
-            self = .minimal
-        case "none":
-            self = .none
-        case "xhigh":
-            self = .xhigh
-        default:
-            self = .unrecognized(wireValue)
+            case "high":
+                self = .high
+            case "low":
+                self = .low
+            case "medium":
+                self = .medium
+            case "minimal":
+                self = .minimal
+            case "none":
+                self = .none
+            case "xhigh":
+                self = .xhigh
+            default:
+                self = .unrecognized(wireValue)
         }
     }
 
     init?(wireValue: String?) {
         guard let wireValue else { return nil }
+
         self.init(wireValue: wireValue)
     }
 
     var wireValue: String {
         switch self {
-        case .high:
-            "high"
-        case .low:
-            "low"
-        case .medium:
-            "medium"
-        case .minimal:
-            "minimal"
-        case .none:
-            "none"
-        case let .unrecognized(value):
-            value
-        case .xhigh:
-            "xhigh"
+            case .high:
+                "high"
+            case .low:
+                "low"
+            case .medium:
+                "medium"
+            case .minimal:
+                "minimal"
+            case .none:
+                "none"
+            case let .unrecognized(value):
+                value
+            case .xhigh:
+                "xhigh"
         }
     }
 }
@@ -534,14 +539,14 @@ extension CodexAppServer.ReasoningEffort {
 extension CodexAppServer.ReasoningSummary {
     var wireValue: CodexWireReasoningSummary {
         switch self {
-        case .auto:
-            .auto
-        case .concise:
-            .concise
-        case .detailed:
-            .detailed
-        case .none:
-            .none
+            case .auto:
+                .auto
+            case .concise:
+                .concise
+            case .detailed:
+                .detailed
+            case .none:
+                .none
         }
     }
 }
@@ -561,15 +566,15 @@ extension CodexAppServer.SandboxPolicy {
 extension CodexAppServer.NetworkAccess {
     init(wireValue: CodexWireNetworkAccessUnion) {
         switch wireValue {
-        case let .bool(value):
-            self = .explicit(value)
-        case let .enumeration(value):
-            switch value {
-            case .enabled:
-                self = .enabled
-            case .restricted:
-                self = .restricted
-            }
+            case let .bool(value):
+                self = .explicit(value)
+            case let .enumeration(value):
+                switch value {
+                    case .enabled:
+                        self = .enabled
+                    case .restricted:
+                        self = .restricted
+                }
         }
     }
 }
@@ -577,14 +582,14 @@ extension CodexAppServer.NetworkAccess {
 extension CodexAppServer.SandboxPolicyType {
     init(wireValue: CodexWireSandboxPolicyType) {
         switch wireValue {
-        case .dangerFullAccess:
-            self = .dangerFullAccess
-        case .externalSandbox:
-            self = .externalSandbox
-        case .readOnly:
-            self = .readOnly
-        case .workspaceWrite:
-            self = .workspaceWrite
+            case .dangerFullAccess:
+                self = .dangerFullAccess
+            case .externalSandbox:
+                self = .externalSandbox
+            case .readOnly:
+                self = .readOnly
+            case .workspaceWrite:
+                self = .workspaceWrite
         }
     }
 }
@@ -645,31 +650,31 @@ extension CodexAppServer.ThreadInfo {
 extension CodexAppServer.ThreadSource {
     init(wireValue: CodexWireSessionSourceUnion) {
         switch wireValue {
-        case let .enumeration(source):
-            self.init(wireValue: source)
-        case let .codexWireSessionSource(source):
-            if let custom = source.custom, !custom.isEmpty {
-                self = .custom(custom)
-            } else if let subAgent = source.subAgent {
-                self = .subAgent(.init(wireValue: subAgent))
-            } else {
-                self = .unknown
-            }
+            case let .enumeration(source):
+                self.init(wireValue: source)
+            case let .codexWireSessionSource(source):
+                if let custom = source.custom, !custom.isEmpty {
+                    self = .custom(custom)
+                } else if let subAgent = source.subAgent {
+                    self = .subAgent(.init(wireValue: subAgent))
+                } else {
+                    self = .unknown
+                }
         }
     }
 
     private init(wireValue: CodexWireSessionSourceEnum) {
         switch wireValue {
-        case .appServer:
-            self = .appServer
-        case .cli:
-            self = .cli
-        case .exec:
-            self = .exec
-        case .unknown:
-            self = .unknown
-        case .vscode:
-            self = .vscode
+            case .appServer:
+                self = .appServer
+            case .cli:
+                self = .cli
+            case .exec:
+                self = .exec
+            case .unknown:
+                self = .unknown
+            case .vscode:
+                self = .vscode
         }
     }
 }
@@ -677,19 +682,19 @@ extension CodexAppServer.ThreadSource {
 extension CodexAppServer.ThreadSource.SubAgentSource {
     init(wireValue: CodexWireSubAgentSourceUnion) {
         switch wireValue {
-        case let .enumeration(source):
-            self.init(kind: .init(wireValue: source))
-        case let .codexWireSubAgentSource(source):
-            if let threadSpawn = source.threadSpawn {
-                self.init(
-                    kind: .threadSpawn,
-                    threadSpawn: .init(wireValue: threadSpawn)
-                )
-            } else if let other = source.other, !other.isEmpty {
-                self.init(kind: .other, other: other)
-            } else {
-                self.init(kind: .unknown)
-            }
+            case let .enumeration(source):
+                self.init(kind: .init(wireValue: source))
+            case let .codexWireSubAgentSource(source):
+                if let threadSpawn = source.threadSpawn {
+                    self.init(
+                        kind: .threadSpawn,
+                        threadSpawn: .init(wireValue: threadSpawn)
+                    )
+                } else if let other = source.other, !other.isEmpty {
+                    self.init(kind: .other, other: other)
+                } else {
+                    self.init(kind: .unknown)
+                }
         }
     }
 }
@@ -697,12 +702,12 @@ extension CodexAppServer.ThreadSource.SubAgentSource {
 extension CodexAppServer.ThreadSource.SubAgentSource.Kind {
     init(wireValue: CodexWireSubAgentSourceEnum) {
         switch wireValue {
-        case .compact:
-            self = .compact
-        case .memoryConsolidation:
-            self = .memoryConsolidation
-        case .review:
-            self = .review
+            case .compact:
+                self = .compact
+            case .memoryConsolidation:
+                self = .memoryConsolidation
+            case .review:
+                self = .review
         }
     }
 }
@@ -733,16 +738,16 @@ extension CodexAppServer.CLIExecutableDiagnostics {
 extension CodexAppServer.CLIExecutableDiagnostics.Source {
     init(_ source: CodexCLIExecutableResolver.Source) {
         switch source {
-        case .explicit:
-            self = .explicit
-        case .path:
-            self = .path
-        case .homebrewAppleSilicon:
-            self = .homebrewAppleSilicon
-        case .homebrewIntel:
-            self = .homebrewIntel
-        case let .npmGlobal(prefix):
-            self = .npmGlobal(prefix: prefix)
+            case .explicit:
+                self = .explicit
+            case .path:
+                self = .path
+            case .homebrewAppleSilicon:
+                self = .homebrewAppleSilicon
+            case .homebrewIntel:
+                self = .homebrewIntel
+            case let .npmGlobal(prefix):
+                self = .npmGlobal(prefix: prefix)
         }
     }
 }
@@ -750,12 +755,12 @@ extension CodexAppServer.CLIExecutableDiagnostics.Source {
 extension CodexAppServer.CLIExecutableDiagnostics.Compatibility {
     init(_ compatibility: CodexCLIExecutableResolver.Compatibility) {
         switch compatibility {
-        case let .supported(documentedWindow):
-            self = .supported(documentedWindow: documentedWindow)
-        case let .outsideDocumentedWindow(documentedWindow):
-            self = .outsideDocumentedWindow(documentedWindow: documentedWindow)
-        case let .unknownVersionFormat(documentedWindow):
-            self = .unknownVersionFormat(documentedWindow: documentedWindow)
+            case let .supported(documentedWindow):
+                self = .supported(documentedWindow: documentedWindow)
+            case let .outsideDocumentedWindow(documentedWindow):
+                self = .outsideDocumentedWindow(documentedWindow: documentedWindow)
+            case let .unknownVersionFormat(documentedWindow):
+                self = .unknownVersionFormat(documentedWindow: documentedWindow)
         }
     }
 }
@@ -805,16 +810,16 @@ extension CodexThread.Dashboard.HookRun.Entry {
 extension CodexThread.Dashboard.HookRun.Entry.Kind {
     init(wireValue: CodexWireHookOutputEntryKind) {
         switch wireValue {
-        case .context:
-            self = .context
-        case .error:
-            self = .error
-        case .feedback:
-            self = .feedback
-        case .stop:
-            self = .stop
-        case .warning:
-            self = .warning
+            case .context:
+                self = .context
+            case .error:
+                self = .error
+            case .feedback:
+                self = .feedback
+            case .stop:
+                self = .stop
+            case .warning:
+                self = .warning
         }
     }
 }
@@ -822,26 +827,26 @@ extension CodexThread.Dashboard.HookRun.Entry.Kind {
 extension CodexThread.Dashboard.HookRun.EventName {
     init(wireValue: CodexWireHookEventName) {
         switch wireValue {
-        case .permissionRequest:
-            self = .permissionRequest
-        case .postCompact:
-            self = .postCompact
-        case .postToolUse:
-            self = .postToolUse
-        case .preCompact:
-            self = .preCompact
-        case .preToolUse:
-            self = .preToolUse
-        case .sessionStart:
-            self = .sessionStart
-        case .stop:
-            self = .stop
-        case .subagentStart:
-            self = .subagentStart
-        case .subagentStop:
-            self = .subagentStop
-        case .userPromptSubmit:
-            self = .userPromptSubmit
+            case .permissionRequest:
+                self = .permissionRequest
+            case .postCompact:
+                self = .postCompact
+            case .postToolUse:
+                self = .postToolUse
+            case .preCompact:
+                self = .preCompact
+            case .preToolUse:
+                self = .preToolUse
+            case .sessionStart:
+                self = .sessionStart
+            case .stop:
+                self = .stop
+            case .subagentStart:
+                self = .subagentStart
+            case .subagentStop:
+                self = .subagentStop
+            case .userPromptSubmit:
+                self = .userPromptSubmit
         }
     }
 }
@@ -849,10 +854,10 @@ extension CodexThread.Dashboard.HookRun.EventName {
 extension CodexThread.Dashboard.HookRun.ExecutionMode {
     init(wireValue: CodexWireHookExecutionMode) {
         switch wireValue {
-        case .async:
-            self = .async
-        case .sync:
-            self = .sync
+            case .async:
+                self = .async
+            case .sync:
+                self = .sync
         }
     }
 }
@@ -860,12 +865,12 @@ extension CodexThread.Dashboard.HookRun.ExecutionMode {
 extension CodexThread.Dashboard.HookRun.HandlerType {
     init(wireValue: CodexWireHookHandlerType) {
         switch wireValue {
-        case .agent:
-            self = .agent
-        case .command:
-            self = .command
-        case .prompt:
-            self = .prompt
+            case .agent:
+                self = .agent
+            case .command:
+                self = .command
+            case .prompt:
+                self = .prompt
         }
     }
 }
@@ -873,10 +878,10 @@ extension CodexThread.Dashboard.HookRun.HandlerType {
 extension CodexThread.Dashboard.HookRun.Scope {
     init(wireValue: CodexWireHookScope) {
         switch wireValue {
-        case .thread:
-            self = .thread
-        case .turn:
-            self = .turn
+            case .thread:
+                self = .thread
+            case .turn:
+                self = .turn
         }
     }
 }
@@ -884,16 +889,16 @@ extension CodexThread.Dashboard.HookRun.Scope {
 extension CodexThread.Dashboard.HookRun.Status {
     init(wireValue: CodexWireHookRunStatus) {
         switch wireValue {
-        case .blocked:
-            self = .blocked
-        case .completed:
-            self = .completed
-        case .failed:
-            self = .failed
-        case .running:
-            self = .running
-        case .stopped:
-            self = .stopped
+            case .blocked:
+                self = .blocked
+            case .completed:
+                self = .completed
+            case .failed:
+                self = .failed
+            case .running:
+                self = .running
+            case .stopped:
+                self = .stopped
         }
     }
 }
@@ -901,14 +906,14 @@ extension CodexThread.Dashboard.HookRun.Status {
 extension CodexAppServer.ThreadStatusType {
     init(wireValue: CodexWireThreadStatusType) {
         switch wireValue {
-        case .active:
-            self = .active
-        case .idle:
-            self = .idle
-        case .notLoaded:
-            self = .notLoaded
-        case .systemError:
-            self = .systemError
+            case .active:
+                self = .active
+            case .idle:
+                self = .idle
+            case .notLoaded:
+                self = .notLoaded
+            case .systemError:
+                self = .systemError
         }
     }
 }
@@ -916,10 +921,10 @@ extension CodexAppServer.ThreadStatusType {
 extension CodexProtocolThreadTurnsSortDirection {
     init(_ direction: CodexAppServer.ThreadTurnsSortDirection) {
         switch direction {
-        case .asc:
-            self = .asc
-        case .desc:
-            self = .desc
+            case .asc:
+                self = .asc
+            case .desc:
+                self = .desc
         }
     }
 }
@@ -927,10 +932,10 @@ extension CodexProtocolThreadTurnsSortDirection {
 extension CodexWireRemoteControlClientsListOrder {
     init(_ direction: CodexAppServer.ThreadTurnsSortDirection) {
         switch direction {
-        case .asc:
-            self = .asc
-        case .desc:
-            self = .desc
+            case .asc:
+                self = .asc
+            case .desc:
+                self = .desc
         }
     }
 }
@@ -938,12 +943,12 @@ extension CodexWireRemoteControlClientsListOrder {
 extension CodexWireTurnItemsView {
     init(_ itemsView: CodexAppServer.TurnItemsView) {
         switch itemsView {
-        case .full:
-            self = .full
-        case .notLoaded:
-            self = .notLoaded
-        case .summary:
-            self = .summary
+            case .full:
+                self = .full
+            case .notLoaded:
+                self = .notLoaded
+            case .summary:
+                self = .summary
         }
     }
 }
@@ -951,10 +956,10 @@ extension CodexWireTurnItemsView {
 extension CodexProtocolThreadListSortKey {
     init(_ key: CodexAppServer.ThreadListSortKey) {
         switch key {
-        case .createdAt:
-            self = .createdAt
-        case .updatedAt:
-            self = .updatedAt
+            case .createdAt:
+                self = .createdAt
+            case .updatedAt:
+                self = .updatedAt
         }
     }
 }
@@ -962,10 +967,10 @@ extension CodexProtocolThreadListSortKey {
 extension CodexProtocolThreadListSortDirection {
     init(_ direction: CodexAppServer.ThreadListSortDirection) {
         switch direction {
-        case .asc:
-            self = .asc
-        case .desc:
-            self = .desc
+            case .asc:
+                self = .asc
+            case .desc:
+                self = .desc
         }
     }
 }
@@ -973,16 +978,16 @@ extension CodexProtocolThreadListSortDirection {
 extension CodexProtocolThreadListSourceKind {
     init(_ sourceKind: CodexAppServer.ThreadListSourceKind) {
         switch sourceKind {
-        case .appServer:
-            self = .appServer
-        case .cli:
-            self = .cli
-        case .exec:
-            self = .exec
-        case .unknown:
-            self = .unknown
-        case .vscode:
-            self = .vscode
+            case .appServer:
+                self = .appServer
+            case .cli:
+                self = .cli
+            case .exec:
+                self = .exec
+            case .unknown:
+                self = .unknown
+            case .vscode:
+                self = .vscode
         }
     }
 }
@@ -990,10 +995,10 @@ extension CodexProtocolThreadListSourceKind {
 extension CodexAppServer.ThreadActiveFlag {
     init(wireValue: CodexWireThreadActiveFlag) {
         switch wireValue {
-        case .waitingOnApproval:
-            self = .waitingOnApproval
-        case .waitingOnUserInput:
-            self = .waitingOnUserInput
+            case .waitingOnApproval:
+                self = .waitingOnApproval
+            case .waitingOnUserInput:
+                self = .waitingOnUserInput
         }
     }
 }
@@ -1001,16 +1006,16 @@ extension CodexAppServer.ThreadActiveFlag {
 extension CodexThread.Dashboard.AutoReviewStatus {
     init(wireValue: CodexWireGuardianApprovalReviewStatus) {
         switch wireValue {
-        case .aborted:
-            self = .aborted
-        case .approved:
-            self = .approved
-        case .denied:
-            self = .denied
-        case .inProgress:
-            self = .inProgress
-        case .timedOut:
-            self = .timedOut
+            case .aborted:
+                self = .aborted
+            case .approved:
+                self = .approved
+            case .denied:
+                self = .denied
+            case .inProgress:
+                self = .inProgress
+            case .timedOut:
+                self = .timedOut
         }
     }
 }
@@ -1037,14 +1042,14 @@ extension CodexAppServer.TurnInfo {
 extension CodexAppServer.TurnStatus {
     init(wireValue: CodexWireTurnStatus) {
         switch wireValue {
-        case .completed:
-            self = .completed
-        case .failed:
-            self = .failed
-        case .inProgress:
-            self = .inProgress
-        case .interrupted:
-            self = .interrupted
+            case .completed:
+                self = .completed
+            case .failed:
+                self = .failed
+            case .inProgress:
+                self = .inProgress
+            case .interrupted:
+                self = .interrupted
         }
     }
 }

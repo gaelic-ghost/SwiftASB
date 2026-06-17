@@ -65,6 +65,40 @@ public struct CodexTurnHandle: Sendable {
             public private(set) var status: Status
             public private(set) var toolName: String?
 
+            fileprivate init(item: CodexTurnItem, kind: Kind, status: Status) {
+                id = item.id
+                displayName = Self.makeDisplayName(from: item)
+                filePath = item.path
+                self.kind = kind
+                latestStatusText = item.status ?? item.text
+                serverName = item.serverName
+                self.status = status
+                toolName = item.toolName
+            }
+
+            private static func makeDisplayName(from item: CodexTurnItem) -> String {
+                switch item.kind {
+                    case .commandExecution:
+                        item.command ?? "Command"
+                    case .mcpToolCall:
+                        if let toolName = item.toolName, let serverName = item.serverName {
+                            "\(serverName).\(toolName)"
+                        } else if let toolName = item.toolName {
+                            toolName
+                        } else {
+                            "MCP tool call"
+                        }
+                    case .dynamicToolCall:
+                        item.toolName ?? "Dynamic tool call"
+                    case .collabAgentToolCall:
+                        item.toolName ?? "Collab tool call"
+                    case .fileChange:
+                        item.path ?? "File edit"
+                    default:
+                        item.text ?? item.status ?? item.kind.rawValue
+                }
+            }
+
             fileprivate mutating func apply(_ item: CodexTurnItem, status: Status) {
                 displayName = Self.makeDisplayName(from: item)
                 filePath = item.path
@@ -72,40 +106,6 @@ public struct CodexTurnHandle: Sendable {
                 serverName = item.serverName
                 self.status = status
                 toolName = item.toolName
-            }
-
-            fileprivate init(item: CodexTurnItem, kind: Kind, status: Status) {
-                self.id = item.id
-                self.displayName = Self.makeDisplayName(from: item)
-                self.filePath = item.path
-                self.kind = kind
-                self.latestStatusText = item.status ?? item.text
-                self.serverName = item.serverName
-                self.status = status
-                self.toolName = item.toolName
-            }
-
-            private static func makeDisplayName(from item: CodexTurnItem) -> String {
-                switch item.kind {
-                case .commandExecution:
-                    item.command ?? "Command"
-                case .mcpToolCall:
-                    if let toolName = item.toolName, let serverName = item.serverName {
-                        "\(serverName).\(toolName)"
-                    } else if let toolName = item.toolName {
-                        toolName
-                    } else {
-                        "MCP tool call"
-                    }
-                case .dynamicToolCall:
-                    item.toolName ?? "Dynamic tool call"
-                case .collabAgentToolCall:
-                    item.toolName ?? "Collab tool call"
-                case .fileChange:
-                    item.path ?? "File edit"
-                default:
-                    item.text ?? item.status ?? item.kind.rawValue
-                }
             }
         }
 
@@ -133,31 +133,31 @@ public struct CodexTurnHandle: Sendable {
         @ObservationIgnored
         private var eventTask: Task<Void, Never>?
 
-        internal init(
+        init(
             threadID: String,
             initialTurn: CodexAppServer.TurnInfo,
             events: AsyncThrowingStream<CodexTurnEvent, Error>
         ) {
             self.threadID = threadID
-            self.turnID = initialTurn.id
-            self.callSnapshots = []
-            self.currentTurn = initialTurn
-            self.isCompactingThreadContext = false
-            self.latestApprovalRequest = nil
-            self.latestAgentMessageDelta = nil
-            self.latestCompletedItem = nil
-            self.latestCompletion = nil
-            self.latestDiagnostic = nil
-            self.latestDiffUpdate = nil
-            self.latestElicitationRequest = nil
-            self.latestPlanDelta = nil
-            self.latestPlanUpdate = nil
-            self.latestReasoningSummaryPartAdded = nil
-            self.latestReasoningSummaryTextDelta = nil
-            self.latestReasoningTextDelta = nil
-            self.latestRequestResolution = nil
-            self.latestStartedItem = nil
-            self.latestStartedTurn = nil
+            turnID = initialTurn.id
+            callSnapshots = []
+            currentTurn = initialTurn
+            isCompactingThreadContext = false
+            latestApprovalRequest = nil
+            latestAgentMessageDelta = nil
+            latestCompletedItem = nil
+            latestCompletion = nil
+            latestDiagnostic = nil
+            latestDiffUpdate = nil
+            latestElicitationRequest = nil
+            latestPlanDelta = nil
+            latestPlanUpdate = nil
+            latestReasoningSummaryPartAdded = nil
+            latestReasoningSummaryTextDelta = nil
+            latestReasoningTextDelta = nil
+            latestRequestResolution = nil
+            latestStartedItem = nil
+            latestStartedTurn = nil
 
             eventTask = Task { [weak self] in
                 guard let self else { return }
@@ -178,60 +178,86 @@ public struct CodexTurnHandle: Sendable {
             eventTask?.cancel()
         }
 
+        private static func callSnapshotKind(for kind: CodexTurnItem.Kind) -> CallSnapshot.Kind? {
+            switch kind {
+                case .collabAgentToolCall:
+                    .collabTool
+                case .commandExecution:
+                    .command
+                case .dynamicToolCall:
+                    .dynamicTool
+                case .fileChange:
+                    .fileEdit
+                case .mcpToolCall:
+                    .mcp
+                case .subAgentActivity:
+                    nil
+                default:
+                    nil
+            }
+        }
+
+        private static func callSnapshotStatus(for item: CodexTurnItem) -> CallSnapshot.Status {
+            if item.isErrored {
+                return .errored
+            }
+            return .completed
+        }
+
         private func apply(_ event: CodexTurnEvent) {
             switch event {
-            case let .started(started):
-                latestStartedTurn = started
-                currentTurn = started.turn
-            case let .planUpdated(update):
-                latestPlanUpdate = update
-            case let .planDelta(delta):
-                latestPlanDelta = delta
-            case let .diffUpdated(update):
-                latestDiffUpdate = update
-            case let .diagnostic(diagnostic):
-                latestDiagnostic = diagnostic
-            case let .approvalRequested(request):
-                latestApprovalRequest = request
-            case let .elicitationRequested(request):
-                latestElicitationRequest = request
-            case let .serverRequestResolved(resolution):
-                latestRequestResolution = resolution
-                if latestApprovalRequest?.requestID == resolution.requestID {
-                    latestApprovalRequest = nil
-                }
-                if latestElicitationRequest?.requestID == resolution.requestID {
-                    latestElicitationRequest = nil
-                }
-            case let .itemStarted(itemStarted):
-                latestStartedItem = itemStarted
-                if itemStarted.item.kind == .contextCompaction {
-                    isCompactingThreadContext = true
-                    return
-                }
-                upsertCallSnapshot(from: itemStarted.item, status: .inProgress)
-            case let .itemCompleted(itemCompleted):
-                latestCompletedItem = itemCompleted
-                if itemCompleted.item.kind == .contextCompaction {
+                case let .started(started):
+                    latestStartedTurn = started
+                    currentTurn = started.turn
+                case let .planUpdated(update):
+                    latestPlanUpdate = update
+                case let .planDelta(delta):
+                    latestPlanDelta = delta
+                case let .diffUpdated(update):
+                    latestDiffUpdate = update
+                case let .diagnostic(diagnostic):
+                    latestDiagnostic = diagnostic
+                case let .approvalRequested(request):
+                    latestApprovalRequest = request
+                case let .elicitationRequested(request):
+                    latestElicitationRequest = request
+                case let .serverRequestResolved(resolution):
+                    latestRequestResolution = resolution
+                    if latestApprovalRequest?.requestID == resolution.requestID {
+                        latestApprovalRequest = nil
+                    }
+                    if latestElicitationRequest?.requestID == resolution.requestID {
+                        latestElicitationRequest = nil
+                    }
+                case let .itemStarted(itemStarted):
+                    latestStartedItem = itemStarted
+                    if itemStarted.item.kind == .contextCompaction {
+                        isCompactingThreadContext = true
+                        return
+                    }
+                    upsertCallSnapshot(from: itemStarted.item, status: .inProgress)
+                case let .itemCompleted(itemCompleted):
+                    latestCompletedItem = itemCompleted
+                    if itemCompleted.item.kind == .contextCompaction {
+                        isCompactingThreadContext = false
+                        return
+                    }
+                    upsertCallSnapshot(
+                        from: itemCompleted.item,
+                        status: Self.callSnapshotStatus(for: itemCompleted.item)
+                    )
+                case let .agentMessageDelta(delta):
+                    latestAgentMessageDelta = delta
+                case let .reasoningSummaryPartAdded(partAdded):
+                    latestReasoningSummaryPartAdded = partAdded
+                case let .reasoningSummaryTextDelta(delta):
+                    latestReasoningSummaryTextDelta = delta
+                case let .reasoningTextDelta(delta):
+                    latestReasoningTextDelta = delta
+                case let .completed(completion):
+                    latestCompletion = completion
+                    currentTurn = completion.turn
                     isCompactingThreadContext = false
-                    return
-                }
-                upsertCallSnapshot(
-                    from: itemCompleted.item,
-                    status: Self.callSnapshotStatus(for: itemCompleted.item)
-                )
-            case let .agentMessageDelta(delta):
-                latestAgentMessageDelta = delta
-            case let .reasoningSummaryPartAdded(partAdded):
-                latestReasoningSummaryPartAdded = partAdded
-            case let .reasoningSummaryTextDelta(delta):
-                latestReasoningSummaryTextDelta = delta
-            case let .reasoningTextDelta(delta):
-                latestReasoningTextDelta = delta
-            case let .completed(completion):
-                latestCompletion = completion
-                currentTurn = completion.turn
-                isCompactingThreadContext = false
             }
         }
 
@@ -250,30 +276,6 @@ public struct CodexTurnHandle: Sendable {
                 )
             }
         }
-
-        private static func callSnapshotKind(for kind: CodexTurnItem.Kind) -> CallSnapshot.Kind? {
-            switch kind {
-            case .collabAgentToolCall:
-                .collabTool
-            case .commandExecution:
-                .command
-            case .dynamicToolCall:
-                .dynamicTool
-            case .fileChange:
-                .fileEdit
-            case .mcpToolCall:
-                .mcp
-            default:
-                nil
-            }
-        }
-
-        private static func callSnapshotStatus(for item: CodexTurnItem) -> CallSnapshot.Status {
-            if item.isErrored {
-                return .errored
-            }
-            return .completed
-        }
     }
 
     private final class MinimapStorage: @unchecked Sendable {
@@ -284,11 +286,8 @@ public struct CodexTurnHandle: Sendable {
         }
     }
 
-    private let appServer: CodexAppServer
-    private let minimapStorage: MinimapStorage
     public let threadID: String
     public let turn: CodexAppServer.TurnInfo
-
     /// Typed events for this active turn.
     ///
     /// SwiftASB buffers the earliest turn events that can arrive before the
@@ -299,19 +298,8 @@ public struct CodexTurnHandle: Sendable {
     /// feed fails unexpectedly.
     public let events: AsyncThrowingStream<CodexTurnEvent, Error>
 
-    internal init(
-        appServer: CodexAppServer,
-        threadID: String,
-        turn: CodexAppServer.TurnInfo,
-        events: AsyncThrowingStream<CodexTurnEvent, Error>,
-        minimap: Minimap
-    ) {
-        self.appServer = appServer
-        self.minimapStorage = MinimapStorage(minimap: minimap)
-        self.threadID = threadID
-        self.turn = turn
-        self.events = events
-    }
+    private let appServer: CodexAppServer
+    private let minimapStorage: MinimapStorage
 
     /// Observable current-state mirror for this turn.
     ///
@@ -321,6 +309,20 @@ public struct CodexTurnHandle: Sendable {
     @MainActor
     public var minimap: Minimap {
         minimapStorage.minimap
+    }
+
+    init(
+        appServer: CodexAppServer,
+        threadID: String,
+        turn: CodexAppServer.TurnInfo,
+        events: AsyncThrowingStream<CodexTurnEvent, Error>,
+        minimap: Minimap
+    ) {
+        self.appServer = appServer
+        minimapStorage = MinimapStorage(minimap: minimap)
+        self.threadID = threadID
+        self.turn = turn
+        self.events = events
     }
 
     /// Answers an approval request for this active turn.
@@ -377,12 +379,12 @@ public struct CodexTurnHandle: Sendable {
         try await steer([.text(text)])
     }
 
-    @discardableResult
     /// Reads this turn's completed local-history snapshot.
     ///
     /// This does not send a command to terminate the turn. Use it after terminal
     /// completion when the caller wants a sealed value independent of the live
     /// handle.
+    @discardableResult
     public func complete() async throws -> ClosedTurn {
         try await appServer.closedTurn(threadID: threadID, turnID: turn.id)
     }
@@ -409,14 +411,6 @@ public enum CodexTurnEvent: Sendable, Equatable {
 public struct CodexTurnStarted: Sendable, Equatable {
     public let threadID: String
     public let turn: CodexAppServer.TurnInfo
-
-    internal init(
-        threadID: String,
-        turn: CodexAppServer.TurnInfo
-    ) {
-        self.threadID = threadID
-        self.turn = turn
-    }
 }
 
 public struct CodexTurnPlanUpdate: Sendable, Equatable {
@@ -430,7 +424,7 @@ public struct CodexTurnPlanUpdate: Sendable, Equatable {
         public let status: Status
         public let step: String
 
-        internal init(
+        init(
             status: Status,
             step: String
         ) {
@@ -443,18 +437,6 @@ public struct CodexTurnPlanUpdate: Sendable, Equatable {
     public let turnID: String
     public let explanation: String?
     public let plan: [Step]
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        explanation: String?,
-        plan: [Step]
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.explanation = explanation
-        self.plan = plan
-    }
 }
 
 public struct CodexTurnPlanDelta: Sendable, Equatable {
@@ -462,34 +444,12 @@ public struct CodexTurnPlanDelta: Sendable, Equatable {
     public let turnID: String
     public let itemID: String
     public let delta: String
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        itemID: String,
-        delta: String
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.itemID = itemID
-        self.delta = delta
-    }
 }
 
 public struct CodexTurnDiffUpdate: Sendable, Equatable {
     public let threadID: String
     public let turnID: String
     public let diff: String
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        diff: String
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.diff = diff
-    }
 }
 
 public struct CodexTurnItem: Sendable, Equatable {
@@ -508,6 +468,7 @@ public struct CodexTurnItem: Sendable, Equatable {
         case mcpToolCall
         case plan
         case reasoning
+        case subAgentActivity
         case userMessage
         case webSearch
     }
@@ -521,33 +482,14 @@ public struct CodexTurnItem: Sendable, Equatable {
     public let status: String?
     public let toolName: String?
 
-    internal init(
-        id: String,
-        kind: Kind,
-        command: String?,
-        path: String?,
-        serverName: String?,
-        text: String?,
-        status: String?,
-        toolName: String?
-    ) {
-        self.id = id
-        self.kind = kind
-        self.command = command
-        self.path = path
-        self.serverName = serverName
-        self.text = text
-        self.status = status
-        self.toolName = toolName
-    }
-
     var isErrored: Bool {
         guard let status else { return false }
+
         return switch status.lowercased() {
-        case "error", "errored", "failed", "interrupted":
-            true
-        default:
-            false
+            case "error", "errored", "failed", "interrupted":
+                true
+            default:
+                false
         }
     }
 }
@@ -556,32 +498,12 @@ public struct CodexTurnItemStarted: Sendable, Equatable {
     public let threadID: String
     public let turnID: String
     public let item: CodexTurnItem
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        item: CodexTurnItem
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.item = item
-    }
 }
 
 public struct CodexTurnItemCompleted: Sendable, Equatable {
     public let threadID: String
     public let turnID: String
     public let item: CodexTurnItem
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        item: CodexTurnItem
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.item = item
-    }
 }
 
 public struct CodexTurnAgentMessageDelta: Sendable, Equatable {
@@ -589,18 +511,6 @@ public struct CodexTurnAgentMessageDelta: Sendable, Equatable {
     public let turnID: String
     public let itemID: String
     public let delta: String
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        itemID: String,
-        delta: String
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.itemID = itemID
-        self.delta = delta
-    }
 }
 
 public struct CodexTurnReasoningSummaryPartAdded: Sendable, Equatable {
@@ -608,18 +518,6 @@ public struct CodexTurnReasoningSummaryPartAdded: Sendable, Equatable {
     public let turnID: String
     public let itemID: String
     public let summaryIndex: Int
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        itemID: String,
-        summaryIndex: Int
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.itemID = itemID
-        self.summaryIndex = summaryIndex
-    }
 }
 
 public struct CodexTurnReasoningSummaryTextDelta: Sendable, Equatable {
@@ -628,20 +526,6 @@ public struct CodexTurnReasoningSummaryTextDelta: Sendable, Equatable {
     public let itemID: String
     public let summaryIndex: Int
     public let delta: String
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        itemID: String,
-        summaryIndex: Int,
-        delta: String
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.itemID = itemID
-        self.summaryIndex = summaryIndex
-        self.delta = delta
-    }
 }
 
 public struct CodexTurnReasoningTextDelta: Sendable, Equatable {
@@ -650,36 +534,14 @@ public struct CodexTurnReasoningTextDelta: Sendable, Equatable {
     public let itemID: String
     public let contentIndex: Int
     public let delta: String
-
-    internal init(
-        threadID: String,
-        turnID: String,
-        itemID: String,
-        contentIndex: Int,
-        delta: String
-    ) {
-        self.threadID = threadID
-        self.turnID = turnID
-        self.itemID = itemID
-        self.contentIndex = contentIndex
-        self.delta = delta
-    }
 }
 
 public struct CodexTurnCompletion: Sendable, Equatable {
     public let threadID: String
     public let turn: CodexAppServer.TurnInfo
-
-    internal init(
-        threadID: String,
-        turn: CodexAppServer.TurnInfo
-    ) {
-        self.threadID = threadID
-        self.turn = turn
-    }
 }
 
-internal extension CodexTurnHandle.ClosedTurn {
+extension CodexTurnHandle.ClosedTurn {
     init(threadID: String, snapshot: ThreadHistoryStore.ThreadSnapshot.TurnSnapshot) {
         self.init(
             id: snapshot.id,

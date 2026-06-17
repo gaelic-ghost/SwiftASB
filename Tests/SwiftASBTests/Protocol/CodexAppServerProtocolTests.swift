@@ -1,8 +1,8 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
-@Suite("CodexAppServerProtocol", .serialized)
+@Suite(.serialized)
 struct CodexAppServerProtocolTests {
     private let protocolLayer = CodexAppServerProtocol()
 
@@ -61,14 +61,14 @@ struct CodexAppServerProtocolTests {
                 disableOutputCap: nil,
                 disableTimeout: nil,
                 env: nil,
-                outputBytesCap: 16_384,
+                outputBytesCap: 16384,
                 permissionProfile: nil,
                 processID: nil,
                 sandboxPolicy: nil,
                 size: nil,
                 streamStdin: nil,
                 streamStdoutStderr: nil,
-                timeoutMS: 5_000,
+                timeoutMS: 5000,
                 tty: nil
             )
         )
@@ -81,8 +81,8 @@ struct CodexAppServerProtocolTests {
         let params = try #require(object["params"] as? [String: Any])
         #expect(params["command"] as? [String] == ["git", "status", "--short"])
         #expect(params["cwd"] as? String == "/tmp/project")
-        #expect(params["outputBytesCap"] as? Int == 16_384)
-        #expect(params["timeoutMs"] as? Int == 5_000)
+        #expect(params["outputBytesCap"] as? Int == 16384)
+        #expect(params["timeoutMs"] as? Int == 5000)
         #expect(params["permissionProfile"] == nil)
         #expect(params["sandboxPolicy"] == nil)
         #expect(params["processId"] == nil)
@@ -217,6 +217,7 @@ struct CodexAppServerProtocolTests {
                 personality: .friendly,
                 runtimeWorkspaceRoots: nil,
                 sandbox: .workspaceWrite,
+                selectedCapabilityRoots: nil,
                 serviceName: "codex",
                 serviceTier: "fast",
                 sessionStartSource: .clear,
@@ -438,7 +439,7 @@ struct CodexAppServerProtocolTests {
                 objective: "Ship schema promotion",
                 status: .active,
                 threadID: "thread-123",
-                tokenBudget: 20_000
+                tokenBudget: 20000
             )
         )
         let setRequest = try #require(try JSONSerialization.jsonObject(with: setPayload) as? [String: Any])
@@ -926,7 +927,7 @@ struct CodexAppServerProtocolTests {
                         url: nil,
                         path: nil,
                         name: nil
-                    )
+                    ),
                 ],
                 model: "gpt-5.4",
                 outputSchema: .object(["type": .string("object")]),
@@ -1004,7 +1005,7 @@ struct CodexAppServerProtocolTests {
                         url: nil,
                         path: nil,
                         name: nil
-                    )
+                    ),
                 ],
                 threadID: "thread-123"
             )
@@ -1154,7 +1155,7 @@ struct CodexAppServerProtocolTests {
         let response = try protocolLayer.decodeTurnStartResponse(payload, expectedID: .string("turn-1"))
 
         #expect(response.turn.id == "turn-123")
-        #expect(response.turn.startedAt == 1713350002)
+        #expect(response.turn.startedAt == 1_713_350_002)
         #expect(response.turn.completedAt == nil)
         #expect(response.turn.items.isEmpty)
     }
@@ -1196,13 +1197,13 @@ struct CodexAppServerProtocolTests {
         let decodedEvent = try #require(event)
 
         switch decodedEvent {
-        case let .turnCompleted(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turn.id == "turn-123")
-            #expect(notification.turn.status == .completed)
-            #expect(notification.turn.completedAt == 1713350005)
-        default:
-            Issue.record("Expected turn/completed to decode into .turnCompleted.")
+            case let .turnCompleted(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turn.id == "turn-123")
+                #expect(notification.turn.status == .completed)
+                #expect(notification.turn.completedAt == 1_713_350_005)
+            default:
+                Issue.record("Expected turn/completed to decode into .turnCompleted.")
         }
     }
 
@@ -1219,12 +1220,12 @@ struct CodexAppServerProtocolTests {
         )
 
         switch threadStartedEvent {
-        case let .threadStarted(notification):
-            #expect(notification.thread.id == "thread-123")
-            #expect(notification.thread.preview == "Hello")
-            #expect(notification.thread.status.type == .active)
-        default:
-            Issue.record("Expected thread/started to decode into .threadStarted.")
+            case let .threadStarted(notification):
+                #expect(notification.thread.id == "thread-123")
+                #expect(notification.thread.preview == "Hello")
+                #expect(notification.thread.status.type == .active)
+            default:
+                Issue.record("Expected thread/started to decode into .threadStarted.")
         }
 
         let statusChangedPayload = Data(
@@ -1236,12 +1237,12 @@ struct CodexAppServerProtocolTests {
         )
 
         switch statusChangedEvent {
-        case let .threadStatusChanged(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.status.type == .active)
-            #expect(notification.status.activeFlags == [.waitingOnApproval])
-        default:
-            Issue.record("Expected thread/status/changed to decode into .threadStatusChanged.")
+            case let .threadStatusChanged(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.status.type == .active)
+                #expect(notification.status.activeFlags == [.waitingOnApproval])
+            default:
+                Issue.record("Expected thread/status/changed to decode into .threadStatusChanged.")
         }
 
         let archivedPayload = Data(#"{"threadId":"thread-123"}"#.utf8)
@@ -1250,10 +1251,10 @@ struct CodexAppServerProtocolTests {
         )
 
         switch archivedEvent {
-        case let .threadArchived(notification):
-            #expect(notification.threadID == "thread-123")
-        default:
-            Issue.record("Expected thread/archived to decode into .threadArchived.")
+            case let .threadArchived(notification):
+                #expect(notification.threadID == "thread-123")
+            default:
+                Issue.record("Expected thread/archived to decode into .threadArchived.")
         }
 
         let unarchivedPayload = Data(#"{"threadId":"thread-123"}"#.utf8)
@@ -1262,10 +1263,10 @@ struct CodexAppServerProtocolTests {
         )
 
         switch unarchivedEvent {
-        case let .threadUnarchived(notification):
-            #expect(notification.threadID == "thread-123")
-        default:
-            Issue.record("Expected thread/unarchived to decode into .threadUnarchived.")
+            case let .threadUnarchived(notification):
+                #expect(notification.threadID == "thread-123")
+            default:
+                Issue.record("Expected thread/unarchived to decode into .threadUnarchived.")
         }
 
         let closedPayload = Data(#"{"threadId":"thread-123"}"#.utf8)
@@ -1274,10 +1275,10 @@ struct CodexAppServerProtocolTests {
         )
 
         switch closedEvent {
-        case let .threadClosed(notification):
-            #expect(notification.threadID == "thread-123")
-        default:
-            Issue.record("Expected thread/closed to decode into .threadClosed.")
+            case let .threadClosed(notification):
+                #expect(notification.threadID == "thread-123")
+            default:
+                Issue.record("Expected thread/closed to decode into .threadClosed.")
         }
 
         let nameUpdatedPayload = Data(
@@ -1289,11 +1290,11 @@ struct CodexAppServerProtocolTests {
         )
 
         switch nameUpdatedEvent {
-        case let .threadNameUpdated(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.threadName == "Planning Thread")
-        default:
-            Issue.record("Expected thread/name/updated to decode into .threadNameUpdated.")
+            case let .threadNameUpdated(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.threadName == "Planning Thread")
+            default:
+                Issue.record("Expected thread/name/updated to decode into .threadNameUpdated.")
         }
 
         let tokenUsageUpdatedPayload = Data(
@@ -1307,13 +1308,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch tokenUsageUpdatedEvent {
-        case let .threadTokenUsageUpdated(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-            #expect(notification.tokenUsage.last.totalTokens == 65)
-            #expect(notification.tokenUsage.total.totalTokens == 650)
-        default:
-            Issue.record("Expected thread/tokenUsage/updated to decode into .threadTokenUsageUpdated.")
+            case let .threadTokenUsageUpdated(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+                #expect(notification.tokenUsage.last.totalTokens == 65)
+                #expect(notification.tokenUsage.total.totalTokens == 650)
+            default:
+                Issue.record("Expected thread/tokenUsage/updated to decode into .threadTokenUsageUpdated.")
         }
     }
 
@@ -1328,11 +1329,11 @@ struct CodexAppServerProtocolTests {
             )
         )
         switch configWarningEvent {
-        case let .configWarning(notification):
-            #expect(notification.summary == "Config key is ignored.")
-            #expect(notification.range?.start.line == 2)
-        default:
-            Issue.record("Expected config/warning to decode into .configWarning.")
+            case let .configWarning(notification):
+                #expect(notification.summary == "Config key is ignored.")
+                #expect(notification.range?.start.line == 2)
+            default:
+                Issue.record("Expected config/warning to decode into .configWarning.")
         }
 
         let mcpStatusEvent = try #require(
@@ -1342,11 +1343,11 @@ struct CodexAppServerProtocolTests {
             )
         )
         switch mcpStatusEvent {
-        case let .mcpServerStatusUpdated(notification):
-            #expect(notification.name == "calendar")
-            #expect(notification.status == .ready)
-        default:
-            Issue.record("Expected mcpServer/startupStatus/updated to decode into .mcpServerStatusUpdated.")
+            case let .mcpServerStatusUpdated(notification):
+                #expect(notification.name == "calendar")
+                #expect(notification.status == .ready)
+            default:
+                Issue.record("Expected mcpServer/startupStatus/updated to decode into .mcpServerStatusUpdated.")
         }
 
         let remoteStatusEvent = try #require(
@@ -1356,13 +1357,13 @@ struct CodexAppServerProtocolTests {
             )
         )
         switch remoteStatusEvent {
-        case let .remoteControlStatusChanged(notification):
-            #expect(notification.environmentID == "env-123")
-            #expect(notification.installationID == "install-123")
-            #expect(notification.serverName == "desktop")
-            #expect(notification.status == .connected)
-        default:
-            Issue.record("Expected remoteControl/status/changed to decode into .remoteControlStatusChanged.")
+            case let .remoteControlStatusChanged(notification):
+                #expect(notification.environmentID == "env-123")
+                #expect(notification.installationID == "install-123")
+                #expect(notification.serverName == "desktop")
+                #expect(notification.status == .connected)
+            default:
+                Issue.record("Expected remoteControl/status/changed to decode into .remoteControlStatusChanged.")
         }
 
         let deprecationEvent = try #require(
@@ -1372,30 +1373,30 @@ struct CodexAppServerProtocolTests {
             )
         )
         switch deprecationEvent {
-        case let .deprecationNotice(notification):
-            #expect(notification.summary == "Old notification is deprecated.")
-        default:
-            Issue.record("Expected deprecation/notice to decode into .deprecationNotice.")
+            case let .deprecationNotice(notification):
+                #expect(notification.summary == "Old notification is deprecated.")
+            default:
+                Issue.record("Expected deprecation/notice to decode into .deprecationNotice.")
         }
 
         let skillsEvent = try #require(
             try decodeEvent(method: "skills/changed", payload: Data(#"{}"#.utf8))
         )
         switch skillsEvent {
-        case let .skillsChanged(payload):
-            #expect(payload.isEmpty)
-        default:
-            Issue.record("Expected skills/changed to decode into .skillsChanged.")
+            case let .skillsChanged(payload):
+                #expect(payload.isEmpty)
+            default:
+                Issue.record("Expected skills/changed to decode into .skillsChanged.")
         }
 
         let appListEvent = try #require(
             try decodeEvent(method: "app/list/updated", payload: Data(#"{"data":[]}"#.utf8))
         )
         switch appListEvent {
-        case let .appListUpdated(notification):
-            #expect(notification.data.isEmpty)
-        default:
-            Issue.record("Expected app/list/updated to decode into .appListUpdated.")
+            case let .appListUpdated(notification):
+                #expect(notification.data.isEmpty)
+            default:
+                Issue.record("Expected app/list/updated to decode into .appListUpdated.")
         }
     }
 
@@ -1412,12 +1413,12 @@ struct CodexAppServerProtocolTests {
         )
 
         switch turnStartedEvent {
-        case let .turnStarted(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turn.id == "turn-123")
-            #expect(notification.turn.status == .inProgress)
-        default:
-            Issue.record("Expected turn/started to decode into .turnStarted.")
+            case let .turnStarted(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turn.id == "turn-123")
+                #expect(notification.turn.status == .inProgress)
+            default:
+                Issue.record("Expected turn/started to decode into .turnStarted.")
         }
 
         let turnDiffUpdatedPayload = Data(
@@ -1429,12 +1430,12 @@ struct CodexAppServerProtocolTests {
         )
 
         switch turnDiffUpdatedEvent {
-        case let .turnDiffUpdated(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-            #expect(notification.diff == "diff --git a/file.txt b/file.txt")
-        default:
-            Issue.record("Expected turn/diff/updated to decode into .turnDiffUpdated.")
+            case let .turnDiffUpdated(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+                #expect(notification.diff == "diff --git a/file.txt b/file.txt")
+            default:
+                Issue.record("Expected turn/diff/updated to decode into .turnDiffUpdated.")
         }
 
         let turnPlanUpdatedPayload = Data(
@@ -1448,15 +1449,15 @@ struct CodexAppServerProtocolTests {
         )
 
         switch turnPlanUpdatedEvent {
-        case let .turnPlanUpdated(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-            #expect(notification.explanation == "Investigating protocol mapping.")
-            #expect(notification.plan.count == 2)
-            #expect(notification.plan.first?.status == .inProgress)
-            #expect(notification.plan.last?.status == .pending)
-        default:
-            Issue.record("Expected turn/plan/updated to decode into .turnPlanUpdated.")
+            case let .turnPlanUpdated(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+                #expect(notification.explanation == "Investigating protocol mapping.")
+                #expect(notification.plan.count == 2)
+                #expect(notification.plan.first?.status == .inProgress)
+                #expect(notification.plan.last?.status == .pending)
+            default:
+                Issue.record("Expected turn/plan/updated to decode into .turnPlanUpdated.")
         }
     }
 
@@ -1471,13 +1472,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch itemStartedEvent {
-        case let .itemStarted(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-            #expect(notification.item.id == "item-123")
-            #expect(notification.item.type == .plan)
-        default:
-            Issue.record("Expected item/started to decode into .itemStarted.")
+            case let .itemStarted(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+                #expect(notification.item.id == "item-123")
+                #expect(notification.item.type == .plan)
+            default:
+                Issue.record("Expected item/started to decode into .itemStarted.")
         }
 
         let itemCompletedPayload = Data(
@@ -1489,13 +1490,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch itemCompletedEvent {
-        case let .itemCompleted(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-            #expect(notification.item.type == .agentMessage)
-            #expect(notification.item.text == "Done.")
-        default:
-            Issue.record("Expected item/completed to decode into .itemCompleted.")
+            case let .itemCompleted(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+                #expect(notification.item.type == .agentMessage)
+                #expect(notification.item.text == "Done.")
+            default:
+                Issue.record("Expected item/completed to decode into .itemCompleted.")
         }
 
         let autoReviewStartedPayload = Data(
@@ -1509,19 +1510,19 @@ struct CodexAppServerProtocolTests {
         )
 
         switch autoReviewStartedEvent {
-        case let .itemGuardianApprovalReviewStarted(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-            #expect(notification.targetItemID == "item-command-1")
-            #expect(notification.reviewID == "review-123")
-            #expect(notification.startedAtMS == 1_713_350_002_000)
-            #expect(notification.action.type == .command)
-            #expect(notification.action.command == "git status")
-            #expect(notification.action.source == .shell)
-            #expect(notification.review.status == .inProgress)
-            #expect(notification.review.riskLevel == .low)
-        default:
-            Issue.record("Expected item/autoApprovalReview/started to decode into .itemGuardianApprovalReviewStarted.")
+            case let .itemGuardianApprovalReviewStarted(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+                #expect(notification.targetItemID == "item-command-1")
+                #expect(notification.reviewID == "review-123")
+                #expect(notification.startedAtMS == 1_713_350_002_000)
+                #expect(notification.action.type == .command)
+                #expect(notification.action.command == "git status")
+                #expect(notification.action.source == .shell)
+                #expect(notification.review.status == .inProgress)
+                #expect(notification.review.riskLevel == .low)
+            default:
+                Issue.record("Expected item/autoApprovalReview/started to decode into .itemGuardianApprovalReviewStarted.")
         }
 
         let autoReviewCompletedPayload = Data(
@@ -1535,22 +1536,22 @@ struct CodexAppServerProtocolTests {
         )
 
         switch autoReviewCompletedEvent {
-        case let .itemGuardianApprovalReviewCompleted(completion):
-            let notification = completion.notification
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-            #expect(notification.targetItemID == nil)
-            #expect(notification.reviewID == "review-124")
-            #expect(notification.startedAtMS == 1_713_350_002_000)
-            #expect(notification.completedAtMS == 1_713_350_003_000)
-            #expect(notification.decisionSource == .agent)
-            #expect(notification.action.type == .networkAccess)
-            #expect(notification.action.host == "api.example.com")
-            #expect(notification.action.guardianApprovalReviewActionProtocol == .https)
-            #expect(notification.review.status == .approved)
-            #expect(notification.review.userAuthorization == .high)
-        default:
-            Issue.record("Expected item/autoApprovalReview/completed to decode into .itemGuardianApprovalReviewCompleted.")
+            case let .itemGuardianApprovalReviewCompleted(completion):
+                let notification = completion.notification
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+                #expect(notification.targetItemID == nil)
+                #expect(notification.reviewID == "review-124")
+                #expect(notification.startedAtMS == 1_713_350_002_000)
+                #expect(notification.completedAtMS == 1_713_350_003_000)
+                #expect(notification.decisionSource == .agent)
+                #expect(notification.action.type == .networkAccess)
+                #expect(notification.action.host == "api.example.com")
+                #expect(notification.action.guardianApprovalReviewActionProtocol == .https)
+                #expect(notification.review.status == .approved)
+                #expect(notification.review.userAuthorization == .high)
+            default:
+                Issue.record("Expected item/autoApprovalReview/completed to decode into .itemGuardianApprovalReviewCompleted.")
         }
 
         let agentMessageDeltaPayload = Data(
@@ -1562,13 +1563,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch agentMessageDeltaEvent {
-        case let .agentMessageDelta(notification):
-            #expect(notification.delta == "Hello there")
-            #expect(notification.itemID == "item-123")
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-        default:
-            Issue.record("Expected item/agentMessage/delta to decode into .agentMessageDelta.")
+            case let .agentMessageDelta(notification):
+                #expect(notification.delta == "Hello there")
+                #expect(notification.itemID == "item-123")
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+            default:
+                Issue.record("Expected item/agentMessage/delta to decode into .agentMessageDelta.")
         }
 
         let planDeltaPayload = Data(
@@ -1580,13 +1581,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch planDeltaEvent {
-        case let .planDelta(notification):
-            #expect(notification.delta == "Decode protocol events")
-            #expect(notification.itemID == "item-456")
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-        default:
-            Issue.record("Expected item/plan/delta to decode into .planDelta.")
+            case let .planDelta(notification):
+                #expect(notification.delta == "Decode protocol events")
+                #expect(notification.itemID == "item-456")
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+            default:
+                Issue.record("Expected item/plan/delta to decode into .planDelta.")
         }
 
         let fileChangeDeltaPayload = Data(
@@ -1598,13 +1599,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch fileChangeDeltaEvent {
-        case let .fileChangeOutputDelta(notification):
-            #expect(notification.delta.contains("+Hello, world"))
-            #expect(notification.itemID == "item-file-1")
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-        default:
-            Issue.record("Expected item/fileChange/outputDelta to decode into .fileChangeOutputDelta.")
+            case let .fileChangeOutputDelta(notification):
+                #expect(notification.delta.contains("+Hello, world"))
+                #expect(notification.itemID == "item-file-1")
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+            default:
+                Issue.record("Expected item/fileChange/outputDelta to decode into .fileChangeOutputDelta.")
         }
 
         let fileChangePatchPayload = Data(
@@ -1618,12 +1619,12 @@ struct CodexAppServerProtocolTests {
         )
 
         switch fileChangePatchEvent {
-        case let .fileChangePatchUpdated(notification):
-            #expect(notification.changes[0].path == "Sources/SwiftASB/File.swift")
-            #expect(notification.changes[0].kind.type == .update)
-            #expect(notification.itemID == "item-file-1")
-        default:
-            Issue.record("Expected item/fileChange/patchUpdated to decode into .fileChangePatchUpdated.")
+            case let .fileChangePatchUpdated(notification):
+                #expect(notification.changes[0].path == "Sources/SwiftASB/File.swift")
+                #expect(notification.changes[0].kind.type == .update)
+                #expect(notification.itemID == "item-file-1")
+            default:
+                Issue.record("Expected item/fileChange/patchUpdated to decode into .fileChangePatchUpdated.")
         }
 
         let commandDeltaPayload = Data(
@@ -1635,13 +1636,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch commandDeltaEvent {
-        case let .commandExecutionOutputDelta(notification):
-            #expect(notification.delta.contains("Cloning into"))
-            #expect(notification.itemID == "item-command-1")
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-        default:
-            Issue.record("Expected item/commandExecution/outputDelta to decode into .commandExecutionOutputDelta.")
+            case let .commandExecutionOutputDelta(notification):
+                #expect(notification.delta.contains("Cloning into"))
+                #expect(notification.itemID == "item-command-1")
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+            default:
+                Issue.record("Expected item/commandExecution/outputDelta to decode into .commandExecutionOutputDelta.")
         }
     }
 
@@ -1656,11 +1657,11 @@ struct CodexAppServerProtocolTests {
         )
 
         switch warningEvent {
-        case let .warning(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.message == "Runtime configuration is using a fallback.")
-        default:
-            Issue.record("Expected warning to decode into .warning.")
+            case let .warning(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.message == "Runtime configuration is using a fallback.")
+            default:
+                Issue.record("Expected warning to decode into .warning.")
         }
 
         let guardianWarningPayload = Data(
@@ -1672,11 +1673,11 @@ struct CodexAppServerProtocolTests {
         )
 
         switch guardianWarningEvent {
-        case let .guardianWarning(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.message == "Guardian flagged this session for review.")
-        default:
-            Issue.record("Expected guardianWarning to decode into .guardianWarning.")
+            case let .guardianWarning(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.message == "Guardian flagged this session for review.")
+            default:
+                Issue.record("Expected guardianWarning to decode into .guardianWarning.")
         }
 
         let modelReroutedPayload = Data(
@@ -1688,14 +1689,14 @@ struct CodexAppServerProtocolTests {
         )
 
         switch modelReroutedEvent {
-        case let .modelRerouted(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-            #expect(notification.fromModel == "gpt-5.4")
-            #expect(notification.toModel == "gpt-5.4-safe")
-            #expect(notification.reason == .highRiskCyberActivity)
-        default:
-            Issue.record("Expected model/rerouted to decode into .modelRerouted.")
+            case let .modelRerouted(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+                #expect(notification.fromModel == "gpt-5.4")
+                #expect(notification.toModel == "gpt-5.4-safe")
+                #expect(notification.reason == .highRiskCyberActivity)
+            default:
+                Issue.record("Expected model/rerouted to decode into .modelRerouted.")
         }
 
         let modelVerificationPayload = Data(
@@ -1707,12 +1708,12 @@ struct CodexAppServerProtocolTests {
         )
 
         switch modelVerificationEvent {
-        case let .modelVerification(notification):
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-            #expect(notification.verifications == [.trustedAccessForCyber])
-        default:
-            Issue.record("Expected model/verification to decode into .modelVerification.")
+            case let .modelVerification(notification):
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+                #expect(notification.verifications == [.trustedAccessForCyber])
+            default:
+                Issue.record("Expected model/verification to decode into .modelVerification.")
         }
     }
 
@@ -1735,17 +1736,17 @@ struct CodexAppServerProtocolTests {
         )
 
         switch commandApprovalEvent {
-        case let .commandExecutionApprovalRequested(request):
-            #expect(request.requestID == .string("approval-1"))
-            #expect(request.threadID == "thread-123")
-            #expect(request.turnID == "turn-123")
-            #expect(request.itemID == "item-command-1")
-            #expect(request.command == "git status")
-            let amendment = try #require(request.proposedNetworkPolicyAmendments?.first)
-            #expect(amendment.publicValue.action == .unknown("audit"))
-            #expect(amendment.publicValue.host == "example.com")
-        default:
-            Issue.record("Expected command approval server request to decode into .commandExecutionApprovalRequested.")
+            case let .commandExecutionApprovalRequested(request):
+                #expect(request.requestID == .string("approval-1"))
+                #expect(request.threadID == "thread-123")
+                #expect(request.turnID == "turn-123")
+                #expect(request.itemID == "item-command-1")
+                #expect(request.command == "git status")
+                let amendment = try #require(request.proposedNetworkPolicyAmendments?.first)
+                #expect(amendment.publicValue.action == .unknown("audit"))
+                #expect(amendment.publicValue.host == "example.com")
+            default:
+                Issue.record("Expected command approval server request to decode into .commandExecutionApprovalRequested.")
         }
 
         let toolInputPayload = Data(
@@ -1765,13 +1766,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch toolInputEvent {
-        case let .toolUserInputRequested(request):
-            #expect(request.requestID == .string("input-1"))
-            #expect(request.questions.count == 1)
-            #expect(request.questions[0].isOther == false)
-            #expect(request.questions[0].isSecret == false)
-        default:
-            Issue.record("Expected tool user input server request to decode into .toolUserInputRequested.")
+            case let .toolUserInputRequested(request):
+                #expect(request.requestID == .string("input-1"))
+                #expect(request.questions.count == 1)
+                #expect(request.questions[0].isOther == false)
+                #expect(request.questions[0].isSecret == false)
+            default:
+                Issue.record("Expected tool user input server request to decode into .toolUserInputRequested.")
         }
 
         let mcpPayload = Data(
@@ -1791,13 +1792,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch mcpEvent {
-        case let .mcpServerElicitationRequested(request):
-            #expect(request.requestID == .string("mcp-1"))
-            #expect(request.serverName == "calendar")
-            #expect(request.threadID == "thread-123")
-            #expect(request.turnID == nil)
-        default:
-            Issue.record("Expected MCP elicitation server request to decode into .mcpServerElicitationRequested.")
+            case let .mcpServerElicitationRequested(request):
+                #expect(request.requestID == .string("mcp-1"))
+                #expect(request.serverName == "calendar")
+                #expect(request.threadID == "thread-123")
+                #expect(request.turnID == nil)
+            default:
+                Issue.record("Expected MCP elicitation server request to decode into .mcpServerElicitationRequested.")
         }
     }
 
@@ -2014,13 +2015,13 @@ struct CodexAppServerProtocolTests {
         )
 
         switch summaryPartAddedEvent {
-        case let .reasoningSummaryPartAdded(notification):
-            #expect(notification.itemID == "item-123")
-            #expect(notification.summaryIndex == 1)
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-        default:
-            Issue.record("Expected item/reasoning/summaryPartAdded to decode into .reasoningSummaryPartAdded.")
+            case let .reasoningSummaryPartAdded(notification):
+                #expect(notification.itemID == "item-123")
+                #expect(notification.summaryIndex == 1)
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+            default:
+                Issue.record("Expected item/reasoning/summaryPartAdded to decode into .reasoningSummaryPartAdded.")
         }
 
         let summaryTextDeltaPayload = Data(
@@ -2032,12 +2033,12 @@ struct CodexAppServerProtocolTests {
         )
 
         switch summaryTextDeltaEvent {
-        case let .reasoningSummaryTextDelta(notification):
-            #expect(notification.delta == "refining the plan")
-            #expect(notification.itemID == "item-123")
-            #expect(notification.summaryIndex == 1)
-        default:
-            Issue.record("Expected item/reasoning/summaryTextDelta to decode into .reasoningSummaryTextDelta.")
+            case let .reasoningSummaryTextDelta(notification):
+                #expect(notification.delta == "refining the plan")
+                #expect(notification.itemID == "item-123")
+                #expect(notification.summaryIndex == 1)
+            default:
+                Issue.record("Expected item/reasoning/summaryTextDelta to decode into .reasoningSummaryTextDelta.")
         }
 
         let reasoningTextDeltaPayload = Data(
@@ -2049,14 +2050,14 @@ struct CodexAppServerProtocolTests {
         )
 
         switch reasoningTextDeltaEvent {
-        case let .reasoningTextDelta(notification):
-            #expect(notification.contentIndex == 0)
-            #expect(notification.delta == "thinking...")
-            #expect(notification.itemID == "item-123")
-            #expect(notification.threadID == "thread-123")
-            #expect(notification.turnID == "turn-123")
-        default:
-            Issue.record("Expected item/reasoning/textDelta to decode into .reasoningTextDelta.")
+            case let .reasoningTextDelta(notification):
+                #expect(notification.contentIndex == 0)
+                #expect(notification.delta == "thinking...")
+                #expect(notification.itemID == "item-123")
+                #expect(notification.threadID == "thread-123")
+                #expect(notification.turnID == "turn-123")
+            default:
+                Issue.record("Expected item/reasoning/textDelta to decode into .reasoningTextDelta.")
         }
     }
 
@@ -2066,5 +2067,4 @@ struct CodexAppServerProtocolTests {
     ) throws -> CodexAppServerProtocolEvent? {
         try protocolLayer.decodeServerEvent(.notification(method: method, payload: payload))
     }
-
 }

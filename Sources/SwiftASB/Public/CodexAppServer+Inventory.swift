@@ -5,14 +5,14 @@ private func snapshotResult<Value: Sendable>(
     _ operation: @Sendable () async throws -> Value
 ) async -> Result<Value, Error> {
     do {
-        return .success(try await operation())
+        return try .success(await operation())
     } catch {
         return .failure(error)
     }
 }
 
 extension CodexAppServer {
-    internal struct AppInventoryReadRequest: Sendable, Equatable {
+    struct AppInventoryReadRequest: Equatable {
         var appListLimit: Int?
         var extensionCurrentDirectoryPaths: [String]?
         var hookListCurrentDirectoryPaths: [String]?
@@ -31,7 +31,7 @@ extension CodexAppServer {
         }
     }
 
-    internal struct AppInventorySnapshot: Sendable, Equatable {
+    struct AppInventorySnapshot: Equatable {
         var appListPage: SwiftASB.CodexExtensions.AppListPage?
         var collaborationModes: SwiftASB.CodexExtensions.CollaborationModeList?
         var errorDescriptions: [String] = []
@@ -46,7 +46,7 @@ extension CodexAppServer {
         }
     }
 
-    internal func readAppInventorySnapshot(
+    func readAppInventorySnapshot(
         _ request: AppInventoryReadRequest
     ) async -> AppInventorySnapshot {
         async let capabilitiesResult = snapshotResult {
@@ -115,10 +115,10 @@ private extension CodexAppServer.AppInventorySnapshot {
         to keyPath: WritableKeyPath<Self, Value?>
     ) {
         switch result {
-        case let .success(value):
-            self[keyPath: keyPath] = value
-        case let .failure(error):
-            errorDescriptions.append(error.localizedDescription)
+            case let .success(value):
+                self[keyPath: keyPath] = value
+            case let .failure(error):
+                errorDescriptions.append(error.localizedDescription)
         }
     }
 
@@ -127,10 +127,10 @@ private extension CodexAppServer.AppInventorySnapshot {
         to keyPath: WritableKeyPath<Self, Value?>
     ) {
         switch result {
-        case let .success(value):
-            self[keyPath: keyPath] = value
-        case let .failure(error):
-            errorDescriptions.append(error.localizedDescription)
+            case let .success(value):
+                self[keyPath: keyPath] = value
+            case let .failure(error):
+                errorDescriptions.append(error.localizedDescription)
         }
     }
 }
@@ -175,6 +175,21 @@ public extension CodexExtensions {
         public private(set) var pluginListSnapshot: SwiftASB.CodexExtensions.PluginListSnapshot?
         public private(set) var skillListSnapshot: SwiftASB.CodexExtensions.SkillListSnapshot?
 
+        @ObservationIgnored
+        private let appServer: CodexAppServer
+
+        @ObservationIgnored
+        private let configuration: Configuration
+
+        @ObservationIgnored
+        private var eventTask: Task<Void, Never>?
+
+        @ObservationIgnored
+        private var refreshTask: Task<Void, Never>?
+
+        @ObservationIgnored
+        private var pendingRefresh = false
+
         public var apps: [SwiftASB.CodexExtensions.AppInfo] {
             appListPage?.apps ?? []
         }
@@ -195,38 +210,23 @@ public extension CodexExtensions {
             collaborationModes?.modes ?? []
         }
 
-        @ObservationIgnored
-        private let appServer: CodexAppServer
-
-        @ObservationIgnored
-        private let configuration: Configuration
-
-        @ObservationIgnored
-        private var eventTask: Task<Void, Never>?
-
-        @ObservationIgnored
-        private var refreshTask: Task<Void, Never>?
-
-        @ObservationIgnored
-        private var pendingRefresh = false
-
-        internal init(
+        init(
             appServer: CodexAppServer,
             configuration: Configuration
         ) {
             self.appServer = appServer
             self.configuration = configuration
-            self.appListPage = nil
-            self.collaborationModes = nil
-            self.hookListSnapshot = nil
-            self.lastRefreshedAt = nil
-            self.latestErrorDescription = nil
-            self.mcpServerNextCursor = nil
-            self.mcpServers = []
-            self.modelCapabilities = nil
-            self.phase = .idle
-            self.pluginListSnapshot = nil
-            self.skillListSnapshot = nil
+            appListPage = nil
+            collaborationModes = nil
+            hookListSnapshot = nil
+            lastRefreshedAt = nil
+            latestErrorDescription = nil
+            mcpServerNextCursor = nil
+            mcpServers = []
+            modelCapabilities = nil
+            phase = .idle
+            pluginListSnapshot = nil
+            skillListSnapshot = nil
 
             if configuration.loadsOnCreation {
                 refreshTask = Task { [weak self] in await self?.refresh() }
@@ -302,6 +302,7 @@ public extension CodexExtensions {
         private func startEventTask() {
             eventTask = Task { [weak self] in
                 guard let self else { return }
+
                 let events = await appServer.libraryEvents()
                 for await event in events {
                     if Task.isCancelled {

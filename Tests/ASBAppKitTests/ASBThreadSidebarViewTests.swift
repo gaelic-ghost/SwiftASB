@@ -2,7 +2,6 @@
 import ASBPresentation
 import Testing
 
-@Suite("ASBThreadSidebarView")
 @MainActor
 struct ASBThreadSidebarViewTests {
     @Test("adapter maps presentation sections into outline rows")

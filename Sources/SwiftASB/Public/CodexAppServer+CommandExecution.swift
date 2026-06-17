@@ -1,7 +1,7 @@
 import Foundation
 
 extension CodexAppServer {
-    struct CommandExecRequest: Sendable, Equatable {
+    struct CommandExecRequest: Equatable {
         var command: [String]
         var currentDirectoryPath: String?
         var environment: [String: String?]
@@ -23,10 +23,9 @@ extension CodexAppServer {
         }
     }
 
-    struct CommandExecResult: Sendable, Equatable {
+    struct CommandExecResult: Equatable {
         var exitCode: Int
         var stdout: String
         var stderr: String
     }
-
 }

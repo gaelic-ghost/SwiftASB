@@ -1,8 +1,8 @@
 import Foundation
 
-extension CodexAppServer {
+public extension CodexAppServer {
     /// Compatibility policy applied by the ergonomic startup call.
-    public enum StartupCompatibilityPolicy: Sendable, Equatable {
+    enum StartupCompatibilityPolicy: Sendable, Equatable {
         /// Require the selected Codex CLI version to be inside SwiftASB's
         /// documented reviewed support window before initializing.
         case requireReviewedSupportWindow
@@ -13,7 +13,7 @@ extension CodexAppServer {
     }
 
     /// One-call startup request for launching and initializing the app-server.
-    public struct StartupRequest: Sendable, Equatable {
+    struct StartupRequest: Sendable, Equatable {
         public var compatibilityPolicy: StartupCompatibilityPolicy
         public var initializeRequest: InitializeRequest
 
@@ -50,13 +50,13 @@ extension CodexAppServer {
     }
 
     /// Successful one-call startup result.
-    public struct StartupSession: Sendable, Equatable {
+    struct StartupSession: Sendable, Equatable {
         public let cliExecutableDiagnostics: CLIExecutableDiagnostics
         public let initializeSession: InitializeSession
     }
 
     /// Diagnostics for the local Codex executable selected at startup.
-    public struct CLIExecutableDiagnostics: Sendable, Equatable {
+    struct CLIExecutableDiagnostics: Sendable, Equatable {
         /// Local install location SwiftASB used to find the Codex executable.
         public enum Source: Sendable, Equatable {
             case explicit
@@ -80,7 +80,7 @@ extension CodexAppServer {
     }
 
     /// Runtime configuration used when SwiftASB launches the local Codex app-server.
-    public struct Configuration: Sendable, Equatable {
+    struct Configuration: Sendable, Equatable {
         public var codexExecutableURL: URL?
         public var arguments: [String]
         public var currentDirectoryURL: URL?
@@ -111,7 +111,7 @@ extension CodexAppServer {
     }
 
     /// Client handshake payload sent to Codex after the app-server process starts.
-    public struct InitializeRequest: Sendable, Equatable {
+    struct InitializeRequest: Sendable, Equatable {
         public var capabilities: InitializeCapabilities
         public var clientInfo: ClientInfo
 
@@ -129,7 +129,7 @@ extension CodexAppServer {
     }
 
     /// Optional client capabilities advertised during initialization.
-    public struct InitializeCapabilities: Sendable, Equatable {
+    struct InitializeCapabilities: Sendable, Equatable {
         public var experimentalAPI: Bool?
         public var optOutNotificationMethods: [String]?
 
@@ -147,7 +147,7 @@ extension CodexAppServer {
     }
 
     /// Identifies the SwiftASB consumer during initialization.
-    public struct ClientInfo: Sendable, Equatable {
+    struct ClientInfo: Sendable, Equatable {
         public var name: String
         public var title: String?
         public var version: String
@@ -167,11 +167,10 @@ extension CodexAppServer {
     }
 
     /// Session metadata returned by the app-server after initialization.
-    public struct InitializeSession: Sendable, Equatable {
+    struct InitializeSession: Sendable, Equatable {
         public let codexHome: String
         public let platformFamily: String
         public let platformOS: String
         public let userAgent: String
     }
-
 }

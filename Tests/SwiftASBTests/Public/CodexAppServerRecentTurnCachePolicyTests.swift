@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("loads older recent turns from the local history store before app-server fallback")
@@ -72,12 +72,12 @@ extension CodexAppServerTests {
                     "backwardsCursor": "cursor-newer-1",
                     "data": [
                         [
-                            "completedAt": 1713350300,
+                            "completedAt": 1_713_350_300,
                             "durationMs": 2500,
                             "error": NSNull(),
                             "id": "turn-3",
                             "items": [],
-                            "startedAt": 1713350250,
+                            "startedAt": 1_713_350_250,
                             "status": "completed",
                         ],
                     ],
@@ -87,12 +87,12 @@ extension CodexAppServerTests {
                     "backwardsCursor": "cursor-newer-2",
                     "data": [
                         [
-                            "completedAt": 1713350005,
+                            "completedAt": 1_713_350_005,
                             "durationMs": 2500,
                             "error": NSNull(),
                             "id": "turn-0",
                             "items": [],
-                            "startedAt": 1713350000,
+                            "startedAt": 1_713_350_000,
                             "status": "completed",
                         ],
                     ],
@@ -134,33 +134,33 @@ extension CodexAppServerTests {
             turns: [
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350300,
+                        completedAt: 1_713_350_300,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-3",
-                        startedAt: 1713350250,
+                        startedAt: 1_713_350_250,
                         status: .completed
                     ),
                     items: []
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350200,
+                        completedAt: 1_713_350_200,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-2",
-                        startedAt: 1713350150,
+                        startedAt: 1_713_350_150,
                         status: .completed
                     ),
                     items: []
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350100,
+                        completedAt: 1_713_350_100,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-1",
-                        startedAt: 1713350050,
+                        startedAt: 1_713_350_050,
                         status: .completed
                     ),
                     items: []
@@ -211,12 +211,12 @@ extension CodexAppServerTests {
                     "backwardsCursor": "cursor-newer-1",
                     "data": [
                         [
-                            "completedAt": 1713350300,
+                            "completedAt": 1_713_350_300,
                             "durationMs": 2500,
                             "error": NSNull(),
                             "id": "turn-3",
                             "items": [],
-                            "startedAt": 1713350250,
+                            "startedAt": 1_713_350_250,
                             "status": "completed",
                         ],
                     ],
@@ -226,12 +226,12 @@ extension CodexAppServerTests {
                     "backwardsCursor": "cursor-newer-2",
                     "data": [
                         [
-                            "completedAt": 1713350005,
+                            "completedAt": 1_713_350_005,
                             "durationMs": 2500,
                             "error": NSNull(),
                             "id": "turn-0",
                             "items": [],
-                            "startedAt": 1713350000,
+                            "startedAt": 1_713_350_000,
                             "status": "completed",
                         ],
                     ],
@@ -273,33 +273,33 @@ extension CodexAppServerTests {
             turns: [
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350300,
+                        completedAt: 1_713_350_300,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-3",
-                        startedAt: 1713350250,
+                        startedAt: 1_713_350_250,
                         status: .completed
                     ),
                     items: []
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350200,
+                        completedAt: 1_713_350_200,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-2",
-                        startedAt: 1713350150,
+                        startedAt: 1_713_350_150,
                         status: .completed
                     ),
                     items: []
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350100,
+                        completedAt: 1_713_350_100,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-1",
-                        startedAt: 1713350050,
+                        startedAt: 1_713_350_050,
                         status: .completed
                     ),
                     items: []
@@ -352,30 +352,30 @@ extension CodexAppServerTests {
                 "backwardsCursor": "cursor-newer-1",
                 "data": [
                     [
-                        "completedAt": 1713350300,
+                        "completedAt": 1_713_350_300,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-3",
                         "items": [],
-                        "startedAt": 1713350250,
+                        "startedAt": 1_713_350_250,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350200,
+                        "completedAt": 1_713_350_200,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-2",
                         "items": [],
-                        "startedAt": 1713350150,
+                        "startedAt": 1_713_350_150,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350100,
+                        "completedAt": 1_713_350_100,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-1",
                         "items": [],
-                        "startedAt": 1713350050,
+                        "startedAt": 1_713_350_050,
                         "status": "completed",
                     ],
                 ],
@@ -418,33 +418,33 @@ extension CodexAppServerTests {
             turns: [
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350300,
+                        completedAt: 1_713_350_300,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-3",
-                        startedAt: 1713350250,
+                        startedAt: 1_713_350_250,
                         status: .completed
                     ),
                     items: []
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350200,
+                        completedAt: 1_713_350_200,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-2",
-                        startedAt: 1713350150,
+                        startedAt: 1_713_350_150,
                         status: .completed
                     ),
                     items: []
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350100,
+                        completedAt: 1_713_350_100,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-1",
-                        startedAt: 1713350050,
+                        startedAt: 1_713_350_050,
                         status: .completed
                     ),
                     items: []
@@ -501,5 +501,4 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
-
 }

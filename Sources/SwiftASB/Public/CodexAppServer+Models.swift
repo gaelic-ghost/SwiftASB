@@ -65,7 +65,6 @@ public extension CodexAppServer {
         public let description: String
         public let reasoningEffort: ReasoningEffort
     }
-
 }
 
 extension CodexAppServer.Model {
@@ -108,10 +107,10 @@ extension CodexAppServer.ModelAvailabilityNux {
 extension CodexAppServer.InputModality {
     init(wireValue: CodexWireInputModality) {
         switch wireValue {
-        case .image:
-            self = .image
-        case .text:
-            self = .text
+            case .image:
+                self = .image
+            case .text:
+                self = .text
         }
     }
 }

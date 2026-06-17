@@ -24,29 +24,29 @@ enum CodexProtocolCommandExecutionApprovalDecision: Encodable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
-        case .accept:
-            try container.encode("accept")
-        case .acceptForSession:
-            try container.encode("acceptForSession")
-        case let .acceptWithExecpolicyAmendment(amendment):
-            try container.encode(
-                ["acceptWithExecpolicyAmendment": ["execpolicy_amendment": amendment]]
-            )
-        case let .applyNetworkPolicyAmendment(amendment):
-            try container.encode(
-                [
-                    "applyNetworkPolicyAmendment": [
-                        "network_policy_amendment": [
-                            "action": amendment.action.wireValue,
-                            "host": amendment.host,
-                        ]
+            case .accept:
+                try container.encode("accept")
+            case .acceptForSession:
+                try container.encode("acceptForSession")
+            case let .acceptWithExecpolicyAmendment(amendment):
+                try container.encode(
+                    ["acceptWithExecpolicyAmendment": ["execpolicy_amendment": amendment]]
+                )
+            case let .applyNetworkPolicyAmendment(amendment):
+                try container.encode(
+                    [
+                        "applyNetworkPolicyAmendment": [
+                            "network_policy_amendment": [
+                                "action": amendment.action.wireValue,
+                                "host": amendment.host,
+                            ],
+                        ],
                     ]
-                ]
-            )
-        case .decline:
-            try container.encode("decline")
-        case .cancel:
-            try container.encode("cancel")
+                )
+            case .decline:
+                try container.encode("decline")
+            case .cancel:
+                try container.encode("cancel")
         }
     }
 }
@@ -191,18 +191,18 @@ extension CodexGuardianApprovalReviewAction {
 extension CodexGuardianApprovalReviewAction.ActionType {
     init(wireValue: CodexWireGuardianApprovalReviewActionType) {
         switch wireValue {
-        case .applyPatch:
-            self = .applyPatch
-        case .command:
-            self = .command
-        case .execve:
-            self = .execve
-        case .mcpToolCall:
-            self = .mcpToolCall
-        case .networkAccess:
-            self = .networkAccess
-        case .requestPermissions:
-            self = .requestPermissions
+            case .applyPatch:
+                self = .applyPatch
+            case .command:
+                self = .command
+            case .execve:
+                self = .execve
+            case .mcpToolCall:
+                self = .mcpToolCall
+            case .networkAccess:
+                self = .networkAccess
+            case .requestPermissions:
+                self = .requestPermissions
         }
     }
 }
@@ -210,10 +210,10 @@ extension CodexGuardianApprovalReviewAction.ActionType {
 extension CodexGuardianApprovalReviewAction.CommandSource {
     init(wireValue: CodexWireGuardianCommandSource) {
         switch wireValue {
-        case .shell:
-            self = .shell
-        case .unifiedExec:
-            self = .unifiedExec
+            case .shell:
+                self = .shell
+            case .unifiedExec:
+                self = .unifiedExec
         }
     }
 }
@@ -221,14 +221,14 @@ extension CodexGuardianApprovalReviewAction.CommandSource {
 extension CodexGuardianApprovalReviewAction.NetworkProtocol {
     init(wireValue: CodexWireNetworkApprovalProtocol) {
         switch wireValue {
-        case .http:
-            self = .http
-        case .https:
-            self = .https
-        case .socks5TCP:
-            self = .socks5TCP
-        case .socks5UDP:
-            self = .socks5UDP
+            case .http:
+                self = .http
+            case .https:
+                self = .https
+            case .socks5TCP:
+                self = .socks5TCP
+            case .socks5UDP:
+                self = .socks5UDP
         }
     }
 }
@@ -247,14 +247,14 @@ extension CodexGuardianApprovalReview {
 extension CodexGuardianApprovalReview.RiskLevel {
     init(wireValue: CodexWireGuardianRiskLevel) {
         switch wireValue {
-        case .critical:
-            self = .critical
-        case .high:
-            self = .high
-        case .low:
-            self = .low
-        case .medium:
-            self = .medium
+            case .critical:
+                self = .critical
+            case .high:
+                self = .high
+            case .low:
+                self = .low
+            case .medium:
+                self = .medium
         }
     }
 }
@@ -262,16 +262,16 @@ extension CodexGuardianApprovalReview.RiskLevel {
 extension CodexGuardianApprovalReview.Status {
     init(wireValue: CodexWireGuardianApprovalReviewStatus) {
         switch wireValue {
-        case .aborted:
-            self = .aborted
-        case .approved:
-            self = .approved
-        case .denied:
-            self = .denied
-        case .inProgress:
-            self = .inProgress
-        case .timedOut:
-            self = .timedOut
+            case .aborted:
+                self = .aborted
+            case .approved:
+                self = .approved
+            case .denied:
+                self = .denied
+            case .inProgress:
+                self = .inProgress
+            case .timedOut:
+                self = .timedOut
         }
     }
 }
@@ -279,14 +279,14 @@ extension CodexGuardianApprovalReview.Status {
 extension CodexGuardianApprovalReview.UserAuthorization {
     init(wireValue: CodexWireGuardianUserAuthorization) {
         switch wireValue {
-        case .high:
-            self = .high
-        case .low:
-            self = .low
-        case .medium:
-            self = .medium
-        case .unknown:
-            self = .unknown
+            case .high:
+                self = .high
+            case .low:
+                self = .low
+            case .medium:
+                self = .medium
+            case .unknown:
+                self = .unknown
         }
     }
 }
@@ -335,21 +335,21 @@ extension CodexProtocolMCPServerElicitationRequest {
 extension CodexProtocolMCPServerElicitationRequest.Mode {
     var publicValue: CodexMcpServerElicitationRequest.Mode {
         switch self {
-        case let .form(form):
-            .form(
-                .init(
-                    message: form.message,
-                    requestedSchema: .init(wireValue: form.requestedSchema)
+            case let .form(form):
+                .form(
+                    .init(
+                        message: form.message,
+                        requestedSchema: .init(wireValue: form.requestedSchema)
+                    )
                 )
-            )
-        case let .url(prompt):
-            .url(
-                .init(
-                    elicitationID: prompt.elicitationID,
-                    message: prompt.message,
-                    url: prompt.url
+            case let .url(prompt):
+                .url(
+                    .init(
+                        elicitationID: prompt.elicitationID,
+                        message: prompt.message,
+                        url: prompt.url
+                    )
                 )
-            )
         }
     }
 }
@@ -376,14 +376,14 @@ extension CodexProtocolToolUserInputRequest.Question.Option {
 extension CodexProtocolCommandAction {
     var publicValue: CodexCommandAction {
         switch self {
-        case let .read(action):
-            .read(.init(command: action.command, name: action.name, path: action.path))
-        case let .listFiles(action):
-            .listFiles(.init(command: action.command, path: action.path))
-        case let .search(action):
-            .search(.init(command: action.command, path: action.path, query: action.query))
-        case let .unknown(action):
-            .unknown(.init(command: action.command))
+            case let .read(action):
+                .read(.init(command: action.command, name: action.name, path: action.path))
+            case let .listFiles(action):
+                .listFiles(.init(command: action.command, path: action.path))
+            case let .search(action):
+                .search(.init(command: action.command, path: action.path, query: action.query))
+            case let .unknown(action):
+                .unknown(.init(command: action.command))
         }
     }
 }
@@ -410,18 +410,18 @@ extension CodexCommandExecutionApprovalResponse {
     var protocolValue: CodexProtocolCommandExecutionApprovalDecisionPayload {
         let decision: CodexProtocolCommandExecutionApprovalDecision
         switch self {
-        case .accept:
-            decision = .accept
-        case .acceptForSession:
-            decision = .acceptForSession
-        case let .acceptWithExecPolicyAmendment(amendment):
-            decision = .acceptWithExecpolicyAmendment(amendment)
-        case let .applyNetworkPolicyAmendment(amendment):
-            decision = .applyNetworkPolicyAmendment(amendment)
-        case .decline:
-            decision = .decline
-        case .cancel:
-            decision = .cancel
+            case .accept:
+                decision = .accept
+            case .acceptForSession:
+                decision = .acceptForSession
+            case let .acceptWithExecPolicyAmendment(amendment):
+                decision = .acceptWithExecpolicyAmendment(amendment)
+            case let .applyNetworkPolicyAmendment(amendment):
+                decision = .applyNetworkPolicyAmendment(amendment)
+            case .decline:
+                decision = .decline
+            case .cancel:
+                decision = .cancel
         }
 
         return .init(decision: decision)
@@ -467,10 +467,10 @@ extension CodexMcpServerElicitationResponse {
 extension CodexRPCRequestID {
     init(wireValue: CodexWireRequestID) {
         switch wireValue {
-        case let .integer(value):
-            self = .int(value)
-        case let .string(value):
-            self = .string(value)
+            case let .integer(value):
+                self = .int(value)
+            case let .string(value):
+                self = .string(value)
         }
     }
 }

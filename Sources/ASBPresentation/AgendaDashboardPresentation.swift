@@ -10,6 +10,14 @@ public struct AgendaSnapshot: Sendable, Equatable {
     public var proposedPlan: AgendaProposedPlan?
     public var updatedAt: Int?
 
+    public var hasGoal: Bool {
+        !goalTitle.isEmpty
+    }
+
+    public var hasPlan: Bool {
+        currentPlan != nil || proposedPlan != nil
+    }
+
     public init(
         threadID: String? = nil,
         goalTitle: String = "",
@@ -26,14 +34,6 @@ public struct AgendaSnapshot: Sendable, Equatable {
         self.currentPlan = currentPlan
         self.proposedPlan = proposedPlan
         self.updatedAt = updatedAt
-    }
-
-    public var hasGoal: Bool {
-        !goalTitle.isEmpty
-    }
-
-    public var hasPlan: Bool {
-        currentPlan != nil || proposedPlan != nil
     }
 
     @MainActor
@@ -142,18 +142,18 @@ public enum AgendaGoalStatus: String, Sendable, Equatable {
 
     public init(_ status: CodexThread.Goal.Status) {
         switch status {
-        case .active:
-            self = .active
-        case .blocked:
-            self = .blocked
-        case .budgetLimited:
-            self = .budgetLimited
-        case .complete:
-            self = .complete
-        case .paused:
-            self = .paused
-        case .usageLimited:
-            self = .usageLimited
+            case .active:
+                self = .active
+            case .blocked:
+                self = .blocked
+            case .budgetLimited:
+                self = .budgetLimited
+            case .complete:
+                self = .complete
+            case .paused:
+                self = .paused
+            case .usageLimited:
+                self = .usageLimited
         }
     }
 }
@@ -165,12 +165,12 @@ public enum AgendaStepStatus: String, Sendable, Equatable {
 
     public init(_ status: CodexThread.Agenda.Plan.Step.Status) {
         switch status {
-        case .completed:
-            self = .completed
-        case .inProgress:
-            self = .inProgress
-        case .pending:
-            self = .pending
+            case .completed:
+                self = .completed
+            case .inProgress:
+                self = .inProgress
+            case .pending:
+                self = .pending
         }
     }
 }
@@ -261,22 +261,22 @@ public struct DashboardSnapshot: Sendable, Equatable {
 
     private static func describe(_ diagnostic: CodexDiagnosticEvent) -> String {
         switch diagnostic {
-        case let .warning(warning):
-            warning.message
-        case let .guardianWarning(warning):
-            warning.message
-        case let .modelRerouted(reroute):
-            "Model rerouted from \(reroute.fromModel) to \(reroute.toModel)."
-        case .modelVerification:
-            "Model verification updated."
-        case let .configWarning(warning):
-            warning.summary
-        case let .deprecationNotice(notice):
-            notice.summary
-        case let .mcpServerStatusChanged(status):
-            "MCP server \(status.name) status changed to \(status.status.rawValue)."
-        case let .remoteControlStatusChanged(status):
-            "Remote control \(status.serverName) status changed to \(status.status.rawValue)."
+            case let .warning(warning):
+                warning.message
+            case let .guardianWarning(warning):
+                warning.message
+            case let .modelRerouted(reroute):
+                "Model rerouted from \(reroute.fromModel) to \(reroute.toModel)."
+            case .modelVerification:
+                "Model verification updated."
+            case let .configWarning(warning):
+                warning.summary
+            case let .deprecationNotice(notice):
+                notice.summary
+            case let .mcpServerStatusChanged(status):
+                "MCP server \(status.name) status changed to \(status.status.rawValue)."
+            case let .remoteControlStatusChanged(status):
+                "Remote control \(status.serverName) status changed to \(status.status.rawValue)."
         }
     }
 }
@@ -288,12 +288,12 @@ public enum DashboardActivityStatus: String, Sendable, Equatable {
 
     public init(_ status: CodexThread.Dashboard.ActivityStatus) {
         switch status {
-        case .errored:
-            self = .errored
-        case .idle:
-            self = .idle
-        case .inProgress:
-            self = .inProgress
+            case .errored:
+                self = .errored
+            case .idle:
+                self = .idle
+            case .inProgress:
+                self = .inProgress
         }
     }
 }
@@ -308,18 +308,18 @@ public enum DashboardAutoReviewStatus: String, Sendable, Equatable {
 
     public init(_ status: CodexThread.Dashboard.AutoReviewStatus) {
         switch status {
-        case .aborted:
-            self = .aborted
-        case .approved:
-            self = .approved
-        case .denied:
-            self = .denied
-        case .idle:
-            self = .idle
-        case .inProgress:
-            self = .inProgress
-        case .timedOut:
-            self = .timedOut
+            case .aborted:
+                self = .aborted
+            case .approved:
+                self = .approved
+            case .denied:
+                self = .denied
+            case .idle:
+                self = .idle
+            case .inProgress:
+                self = .inProgress
+            case .timedOut:
+                self = .timedOut
         }
     }
 }

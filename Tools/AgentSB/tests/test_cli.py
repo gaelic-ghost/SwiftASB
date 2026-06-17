@@ -19,7 +19,7 @@ def test_cli_inspect_outputs_json(repo_root, capsys):
 
     assert exit_code == 0
     facts = json.loads(captured.out)
-    assert facts["reviewed_codex_cli_window"]["window"] == "0.139.x"
+    assert facts["reviewed_codex_cli_window"]["window"] == "0.140.x plus 0.139.x when feasible"
 
 
 def test_cli_schema_review_writes_report(fake_repo, capsys):

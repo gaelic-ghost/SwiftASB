@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @MainActor
@@ -284,17 +284,11 @@ extension CodexAppServerTests {
         )
         let thread = try await client.startThread(
             .init(
-                permissions: .init(
-                    id: ":workspace",
-                    modifications: [
-                        .init(additionalWritableRoot: "/tmp/project-fixtures"),
-                    ]
-                )
+                permissions: .workspace
             )
         )
 
         #expect(thread.activePermissionProfile?.id == ":workspace")
-        #expect(thread.activePermissionProfile?.modifications.isEmpty == true)
         #expect(thread.permissionProfile == nil)
         #expect(thread.workspace.currentDirectoryPath == "/tmp/project")
         #expect(thread.workspace.projectInfo == thread.info.projectInfo)
@@ -343,7 +337,7 @@ extension CodexAppServerTests {
         let rolledBackThread = try await thread.rollbackLastTurns(1)
 
         #expect(rolledBackThread.id == thread.id)
-        #expect(rolledBackThread.info.updatedAt == 1713350010)
+        #expect(rolledBackThread.info.updatedAt == 1_713_350_010)
 
         let requestPayload = try #require(await transport.recordedRequestPayload(for: "thread/rollback"))
         let request = try #require(try JSONSerialization.jsonObject(with: requestPayload) as? [String: Any])
@@ -359,10 +353,9 @@ extension CodexAppServerTests {
         #expect(afterRollback.rollbacks[0].previousNewestTurnID == "turn-newer")
         #expect(afterRollback.rollbacks[0].resultingNewestTurnID == "turn-older")
         #expect(afterRollback.rollbacks[0].removedTurnIDs == ["turn-newer"])
-        #expect(afterRollback.rollbacks[0].serverUpdatedAt == 1713350010)
+        #expect(afterRollback.rollbacks[0].serverUpdatedAt == 1_713_350_010)
 
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
-
 }

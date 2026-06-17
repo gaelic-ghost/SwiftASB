@@ -1,9 +1,9 @@
 import Foundation
 
 struct CodexAppServerProtocol {
-    enum Method: String, Sendable, Codable {
-        case initialize = "initialize"
-        case initialized = "initialized"
+    enum Method: String, Codable {
+        case initialize
+        case initialized
         case threadCompactStart = "thread/compact/start"
         case threadArchive = "thread/archive"
         case threadFork = "thread/fork"
@@ -1119,387 +1119,387 @@ struct CodexAppServerProtocol {
         _ serverEvent: CodexRPCServerEvent
     ) throws -> CodexAppServerProtocolEvent? {
         switch serverEvent {
-        case let .request(id, method, payload):
-            switch method {
-            case "item/commandExecution/requestApproval":
-                return .commandExecutionApprovalRequested(
-                    try decodeServerRequest(
-                        payload,
-                        method: method,
-                        id: id,
-                        requestType: CodexProtocolCommandExecutionApprovalRequest.self
-                    )
-                )
-            case "item/fileChange/requestApproval":
-                return .fileChangeApprovalRequested(
-                    try decodeServerRequest(
-                        payload,
-                        method: method,
-                        id: id,
-                        requestType: CodexProtocolFileChangeApprovalRequest.self
-                    )
-                )
-            case "item/permissions/requestApproval":
-                return .permissionsApprovalRequested(
-                    try decodeServerRequest(
-                        payload,
-                        method: method,
-                        id: id,
-                        requestType: CodexProtocolPermissionsApprovalRequest.self
-                    )
-                )
-            case "item/tool/requestUserInput":
-                return .toolUserInputRequested(
-                    try decodeServerRequest(
-                        payload,
-                        method: method,
-                        id: id,
-                        requestType: CodexProtocolToolUserInputRequest.self
-                    )
-                )
-            case "mcpServer/elicitation/request":
-                return .mcpServerElicitationRequested(
-                    try decodeMCPServerElicitationRequest(
-                        payload,
-                        method: method,
-                        id: id
-                    )
-                )
-            default:
-                return nil
-            }
-        case let .notification(method, payload):
-            switch method {
-            case "app/list/updated":
-                return .appListUpdated(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireAppListUpdatedNotification.self
-                    )
-                )
-            case "skills/changed":
-                return .skillsChanged(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: [String: CodexWireJSONValue].self
-                    )
-                )
-            case "mcpServer/startupStatus/updated":
-                return .mcpServerStatusUpdated(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireMCPServerStatusUpdatedNotification.self
-                    )
-                )
-            case "config/warning":
-                return .configWarning(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireConfigWarningNotification.self
-                    )
-                )
-            case "deprecation/notice":
-                return .deprecationNotice(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireDeprecationNoticeNotification.self
-                    )
-                )
-            case "remoteControl/status/changed":
-                return .remoteControlStatusChanged(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireRemoteControlStatusChangedNotification.self
-                    )
-                )
-            case "thread/started":
-                return .threadStarted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireThreadStartedNotification.self
-                    )
-                )
-            case "thread/status/changed":
-                return .threadStatusChanged(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireThreadStatusChangedNotification.self
-                    )
-                )
-            case "thread/archived":
-                return .threadArchived(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireThreadArchivedNotification.self
-                    )
-                )
-            case "thread/unarchived":
-                return .threadUnarchived(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireThreadUnarchivedNotification.self
-                    )
-                )
-            case "thread/closed":
-                return .threadClosed(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireThreadClosedNotification.self
-                    )
-                )
-            case "thread/name/updated":
-                return .threadNameUpdated(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireThreadNameUpdatedNotification.self
-                    )
-                )
-            case "thread/tokenUsage/updated":
-                return .threadTokenUsageUpdated(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireThreadTokenUsageUpdatedNotification.self
-                    )
-                )
-            case "thread/goal/updated":
-                return .threadGoalUpdated(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireThreadGoalUpdatedNotification.self
-                    )
-                )
-            case "thread/goal/cleared":
-                return .threadGoalCleared(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireThreadGoalClearedNotification.self
-                    )
-                )
-            case "fs/changed":
-                return .fsChanged(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireFSChangedNotification.self
-                    )
-                )
-            case "hook/started":
-                return .hookStarted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireHookStartedNotification.self
-                    )
-                )
-            case "hook/completed":
-                return .hookCompleted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireHookCompletedNotification.self
-                    )
-                )
-            case "warning":
-                return .warning(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireWarningNotification.self
-                    )
-                )
-            case "guardianWarning":
-                return .guardianWarning(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireGuardianWarningNotification.self
-                    )
-                )
-            case "model/rerouted":
-                return .modelRerouted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireModelReroutedNotification.self
-                    )
-                )
-            case "model/verification":
-                return .modelVerification(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireModelVerificationNotification.self
-                    )
-                )
-            case "turn/started":
-                return .turnStarted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireTurnStartedNotification.self
-                    )
-                )
-            case "turn/diff/updated":
-                return .turnDiffUpdated(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireTurnDiffUpdatedNotification.self
-                    )
-                )
-            case "turn/plan/updated":
-                return .turnPlanUpdated(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireTurnPlanUpdatedNotification.self
-                    )
-                )
-            case "turn/completed":
-                return .turnCompleted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireTurnCompletedNotification.self
-                    )
-                )
-            case "item/started":
-                return .itemStarted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireItemStartedNotification.self
-                    )
-                )
-            case "item/completed":
-                return .itemCompleted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireItemCompletedNotification.self
-                    )
-                )
-            case "item/autoApprovalReview/started":
-                return .itemGuardianApprovalReviewStarted(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireItemGuardianApprovalReviewStartedNotification.self
-                    )
-                )
-            case "item/autoApprovalReview/completed":
-                return .itemGuardianApprovalReviewCompleted(
-                    .init(
-                        event: try decodeNotification(
-                            payload,
-                            method: method,
-                            resultType: CodexWireJSONValue.self
-                        ),
-                        notification: try decodeNotification(
-                            payload,
-                            method: method,
-                            resultType: CodexWireItemGuardianApprovalReviewCompletedNotification.self
+            case let .request(id, method, payload):
+                switch method {
+                    case "item/commandExecution/requestApproval":
+                        return try .commandExecutionApprovalRequested(
+                            decodeServerRequest(
+                                payload,
+                                method: method,
+                                id: id,
+                                requestType: CodexProtocolCommandExecutionApprovalRequest.self
+                            )
                         )
-                    )
-                )
-            case "item/commandExecution/outputDelta":
-                return .commandExecutionOutputDelta(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireCommandExecutionOutputDeltaNotification.self
-                    )
-                )
-            case "command/exec/outputDelta":
-                return .commandExecOutputDelta(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireCommandExecOutputDeltaNotification.self
-                    )
-                )
-            case "item/fileChange/outputDelta":
-                return .fileChangeOutputDelta(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireFileChangeOutputDeltaNotification.self
-                    )
-                )
-            case "item/fileChange/patchUpdated":
-                return .fileChangePatchUpdated(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireFileChangePatchUpdatedNotification.self
-                    )
-                )
-            case "item/agentMessage/delta":
-                return .agentMessageDelta(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireAgentMessageDeltaNotification.self
-                    )
-                )
-            case "item/plan/delta":
-                return .planDelta(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWirePlanDeltaNotification.self
-                    )
-                )
-            case "item/reasoning/summaryPartAdded":
-                return .reasoningSummaryPartAdded(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireReasoningSummaryPartAddedNotification.self
-                    )
-                )
-            case "item/reasoning/summaryTextDelta":
-                return .reasoningSummaryTextDelta(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireReasoningSummaryTextDeltaNotification.self
-                    )
-                )
-            case "item/reasoning/textDelta":
-                return .reasoningTextDelta(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireReasoningTextDeltaNotification.self
-                    )
-                )
-            case "serverRequest/resolved":
-                return .serverRequestResolved(
-                    try decodeNotification(
-                        payload,
-                        method: method,
-                        resultType: CodexWireServerRequestResolvedNotification.self
-                    )
-                )
-            default:
-                return nil
-            }
+                    case "item/fileChange/requestApproval":
+                        return try .fileChangeApprovalRequested(
+                            decodeServerRequest(
+                                payload,
+                                method: method,
+                                id: id,
+                                requestType: CodexProtocolFileChangeApprovalRequest.self
+                            )
+                        )
+                    case "item/permissions/requestApproval":
+                        return try .permissionsApprovalRequested(
+                            decodeServerRequest(
+                                payload,
+                                method: method,
+                                id: id,
+                                requestType: CodexProtocolPermissionsApprovalRequest.self
+                            )
+                        )
+                    case "item/tool/requestUserInput":
+                        return try .toolUserInputRequested(
+                            decodeServerRequest(
+                                payload,
+                                method: method,
+                                id: id,
+                                requestType: CodexProtocolToolUserInputRequest.self
+                            )
+                        )
+                    case "mcpServer/elicitation/request":
+                        return try .mcpServerElicitationRequested(
+                            decodeMCPServerElicitationRequest(
+                                payload,
+                                method: method,
+                                id: id
+                            )
+                        )
+                    default:
+                        return nil
+                }
+            case let .notification(method, payload):
+                switch method {
+                    case "app/list/updated":
+                        return try .appListUpdated(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireAppListUpdatedNotification.self
+                            )
+                        )
+                    case "skills/changed":
+                        return try .skillsChanged(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: [String: CodexWireJSONValue].self
+                            )
+                        )
+                    case "mcpServer/startupStatus/updated":
+                        return try .mcpServerStatusUpdated(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireMCPServerStatusUpdatedNotification.self
+                            )
+                        )
+                    case "config/warning":
+                        return try .configWarning(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireConfigWarningNotification.self
+                            )
+                        )
+                    case "deprecation/notice":
+                        return try .deprecationNotice(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireDeprecationNoticeNotification.self
+                            )
+                        )
+                    case "remoteControl/status/changed":
+                        return try .remoteControlStatusChanged(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireRemoteControlStatusChangedNotification.self
+                            )
+                        )
+                    case "thread/started":
+                        return try .threadStarted(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireThreadStartedNotification.self
+                            )
+                        )
+                    case "thread/status/changed":
+                        return try .threadStatusChanged(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireThreadStatusChangedNotification.self
+                            )
+                        )
+                    case "thread/archived":
+                        return try .threadArchived(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireThreadArchivedNotification.self
+                            )
+                        )
+                    case "thread/unarchived":
+                        return try .threadUnarchived(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireThreadUnarchivedNotification.self
+                            )
+                        )
+                    case "thread/closed":
+                        return try .threadClosed(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireThreadClosedNotification.self
+                            )
+                        )
+                    case "thread/name/updated":
+                        return try .threadNameUpdated(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireThreadNameUpdatedNotification.self
+                            )
+                        )
+                    case "thread/tokenUsage/updated":
+                        return try .threadTokenUsageUpdated(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireThreadTokenUsageUpdatedNotification.self
+                            )
+                        )
+                    case "thread/goal/updated":
+                        return try .threadGoalUpdated(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireThreadGoalUpdatedNotification.self
+                            )
+                        )
+                    case "thread/goal/cleared":
+                        return try .threadGoalCleared(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireThreadGoalClearedNotification.self
+                            )
+                        )
+                    case "fs/changed":
+                        return try .fsChanged(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireFSChangedNotification.self
+                            )
+                        )
+                    case "hook/started":
+                        return try .hookStarted(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireHookStartedNotification.self
+                            )
+                        )
+                    case "hook/completed":
+                        return try .hookCompleted(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireHookCompletedNotification.self
+                            )
+                        )
+                    case "warning":
+                        return try .warning(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireWarningNotification.self
+                            )
+                        )
+                    case "guardianWarning":
+                        return try .guardianWarning(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireGuardianWarningNotification.self
+                            )
+                        )
+                    case "model/rerouted":
+                        return try .modelRerouted(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireModelReroutedNotification.self
+                            )
+                        )
+                    case "model/verification":
+                        return try .modelVerification(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireModelVerificationNotification.self
+                            )
+                        )
+                    case "turn/started":
+                        return try .turnStarted(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireTurnStartedNotification.self
+                            )
+                        )
+                    case "turn/diff/updated":
+                        return try .turnDiffUpdated(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireTurnDiffUpdatedNotification.self
+                            )
+                        )
+                    case "turn/plan/updated":
+                        return try .turnPlanUpdated(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireTurnPlanUpdatedNotification.self
+                            )
+                        )
+                    case "turn/completed":
+                        return try .turnCompleted(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireTurnCompletedNotification.self
+                            )
+                        )
+                    case "item/started":
+                        return try .itemStarted(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireItemStartedNotification.self
+                            )
+                        )
+                    case "item/completed":
+                        return try .itemCompleted(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireItemCompletedNotification.self
+                            )
+                        )
+                    case "item/autoApprovalReview/started":
+                        return try .itemGuardianApprovalReviewStarted(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireItemGuardianApprovalReviewStartedNotification.self
+                            )
+                        )
+                    case "item/autoApprovalReview/completed":
+                        return try .itemGuardianApprovalReviewCompleted(
+                            .init(
+                                event: decodeNotification(
+                                    payload,
+                                    method: method,
+                                    resultType: CodexWireJSONValue.self
+                                ),
+                                notification: decodeNotification(
+                                    payload,
+                                    method: method,
+                                    resultType: CodexWireItemGuardianApprovalReviewCompletedNotification.self
+                                )
+                            )
+                        )
+                    case "item/commandExecution/outputDelta":
+                        return try .commandExecutionOutputDelta(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireCommandExecutionOutputDeltaNotification.self
+                            )
+                        )
+                    case "command/exec/outputDelta":
+                        return try .commandExecOutputDelta(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireCommandExecOutputDeltaNotification.self
+                            )
+                        )
+                    case "item/fileChange/outputDelta":
+                        return try .fileChangeOutputDelta(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireFileChangeOutputDeltaNotification.self
+                            )
+                        )
+                    case "item/fileChange/patchUpdated":
+                        return try .fileChangePatchUpdated(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireFileChangePatchUpdatedNotification.self
+                            )
+                        )
+                    case "item/agentMessage/delta":
+                        return try .agentMessageDelta(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireAgentMessageDeltaNotification.self
+                            )
+                        )
+                    case "item/plan/delta":
+                        return try .planDelta(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWirePlanDeltaNotification.self
+                            )
+                        )
+                    case "item/reasoning/summaryPartAdded":
+                        return try .reasoningSummaryPartAdded(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireReasoningSummaryPartAddedNotification.self
+                            )
+                        )
+                    case "item/reasoning/summaryTextDelta":
+                        return try .reasoningSummaryTextDelta(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireReasoningSummaryTextDeltaNotification.self
+                            )
+                        )
+                    case "item/reasoning/textDelta":
+                        return try .reasoningTextDelta(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireReasoningTextDeltaNotification.self
+                            )
+                        )
+                    case "serverRequest/resolved":
+                        return try .serverRequestResolved(
+                            decodeNotification(
+                                payload,
+                                method: method,
+                                resultType: CodexWireServerRequestResolvedNotification.self
+                            )
+                        )
+                    default:
+                        return nil
+                }
         }
     }
 
@@ -1668,8 +1668,8 @@ extension CodexProtocolToolUserInputRequest: RequestIDBindable {
     }
 }
 
-extension CodexProtocolMCPServerElicitationRequest {
-    fileprivate func settingRequestID(_ requestID: CodexRPCRequestID) -> Self {
+private extension CodexProtocolMCPServerElicitationRequest {
+    func settingRequestID(_ requestID: CodexRPCRequestID) -> Self {
         .init(
             mode: mode,
             requestID: requestID,
@@ -1679,7 +1679,7 @@ extension CodexProtocolMCPServerElicitationRequest {
         )
     }
 
-    fileprivate init(
+    init(
         mode: Mode,
         requestID: CodexRPCRequestID,
         serverName: String,

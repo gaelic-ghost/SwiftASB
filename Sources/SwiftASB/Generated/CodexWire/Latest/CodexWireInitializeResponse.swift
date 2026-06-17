@@ -1,9 +1,9 @@
 import Foundation
 
-// The current bundled v2 schema dump does not expose InitializeResponse, so we
-// keep this tiny handshake shape hand-owned alongside the generated v2 wire
-// snapshot until upstream schema convergence makes it unnecessary.
-struct CodexWireInitializeResponse: Codable, Equatable, Sendable {
+/// The current bundled v2 schema dump does not expose InitializeResponse, so we
+/// keep this tiny handshake shape hand-owned alongside the generated v2 wire
+/// snapshot until upstream schema convergence makes it unnecessary.
+struct CodexWireInitializeResponse: Codable, Equatable {
     /// Absolute path to the server's $CODEX_HOME directory.
     let codexHome: String
     /// Platform family for the running app-server target, for example "unix" or "windows".

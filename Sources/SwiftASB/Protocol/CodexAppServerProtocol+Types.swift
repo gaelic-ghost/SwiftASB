@@ -7,78 +7,78 @@
 
 import Foundation
 
-enum CodexAppServerProtocolEvent: Equatable, Sendable {
-	case appListUpdated(CodexWireAppListUpdatedNotification)
-	case skillsChanged([String: CodexWireJSONValue])
-	case mcpServerStatusUpdated(CodexWireMCPServerStatusUpdatedNotification)
-	case configWarning(CodexWireConfigWarningNotification)
-	case deprecationNotice(CodexWireDeprecationNoticeNotification)
-	case remoteControlStatusChanged(CodexWireRemoteControlStatusChangedNotification)
-	case threadStarted(CodexWireThreadStartedNotification)
-	case threadStatusChanged(CodexWireThreadStatusChangedNotification)
-	case threadArchived(CodexWireThreadArchivedNotification)
-	case threadUnarchived(CodexWireThreadUnarchivedNotification)
-	case threadClosed(CodexWireThreadClosedNotification)
-	case threadNameUpdated(CodexWireThreadNameUpdatedNotification)
-	case threadTokenUsageUpdated(CodexWireThreadTokenUsageUpdatedNotification)
-	case threadGoalUpdated(CodexWireThreadGoalUpdatedNotification)
-	case threadGoalCleared(CodexWireThreadGoalClearedNotification)
-	case fsChanged(CodexWireFSChangedNotification)
-	case hookStarted(CodexWireHookStartedNotification)
-	case hookCompleted(CodexWireHookCompletedNotification)
-	case warning(CodexWireWarningNotification)
-	case guardianWarning(CodexWireGuardianWarningNotification)
-	case modelRerouted(CodexWireModelReroutedNotification)
-	case modelVerification(CodexWireModelVerificationNotification)
-	case turnStarted(CodexWireTurnStartedNotification)
-	case turnDiffUpdated(CodexWireTurnDiffUpdatedNotification)
-	case turnPlanUpdated(CodexWireTurnPlanUpdatedNotification)
-	case turnCompleted(CodexWireTurnCompletedNotification)
-	case itemStarted(CodexWireItemStartedNotification)
-	case itemCompleted(CodexWireItemCompletedNotification)
-	case itemGuardianApprovalReviewStarted(CodexWireItemGuardianApprovalReviewStartedNotification)
-	case itemGuardianApprovalReviewCompleted(CodexProtocolGuardianApprovalReviewCompletedNotification)
-	case commandExecOutputDelta(CodexWireCommandExecOutputDeltaNotification)
-	case commandExecutionOutputDelta(CodexWireCommandExecutionOutputDeltaNotification)
-	case fileChangeOutputDelta(CodexWireFileChangeOutputDeltaNotification)
-	case fileChangePatchUpdated(CodexWireFileChangePatchUpdatedNotification)
-	case agentMessageDelta(CodexWireAgentMessageDeltaNotification)
-	case planDelta(CodexWirePlanDeltaNotification)
-	case reasoningSummaryPartAdded(CodexWireReasoningSummaryPartAddedNotification)
-	case reasoningSummaryTextDelta(CodexWireReasoningSummaryTextDeltaNotification)
-	case reasoningTextDelta(CodexWireReasoningTextDeltaNotification)
-	case commandExecutionApprovalRequested(CodexProtocolCommandExecutionApprovalRequest)
-	case fileChangeApprovalRequested(CodexProtocolFileChangeApprovalRequest)
-	case permissionsApprovalRequested(CodexProtocolPermissionsApprovalRequest)
-	case toolUserInputRequested(CodexProtocolToolUserInputRequest)
-	case mcpServerElicitationRequested(CodexProtocolMCPServerElicitationRequest)
-	case serverRequestResolved(CodexWireServerRequestResolvedNotification)
+enum CodexAppServerProtocolEvent: Equatable {
+    case appListUpdated(CodexWireAppListUpdatedNotification)
+    case skillsChanged([String: CodexWireJSONValue])
+    case mcpServerStatusUpdated(CodexWireMCPServerStatusUpdatedNotification)
+    case configWarning(CodexWireConfigWarningNotification)
+    case deprecationNotice(CodexWireDeprecationNoticeNotification)
+    case remoteControlStatusChanged(CodexWireRemoteControlStatusChangedNotification)
+    case threadStarted(CodexWireThreadStartedNotification)
+    case threadStatusChanged(CodexWireThreadStatusChangedNotification)
+    case threadArchived(CodexWireThreadArchivedNotification)
+    case threadUnarchived(CodexWireThreadUnarchivedNotification)
+    case threadClosed(CodexWireThreadClosedNotification)
+    case threadNameUpdated(CodexWireThreadNameUpdatedNotification)
+    case threadTokenUsageUpdated(CodexWireThreadTokenUsageUpdatedNotification)
+    case threadGoalUpdated(CodexWireThreadGoalUpdatedNotification)
+    case threadGoalCleared(CodexWireThreadGoalClearedNotification)
+    case fsChanged(CodexWireFSChangedNotification)
+    case hookStarted(CodexWireHookStartedNotification)
+    case hookCompleted(CodexWireHookCompletedNotification)
+    case warning(CodexWireWarningNotification)
+    case guardianWarning(CodexWireGuardianWarningNotification)
+    case modelRerouted(CodexWireModelReroutedNotification)
+    case modelVerification(CodexWireModelVerificationNotification)
+    case turnStarted(CodexWireTurnStartedNotification)
+    case turnDiffUpdated(CodexWireTurnDiffUpdatedNotification)
+    case turnPlanUpdated(CodexWireTurnPlanUpdatedNotification)
+    case turnCompleted(CodexWireTurnCompletedNotification)
+    case itemStarted(CodexWireItemStartedNotification)
+    case itemCompleted(CodexWireItemCompletedNotification)
+    case itemGuardianApprovalReviewStarted(CodexWireItemGuardianApprovalReviewStartedNotification)
+    case itemGuardianApprovalReviewCompleted(CodexProtocolGuardianApprovalReviewCompletedNotification)
+    case commandExecOutputDelta(CodexWireCommandExecOutputDeltaNotification)
+    case commandExecutionOutputDelta(CodexWireCommandExecutionOutputDeltaNotification)
+    case fileChangeOutputDelta(CodexWireFileChangeOutputDeltaNotification)
+    case fileChangePatchUpdated(CodexWireFileChangePatchUpdatedNotification)
+    case agentMessageDelta(CodexWireAgentMessageDeltaNotification)
+    case planDelta(CodexWirePlanDeltaNotification)
+    case reasoningSummaryPartAdded(CodexWireReasoningSummaryPartAddedNotification)
+    case reasoningSummaryTextDelta(CodexWireReasoningSummaryTextDeltaNotification)
+    case reasoningTextDelta(CodexWireReasoningTextDeltaNotification)
+    case commandExecutionApprovalRequested(CodexProtocolCommandExecutionApprovalRequest)
+    case fileChangeApprovalRequested(CodexProtocolFileChangeApprovalRequest)
+    case permissionsApprovalRequested(CodexProtocolPermissionsApprovalRequest)
+    case toolUserInputRequested(CodexProtocolToolUserInputRequest)
+    case mcpServerElicitationRequested(CodexProtocolMCPServerElicitationRequest)
+    case serverRequestResolved(CodexWireServerRequestResolvedNotification)
 }
 
-struct CodexProtocolThreadCompactStartResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolThreadCompactStartResponse: Decodable, Equatable {}
 
-struct CodexProtocolThreadShellCommandResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolThreadShellCommandResponse: Decodable, Equatable {}
 
-struct CodexProtocolThreadArchiveResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolThreadArchiveResponse: Decodable, Equatable {}
 
-struct CodexProtocolThreadSetNameResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolThreadSetNameResponse: Decodable, Equatable {}
 
-struct CodexProtocolThreadApproveGuardianDeniedActionResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolThreadApproveGuardianDeniedActionResponse: Decodable, Equatable {}
 
-struct CodexProtocolGuardianApprovalReviewCompletedNotification: Equatable, Sendable {
-	let event: CodexWireJSONValue
-	let notification: CodexWireItemGuardianApprovalReviewCompletedNotification
+struct CodexProtocolGuardianApprovalReviewCompletedNotification: Equatable {
+    let event: CodexWireJSONValue
+    let notification: CodexWireItemGuardianApprovalReviewCompletedNotification
 }
 
-struct CodexProtocolModelProviderCapabilitiesReadParams: Encodable, Equatable, Sendable {}
+struct CodexProtocolModelProviderCapabilitiesReadParams: Encodable, Equatable {}
 
-struct CodexProtocolModelProviderCapabilitiesReadResponse: Decodable, Equatable, Sendable {
+struct CodexProtocolModelProviderCapabilitiesReadResponse: Decodable, Equatable {
     let imageGeneration: Bool
     let namespaceTools: Bool
     let webSearch: Bool
 }
 
-struct CodexProtocolCommandExecParams: Encodable, Equatable, Sendable {
+struct CodexProtocolCommandExecParams: Encodable, Equatable {
     let command: [String]
     let cwd: String?
     let disableOutputCap: Bool?
@@ -102,81 +102,81 @@ struct CodexProtocolCommandExecParams: Encodable, Equatable, Sendable {
         case tty
     }
 
-    struct TerminalSize: Encodable, Equatable, Sendable {
+    struct TerminalSize: Encodable, Equatable {
         let cols: Int
         let rows: Int
     }
 }
 
-struct CodexProtocolCommandExecResponse: Decodable, Equatable, Sendable {
+struct CodexProtocolCommandExecResponse: Decodable, Equatable {
     let exitCode: Int
     let stderr: String
     let stdout: String
 }
 
-struct CodexProtocolCollaborationModeListParams: Encodable, Equatable, Sendable {}
+struct CodexProtocolCollaborationModeListParams: Encodable, Equatable {}
 
-struct CodexProtocolConfigBatchWriteParams: Encodable, Equatable, Sendable {
+struct CodexProtocolConfigBatchWriteParams: Encodable, Equatable {
     let edits: [CodexProtocolConfigEdit]
     let expectedVersion: String?
     let filePath: String?
     let reloadUserConfig: Bool?
 }
 
-struct CodexProtocolConfigEdit: Encodable, Equatable, Sendable {
+struct CodexProtocolConfigEdit: Encodable, Equatable {
     let keyPath: String
     let mergeStrategy: CodexProtocolConfigMergeStrategy
     let value: CodexWireJSONValue
 }
 
-enum CodexProtocolConfigMergeStrategy: String, Encodable, Equatable, Sendable {
+enum CodexProtocolConfigMergeStrategy: String, Encodable, Equatable {
     case replace
     case upsert
 }
 
-struct CodexProtocolConfigWriteResponse: Decodable, Equatable, Sendable {
+struct CodexProtocolConfigWriteResponse: Decodable, Equatable {
     let filePath: String
     let overriddenMetadata: CodexWireJSONValue?
     let status: CodexProtocolConfigWriteStatus
     let version: String
 }
 
-enum CodexProtocolConfigWriteStatus: String, Decodable, Equatable, Sendable {
+enum CodexProtocolConfigWriteStatus: String, Decodable, Equatable {
     case ok
     case okOverridden
 }
 
-struct CodexProtocolFSWriteFileParams: Encodable, Equatable, Sendable {
+struct CodexProtocolFSWriteFileParams: Encodable, Equatable {
     let dataBase64: String
     let path: String
 }
 
-struct CodexProtocolFSCreateDirectoryParams: Encodable, Equatable, Sendable {
+struct CodexProtocolFSCreateDirectoryParams: Encodable, Equatable {
     let path: String
     let recursive: Bool?
 }
 
-struct CodexProtocolFSRemoveParams: Encodable, Equatable, Sendable {
+struct CodexProtocolFSRemoveParams: Encodable, Equatable {
     let force: Bool?
     let path: String
     let recursive: Bool?
 }
 
-struct CodexProtocolFSCopyParams: Encodable, Equatable, Sendable {
+struct CodexProtocolFSCopyParams: Encodable, Equatable {
     let destinationPath: String
     let recursive: Bool?
     let sourcePath: String
 }
 
-struct CodexProtocolFSWriteFileResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolFSWriteFileResponse: Decodable, Equatable {}
 
-struct CodexProtocolFSCreateDirectoryResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolFSCreateDirectoryResponse: Decodable, Equatable {}
 
-struct CodexProtocolFSRemoveResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolFSRemoveResponse: Decodable, Equatable {}
 
-struct CodexProtocolFSCopyResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolFSCopyResponse: Decodable, Equatable {}
 
-struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
+struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable {
     let gitInfo: GitInfo?
     let threadID: String
 
@@ -185,7 +185,7 @@ struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
         case threadID = "threadId"
     }
 
-    struct GitInfo: Encodable, Equatable, Sendable {
+    struct GitInfo: Encodable, Equatable {
         let branch: FieldUpdate
         let originURL: FieldUpdate
         let sha: FieldUpdate
@@ -204,7 +204,7 @@ struct CodexProtocolThreadMetadataUpdateParams: Encodable, Equatable, Sendable {
         }
     }
 
-    enum FieldUpdate: Equatable, Sendable {
+    enum FieldUpdate: Equatable {
         case unchanged
         case clear
         case replace(String)
@@ -217,27 +217,27 @@ private extension KeyedEncodingContainer {
         forKey key: Key
     ) throws {
         switch update {
-        case .unchanged:
-            return
-        case .clear:
-            try encodeNil(forKey: key)
-        case let .replace(value):
-            try encode(value, forKey: key)
+            case .unchanged:
+                return
+            case .clear:
+                try encodeNil(forKey: key)
+            case let .replace(value):
+                try encode(value, forKey: key)
         }
     }
 }
 
-struct CodexProtocolTurnInterruptParams: Encodable, Equatable, Sendable {
-	let threadID: String
-	let turnID: String
+struct CodexProtocolTurnInterruptParams: Encodable, Equatable {
+    let threadID: String
+    let turnID: String
 
-	enum CodingKeys: String, CodingKey {
-		case threadID = "threadId"
-		case turnID = "turnId"
-	}
+    enum CodingKeys: String, CodingKey {
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
 }
 
-struct CodexProtocolThreadReadParams: Encodable, Equatable, Sendable {
+struct CodexProtocolThreadReadParams: Encodable, Equatable {
     let includeTurns: Bool?
     let threadID: String
 
@@ -247,11 +247,11 @@ struct CodexProtocolThreadReadParams: Encodable, Equatable, Sendable {
     }
 }
 
-struct CodexProtocolThreadReadResponse: Decodable, Equatable, Sendable {
+struct CodexProtocolThreadReadResponse: Decodable, Equatable {
     let thread: CodexWireThread
 }
 
-struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
+struct CodexProtocolThreadResumeParams: Encodable, Equatable {
     let approvalPolicy: CodexWireApprovalPolicyUnion?
     let approvalsReviewer: CodexWireApprovalsReviewer?
     let baseInstructions: String?
@@ -287,7 +287,7 @@ struct CodexProtocolThreadResumeParams: Encodable, Equatable, Sendable {
     }
 }
 
-struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
+struct CodexProtocolThreadForkParams: Encodable, Equatable {
     let approvalPolicy: CodexWireApprovalPolicyUnion?
     let approvalsReviewer: CodexWireApprovalsReviewer?
     let baseInstructions: String?
@@ -325,7 +325,7 @@ struct CodexProtocolThreadForkParams: Encodable, Equatable, Sendable {
     }
 }
 
-struct CodexProtocolThreadListParams: Encodable, Equatable, Sendable {
+struct CodexProtocolThreadListParams: Encodable, Equatable {
     let archived: Bool?
     let cursor: String?
     let cwd: String?
@@ -349,30 +349,30 @@ struct CodexProtocolThreadListParams: Encodable, Equatable, Sendable {
     }
 }
 
-enum CodexProtocolThreadListSortDirection: String, Codable, Equatable, Sendable {
+enum CodexProtocolThreadListSortDirection: String, Codable, Equatable {
     case asc
     case desc
 }
 
-enum CodexProtocolThreadListSortKey: String, Codable, Equatable, Sendable {
+enum CodexProtocolThreadListSortKey: String, Codable, Equatable {
     case createdAt = "created_at"
     case updatedAt = "updated_at"
 }
 
-enum CodexProtocolThreadListSourceKind: String, Codable, Equatable, Sendable {
-    case appServer = "appServer"
+enum CodexProtocolThreadListSourceKind: String, Codable, Equatable {
+    case appServer
     case cli
     case exec
     case unknown
     case vscode
 }
 
-struct CodexProtocolThreadListResponse: Decodable, Equatable, Sendable {
+struct CodexProtocolThreadListResponse: Decodable, Equatable {
     let data: [CodexWireThread]
     let nextCursor: String?
 }
 
-struct CodexProtocolThreadTurnsListParams: Encodable, Equatable, Sendable {
+struct CodexProtocolThreadTurnsListParams: Encodable, Equatable {
     let cursor: String?
     let itemsView: CodexWireTurnItemsView?
     let limit: Int?
@@ -388,37 +388,35 @@ struct CodexProtocolThreadTurnsListParams: Encodable, Equatable, Sendable {
     }
 }
 
-enum CodexProtocolThreadTurnsSortDirection: String, Codable, Equatable, Sendable {
+enum CodexProtocolThreadTurnsSortDirection: String, Codable, Equatable {
     case asc
     case desc
 }
 
-struct CodexProtocolThreadTurnsListResponse: Decodable, Equatable, Sendable {
+struct CodexProtocolThreadTurnsListResponse: Decodable, Equatable {
     let backwardsCursor: String?
     let data: [CodexWireTurn]
     let nextCursor: String?
 }
 
-struct CodexProtocolHooksListParams: Encodable, Equatable, Sendable {
+struct CodexProtocolHooksListParams: Encodable, Equatable {
     let cwds: [String]?
 }
 
-struct CodexProtocolHooksListResponse: Decodable, Equatable, Sendable {
-    let data: [Entry]
-
-    struct Entry: Decodable, Equatable, Sendable {
+struct CodexProtocolHooksListResponse: Decodable, Equatable {
+    struct Entry: Decodable, Equatable {
         let cwd: String
         let errors: [ErrorInfo]
         let hooks: [HookMetadata]
         let warnings: [String]
     }
 
-    struct ErrorInfo: Decodable, Equatable, Sendable {
+    struct ErrorInfo: Decodable, Equatable {
         let message: String
         let path: String
     }
 
-    struct HookMetadata: Decodable, Equatable, Sendable {
+    struct HookMetadata: Decodable, Equatable {
         let command: String?
         let displayOrder: Int
         let enabled: Bool
@@ -450,7 +448,7 @@ struct CodexProtocolHooksListResponse: Decodable, Equatable, Sendable {
         }
     }
 
-    enum EventName: String, Decodable, Equatable, Sendable {
+    enum EventName: String, Decodable, Equatable {
         case permissionRequest
         case postCompact
         case postToolUse
@@ -461,13 +459,13 @@ struct CodexProtocolHooksListResponse: Decodable, Equatable, Sendable {
         case userPromptSubmit
     }
 
-    enum HandlerType: String, Decodable, Equatable, Sendable {
+    enum HandlerType: String, Decodable, Equatable {
         case agent
         case command
         case prompt
     }
 
-    enum Source: String, Decodable, Equatable, Sendable {
+    enum Source: String, Decodable, Equatable {
         case cloudRequirements
         case legacyManagedConfigFile
         case legacyManagedConfigMdm
@@ -479,318 +477,320 @@ struct CodexProtocolHooksListResponse: Decodable, Equatable, Sendable {
         case unknown
         case user
     }
+
+    let data: [Entry]
 }
 
-struct CodexProtocolTurnSteerParams: Encodable, Equatable, Sendable {
-	let expectedTurnID: String
-	let input: [CodexWireUserInput]
-	let threadID: String
+struct CodexProtocolTurnSteerParams: Encodable, Equatable {
+    let expectedTurnID: String
+    let input: [CodexWireUserInput]
+    let threadID: String
 
-	enum CodingKeys: String, CodingKey {
-		case expectedTurnID = "expectedTurnId"
-		case input
-		case threadID = "threadId"
-	}
+    enum CodingKeys: String, CodingKey {
+        case expectedTurnID = "expectedTurnId"
+        case input
+        case threadID = "threadId"
+    }
 }
 
-struct CodexProtocolTurnSteerResponse: Decodable, Equatable, Sendable {
-	let turnID: String
+struct CodexProtocolTurnSteerResponse: Decodable, Equatable {
+    let turnID: String
 
-	enum CodingKeys: String, CodingKey {
-		case turnID = "turnId"
-	}
+    enum CodingKeys: String, CodingKey {
+        case turnID = "turnId"
+    }
 }
 
-struct CodexProtocolTurnInterruptResponse: Decodable, Equatable, Sendable {}
+struct CodexProtocolTurnInterruptResponse: Decodable, Equatable {}
 
-struct CodexProtocolCommandExecutionApprovalRequest: Decodable, Equatable, Sendable {
-	let approvalID: String?
-	let command: String?
-	let commandActions: [CodexProtocolCommandAction]?
-	let cwd: String?
-	let itemID: String
-	let networkApprovalContext: CodexWireJSONValue?
-	let proposedExecpolicyAmendment: [String]?
-	let proposedNetworkPolicyAmendments: [CodexProtocolNetworkPolicyAmendment]?
-	let reason: String?
-	var requestID: CodexRPCRequestID = .string("unbound")
-	let threadID: String
-	let turnID: String
+struct CodexProtocolCommandExecutionApprovalRequest: Decodable, Equatable {
+    let approvalID: String?
+    let command: String?
+    let commandActions: [CodexProtocolCommandAction]?
+    let cwd: String?
+    let itemID: String
+    let networkApprovalContext: CodexWireJSONValue?
+    let proposedExecpolicyAmendment: [String]?
+    let proposedNetworkPolicyAmendments: [CodexProtocolNetworkPolicyAmendment]?
+    let reason: String?
+    var requestID: CodexRPCRequestID = .string("unbound")
+    let threadID: String
+    let turnID: String
 
-	enum CodingKeys: String, CodingKey {
-		case approvalID = "approvalId"
-		case command
-		case commandActions
-		case cwd
-		case itemID = "itemId"
-		case networkApprovalContext
-		case proposedExecpolicyAmendment
-		case proposedNetworkPolicyAmendments
-		case reason
-		case threadID = "threadId"
-		case turnID = "turnId"
-	}
+    enum CodingKeys: String, CodingKey {
+        case approvalID = "approvalId"
+        case command
+        case commandActions
+        case cwd
+        case itemID = "itemId"
+        case networkApprovalContext
+        case proposedExecpolicyAmendment
+        case proposedNetworkPolicyAmendments
+        case reason
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
 }
 
-struct CodexProtocolFileChangeApprovalRequest: Decodable, Equatable, Sendable {
-	let grantRoot: String?
-	let itemID: String
-	let reason: String?
-	var requestID: CodexRPCRequestID = .string("unbound")
-	let threadID: String
-	let turnID: String
+struct CodexProtocolFileChangeApprovalRequest: Decodable, Equatable {
+    let grantRoot: String?
+    let itemID: String
+    let reason: String?
+    var requestID: CodexRPCRequestID = .string("unbound")
+    let threadID: String
+    let turnID: String
 
-	enum CodingKeys: String, CodingKey {
-		case grantRoot
-		case itemID = "itemId"
-		case reason
-		case threadID = "threadId"
-		case turnID = "turnId"
-	}
+    enum CodingKeys: String, CodingKey {
+        case grantRoot
+        case itemID = "itemId"
+        case reason
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
 }
 
-struct CodexProtocolPermissionsApprovalRequest: Decodable, Equatable, Sendable {
-	let itemID: String
-	let permissions: CodexProtocolPermissionProfile
-	let reason: String?
-	var requestID: CodexRPCRequestID = .string("unbound")
-	let threadID: String
-	let turnID: String
+struct CodexProtocolPermissionsApprovalRequest: Decodable, Equatable {
+    let itemID: String
+    let permissions: CodexProtocolPermissionProfile
+    let reason: String?
+    var requestID: CodexRPCRequestID = .string("unbound")
+    let threadID: String
+    let turnID: String
 
-	enum CodingKeys: String, CodingKey {
-		case itemID = "itemId"
-		case permissions
-		case reason
-		case threadID = "threadId"
-		case turnID = "turnId"
-	}
+    enum CodingKeys: String, CodingKey {
+        case itemID = "itemId"
+        case permissions
+        case reason
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
 }
 
-struct CodexProtocolToolUserInputRequest: Decodable, Equatable, Sendable {
-	let itemID: String
-	let questions: [Question]
-	var requestID: CodexRPCRequestID = .string("unbound")
-	let threadID: String
-	let turnID: String
+struct CodexProtocolToolUserInputRequest: Decodable, Equatable {
+    enum CodingKeys: String, CodingKey {
+        case itemID = "itemId"
+        case questions
+        case threadID = "threadId"
+        case turnID = "turnId"
+    }
 
-	enum CodingKeys: String, CodingKey {
-		case itemID = "itemId"
-		case questions
-		case threadID = "threadId"
-		case turnID = "turnId"
-	}
+    struct Question: Decodable, Equatable {
+        let header: String
+        let id: String
+        let isOther: Bool
+        let isSecret: Bool
+        let options: [Option]?
+        let question: String
 
-	struct Question: Decodable, Equatable, Sendable {
-		let header: String
-		let id: String
-		let isOther: Bool
-		let isSecret: Bool
-		let options: [Option]?
-		let question: String
+        enum CodingKeys: String, CodingKey {
+            case header
+            case id
+            case isOther
+            case isSecret
+            case options
+            case question
+        }
 
-		enum CodingKeys: String, CodingKey {
-			case header
-			case id
-			case isOther
-			case isSecret
-			case options
-			case question
-		}
+        struct Option: Decodable, Equatable {
+            let description: String
+            let label: String
+        }
 
-		struct Option: Decodable, Equatable, Sendable {
-			let description: String
-			let label: String
-		}
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            header = try container.decode(String.self, forKey: .header)
+            id = try container.decode(String.self, forKey: .id)
+            isOther = try container.decodeIfPresent(Bool.self, forKey: .isOther) ?? false
+            isSecret = try container.decodeIfPresent(Bool.self, forKey: .isSecret) ?? false
+            options = try container.decodeIfPresent([Option].self, forKey: .options)
+            question = try container.decode(String.self, forKey: .question)
+        }
+    }
 
-		init(from decoder: Decoder) throws {
-			let container = try decoder.container(keyedBy: CodingKeys.self)
-			header = try container.decode(String.self, forKey: .header)
-			id = try container.decode(String.self, forKey: .id)
-			isOther = try container.decodeIfPresent(Bool.self, forKey: .isOther) ?? false
-			isSecret = try container.decodeIfPresent(Bool.self, forKey: .isSecret) ?? false
-			options = try container.decodeIfPresent([Option].self, forKey: .options)
-			question = try container.decode(String.self, forKey: .question)
-		}
-	}
+    let itemID: String
+    let questions: [Question]
+    var requestID: CodexRPCRequestID = .string("unbound")
+    let threadID: String
+    let turnID: String
 }
 
-struct CodexProtocolMCPServerElicitationRequest: Decodable, Equatable, Sendable {
-	let mode: Mode
-	let requestID: CodexRPCRequestID
-	let serverName: String
-	let threadID: String
-	let turnID: String?
+struct CodexProtocolMCPServerElicitationRequest: Decodable, Equatable {
+    enum CodingKeys: String, CodingKey {
+        case serverName
+        case threadID = "threadId"
+        case turnID = "turnId"
+        case mode
+    }
 
-	enum CodingKeys: String, CodingKey {
-		case serverName
-		case threadID = "threadId"
-		case turnID = "turnId"
-		case mode
-	}
+    enum Mode: Equatable {
+        case form(Form)
+        case url(URLPrompt)
+    }
 
-	enum Mode: Equatable, Sendable {
-		case form(Form)
-		case url(URLPrompt)
-	}
+    struct Form: Decodable, Equatable {
+        let message: String
+        let requestedSchema: CodexWireJSONValue
 
-	struct Form: Decodable, Equatable, Sendable {
-		let message: String
-		let requestedSchema: CodexWireJSONValue
+        enum CodingKeys: String, CodingKey {
+            case message
+            case requestedSchema
+        }
+    }
 
-		enum CodingKeys: String, CodingKey {
-			case message
-			case requestedSchema
-		}
-	}
+    struct URLPrompt: Decodable, Equatable {
+        let elicitationID: String
+        let message: String
+        let url: String
 
-	struct URLPrompt: Decodable, Equatable, Sendable {
-		let elicitationID: String
-		let message: String
-		let url: String
+        enum CodingKeys: String, CodingKey {
+            case elicitationID = "elicitationId"
+            case message
+            case url
+        }
+    }
 
-		enum CodingKeys: String, CodingKey {
-			case elicitationID = "elicitationId"
-			case message
-			case url
-		}
-	}
+    let mode: Mode
+    let requestID: CodexRPCRequestID
+    let serverName: String
+    let threadID: String
+    let turnID: String?
 
-	init(from decoder: Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		serverName = try container.decode(String.self, forKey: .serverName)
-		threadID = try container.decode(String.self, forKey: .threadID)
-		turnID = try container.decodeIfPresent(String.self, forKey: .turnID)
-		requestID = .string("unbound")
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        serverName = try container.decode(String.self, forKey: .serverName)
+        threadID = try container.decode(String.self, forKey: .threadID)
+        turnID = try container.decodeIfPresent(String.self, forKey: .turnID)
+        requestID = .string("unbound")
 
-		let modeValue = try container.decode(String.self, forKey: .mode)
-		switch modeValue {
-			case "form":
-				mode = .form(try Form(from: decoder))
-			case "url":
-				mode = .url(try URLPrompt(from: decoder))
-			default:
-				throw DecodingError.dataCorruptedError(
-					forKey: .mode,
-					in: container,
-					debugDescription: "Unsupported MCP elicitation mode \(modeValue)."
-				)
-		}
-	}
+        let modeValue = try container.decode(String.self, forKey: .mode)
+        switch modeValue {
+            case "form":
+                mode = try .form(Form(from: decoder))
+            case "url":
+                mode = try .url(URLPrompt(from: decoder))
+            default:
+                throw DecodingError.dataCorruptedError(
+                    forKey: .mode,
+                    in: container,
+                    debugDescription: "Unsupported MCP elicitation mode \(modeValue)."
+                )
+        }
+    }
 }
 
-enum CodexProtocolCommandAction: Decodable, Equatable, Sendable {
-	case read(Read)
-	case listFiles(ListFiles)
-	case search(Search)
-	case unknown(Unknown)
+enum CodexProtocolCommandAction: Decodable, Equatable {
+    case read(Read)
+    case listFiles(ListFiles)
+    case search(Search)
+    case unknown(Unknown)
 
-	struct Read: Decodable, Equatable, Sendable {
-		let command: String
-		let name: String
-		let path: String
+    struct Read: Decodable, Equatable {
+        let command: String
+        let name: String
+        let path: String
 
-		enum CodingKeys: String, CodingKey {
-			case command
-			case name
-			case path
-		}
-	}
+        enum CodingKeys: String, CodingKey {
+            case command
+            case name
+            case path
+        }
+    }
 
-	struct ListFiles: Decodable, Equatable, Sendable {
-		let command: String
-		let path: String?
+    struct ListFiles: Decodable, Equatable {
+        let command: String
+        let path: String?
 
-		enum CodingKeys: String, CodingKey {
-			case command
-			case path
-		}
-	}
+        enum CodingKeys: String, CodingKey {
+            case command
+            case path
+        }
+    }
 
-	struct Search: Decodable, Equatable, Sendable {
-		let command: String
-		let path: String?
-		let query: String?
+    struct Search: Decodable, Equatable {
+        let command: String
+        let path: String?
+        let query: String?
 
-		enum CodingKeys: String, CodingKey {
-			case command
-			case path
-			case query
-		}
-	}
+        enum CodingKeys: String, CodingKey {
+            case command
+            case path
+            case query
+        }
+    }
 
-	struct Unknown: Decodable, Equatable, Sendable {
-		let command: String
+    struct Unknown: Decodable, Equatable {
+        let command: String
 
-		enum CodingKeys: String, CodingKey {
-			case command
-		}
-	}
+        enum CodingKeys: String, CodingKey {
+            case command
+        }
+    }
 
-	private enum CodingKeys: String, CodingKey {
-		case command
-		case name
-		case path
-		case query
-		case type
-	}
+    private enum CodingKeys: String, CodingKey {
+        case command
+        case name
+        case path
+        case query
+        case type
+    }
 
-	init(from decoder: Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		let type = try container.decode(String.self, forKey: .type)
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
 
-		switch type {
-			case "read":
-				self = .read(
-					.init(
-						command: try container.decode(String.self, forKey: .command),
-						name: try container.decode(String.self, forKey: .name),
-						path: try container.decode(String.self, forKey: .path)
-					)
-				)
-			case "listFiles":
-				self = .listFiles(
-					.init(
-						command: try container.decode(String.self, forKey: .command),
-						path: try container.decodeIfPresent(String.self, forKey: .path)
-					)
-				)
-			case "search":
-				self = .search(
-					.init(
-						command: try container.decode(String.self, forKey: .command),
-						path: try container.decodeIfPresent(String.self, forKey: .path),
-						query: try container.decodeIfPresent(String.self, forKey: .query)
-					)
-				)
-			case "unknown":
-				self = .unknown(
-					.init(command: try container.decode(String.self, forKey: .command))
-				)
-			default:
-				throw DecodingError.dataCorruptedError(
-					forKey: .type,
-					in: container,
-					debugDescription: "Unsupported command action type \(type)."
-				)
-		}
-	}
+        switch type {
+            case "read":
+                self = try .read(
+                    .init(
+                        command: container.decode(String.self, forKey: .command),
+                        name: container.decode(String.self, forKey: .name),
+                        path: container.decode(String.self, forKey: .path)
+                    )
+                )
+            case "listFiles":
+                self = try .listFiles(
+                    .init(
+                        command: container.decode(String.self, forKey: .command),
+                        path: container.decodeIfPresent(String.self, forKey: .path)
+                    )
+                )
+            case "search":
+                self = try .search(
+                    .init(
+                        command: container.decode(String.self, forKey: .command),
+                        path: container.decodeIfPresent(String.self, forKey: .path),
+                        query: container.decodeIfPresent(String.self, forKey: .query)
+                    )
+                )
+            case "unknown":
+                self = try .unknown(
+                    .init(command: container.decode(String.self, forKey: .command))
+                )
+            default:
+                throw DecodingError.dataCorruptedError(
+                    forKey: .type,
+                    in: container,
+                    debugDescription: "Unsupported command action type \(type)."
+                )
+        }
+    }
 }
 
-struct CodexProtocolNetworkPolicyAmendment: Decodable, Equatable, Sendable {
-	let action: String
-	let host: String
+struct CodexProtocolNetworkPolicyAmendment: Decodable, Equatable {
+    let action: String
+    let host: String
 }
 
-struct CodexProtocolPermissionProfile: Decodable, Equatable, Sendable {
-	let fileSystem: FileSystem?
-	let network: Network?
+struct CodexProtocolPermissionProfile: Decodable, Equatable {
+    let fileSystem: FileSystem?
+    let network: Network?
 
-	struct FileSystem: Decodable, Equatable, Sendable {
-		let read: [String]?
-		let write: [String]?
-	}
+    struct FileSystem: Decodable, Equatable {
+        let read: [String]?
+        let write: [String]?
+    }
 
-	struct Network: Decodable, Equatable, Sendable {
-		let enabled: Bool?
-	}
+    struct Network: Decodable, Equatable {
+        let enabled: Bool?
+    }
 }

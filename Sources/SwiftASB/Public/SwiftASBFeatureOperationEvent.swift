@@ -37,7 +37,7 @@ public struct SwiftASBFeatureOperationEvent: Sendable, Equatable, Identifiable {
         rollback: Rollback = .unavailable,
         diagnosticText: String? = nil
     ) {
-        self.id = operationID
+        id = operationID
         self.categoryID = categoryID
         self.operationID = operationID
         self.title = title
@@ -55,14 +55,14 @@ public struct SwiftASBFeatureOperationEvent: Sendable, Equatable, Identifiable {
     }
 }
 
-extension SwiftASBFeatureOperationEvent {
+public extension SwiftASBFeatureOperationEvent {
     /// The current result state for a feature operation.
-    public enum Status: String, Sendable, Equatable {
+    enum Status: String, Sendable, Equatable {
         case started, succeeded, failed, cancelled, skipped
     }
 
     /// One command SwiftASB ran as part of a feature operation.
-    public struct Command: Sendable, Equatable {
+    struct Command: Sendable, Equatable {
         public let argv: [String]
         public let currentDirectoryPath: String?
 
@@ -76,7 +76,7 @@ extension SwiftASBFeatureOperationEvent {
     }
 
     /// Rollback metadata for a feature operation.
-    public struct Rollback: Sendable, Equatable {
+    struct Rollback: Sendable, Equatable {
         public let isAvailable: Bool
         public let handle: String?
         public let summary: String?

@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("selected recent files keep full payload while older unselected files slim first")
@@ -10,7 +10,7 @@ extension CodexAppServerTests {
                 "backwardsCursor": "cursor-newer-1",
                 "data": [
                     [
-                        "completedAt": 1713350200,
+                        "completedAt": 1_713_350_200,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-2",
@@ -23,11 +23,11 @@ extension CodexAppServerTests {
                                 "type": "fileChange",
                             ],
                         ],
-                        "startedAt": 1713350150,
+                        "startedAt": 1_713_350_150,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350100,
+                        "completedAt": 1_713_350_100,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-1",
@@ -40,7 +40,7 @@ extension CodexAppServerTests {
                                 "type": "fileChange",
                             ],
                         ],
-                        "startedAt": 1713350050,
+                        "startedAt": 1_713_350_050,
                         "status": "completed",
                     ],
                 ],
@@ -101,6 +101,7 @@ extension CodexAppServerTests {
 
         await waitForObservableState {
             guard recentFiles.files.count == 2 else { return false }
+
             let selected = recentFiles.files.first(where: { $0.id == "turn-1:item-1-file" })
             let newest = recentFiles.files.first(where: { $0.id == "turn-2:item-2-file" })
             return selected?.isPayloadComplete == true && newest?.isPayloadComplete == false
@@ -126,7 +127,7 @@ extension CodexAppServerTests {
                 "backwardsCursor": "cursor-newer-1",
                 "data": [
                     [
-                        "completedAt": 1713350200,
+                        "completedAt": 1_713_350_200,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-2",
@@ -139,11 +140,11 @@ extension CodexAppServerTests {
                                 "type": "fileChange",
                             ],
                         ],
-                        "startedAt": 1713350150,
+                        "startedAt": 1_713_350_150,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350100,
+                        "completedAt": 1_713_350_100,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-1",
@@ -156,7 +157,7 @@ extension CodexAppServerTests {
                                 "type": "fileChange",
                             ],
                         ],
-                        "startedAt": 1713350050,
+                        "startedAt": 1_713_350_050,
                         "status": "completed",
                     ],
                 ],
@@ -237,7 +238,7 @@ extension CodexAppServerTests {
                 "backwardsCursor": "cursor-newer-1",
                 "data": [
                     [
-                        "completedAt": 1713350200,
+                        "completedAt": 1_713_350_200,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-2",
@@ -258,11 +259,11 @@ extension CodexAppServerTests {
                                 "type": "fileChange",
                             ],
                         ],
-                        "startedAt": 1713350150,
+                        "startedAt": 1_713_350_150,
                         "status": "completed",
                     ],
                     [
-                        "completedAt": 1713350100,
+                        "completedAt": 1_713_350_100,
                         "durationMs": 2500,
                         "error": NSNull(),
                         "id": "turn-1",
@@ -275,7 +276,7 @@ extension CodexAppServerTests {
                                 "type": "fileChange",
                             ],
                         ],
-                        "startedAt": 1713350050,
+                        "startedAt": 1_713_350_050,
                         "status": "completed",
                     ],
                 ],
@@ -344,7 +345,7 @@ extension CodexAppServerTests {
                     "backwardsCursor": NSNull(),
                     "data": [
                         [
-                            "completedAt": 1713350400,
+                            "completedAt": 1_713_350_400,
                             "durationMs": 500,
                             "error": NSNull(),
                             "id": "turn-newer",
@@ -362,11 +363,11 @@ extension CodexAppServerTests {
                                     "type": "fileChange",
                                 ],
                             ],
-                            "startedAt": 1713350300,
+                            "startedAt": 1_713_350_300,
                             "status": "completed",
                         ],
                         [
-                            "completedAt": 1713349400,
+                            "completedAt": 1_713_349_400,
                             "durationMs": 500,
                             "error": NSNull(),
                             "id": "turn-older",
@@ -378,12 +379,12 @@ extension CodexAppServerTests {
                                     "type": "fileChange",
                                 ],
                             ],
-                            "startedAt": 1713349300,
+                            "startedAt": 1_713_349_300,
                             "status": "completed",
                         ],
                     ],
                     "nextCursor": NSNull(),
-                ]
+                ],
             ]
         )
         let (historyStore, temporaryDirectory) = try temporarySQLiteHistoryStore()
@@ -450,7 +451,7 @@ extension CodexAppServerTests {
                     "backwardsCursor": "cursor-newer-1",
                     "data": [
                         [
-                            "completedAt": 1713350300,
+                            "completedAt": 1_713_350_300,
                             "durationMs": 2500,
                             "error": NSNull(),
                             "id": "turn-3",
@@ -462,7 +463,7 @@ extension CodexAppServerTests {
                                     "type": "fileChange",
                                 ],
                             ],
-                            "startedAt": 1713350250,
+                            "startedAt": 1_713_350_250,
                             "status": "completed",
                         ],
                     ],
@@ -472,7 +473,7 @@ extension CodexAppServerTests {
                     "backwardsCursor": "cursor-newer-2",
                     "data": [
                         [
-                            "completedAt": 1713350005,
+                            "completedAt": 1_713_350_005,
                             "durationMs": 2500,
                             "error": NSNull(),
                             "id": "turn-0",
@@ -484,7 +485,7 @@ extension CodexAppServerTests {
                                     "type": "fileChange",
                                 ],
                             ],
-                            "startedAt": 1713350000,
+                            "startedAt": 1_713_350_000,
                             "status": "completed",
                         ],
                     ],
@@ -526,11 +527,11 @@ extension CodexAppServerTests {
             turns: [
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350300,
+                        completedAt: 1_713_350_300,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-3",
-                        startedAt: 1713350250,
+                        startedAt: 1_713_350_250,
                         status: .completed
                     ),
                     items: [
@@ -548,11 +549,11 @@ extension CodexAppServerTests {
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350200,
+                        completedAt: 1_713_350_200,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-2",
-                        startedAt: 1713350150,
+                        startedAt: 1_713_350_150,
                         status: .completed
                     ),
                     items: [
@@ -570,11 +571,11 @@ extension CodexAppServerTests {
                 ),
                 ThreadHistoryStore.HydratedTurn(
                     turn: CodexAppServer.TurnInfo(
-                        completedAt: 1713350100,
+                        completedAt: 1_713_350_100,
                         durationMS: 2500,
                         errorMessage: nil,
                         id: "turn-1",
-                        startedAt: 1713350050,
+                        startedAt: 1_713_350_050,
                         status: .completed
                     ),
                     items: [
@@ -632,5 +633,4 @@ extension CodexAppServerTests {
         await client.stop()
         await tearDownTemporarySQLiteHistoryStore(historyStore, directory: temporaryDirectory)
     }
-
 }

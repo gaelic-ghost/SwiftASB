@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 @MainActor
 func waitForObservableState(
@@ -29,17 +29,14 @@ func waitForCondition(
 }
 
 actor FakeCodexAppServerTransport: CodexAppServerTransporting {
-    struct RecordedResponse: Sendable, Equatable {
+    struct RecordedResponse: Equatable {
         let requestID: CodexRPCRequestID
         let payload: Data
     }
 
-    var recordedMethods: [String] {
-        rawRecordedMethods.filter { $0 != "mcpServerStatus/list" }
-    }
+    private(set) var recordedResponses: [RecordedResponse] = []
 
     private var rawRecordedMethods: [String] = []
-    private(set) var recordedResponses: [RecordedResponse] = []
     private var recordedRequestPayloads: [String: [Data]] = [:]
     private var threadListResult: [String: Any]?
     private var threadListResultQueue: [[String: Any]]
@@ -62,6 +59,14 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     private var initializedSeen = false
     private var serverEventContinuation: AsyncStream<CodexRPCServerEvent>.Continuation?
 
+    var recordedMethods: [String] {
+        rawRecordedMethods.filter { $0 != "mcpServerStatus/list" }
+    }
+
+    var isStarted: Bool {
+        started
+    }
+
     init(
         executableResolution: CodexCLIExecutableResolver.Resolution? = nil,
         startError: CodexTransportError? = nil,
@@ -83,7 +88,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         ],
         commandExecResultQueue: [[String: Any]] = []
     ) {
-        self.resolvedExecutable = executableResolution
+        resolvedExecutable = executableResolution
         self.startError = startError
         self.threadListResult = threadListResult
         self.threadListResultQueue = threadListResultQueue
@@ -98,6 +103,16 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         self.threadTurnsItemsListResult = threadTurnsItemsListResult
         self.commandExecResult = commandExecResult
         self.commandExecResultQueue = commandExecResultQueue
+    }
+
+    private static func isAppSnapshotRequest(_ method: String) -> Bool {
+        method == "modelProvider/capabilities/read"
+            || method == "mcpServerStatus/list"
+            || method == "hooks/list"
+            || method == "app/list"
+            || method == "skills/list"
+            || method == "plugin/list"
+            || method == "collaborationMode/list"
     }
 
     func setThreadListResult(_ result: [String: Any]?) {
@@ -118,10 +133,6 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
 
     func requestPayloads(for method: String) -> [Data] {
         recordedRequestPayloads[method] ?? []
-    }
-
-    var isStarted: Bool {
-        started
     }
 
     func start() throws {
@@ -160,385 +171,217 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         }
 
         switch method {
-        case "initialize":
-            return responsePayload(
-                id: id,
-                result: [
-                    "codexHome": "/Users/galew/.codex",
-                    "platformFamily": "unix",
-                    "platformOs": "macos",
-                    "userAgent": "codex-cli/0.128.0",
-                ]
-            )
-        case "model/list":
-            return responsePayload(
-                id: id,
-                result: [
-                    "data": [
-                        [
-                            "additionalSpeedTiers": ["fast", "flex"],
-                            "availabilityNux": [
-                                "message": "Available for this workspace.",
-                            ],
-                            "defaultReasoningEffort": "medium",
-                            "description": "Balanced general-purpose model.",
-                            "displayName": "GPT-5.4",
-                            "hidden": false,
-                            "id": "gpt-5.4",
-                            "inputModalities": ["text", "image"],
-                            "isDefault": true,
-                            "model": "gpt-5.4",
-                            "supportedReasoningEfforts": [
-                                [
-                                    "description": "Faster responses.",
-                                    "reasoningEffort": "low",
+            case "initialize":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "codexHome": "/Users/galew/.codex",
+                        "platformFamily": "unix",
+                        "platformOs": "macos",
+                        "userAgent": "codex-cli/0.128.0",
+                    ]
+                )
+            case "model/list":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "data": [
+                            [
+                                "additionalSpeedTiers": ["fast", "flex"],
+                                "availabilityNux": [
+                                    "message": "Available for this workspace.",
                                 ],
-                                [
-                                    "description": "Balanced responses.",
-                                    "reasoningEffort": "medium",
+                                "defaultReasoningEffort": "medium",
+                                "description": "Balanced general-purpose model.",
+                                "displayName": "GPT-5.4",
+                                "hidden": false,
+                                "id": "gpt-5.4",
+                                "inputModalities": ["text", "image"],
+                                "isDefault": true,
+                                "model": "gpt-5.4",
+                                "supportedReasoningEfforts": [
+                                    [
+                                        "description": "Faster responses.",
+                                        "reasoningEffort": "low",
+                                    ],
+                                    [
+                                        "description": "Balanced responses.",
+                                        "reasoningEffort": "medium",
+                                    ],
+                                    [
+                                        "description": "Deeper reasoning.",
+                                        "reasoningEffort": "high",
+                                    ],
                                 ],
-                                [
-                                    "description": "Deeper reasoning.",
-                                    "reasoningEffort": "high",
-                                ],
-                            ],
-                            "supportsPersonality": true,
-                            "upgrade": NSNull(),
-                            "upgradeInfo": NSNull(),
-                        ],
-                    ],
-                    "nextCursor": "cursor-models-next",
-                ]
-            )
-        case "modelProvider/capabilities/read":
-            return responsePayload(
-                id: id,
-                result: [
-                    "imageGeneration": true,
-                    "namespaceTools": false,
-                    "webSearch": true,
-                ]
-            )
-        case "hooks/list":
-            return responsePayload(
-                id: id,
-                result: [
-                    "data": [
-                        [
-                            "cwd": "/tmp/project",
-                            "errors": [
-                                [
-                                    "message": "Hook script is not executable.",
-                                    "path": "/tmp/project/.codex/hooks/post-tool-use.sh",
-                                ],
-                            ],
-                            "hooks": [
-                                [
-                                    "command": "swift test",
-                                    "displayOrder": 2,
-                                    "enabled": true,
-                                    "eventName": "postToolUse",
-                                    "handlerType": "command",
-                                    "isManaged": false,
-                                    "key": "project-post-tool-use",
-                                    "matcher": "swift",
-                                    "pluginId": NSNull(),
-                                    "source": "project",
-                                    "sourcePath": "/tmp/project/.codex/hooks/post-tool-use.sh",
-                                    "statusMessage": "Ready.",
-                                    "timeoutSec": 30,
-                                ],
-                                [
-                                    "command": "swift format",
-                                    "displayOrder": 3,
-                                    "enabled": false,
-                                    "eventName": "preToolUse",
-                                    "handlerType": "command",
-                                    "isManaged": false,
-                                    "key": "user-pre-tool-use",
-                                    "matcher": "swift",
-                                    "pluginId": NSNull(),
-                                    "source": "user",
-                                    "sourcePath": "/Users/example/.codex/hooks/pre-tool-use.sh",
-                                    "statusMessage": "Disabled.",
-                                    "timeoutSec": 10,
-                                ],
-                            ],
-                            "warnings": [
-                                "Ignoring disabled user hook user-pre-tool-use.",
+                                "supportsPersonality": true,
+                                "upgrade": NSNull(),
+                                "upgradeInfo": NSNull(),
                             ],
                         ],
-                    ],
-                ]
-            )
-        case "mcpServerStatus/list":
-            let includesThreadScopedServer = try requestParam("threadId", from: requestPayload) is String
-            var servers: [[String: Any]] = [
-                [
-                    "authStatus": "oAuth",
-                    "name": "calendar",
-                    "resources": [
-                        [
-                            "_meta": ["source": "fixture"],
-                            "annotations": NSNull(),
-                            "description": "Today's events.",
-                            "icons": [],
-                            "mimeType": "application/json",
-                            "name": "today",
-                            "size": 128,
-                            "title": "Today",
-                            "uri": "calendar://events/today",
-                        ],
-                    ],
-                    "resourceTemplates": [
-                        [
-                            "annotations": NSNull(),
-                            "description": "Events by date.",
-                            "mimeType": "application/json",
-                            "name": "events-by-date",
-                            "title": "Events By Date",
-                            "uriTemplate": "calendar://events/{date}",
-                        ],
-                    ],
-                    "tools": [
-                        "list_events": [
-                            "_meta": ["source": "fixture"],
-                            "annotations": NSNull(),
-                            "description": "List calendar events.",
-                            "icons": [],
-                            "inputSchema": ["type": "object"],
-                            "name": "list_events",
-                            "outputSchema": ["type": "object"],
-                            "title": "List Events",
-                        ],
-                    ],
-                ],
-            ]
-
-            if includesThreadScopedServer {
-                servers.append(
-                    [
-                        "authStatus": "unsupported",
-                        "name": "thread_notes",
-                        "resources": [],
-                        "resourceTemplates": [],
-                        "tools": [
-                            "search_notes": [
-                                "_meta": ["source": "fixture"],
-                                "annotations": NSNull(),
-                                "description": "Search thread notes.",
-                                "icons": [],
-                                "inputSchema": ["type": "object"],
-                                "name": "search_notes",
-                                "outputSchema": NSNull(),
-                                "title": "Search Notes",
+                        "nextCursor": "cursor-models-next",
+                    ]
+                )
+            case "modelProvider/capabilities/read":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "imageGeneration": true,
+                        "namespaceTools": false,
+                        "webSearch": true,
+                    ]
+                )
+            case "hooks/list":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "data": [
+                            [
+                                "cwd": "/tmp/project",
+                                "errors": [
+                                    [
+                                        "message": "Hook script is not executable.",
+                                        "path": "/tmp/project/.codex/hooks/post-tool-use.sh",
+                                    ],
+                                ],
+                                "hooks": [
+                                    [
+                                        "command": "swift test",
+                                        "displayOrder": 2,
+                                        "enabled": true,
+                                        "eventName": "postToolUse",
+                                        "handlerType": "command",
+                                        "isManaged": false,
+                                        "key": "project-post-tool-use",
+                                        "matcher": "swift",
+                                        "pluginId": NSNull(),
+                                        "source": "project",
+                                        "sourcePath": "/tmp/project/.codex/hooks/post-tool-use.sh",
+                                        "statusMessage": "Ready.",
+                                        "timeoutSec": 30,
+                                    ],
+                                    [
+                                        "command": "swift format",
+                                        "displayOrder": 3,
+                                        "enabled": false,
+                                        "eventName": "preToolUse",
+                                        "handlerType": "command",
+                                        "isManaged": false,
+                                        "key": "user-pre-tool-use",
+                                        "matcher": "swift",
+                                        "pluginId": NSNull(),
+                                        "source": "user",
+                                        "sourcePath": "/Users/example/.codex/hooks/pre-tool-use.sh",
+                                        "statusMessage": "Disabled.",
+                                        "timeoutSec": 10,
+                                    ],
+                                ],
+                                "warnings": [
+                                    "Ignoring disabled user hook user-pre-tool-use.",
+                                ],
                             ],
                         ],
                     ]
                 )
-            }
-
-            return responsePayload(
-                id: id,
-                result: [
-                    "data": servers,
-                    "nextCursor": NSNull(),
-                ]
-            )
-        case "mcpServer/resource/read":
-            return responsePayload(
-                id: id,
-                result: [
-                    "contents": [
-                        [
-                            "_meta": ["source": "fixture"],
-                            "blob": NSNull(),
-                            "mimeType": "application/json",
-                            "text": #"{"events":[]}"#,
-                            "uri": "calendar://events/today",
-                        ],
-                    ],
-                ]
-            )
-        case "thread/archive":
-            return responsePayload(id: id, result: [:])
-        case "thread/approveGuardianDeniedAction":
-            return responsePayload(id: id, result: [:])
-        case "thread/unarchive":
-            return responsePayload(
-                id: id,
-                result: [
-                    "thread": [
-                        "cliVersion": "0.128.0",
-                        "createdAt": 1713350000,
-                        "cwd": "/tmp/project",
-                        "ephemeral": false,
-                        "id": "thread-123",
-                        "modelProvider": "openai",
-                        "name": "Hydrated Thread",
-                        "preview": "Hydrated thread preview",
-                        "source": "cli",
-                        "status": ["type": "notLoaded"],
-                        "turns": [],
-                        "updatedAt": 1713350005,
-                    ],
-                ]
-            )
-        case "thread/name/set":
-            return responsePayload(id: id, result: [:])
-        case "thread/metadata/update":
-            return responsePayload(
-                id: id,
-                result: [
-                    "thread": [
-                        "cliVersion": "0.128.0",
-                        "createdAt": 1713350000,
-                        "cwd": "/tmp/project",
-                        "ephemeral": false,
-                        "gitInfo": [
-                            "branch": "main",
-                            "originUrl": NSNull(),
-                            "sha": "abc123",
-                        ],
-                        "id": "thread-123",
-                        "modelProvider": "openai",
-                        "name": "Hydrated Thread",
-                        "preview": "Hydrated thread preview",
-                        "source": "cli",
-                        "status": ["type": "active"],
-                        "turns": [],
-                        "updatedAt": 1713350006,
-                    ],
-                ]
-            )
-        case "thread/rollback":
-            return responsePayload(
-                id: id,
-                result: [
-                    "thread": [
-                        "cliVersion": "0.128.0",
-                        "createdAt": 1713350000,
-                        "cwd": "/tmp/project",
-                        "ephemeral": false,
-                        "id": "thread-123",
-                        "modelProvider": "openai",
-                        "name": "Hydrated Thread",
-                        "preview": "Hydrated thread preview",
-                        "source": "cli",
-                        "status": ["type": "active"],
-                        "turns": [
+            case "mcpServerStatus/list":
+                let includesThreadScopedServer = try requestParam("threadId", from: requestPayload) is String
+                var servers: [[String: Any]] = [
+                    [
+                        "authStatus": "oAuth",
+                        "name": "calendar",
+                        "resources": [
                             [
-                                "completedAt": 1713350004,
-                                "durationMs": 2000,
-                                "error": NSNull(),
-                                "id": "turn-older",
-                                "items": [
-                                    [
-                                        "id": "item-older-user",
-                                        "text": "Older prompt",
-                                        "type": "userMessage",
-                                    ],
-                                ],
-                                "startedAt": 1713350002,
-                                "status": "completed",
+                                "_meta": ["source": "fixture"],
+                                "annotations": NSNull(),
+                                "description": "Today's events.",
+                                "icons": [],
+                                "mimeType": "application/json",
+                                "name": "today",
+                                "size": 128,
+                                "title": "Today",
+                                "uri": "calendar://events/today",
                             ],
                         ],
-                        "updatedAt": 1713350010,
+                        "resourceTemplates": [
+                            [
+                                "annotations": NSNull(),
+                                "description": "Events by date.",
+                                "mimeType": "application/json",
+                                "name": "events-by-date",
+                                "title": "Events By Date",
+                                "uriTemplate": "calendar://events/{date}",
+                            ],
+                        ],
+                        "tools": [
+                            "list_events": [
+                                "_meta": ["source": "fixture"],
+                                "annotations": NSNull(),
+                                "description": "List calendar events.",
+                                "icons": [],
+                                "inputSchema": ["type": "object"],
+                                "name": "list_events",
+                                "outputSchema": ["type": "object"],
+                                "title": "List Events",
+                            ],
+                        ],
                     ],
                 ]
-            )
-        case "thread/start":
-            if !initializedSeen {
-                return errorPayload(
+
+                if includesThreadScopedServer {
+                    servers.append(
+                        [
+                            "authStatus": "unsupported",
+                            "name": "thread_notes",
+                            "resources": [],
+                            "resourceTemplates": [],
+                            "tools": [
+                                "search_notes": [
+                                    "_meta": ["source": "fixture"],
+                                    "annotations": NSNull(),
+                                    "description": "Search thread notes.",
+                                    "icons": [],
+                                    "inputSchema": ["type": "object"],
+                                    "name": "search_notes",
+                                    "outputSchema": NSNull(),
+                                    "title": "Search Notes",
+                                ],
+                            ],
+                        ]
+                    )
+                }
+
+                return responsePayload(
                     id: id,
-                    code: -32000,
-                    message: "initialized notification missing"
+                    result: [
+                        "data": servers,
+                        "nextCursor": NSNull(),
+                    ]
                 )
-            }
-
-            let threadID = threadStartIDQueue.isEmpty ? "thread-123" : threadStartIDQueue.removeFirst()
-
-            return responsePayload(
-                id: id,
-                result: [
-                    "approvalPolicy": "on-request",
-                    "approvalsReviewer": "user",
-                    "cwd": "/tmp/project",
-                    "instructionSources": ["AGENTS.md"],
-                    "model": "gpt-5.4",
-                    "modelProvider": "openai",
-                    "activePermissionProfile": [
-                        "id": ":workspace",
-                        "extends": NSNull(),
-                        "modifications": [
+            case "mcpServer/resource/read":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "contents": [
                             [
-                                "path": "/tmp/project-fixtures",
-                                "type": "additionalWritableRoot",
+                                "_meta": ["source": "fixture"],
+                                "blob": NSNull(),
+                                "mimeType": "application/json",
+                                "text": #"{"events":[]}"#,
+                                "uri": "calendar://events/today",
                             ],
                         ],
-                    ],
-                    "permissionProfile": [
-                        "type": "managed",
-                        "fileSystem": [
-                            "type": "restricted",
-                            "globScanMaxDepth": 4,
-                            "entries": [
-                                [
-                                    "access": "write",
-                                    "path": [
-                                        "type": "special",
-                                        "value": [
-                                            "kind": "project_roots",
-                                            "path": NSNull(),
-                                            "subpath": NSNull(),
-                                        ],
-                                    ],
-                                ],
-                                [
-                                    "access": "read",
-                                    "path": [
-                                        "type": "path",
-                                        "path": "/tmp/project",
-                                    ],
-                                ],
-                            ],
-                        ],
-                        "network": [
-                            "enabled": true,
-                        ],
-                    ],
-                    "reasoningEffort": "medium",
-                    "sandbox": [
-                        "type": "workspaceWrite",
-                        "networkAccess": "enabled",
-                        "writableRoots": ["/tmp/project"],
-                    ],
-                    "serviceTier": "fast",
-                    "thread": [
-                        "cliVersion": "0.128.0",
-                        "createdAt": 1713350000,
-                        "cwd": "/tmp/project",
-                        "ephemeral": false,
-                        "id": threadID,
-                        "modelProvider": "openai",
-                        "preview": "Hello from the fake app-server",
-                        "source": "cli",
-                        "status": ["type": "active"],
-                        "turns": [],
-                        "updatedAt": 1713350001,
-                    ],
-                ]
-            )
-        case "thread/list":
-            let result: [String: Any]
-            if !threadListResultQueue.isEmpty {
-                result = threadListResultQueue.removeFirst()
-            } else {
-                result = threadListResult ?? [
-                    "data": [
-                        [
+                    ]
+                )
+            case "thread/archive":
+                return responsePayload(id: id, result: [:])
+            case "thread/approveGuardianDeniedAction":
+                return responsePayload(id: id, result: [:])
+            case "thread/unarchive":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "thread": [
                             "cliVersion": "0.128.0",
-                            "createdAt": 1713350000,
+                            "createdAt": 1_713_350_000,
                             "cwd": "/tmp/project",
                             "ephemeral": false,
                             "id": "thread-123",
@@ -548,758 +391,920 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                             "source": "cli",
                             "status": ["type": "notLoaded"],
                             "turns": [],
-                            "updatedAt": 1713350005,
+                            "updatedAt": 1_713_350_005,
                         ],
-                    ],
-                    "nextCursor": "cursor-next",
-                ]
-            }
-            return responsePayload(
-                id: id,
-                result: result
-            )
-        case "thread/loaded/list":
-            return responsePayload(
-                id: id,
-                result: [
-                    "data": ["thread-123", "thread-456"],
-                    "nextCursor": "cursor-loaded-next",
-                ]
-            )
-        case "fs/getMetadata":
-            return responsePayload(
-                id: id,
-                result: [
-                    "createdAtMs": 1_713_350_000_000,
-                    "isDirectory": true,
-                    "isFile": false,
-                    "isSymlink": false,
-                    "modifiedAtMs": 1_713_350_005_000,
-                ]
-            )
-        case "fs/readDirectory":
-            let path = try requestParam("path", from: requestPayload) as? String
-            let entries: [[String: Any]] = switch path {
-            case "/tmp/project":
-                [
-                    [
-                        "fileName": "Sources",
-                        "isDirectory": true,
-                        "isFile": false,
-                    ],
-                    [
-                        "fileName": "Package.swift",
-                        "isDirectory": false,
-                        "isFile": true,
-                    ],
-                    [
-                        "fileName": ".build",
-                        "isDirectory": true,
-                        "isFile": false,
-                    ],
-                ]
-            case "/tmp/project/Sources":
-                [
-                    [
-                        "fileName": "SwiftASB",
-                        "isDirectory": true,
-                        "isFile": false,
-                    ],
-                    [
-                        "fileName": "SwiftASBTests.swift",
-                        "isDirectory": false,
-                        "isFile": true,
-                    ],
-                ]
-            case "/tmp/project/Sources/SwiftASB":
-                [
-                    [
-                        "fileName": "CodexFS.swift",
-                        "isDirectory": false,
-                        "isFile": true,
-                    ],
-                    [
-                        "fileName": "CodexAppServer.swift",
-                        "isDirectory": false,
-                        "isFile": true,
-                    ],
-                ]
-            case "/tmp/project/.build":
-                [
-                    [
-                        "fileName": "debug",
-                        "isDirectory": true,
-                        "isFile": false,
-                    ],
-                    [
-                        "fileName": "cache.log",
-                        "isDirectory": false,
-                        "isFile": true,
-                    ],
-                ]
-            case "/tmp/project/.build/debug":
-                [
-                    [
-                        "fileName": "CodexFS.o",
-                        "isDirectory": false,
-                        "isFile": true,
-                    ],
-                ]
-            default:
-                []
-            }
-            return responsePayload(
-                id: id,
-                result: [
-                    "entries": entries,
-                ]
-            )
-        case "fs/readFile":
-            return responsePayload(
-                id: id,
-                result: [
-                    "dataBase64": Data("hello from CodexFS".utf8).base64EncodedString(),
-                ]
-            )
-        case "fs/watch":
-            return responsePayload(
-                id: id,
-                result: [
-                    "path": "/tmp/project",
-                ]
-            )
-        case "fs/unwatch":
-            return responsePayload(
-                id: id,
-                result: [:]
-            )
-        case "config/read":
-            return responsePayload(
-                id: id,
-                result: [
-                    "config": [
-                        "model": "gpt-5.2",
-                        "sandbox_mode": "workspace-write",
-                    ],
-                    "layers": [
-                        [
-                            "config": [
-                                "model": "gpt-5.2",
-                            ],
-                            "name": [
-                                "type": "user",
-                                "file": "/Users/galew/.codex/config.toml",
-                            ],
-                            "version": "1",
-                        ],
-                        [
-                            "config": [
-                                "sandbox_mode": "workspace-write",
-                            ],
-                            "disabledReason": "Project config is disabled for this fixture.",
-                            "name": [
-                                "type": "project",
-                                "dotCodexFolder": "/tmp/project/.codex",
-                            ],
-                            "version": "2",
-                        ],
-                        [
-                            "config": [
-                                "review_model": "gpt-5.5",
-                            ],
-                            "name": [
-                                "type": "enterpriseManaged",
-                                "id": "enterprise-layer-1",
-                                "name": "Admin Defaults",
-                            ],
-                            "version": "3",
-                        ],
-                    ],
-                    "origins": [
-                        "model": [
-                            "name": [
-                                "type": "user",
-                                "file": "/Users/galew/.codex/config.toml",
-                            ],
-                            "version": "1",
-                        ],
-                        "sandbox_mode": [
-                            "name": [
-                                "type": "project",
-                                "dotCodexFolder": "/tmp/project/.codex",
-                            ],
-                            "version": "2",
-                        ],
-                        "review_model": [
-                            "name": [
-                                "type": "enterpriseManaged",
-                                "id": "enterprise-layer-1",
-                                "name": "Admin Defaults",
-                            ],
-                            "version": "3",
-                        ],
-                    ],
-                ]
-            )
-        case "config/batchWrite":
-            return responsePayload(
-                id: id,
-                result: [
-                    "filePath": "/Users/example/.codex/config.toml",
-                    "overriddenMetadata": NSNull(),
-                    "status": "ok",
-                    "version": "sha256:swiftasb-config-write",
-                ]
-            )
-        case "configRequirements/read":
-            return responsePayload(
-                id: id,
-                result: [
-                    "requirements": [
-                        "featureRequirements": [
-                            "network_access": true,
-                        ],
-                    ],
-                ]
-            )
-        case "app/list":
-            return responsePayload(
-                id: id,
-                result: [
-                    "data": [
-                        [
-                            "branding": [
-                                "isDiscoverableApp": true,
-                                "developer": "OpenAI",
-                                "category": "developer-tools",
-                                "privacyPolicy": "https://example.com/privacy",
-                                "termsOfService": "https://example.com/terms",
-                                "website": "https://example.com/github",
-                            ],
-                            "appMetadata": [
-                                "categories": ["Developer Tools"],
-                                "developer": "OpenAI",
-                                "screenshots": [
-                                    [
-                                        "fileId": "screenshot-1",
-                                        "url": "https://example.com/screenshot.png",
-                                        "userPrompt": "Show repository issues.",
-                                    ],
-                                ],
-                                "version": "1.2.3",
-                                "versionId": "version-123",
-                                "versionNotes": "Fixture metadata.",
-                            ],
-                            "description": "GitHub app fixture",
-                            "distributionChannel": "curated",
-                            "id": "github",
-                            "installUrl": "https://example.com/install",
-                            "isAccessible": true,
-                            "isEnabled": true,
-                            "labels": ["kind": "connector"],
-                            "logoUrl": "https://example.com/logo-light.png",
-                            "logoUrlDark": "https://example.com/logo-dark.png",
-                            "name": "GitHub",
-                            "pluginDisplayNames": ["GitHub"],
-                        ],
-                    ],
-                    "nextCursor": "apps-next",
-                ]
-            )
-        case "skills/list":
-            return responsePayload(
-                id: id,
-                result: [
-                    "data": [
-                        [
+                    ]
+                )
+            case "thread/name/set":
+                return responsePayload(id: id, result: [:])
+            case "thread/metadata/update":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "thread": [
+                            "cliVersion": "0.128.0",
+                            "createdAt": 1_713_350_000,
                             "cwd": "/tmp/project",
-                            "errors": [
+                            "ephemeral": false,
+                            "gitInfo": [
+                                "branch": "main",
+                                "originUrl": NSNull(),
+                                "sha": "abc123",
+                            ],
+                            "id": "thread-123",
+                            "modelProvider": "openai",
+                            "name": "Hydrated Thread",
+                            "preview": "Hydrated thread preview",
+                            "source": "cli",
+                            "status": ["type": "active"],
+                            "turns": [],
+                            "updatedAt": 1_713_350_006,
+                        ],
+                    ]
+                )
+            case "thread/rollback":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "thread": [
+                            "cliVersion": "0.128.0",
+                            "createdAt": 1_713_350_000,
+                            "cwd": "/tmp/project",
+                            "ephemeral": false,
+                            "id": "thread-123",
+                            "modelProvider": "openai",
+                            "name": "Hydrated Thread",
+                            "preview": "Hydrated thread preview",
+                            "source": "cli",
+                            "status": ["type": "active"],
+                            "turns": [
                                 [
-                                    "message": "Skipped duplicate skill.",
-                                    "path": "/tmp/skills/duplicate/SKILL.md",
+                                    "completedAt": 1_713_350_004,
+                                    "durationMs": 2000,
+                                    "error": NSNull(),
+                                    "id": "turn-older",
+                                    "items": [
+                                        [
+                                            "id": "item-older-user",
+                                            "text": "Older prompt",
+                                            "type": "userMessage",
+                                        ],
+                                    ],
+                                    "startedAt": 1_713_350_002,
+                                    "status": "completed",
                                 ],
                             ],
-                            "skills": [
-                                [
-                                    "description": "Build Swift packages.",
-                                    "enabled": true,
-                                    "interface": [
-                                        "displayName": "Swift Package Workflow",
-                                        "shortDescription": "SwiftPM workflow from interface",
+                            "updatedAt": 1_713_350_010,
+                        ],
+                    ]
+                )
+            case "thread/start":
+                if !initializedSeen {
+                    return errorPayload(
+                        id: id,
+                        code: -32000,
+                        message: "initialized notification missing"
+                    )
+                }
+
+                let threadID = threadStartIDQueue.isEmpty ? "thread-123" : threadStartIDQueue.removeFirst()
+
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "approvalPolicy": "on-request",
+                        "approvalsReviewer": "user",
+                        "cwd": "/tmp/project",
+                        "instructionSources": ["AGENTS.md"],
+                        "model": "gpt-5.4",
+                        "modelProvider": "openai",
+                        "activePermissionProfile": [
+                            "id": ":workspace",
+                            "extends": NSNull(),
+                        ],
+                        "permissionProfile": [
+                            "type": "managed",
+                            "fileSystem": [
+                                "type": "restricted",
+                                "globScanMaxDepth": 4,
+                                "entries": [
+                                    [
+                                        "access": "write",
+                                        "path": [
+                                            "type": "special",
+                                            "value": [
+                                                "kind": "project_roots",
+                                                "path": NSNull(),
+                                                "subpath": NSNull(),
+                                            ],
+                                        ],
                                     ],
-                                    "name": "swift-package-build-run-workflow",
-                                    "path": "/tmp/skills/swift-package-build-run-workflow/SKILL.md",
-                                    "scope": "user",
-                                    "shortDescription": "Legacy SwiftPM workflow",
+                                    [
+                                        "access": "read",
+                                        "path": [
+                                            "type": "path",
+                                            "path": "/tmp/project",
+                                        ],
+                                    ],
                                 ],
+                            ],
+                            "network": [
+                                "enabled": true,
                             ],
                         ],
-                    ],
-                ]
-            )
-        case "plugin/list":
-            return responsePayload(
-                id: id,
-                result: [
-                    "featuredPluginIds": ["github"],
-                    "marketplaceLoadErrors": [
-                        [
-                            "marketplacePath": "/tmp/bad-marketplace.json",
-                            "message": "Fixture marketplace failed to load.",
+                        "reasoningEffort": "medium",
+                        "sandbox": [
+                            "type": "workspaceWrite",
+                            "networkAccess": "enabled",
+                            "writableRoots": ["/tmp/project"],
                         ],
-                    ],
-                    "marketplaces": [
-                        [
-                            "interface": [
-                                "displayName": "Curated",
-                            ],
-                            "name": "openai-curated",
-                            "plugins": [
-                                [
-                                    "authPolicy": "ON_USE",
-                                    "enabled": true,
-                                    "id": "github",
-                                    "installed": true,
-                                    "installPolicy": "AVAILABLE",
-                                    "interface": [
-                                        "brandColor": "#111111",
-                                        "capabilities": ["issues", "pull-requests"],
-                                        "category": "developer-tools",
-                                        "defaultPrompt": ["Review my PR."],
-                                        "developerName": "OpenAI",
-                                        "displayName": "GitHub",
-                                        "longDescription": "GitHub plugin fixture.",
-                                        "screenshots": [],
-                                        "screenshotUrls": [],
-                                        "shortDescription": "GitHub workflows.",
-                                    ],
-                                    "name": "GitHub",
-                                    "source": [
-                                        "type": "remote",
-                                    ],
-                                ],
-                                [
-                                    "authPolicy": "ON_INSTALL",
-                                    "enabled": false,
-                                    "id": "local-plugin",
-                                    "installed": false,
-                                    "installPolicy": "NOT_AVAILABLE",
-                                    "name": "Local Plugin",
-                                    "source": [
-                                        "path": "/tmp/plugins/local-plugin",
-                                        "type": "local",
-                                    ],
-                                ],
-                            ],
+                        "serviceTier": "fast",
+                        "thread": [
+                            "cliVersion": "0.128.0",
+                            "createdAt": 1_713_350_000,
+                            "cwd": "/tmp/project",
+                            "ephemeral": false,
+                            "id": threadID,
+                            "modelProvider": "openai",
+                            "preview": "Hello from the fake app-server",
+                            "source": "cli",
+                            "status": ["type": "active"],
+                            "turns": [],
+                            "updatedAt": 1_713_350_001,
                         ],
-                    ],
-                ]
-            )
-        case "plugin/read":
-            return responsePayload(
-                id: id,
-                result: [
-                    "plugin": [
-                        "apps": [
+                    ]
+                )
+            case "thread/list":
+                let result: [String: Any]
+                if !threadListResultQueue.isEmpty {
+                    result = threadListResultQueue.removeFirst()
+                } else {
+                    result = threadListResult ?? [
+                        "data": [
                             [
-                                "description": "GitHub app summary",
+                                "cliVersion": "0.128.0",
+                                "createdAt": 1_713_350_000,
+                                "cwd": "/tmp/project",
+                                "ephemeral": false,
+                                "id": "thread-123",
+                                "modelProvider": "openai",
+                                "name": "Hydrated Thread",
+                                "preview": "Hydrated thread preview",
+                                "source": "cli",
+                                "status": ["type": "notLoaded"],
+                                "turns": [],
+                                "updatedAt": 1_713_350_005,
+                            ],
+                        ],
+                        "nextCursor": "cursor-next",
+                    ]
+                }
+                return responsePayload(
+                    id: id,
+                    result: result
+                )
+            case "thread/loaded/list":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "data": ["thread-123", "thread-456"],
+                        "nextCursor": "cursor-loaded-next",
+                    ]
+                )
+            case "fs/getMetadata":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "createdAtMs": 1_713_350_000_000,
+                        "isDirectory": true,
+                        "isFile": false,
+                        "isSymlink": false,
+                        "modifiedAtMs": 1_713_350_005_000,
+                    ]
+                )
+            case "fs/readDirectory":
+                let path = try requestParam("path", from: requestPayload) as? String
+                let entries: [[String: Any]] = switch path {
+                    case "/tmp/project":
+                        [
+                            [
+                                "fileName": "Sources",
+                                "isDirectory": true,
+                                "isFile": false,
+                            ],
+                            [
+                                "fileName": "Package.swift",
+                                "isDirectory": false,
+                                "isFile": true,
+                            ],
+                            [
+                                "fileName": ".build",
+                                "isDirectory": true,
+                                "isFile": false,
+                            ],
+                        ]
+                    case "/tmp/project/Sources":
+                        [
+                            [
+                                "fileName": "SwiftASB",
+                                "isDirectory": true,
+                                "isFile": false,
+                            ],
+                            [
+                                "fileName": "SwiftASBTests.swift",
+                                "isDirectory": false,
+                                "isFile": true,
+                            ],
+                        ]
+                    case "/tmp/project/Sources/SwiftASB":
+                        [
+                            [
+                                "fileName": "CodexFS.swift",
+                                "isDirectory": false,
+                                "isFile": true,
+                            ],
+                            [
+                                "fileName": "CodexAppServer.swift",
+                                "isDirectory": false,
+                                "isFile": true,
+                            ],
+                        ]
+                    case "/tmp/project/.build":
+                        [
+                            [
+                                "fileName": "debug",
+                                "isDirectory": true,
+                                "isFile": false,
+                            ],
+                            [
+                                "fileName": "cache.log",
+                                "isDirectory": false,
+                                "isFile": true,
+                            ],
+                        ]
+                    case "/tmp/project/.build/debug":
+                        [
+                            [
+                                "fileName": "CodexFS.o",
+                                "isDirectory": false,
+                                "isFile": true,
+                            ],
+                        ]
+                    default:
+                        []
+                }
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "entries": entries,
+                    ]
+                )
+            case "fs/readFile":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "dataBase64": Data("hello from CodexFS".utf8).base64EncodedString(),
+                    ]
+                )
+            case "fs/watch":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "path": "/tmp/project",
+                    ]
+                )
+            case "fs/unwatch":
+                return responsePayload(
+                    id: id,
+                    result: [:]
+                )
+            case "config/read":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "config": [
+                            "model": "gpt-5.2",
+                            "sandbox_mode": "workspace-write",
+                        ],
+                        "layers": [
+                            [
+                                "config": [
+                                    "model": "gpt-5.2",
+                                ],
+                                "name": [
+                                    "type": "user",
+                                    "file": "/Users/galew/.codex/config.toml",
+                                ],
+                                "version": "1",
+                            ],
+                            [
+                                "config": [
+                                    "sandbox_mode": "workspace-write",
+                                ],
+                                "disabledReason": "Project config is disabled for this fixture.",
+                                "name": [
+                                    "type": "project",
+                                    "dotCodexFolder": "/tmp/project/.codex",
+                                ],
+                                "version": "2",
+                            ],
+                            [
+                                "config": [
+                                    "review_model": "gpt-5.5",
+                                ],
+                                "name": [
+                                    "type": "enterpriseManaged",
+                                    "id": "enterprise-layer-1",
+                                    "name": "Admin Defaults",
+                                ],
+                                "version": "3",
+                            ],
+                        ],
+                        "origins": [
+                            "model": [
+                                "name": [
+                                    "type": "user",
+                                    "file": "/Users/galew/.codex/config.toml",
+                                ],
+                                "version": "1",
+                            ],
+                            "sandbox_mode": [
+                                "name": [
+                                    "type": "project",
+                                    "dotCodexFolder": "/tmp/project/.codex",
+                                ],
+                                "version": "2",
+                            ],
+                            "review_model": [
+                                "name": [
+                                    "type": "enterpriseManaged",
+                                    "id": "enterprise-layer-1",
+                                    "name": "Admin Defaults",
+                                ],
+                                "version": "3",
+                            ],
+                        ],
+                    ]
+                )
+            case "config/batchWrite":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "filePath": "/Users/example/.codex/config.toml",
+                        "overriddenMetadata": NSNull(),
+                        "status": "ok",
+                        "version": "sha256:swiftasb-config-write",
+                    ]
+                )
+            case "configRequirements/read":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "requirements": [
+                            "featureRequirements": [
+                                "network_access": true,
+                            ],
+                        ],
+                    ]
+                )
+            case "app/list":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "data": [
+                            [
+                                "branding": [
+                                    "isDiscoverableApp": true,
+                                    "developer": "OpenAI",
+                                    "category": "developer-tools",
+                                    "privacyPolicy": "https://example.com/privacy",
+                                    "termsOfService": "https://example.com/terms",
+                                    "website": "https://example.com/github",
+                                ],
+                                "appMetadata": [
+                                    "categories": ["Developer Tools"],
+                                    "developer": "OpenAI",
+                                    "screenshots": [
+                                        [
+                                            "fileId": "screenshot-1",
+                                            "url": "https://example.com/screenshot.png",
+                                            "userPrompt": "Show repository issues.",
+                                        ],
+                                    ],
+                                    "version": "1.2.3",
+                                    "versionId": "version-123",
+                                    "versionNotes": "Fixture metadata.",
+                                ],
+                                "description": "GitHub app fixture",
+                                "distributionChannel": "curated",
                                 "id": "github",
                                 "installUrl": "https://example.com/install",
+                                "isAccessible": true,
+                                "isEnabled": true,
+                                "labels": ["kind": "connector"],
+                                "logoUrl": "https://example.com/logo-light.png",
+                                "logoUrlDark": "https://example.com/logo-dark.png",
                                 "name": "GitHub",
-                                "needsAuth": true,
+                                "pluginDisplayNames": ["GitHub"],
                             ],
                         ],
-                        "appTemplates": [],
-                        "description": "GitHub plugin detail fixture.",
-                        "hooks": [
+                        "nextCursor": "apps-next",
+                    ]
+                )
+            case "skills/list":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "data": [
                             [
-                                "eventName": "preToolUse",
-                                "key": "github-pre-tool-use",
-                            ],
-                            [
-                                "eventName": "postToolUse",
-                                "key": "github-post-tool-use",
+                                "cwd": "/tmp/project",
+                                "errors": [
+                                    [
+                                        "message": "Skipped duplicate skill.",
+                                        "path": "/tmp/skills/duplicate/SKILL.md",
+                                    ],
+                                ],
+                                "skills": [
+                                    [
+                                        "description": "Build Swift packages.",
+                                        "enabled": true,
+                                        "interface": [
+                                            "displayName": "Swift Package Workflow",
+                                            "shortDescription": "SwiftPM workflow from interface",
+                                        ],
+                                        "name": "swift-package-build-run-workflow",
+                                        "path": "/tmp/skills/swift-package-build-run-workflow/SKILL.md",
+                                        "scope": "user",
+                                        "shortDescription": "Legacy SwiftPM workflow",
+                                    ],
+                                ],
                             ],
                         ],
-                        "marketplaceName": "openai-curated",
-                        "marketplacePath": "/tmp/marketplaces/openai-curated.json",
-                        "mcpServers": [],
-                        "skills": [
+                    ]
+                )
+            case "plugin/list":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "featuredPluginIds": ["github"],
+                        "marketplaceLoadErrors": [
                             [
-                                "description": "Review pull requests.",
-                                "enabled": true,
+                                "marketplacePath": "/tmp/bad-marketplace.json",
+                                "message": "Fixture marketplace failed to load.",
+                            ],
+                        ],
+                        "marketplaces": [
+                            [
                                 "interface": [
-                                    "displayName": "PR Review",
-                                    "shortDescription": "Review PRs.",
+                                    "displayName": "Curated",
                                 ],
-                                "name": "review-pr",
-                                "path": "/tmp/plugins/github/skills/review-pr/SKILL.md",
-                                "shortDescription": "Legacy review PRs.",
+                                "name": "openai-curated",
+                                "plugins": [
+                                    [
+                                        "authPolicy": "ON_USE",
+                                        "enabled": true,
+                                        "id": "github",
+                                        "installed": true,
+                                        "installPolicy": "AVAILABLE",
+                                        "interface": [
+                                            "brandColor": "#111111",
+                                            "capabilities": ["issues", "pull-requests"],
+                                            "category": "developer-tools",
+                                            "defaultPrompt": ["Review my PR."],
+                                            "developerName": "OpenAI",
+                                            "displayName": "GitHub",
+                                            "longDescription": "GitHub plugin fixture.",
+                                            "screenshots": [],
+                                            "screenshotUrls": [],
+                                            "shortDescription": "GitHub workflows.",
+                                        ],
+                                        "name": "GitHub",
+                                        "source": [
+                                            "type": "remote",
+                                        ],
+                                    ],
+                                    [
+                                        "authPolicy": "ON_INSTALL",
+                                        "enabled": false,
+                                        "id": "local-plugin",
+                                        "installed": false,
+                                        "installPolicy": "NOT_AVAILABLE",
+                                        "name": "Local Plugin",
+                                        "source": [
+                                            "path": "/tmp/plugins/local-plugin",
+                                            "type": "local",
+                                        ],
+                                    ],
+                                ],
                             ],
                         ],
-                        "summary": [
-                            "authPolicy": "ON_USE",
-                            "enabled": true,
-                            "id": "github",
-                            "installed": true,
-                            "installPolicy": "AVAILABLE",
-                            "interface": [
-                                "brandColor": "#111111",
-                                "capabilities": ["issues", "pull-requests"],
-                                "category": "developer-tools",
-                                "defaultPrompt": ["Review my PR."],
-                                "developerName": "OpenAI",
-                                "displayName": "GitHub",
-                                "longDescription": "GitHub plugin fixture.",
-                                "screenshots": [],
-                                "screenshotUrls": [],
-                                "shortDescription": "GitHub workflows.",
+                    ]
+                )
+            case "plugin/read":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "plugin": [
+                            "apps": [
+                                [
+                                    "category": "developer-tools",
+                                    "description": "GitHub app summary",
+                                    "id": "github",
+                                    "installUrl": "https://example.com/install",
+                                    "name": "GitHub",
+                                ],
                             ],
-                            "name": "GitHub",
-                            "source": [
-                                "refName": "main",
-                                "sha": "abc123",
-                                "type": "git",
-                                "url": "https://github.com/openai/github-plugin",
+                            "appTemplates": [],
+                            "description": "GitHub plugin detail fixture.",
+                            "hooks": [
+                                [
+                                    "eventName": "preToolUse",
+                                    "key": "github-pre-tool-use",
+                                ],
+                                [
+                                    "eventName": "postToolUse",
+                                    "key": "github-post-tool-use",
+                                ],
+                            ],
+                            "marketplaceName": "openai-curated",
+                            "marketplacePath": "/tmp/marketplaces/openai-curated.json",
+                            "mcpServers": [],
+                            "skills": [
+                                [
+                                    "description": "Review pull requests.",
+                                    "enabled": true,
+                                    "interface": [
+                                        "displayName": "PR Review",
+                                        "shortDescription": "Review PRs.",
+                                    ],
+                                    "name": "review-pr",
+                                    "path": "/tmp/plugins/github/skills/review-pr/SKILL.md",
+                                    "shortDescription": "Legacy review PRs.",
+                                ],
+                            ],
+                            "summary": [
+                                "authPolicy": "ON_USE",
+                                "enabled": true,
+                                "id": "github",
+                                "installed": true,
+                                "installPolicy": "AVAILABLE",
+                                "interface": [
+                                    "brandColor": "#111111",
+                                    "capabilities": ["issues", "pull-requests"],
+                                    "category": "developer-tools",
+                                    "defaultPrompt": ["Review my PR."],
+                                    "developerName": "OpenAI",
+                                    "displayName": "GitHub",
+                                    "longDescription": "GitHub plugin fixture.",
+                                    "screenshots": [],
+                                    "screenshotUrls": [],
+                                    "shortDescription": "GitHub workflows.",
+                                ],
+                                "name": "GitHub",
+                                "source": [
+                                    "refName": "main",
+                                    "sha": "abc123",
+                                    "type": "git",
+                                    "url": "https://github.com/openai/github-plugin",
+                                ],
                             ],
                         ],
-                    ],
-                ]
-            )
-        case "collaborationMode/list":
-            return responsePayload(
-                id: id,
-                result: [
-                    "data": [
-                        [
-                            "mode": "plan",
-                            "model": "gpt-5.2",
-                            "name": "Plan",
-                            "reasoning_effort": "medium",
-                        ],
-                    ],
-                ]
-            )
-        case "thread/goal/get":
-            return responsePayload(
-                id: id,
-                result: [
-                    "goal": [
-                        "createdAt": 1_713_350_000,
-                        "objective": "Promote schemas",
-                        "status": "active",
-                        "threadId": "thread-123",
-                        "timeUsedSeconds": 12,
-                        "tokenBudget": 20_000,
-                        "tokensUsed": 400,
-                        "updatedAt": 1_713_350_010,
-                    ],
-                ]
-            )
-        case "thread/goal/set":
-            return responsePayload(
-                id: id,
-                result: [
-                    "goal": [
-                        "createdAt": 1_713_350_000,
-                        "objective": "Promote schemas",
-                        "status": "budgetLimited",
-                        "threadId": "thread-123",
-                        "timeUsedSeconds": 12,
-                        "tokenBudget": 30_000,
-                        "tokensUsed": 400,
-                        "updatedAt": 1_713_350_020,
-                    ],
-                ]
-            )
-        case "thread/goal/clear":
-            return responsePayload(
-                id: id,
-                result: [
-                    "cleared": true,
-                ]
-            )
-        case "thread/read":
-            return responsePayload(
-                id: id,
-                result: threadReadResult ?? [
-                    "thread": [
-                        "cliVersion": "0.128.0",
-                        "createdAt": 1713350000,
-                        "cwd": "/tmp/project",
-                        "ephemeral": false,
-                        "id": "thread-123",
-                        "modelProvider": "openai",
-                        "name": "Hydrated Thread",
-                        "preview": "Hydrated thread preview",
-                        "source": "cli",
-                        "status": ["type": "notLoaded"],
-                        "turns": [
+                    ]
+                )
+            case "collaborationMode/list":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "data": [
                             [
-                                "completedAt": 1713350005,
+                                "mode": "plan",
+                                "model": "gpt-5.2",
+                                "name": "Plan",
+                                "reasoning_effort": "medium",
+                            ],
+                        ],
+                    ]
+                )
+            case "thread/goal/get":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "goal": [
+                            "createdAt": 1_713_350_000,
+                            "objective": "Promote schemas",
+                            "status": "active",
+                            "threadId": "thread-123",
+                            "timeUsedSeconds": 12,
+                            "tokenBudget": 20000,
+                            "tokensUsed": 400,
+                            "updatedAt": 1_713_350_010,
+                        ],
+                    ]
+                )
+            case "thread/goal/set":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "goal": [
+                            "createdAt": 1_713_350_000,
+                            "objective": "Promote schemas",
+                            "status": "budgetLimited",
+                            "threadId": "thread-123",
+                            "timeUsedSeconds": 12,
+                            "tokenBudget": 30000,
+                            "tokensUsed": 400,
+                            "updatedAt": 1_713_350_020,
+                        ],
+                    ]
+                )
+            case "thread/goal/clear":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "cleared": true,
+                    ]
+                )
+            case "thread/read":
+                return responsePayload(
+                    id: id,
+                    result: threadReadResult ?? [
+                        "thread": [
+                            "cliVersion": "0.128.0",
+                            "createdAt": 1_713_350_000,
+                            "cwd": "/tmp/project",
+                            "ephemeral": false,
+                            "id": "thread-123",
+                            "modelProvider": "openai",
+                            "name": "Hydrated Thread",
+                            "preview": "Hydrated thread preview",
+                            "source": "cli",
+                            "status": ["type": "notLoaded"],
+                            "turns": [
+                                [
+                                    "completedAt": 1_713_350_005,
+                                    "durationMs": 3000,
+                                    "error": NSNull(),
+                                    "id": "turn-hydrated-1",
+                                    "items": [
+                                        [
+                                            "id": "item-user-1",
+                                            "text": "Hydrated user prompt.",
+                                            "type": "userMessage",
+                                        ],
+                                        [
+                                            "id": "item-agent-1",
+                                            "status": "completed",
+                                            "text": "Hydrated reply from thread/read.",
+                                            "type": "agentMessage",
+                                        ],
+                                    ],
+                                    "startedAt": 1_713_350_002,
+                                    "status": "completed",
+                                ],
+                            ],
+                            "updatedAt": 1_713_350_005,
+                        ],
+                    ]
+                )
+            case "thread/compact/start":
+                return responsePayload(
+                    id: id,
+                    result: [:]
+                )
+            case "thread/fork":
+                return responsePayload(
+                    id: id,
+                    result: threadForkResult ?? [
+                        "approvalPolicy": "on-request",
+                        "approvalsReviewer": "user",
+                        "cwd": "/tmp/project",
+                        "instructionSources": ["AGENTS.md"],
+                        "model": "gpt-5.4",
+                        "modelProvider": "openai",
+                        "reasoningEffort": "medium",
+                        "sandbox": [
+                            "type": "workspaceWrite",
+                            "networkAccess": "enabled",
+                            "writableRoots": ["/tmp/project"],
+                        ],
+                        "serviceTier": "fast",
+                        "thread": [
+                            "cliVersion": "0.128.0",
+                            "createdAt": 1_713_350_010,
+                            "cwd": "/tmp/project",
+                            "ephemeral": false,
+                            "forkedFromId": "thread-123",
+                            "id": "thread-456",
+                            "modelProvider": "openai",
+                            "name": "Forked Thread",
+                            "preview": "Hydrated fork preview",
+                            "source": "cli",
+                            "status": ["type": "idle"],
+                            "turns": [
+                                [
+                                    "completedAt": 1_713_350_005,
+                                    "durationMs": 3000,
+                                    "error": NSNull(),
+                                    "id": "turn-hydrated-1",
+                                    "items": [
+                                        [
+                                            "id": "item-agent-1",
+                                            "status": "completed",
+                                            "text": "Forked reply from thread/fork.",
+                                            "type": "agentMessage",
+                                        ],
+                                    ],
+                                    "startedAt": 1_713_350_002,
+                                    "status": "completed",
+                                ],
+                            ],
+                            "updatedAt": 1_713_350_011,
+                        ],
+                    ]
+                )
+            case "thread/resume":
+                return responsePayload(
+                    id: id,
+                    result: threadResumeResult ?? [
+                        "approvalPolicy": "on-request",
+                        "approvalsReviewer": "user",
+                        "cwd": "/tmp/project",
+                        "instructionSources": ["AGENTS.md"],
+                        "model": "gpt-5.4",
+                        "modelProvider": "openai",
+                        "reasoningEffort": "medium",
+                        "sandbox": [
+                            "type": "workspaceWrite",
+                            "networkAccess": "enabled",
+                            "writableRoots": ["/tmp/project"],
+                        ],
+                        "serviceTier": "fast",
+                        "thread": [
+                            "cliVersion": "0.128.0",
+                            "createdAt": 1_713_350_000,
+                            "cwd": "/tmp/project",
+                            "ephemeral": false,
+                            "id": "thread-123",
+                            "modelProvider": "openai",
+                            "name": "Resumed Thread",
+                            "preview": "Hydrated resume preview",
+                            "source": "cli",
+                            "status": ["type": "idle"],
+                            "turns": [
+                                [
+                                    "completedAt": 1_713_350_005,
+                                    "durationMs": 3000,
+                                    "error": NSNull(),
+                                    "id": "turn-hydrated-1",
+                                    "items": [
+                                        [
+                                            "id": "item-agent-1",
+                                            "status": "completed",
+                                            "text": "Resumed reply from thread/resume.",
+                                            "type": "agentMessage",
+                                        ],
+                                    ],
+                                    "startedAt": 1_713_350_002,
+                                    "status": "completed",
+                                ],
+                            ],
+                            "updatedAt": 1_713_350_005,
+                        ],
+                    ]
+                )
+            case "thread/turns/list":
+                if let threadTurnsListErrorMessage {
+                    return errorPayload(
+                        id: id,
+                        code: -32600,
+                        message: threadTurnsListErrorMessage
+                    )
+                }
+                if !threadTurnsListResultQueue.isEmpty {
+                    return responsePayload(
+                        id: id,
+                        result: threadTurnsListResultQueue.removeFirst()
+                    )
+                }
+                return responsePayload(
+                    id: id,
+                    result: threadTurnsListResult ?? [
+                        "backwardsCursor": "cursor-newer",
+                        "data": [
+                            [
+                                "completedAt": 1_713_350_100,
+                                "durationMs": 2500,
+                                "error": NSNull(),
+                                "id": "turn-newer",
+                                "items": [],
+                                "startedAt": 1_713_350_050,
+                                "status": "completed",
+                            ],
+                            [
+                                "completedAt": 1_713_350_005,
                                 "durationMs": 3000,
                                 "error": NSNull(),
-                                "id": "turn-hydrated-1",
-                                "items": [
-                                    [
-                                        "id": "item-user-1",
-                                        "text": "Hydrated user prompt.",
-                                        "type": "userMessage",
-                                    ],
-                                    [
-                                        "id": "item-agent-1",
-                                        "status": "completed",
-                                        "text": "Hydrated reply from thread/read.",
-                                        "type": "agentMessage",
-                                    ],
-                                ],
-                                "startedAt": 1713350002,
+                                "id": "turn-older",
+                                "items": [],
+                                "startedAt": 1_713_350_002,
                                 "status": "completed",
                             ],
                         ],
-                        "updatedAt": 1713350005,
-                    ],
-                ]
-            )
-        case "thread/compact/start":
-            return responsePayload(
-                id: id,
-                result: [:]
-            )
-        case "thread/fork":
-            return responsePayload(
-                id: id,
-                result: threadForkResult ?? [
-                    "approvalPolicy": "on-request",
-                    "approvalsReviewer": "user",
-                    "cwd": "/tmp/project",
-                    "instructionSources": ["AGENTS.md"],
-                    "model": "gpt-5.4",
-                    "modelProvider": "openai",
-                    "reasoningEffort": "medium",
-                    "sandbox": [
-                        "type": "workspaceWrite",
-                        "networkAccess": "enabled",
-                        "writableRoots": ["/tmp/project"],
-                    ],
-                    "serviceTier": "fast",
-                    "thread": [
-                        "cliVersion": "0.128.0",
-                        "createdAt": 1713350010,
-                        "cwd": "/tmp/project",
-                        "ephemeral": false,
-                        "forkedFromId": "thread-123",
-                        "id": "thread-456",
-                        "modelProvider": "openai",
-                        "name": "Forked Thread",
-                        "preview": "Hydrated fork preview",
-                        "source": "cli",
-                        "status": ["type": "idle"],
-                        "turns": [
+                        "nextCursor": "cursor-older",
+                    ]
+                )
+            case "thread/turns/items/list":
+                return responsePayload(
+                    id: id,
+                    result: threadTurnsItemsListResult ?? [
+                        "backwardsCursor": "cursor-newer-items",
+                        "data": [
                             [
-                                "completedAt": 1713350005,
-                                "durationMs": 3000,
-                                "error": NSNull(),
-                                "id": "turn-hydrated-1",
-                                "items": [
-                                    [
-                                        "id": "item-agent-1",
-                                        "status": "completed",
-                                        "text": "Forked reply from thread/fork.",
-                                        "type": "agentMessage",
-                                    ],
-                                ],
-                                "startedAt": 1713350002,
+                                "id": "item-command-1",
+                                "command": "swift test",
                                 "status": "completed",
+                                "type": "commandExecution",
+                            ],
+                            [
+                                "id": "item-agent-1",
+                                "status": "completed",
+                                "text": "Done.",
+                                "type": "agentMessage",
                             ],
                         ],
-                        "updatedAt": 1713350011,
-                    ],
-                ]
-            )
-        case "thread/resume":
-            return responsePayload(
-                id: id,
-                result: threadResumeResult ?? [
-                    "approvalPolicy": "on-request",
-                    "approvalsReviewer": "user",
-                    "cwd": "/tmp/project",
-                    "instructionSources": ["AGENTS.md"],
-                    "model": "gpt-5.4",
-                    "modelProvider": "openai",
-                    "reasoningEffort": "medium",
-                    "sandbox": [
-                        "type": "workspaceWrite",
-                        "networkAccess": "enabled",
-                        "writableRoots": ["/tmp/project"],
-                    ],
-                    "serviceTier": "fast",
-                    "thread": [
-                        "cliVersion": "0.128.0",
-                        "createdAt": 1713350000,
-                        "cwd": "/tmp/project",
-                        "ephemeral": false,
-                        "id": "thread-123",
-                        "modelProvider": "openai",
-                        "name": "Resumed Thread",
-                        "preview": "Hydrated resume preview",
-                        "source": "cli",
-                        "status": ["type": "idle"],
-                        "turns": [
-                            [
-                                "completedAt": 1713350005,
-                                "durationMs": 3000,
-                                "error": NSNull(),
-                                "id": "turn-hydrated-1",
-                                "items": [
-                                    [
-                                        "id": "item-agent-1",
-                                        "status": "completed",
-                                        "text": "Resumed reply from thread/resume.",
-                                        "type": "agentMessage",
-                                    ],
-                                ],
-                                "startedAt": 1713350002,
-                                "status": "completed",
-                            ],
+                        "nextCursor": "cursor-older-items",
+                    ]
+                )
+            case "command/exec":
+                if !commandExecResultQueue.isEmpty {
+                    return responsePayload(
+                        id: id,
+                        result: commandExecResultQueue.removeFirst()
+                    )
+                }
+                return responsePayload(
+                    id: id,
+                    result: commandExecResult
+                )
+            case "thread/shellCommand":
+                return responsePayload(
+                    id: id,
+                    result: [:]
+                )
+            case "review/start":
+                let delivery = try requestParam("delivery", from: requestPayload) as? String
+                let sourceThreadID = try #require(requestParam("threadId", from: requestPayload) as? String)
+                let reviewThreadID = delivery == "detached" ? "review-thread-123" : sourceThreadID
+                let turnID = turnStartIDQueue.isEmpty ? "review-turn-123" : turnStartIDQueue.removeFirst()
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "reviewThreadId": reviewThreadID,
+                        "turn": [
+                            "completedAt": NSNull(),
+                            "durationMs": NSNull(),
+                            "error": NSNull(),
+                            "id": turnID,
+                            "items": [],
+                            "startedAt": 1_713_350_003,
+                            "status": "inProgress",
                         ],
-                        "updatedAt": 1713350005,
-                    ],
-                ]
-            )
-        case "thread/turns/list":
-            if let threadTurnsListErrorMessage {
+                    ]
+                )
+            case "turn/start":
+                let turnID = turnStartIDQueue.isEmpty ? "turn-123" : turnStartIDQueue.removeFirst()
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "turn": [
+                            "completedAt": NSNull(),
+                            "durationMs": NSNull(),
+                            "error": NSNull(),
+                            "id": turnID,
+                            "items": [],
+                            "startedAt": 1_713_350_002,
+                            "status": "inProgress",
+                        ],
+                    ]
+                )
+            case "turn/steer":
+                return responsePayload(
+                    id: id,
+                    result: [
+                        "turnId": "turn-123",
+                    ]
+                )
+            case "turn/interrupt":
+                return responsePayload(
+                    id: id,
+                    result: [:]
+                )
+            default:
                 return errorPayload(
                     id: id,
-                    code: -32600,
-                    message: threadTurnsListErrorMessage
+                    code: -32601,
+                    message: "unsupported method in fake transport"
                 )
-            }
-            if !threadTurnsListResultQueue.isEmpty {
-                return responsePayload(
-                    id: id,
-                    result: threadTurnsListResultQueue.removeFirst()
-                )
-            }
-            return responsePayload(
-                id: id,
-                result: threadTurnsListResult ?? [
-                    "backwardsCursor": "cursor-newer",
-                    "data": [
-                        [
-                            "completedAt": 1713350100,
-                            "durationMs": 2500,
-                            "error": NSNull(),
-                            "id": "turn-newer",
-                            "items": [],
-                            "startedAt": 1713350050,
-                            "status": "completed",
-                        ],
-                        [
-                            "completedAt": 1713350005,
-                            "durationMs": 3000,
-                            "error": NSNull(),
-                            "id": "turn-older",
-                            "items": [],
-                            "startedAt": 1713350002,
-                            "status": "completed",
-                        ],
-                    ],
-                    "nextCursor": "cursor-older",
-                ]
-            )
-        case "thread/turns/items/list":
-            return responsePayload(
-                id: id,
-                result: threadTurnsItemsListResult ?? [
-                    "backwardsCursor": "cursor-newer-items",
-                    "data": [
-                        [
-                            "id": "item-command-1",
-                            "command": "swift test",
-                            "status": "completed",
-                            "type": "commandExecution",
-                        ],
-                        [
-                            "id": "item-agent-1",
-                            "status": "completed",
-                            "text": "Done.",
-                            "type": "agentMessage",
-                        ],
-                    ],
-                    "nextCursor": "cursor-older-items",
-                ]
-            )
-        case "command/exec":
-            if !commandExecResultQueue.isEmpty {
-                return responsePayload(
-                    id: id,
-                    result: commandExecResultQueue.removeFirst()
-                )
-            }
-            return responsePayload(
-                id: id,
-                result: commandExecResult
-            )
-        case "thread/shellCommand":
-            return responsePayload(
-                id: id,
-                result: [:]
-            )
-        case "review/start":
-            let delivery = try requestParam("delivery", from: requestPayload) as? String
-            let sourceThreadID = try #require(requestParam("threadId", from: requestPayload) as? String)
-            let reviewThreadID = delivery == "detached" ? "review-thread-123" : sourceThreadID
-            let turnID = turnStartIDQueue.isEmpty ? "review-turn-123" : turnStartIDQueue.removeFirst()
-            return responsePayload(
-                id: id,
-                result: [
-                    "reviewThreadId": reviewThreadID,
-                    "turn": [
-                        "completedAt": NSNull(),
-                        "durationMs": NSNull(),
-                        "error": NSNull(),
-                        "id": turnID,
-                        "items": [],
-                        "startedAt": 1713350003,
-                        "status": "inProgress",
-                    ],
-                ]
-            )
-        case "turn/start":
-            let turnID = turnStartIDQueue.isEmpty ? "turn-123" : turnStartIDQueue.removeFirst()
-            return responsePayload(
-                id: id,
-                result: [
-                    "turn": [
-                        "completedAt": NSNull(),
-                        "durationMs": NSNull(),
-                        "error": NSNull(),
-                        "id": turnID,
-                        "items": [],
-                        "startedAt": 1713350002,
-                        "status": "inProgress",
-                    ],
-                ]
-            )
-        case "turn/steer":
-            return responsePayload(
-                id: id,
-                result: [
-                    "turnId": "turn-123",
-                ]
-            )
-        case "turn/interrupt":
-            return responsePayload(
-                id: id,
-                result: [:]
-            )
-        default:
-            return errorPayload(
-                id: id,
-                code: -32601,
-                message: "unsupported method in fake transport"
-            )
         }
     }
 
@@ -1345,7 +1350,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     func emitTurnCompleted(
         threadID: String,
         turnID: String,
-        completedAt: Int = 1713350005
+        completedAt: Int = 1_713_350_005
     ) {
         let payload = payloadObject([
             "threadId": threadID,
@@ -1355,7 +1360,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 "error": NSNull(),
                 "id": turnID,
                 "items": [],
-                "startedAt": 1713350002,
+                "startedAt": 1_713_350_002,
                 "status": "completed",
             ],
         ])
@@ -1377,7 +1382,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 [
                     "command": "git status",
                     "type": "unknown",
-                ]
+                ],
             ],
             "cwd": "/tmp/project",
             "itemId": itemID,
@@ -1484,7 +1489,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                         ],
                     ],
                     "question": "Which direction should we take?",
-                ]
+                ],
             ],
             "threadId": threadID,
             "turnId": turnID,
@@ -1529,10 +1534,10 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
     ) {
         let jsonRequestID: Any
         switch requestID {
-        case let .string(value):
-            jsonRequestID = value
-        case let .int(value):
-            jsonRequestID = value
+            case let .string(value):
+                jsonRequestID = value
+            case let .int(value):
+                jsonRequestID = value
         }
 
         let payload = payloadObject([
@@ -1549,7 +1554,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         let payload = payloadObject([
             "thread": [
                 "cliVersion": "0.128.0",
-                "createdAt": 1713350000,
+                "createdAt": 1_713_350_000,
                 "cwd": "/tmp/project",
                 "ephemeral": false,
                 "id": threadID,
@@ -1558,7 +1563,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 "source": "cli",
                 "status": ["type": "active"],
                 "turns": [],
-                "updatedAt": 1713350001,
+                "updatedAt": 1_713_350_001,
             ],
         ])
 
@@ -1624,7 +1629,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                     "reasoningOutputTokens": 5,
                     "totalTokens": 65,
                 ],
-                "modelContextWindow": 200000,
+                "modelContextWindow": 200_000,
                 "total": [
                     "cachedInputTokens": 100,
                     "inputTokens": 200,
@@ -1707,7 +1712,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 "id": hookID,
                 "scope": "turn",
                 "sourcePath": "/tmp/project/.codex/hooks/pre-tool-use.sh",
-                "startedAt": 1713350003,
+                "startedAt": 1_713_350_003,
                 "status": status,
                 "statusMessage": NSNull(),
             ],
@@ -1730,14 +1735,14 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         let jsonStatusMessage: Any = statusMessage ?? NSNull()
         let payload = payloadObject([
             "run": [
-                "completedAt": 1713350004,
+                "completedAt": 1_713_350_004,
                 "displayOrder": 1,
                 "durationMs": 150,
                 "entries": [
                     [
                         "kind": "feedback",
                         "text": "Hook finished.",
-                    ]
+                    ],
                 ],
                 "eventName": "preToolUse",
                 "executionMode": "sync",
@@ -1745,7 +1750,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 "id": hookID,
                 "scope": "turn",
                 "sourcePath": "/tmp/project/.codex/hooks/pre-tool-use.sh",
-                "startedAt": 1713350003,
+                "startedAt": 1_713_350_003,
                 "status": status,
                 "statusMessage": jsonStatusMessage,
             ],
@@ -1843,7 +1848,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                 "error": NSNull(),
                 "id": turnID,
                 "items": [],
-                "startedAt": 1713350002,
+                "startedAt": 1_713_350_002,
                 "status": "inProgress",
             ],
         ])
@@ -2090,16 +2095,6 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
         return params[name]
     }
 
-    private static func isAppSnapshotRequest(_ method: String) -> Bool {
-        method == "modelProvider/capabilities/read"
-            || method == "mcpServerStatus/list"
-            || method == "hooks/list"
-            || method == "app/list"
-            || method == "skills/list"
-            || method == "plugin/list"
-            || method == "collaborationMode/list"
-    }
-
     private func responsePayload(id: CodexRPCRequestID, result: [String: Any]) -> Data {
         payloadObject([
             "id": id.jsonObjectValue,
@@ -2236,7 +2231,8 @@ func threadEvents(
 }
 
 func temporarySQLiteHistoryStore() throws -> (ThreadHistoryStore, URL) {
-    let temporaryDirectory = FileManager.default.temporaryDirectory
+    let temporaryDirectory = FileManager.default
+        .temporaryDirectory
         .appendingPathComponent(UUID().uuidString, isDirectory: true)
     try FileManager.default.createDirectory(
         at: temporaryDirectory,
@@ -2267,10 +2263,10 @@ func settleObservableTeardown() async {
 extension CodexRPCRequestID {
     var jsonObjectValue: Any {
         switch self {
-        case let .string(value):
-            value
-        case let .int(value):
-            value
+            case let .string(value):
+                value
+            case let .int(value):
+                value
         }
     }
 }

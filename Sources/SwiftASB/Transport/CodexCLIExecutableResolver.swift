@@ -1,16 +1,16 @@
 import Foundation
 
-internal struct CodexCLIExecutableResolver {
-    internal struct Resolution: Sendable, Equatable {
-        internal let launchExecutableURL: URL
-        internal let launchArgumentsPrefix: [String]
-        internal let resolvedExecutableURL: URL?
-        internal let source: Source
-        internal let versionString: String
-        internal let compatibility: Compatibility
+struct CodexCLIExecutableResolver {
+    struct Resolution: Equatable {
+        let launchExecutableURL: URL
+        let launchArgumentsPrefix: [String]
+        let resolvedExecutableURL: URL?
+        let source: Source
+        let versionString: String
+        let compatibility: Compatibility
     }
 
-    internal enum Source: Sendable, Equatable {
+    enum Source: Equatable {
         case explicit
         case path
         case homebrewAppleSilicon
@@ -18,31 +18,36 @@ internal struct CodexCLIExecutableResolver {
         case npmGlobal(prefix: String)
     }
 
-    internal enum Compatibility: Sendable, Equatable {
+    enum Compatibility: Equatable {
         case supported(documentedWindow: String)
         case outsideDocumentedWindow(documentedWindow: String)
         case unknownVersionFormat(documentedWindow: String)
     }
 
-    internal struct Version: Sendable, Equatable {
-        internal let major: Int
-        internal let minor: Int
-        internal let patch: Int
+    struct Version: Equatable {
+        let major: Int
+        let minor: Int
+        let patch: Int
 
         private static let regex = try! NSRegularExpression(pattern: #"(\d+)\.(\d+)\.(\d+)"#)
-        internal static let latestSupportedPublicRelease = Version(major: 0, minor: 139, patch: 0)
+        static let oldestSupportedPublicRelease = Version(major: 0, minor: 139, patch: 0)
+        static let latestSupportedPublicRelease = Version(major: 0, minor: 140, patch: 0)
 
-        internal static var documentedWindowDescription: String {
+        static var documentedWindowDescription: String {
+            let oldest = oldestSupportedPublicRelease
             let latest = latestSupportedPublicRelease
+            if oldest == latest {
+                return "\(latest.major).\(latest.minor).x"
+            }
             return "\(latest.major).\(latest.minor).x"
+                + " plus \(oldest.major).\(oldest.minor).x when feasible"
         }
 
-        internal static func parse(from text: String) -> Version? {
+        static func parse(from text: String) -> Version? {
             let range = NSRange(text.startIndex..<text.endIndex, in: text)
             guard let match = regex.firstMatch(in: text, range: range), match.numberOfRanges == 4 else {
                 return nil
             }
-
             guard
                 let majorRange = Range(match.range(at: 1), in: text),
                 let minorRange = Range(match.range(at: 2), in: text),
@@ -58,20 +63,20 @@ internal struct CodexCLIExecutableResolver {
         }
     }
 
-    internal struct CommandResult: Sendable, Equatable {
-        internal let terminationStatus: Int32
-        internal let standardOutput: String
-        internal let standardError: String
+    struct CommandResult: Equatable {
+        let terminationStatus: Int32
+        let standardOutput: String
+        let standardError: String
     }
 
-    internal typealias CommandRunner = @Sendable (
+    typealias CommandRunner = @Sendable (
         _ executableURL: URL,
         _ arguments: [String],
         _ environment: [String: String]?,
         _ currentDirectoryURL: URL?
     ) throws -> CommandResult
 
-    internal typealias ExecutableFileChecker = @Sendable (_ path: String) -> Bool
+    typealias ExecutableFileChecker = @Sendable (_ path: String) -> Bool
 
     private let explicitExecutableURL: URL?
     private let environment: [String: String]?
@@ -79,7 +84,7 @@ internal struct CodexCLIExecutableResolver {
     private let runCommand: CommandRunner
     private let isExecutableFile: ExecutableFileChecker
 
-    internal init(
+    init(
         explicitExecutableURL: URL?,
         environment: [String: String]?,
         currentDirectoryURL: URL?,
@@ -93,7 +98,43 @@ internal struct CodexCLIExecutableResolver {
         self.isExecutableFile = isExecutableFile
     }
 
-    internal func resolve() throws -> Resolution {
+    private static func runProcess(
+        executableURL: URL,
+        arguments: [String],
+        environment: [String: String]?,
+        currentDirectoryURL: URL?
+    ) throws -> CommandResult {
+        let process = Process()
+        let standardOutput = Pipe()
+        let standardError = Pipe()
+
+        process.executableURL = executableURL
+        process.arguments = arguments
+        process.environment = environment
+        process.currentDirectoryURL = currentDirectoryURL
+        process.standardOutput = standardOutput
+        process.standardError = standardError
+
+        try process.run()
+        process.waitUntilExit()
+
+        let output = String(
+            decoding: standardOutput.fileHandleForReading.readDataToEndOfFile(),
+            as: UTF8.self
+        )
+        let error = String(
+            decoding: standardError.fileHandleForReading.readDataToEndOfFile(),
+            as: UTF8.self
+        )
+
+        return CommandResult(
+            terminationStatus: process.terminationStatus,
+            standardOutput: output,
+            standardError: error
+        )
+    }
+
+    func resolve() throws -> Resolution {
         if let explicitExecutableURL {
             return try resolveExplicitExecutable(at: explicitExecutableURL)
         }
@@ -178,10 +219,10 @@ internal struct CodexCLIExecutableResolver {
             )
         } catch let error as CodexTransportError {
             switch error {
-            case .executableDiscoveryFailed:
-                return nil
-            default:
-                throw error
+                case .executableDiscoveryFailed:
+                    return nil
+                default:
+                    throw error
             }
         }
     }
@@ -298,51 +339,16 @@ internal struct CodexCLIExecutableResolver {
         }
 
         let latest = Version.latestSupportedPublicRelease
+        let oldest = Version.oldestSupportedPublicRelease
 
-        guard parsedVersion.major == latest.major else {
+        guard parsedVersion.major == latest.major, parsedVersion.major == oldest.major else {
             return .outsideDocumentedWindow(documentedWindow: documentedWindow)
         }
 
-        if parsedVersion.minor == latest.minor {
+        if parsedVersion.minor >= oldest.minor, parsedVersion.minor <= latest.minor {
             return .supported(documentedWindow: documentedWindow)
         }
 
         return .outsideDocumentedWindow(documentedWindow: documentedWindow)
-    }
-
-    private static func runProcess(
-        executableURL: URL,
-        arguments: [String],
-        environment: [String: String]?,
-        currentDirectoryURL: URL?
-    ) throws -> CommandResult {
-        let process = Process()
-        let standardOutput = Pipe()
-        let standardError = Pipe()
-
-        process.executableURL = executableURL
-        process.arguments = arguments
-        process.environment = environment
-        process.currentDirectoryURL = currentDirectoryURL
-        process.standardOutput = standardOutput
-        process.standardError = standardError
-
-        try process.run()
-        process.waitUntilExit()
-
-        let output = String(
-            decoding: standardOutput.fileHandleForReading.readDataToEndOfFile(),
-            as: UTF8.self
-        )
-        let error = String(
-            decoding: standardError.fileHandleForReading.readDataToEndOfFile(),
-            as: UTF8.self
-        )
-
-        return CommandResult(
-            terminationStatus: process.terminationStatus,
-            standardOutput: output,
-            standardError: error
-        )
     }
 }

@@ -249,9 +249,9 @@ Use these decisions for every public symbol:
 - [x] Review `listModels(_:)` and MCP status as app-wide capability surfaces.
   Decision: keep model listing public, make routine app-wide state observable
   through `CodexAppServer.Inventory`, keep MCP summaries in observable
-  companions, and expose MCP detail reads through `CodexAppServer.mcp`.
-  Keep `listMcpServerStatuses(_:)` compatibility-only while consumers move
-  away from raw MCP list requests.
+  companions, and expose MCP detail reads through `CodexAppServer.mcp`. The
+  later 0.140 compatibility cleanup removed the raw MCP status-list public
+  convenience in favor of SwiftASB-owned snapshots.
 - [x] Review whether `CodexAppServer.swift` should keep all nested app-server
   request/result/domain values, or split more values into dedicated files.
   Decision: split by responsibility before v1; no new owners were introduced.
@@ -514,7 +514,7 @@ Use these decisions for every public symbol:
   Decision: covered by the startup, progress/approval, diagnostics/history, and
   SwiftUI observable companion walkthroughs in `Sources/SwiftASB/SwiftASB.docc/`.
 - [x] Update stale README release references before the next release.
-  Decision: README now names `v1.7.4` as the current released baseline.
+  Decision: README now names `v1.7.5` as the current released baseline.
 - [x] Confirm README, DocC, and this audit use the same v1 release boundary.
   Decision: README, DocC, and this audit now describe the same narrow v1
   promise: app-server lifecycle, app-wide capability reads, stored-thread

@@ -11,6 +11,16 @@ public struct TurnTimelineSnapshot: Sendable, Equatable {
     public var canLoadNewerTurns: Bool
     public var errorDescription: String?
 
+    /// All timeline items in renderer order.
+    public var items: [TurnTimelineItem] {
+        sections.flatMap(\.items)
+    }
+
+    /// True when there is no visible turn or active call row.
+    public var isEmpty: Bool {
+        items.isEmpty
+    }
+
     public init(
         sections: [TurnTimelineSection] = [],
         viewport: TurnTimelineViewportState = .init(),
@@ -29,16 +39,6 @@ public struct TurnTimelineSnapshot: Sendable, Equatable {
         self.canLoadOlderTurns = canLoadOlderTurns
         self.canLoadNewerTurns = canLoadNewerTurns
         self.errorDescription = errorDescription
-    }
-
-    /// All timeline items in renderer order.
-    public var items: [TurnTimelineItem] {
-        sections.flatMap(\.items)
-    }
-
-    /// True when there is no visible turn or active call row.
-    public var isEmpty: Bool {
-        items.isEmpty
     }
 
     @MainActor
@@ -264,37 +264,37 @@ public enum TurnTimelineItemKind: String, Sendable, Equatable {
 
     public init(rawKind: String) {
         switch rawKind {
-        case "agentMessage":
-            self = .agentMessage
-        case "collabAgentToolCall":
-            self = .collabTool
-        case "commandExecution":
-            self = .command
-        case "dynamicToolCall":
-            self = .dynamicTool
-        case "fileChange":
-            self = .fileEdit
-        case "mcpToolCall":
-            self = .mcp
-        case "reasoning":
-            self = .reasoning
-        default:
-            self = .unknown
+            case "agentMessage":
+                self = .agentMessage
+            case "collabAgentToolCall":
+                self = .collabTool
+            case "commandExecution":
+                self = .command
+            case "dynamicToolCall":
+                self = .dynamicTool
+            case "fileChange":
+                self = .fileEdit
+            case "mcpToolCall":
+                self = .mcp
+            case "reasoning":
+                self = .reasoning
+            default:
+                self = .unknown
         }
     }
 
     public init(callKind: CodexTurnHandle.Minimap.CallSnapshot.Kind) {
         switch callKind {
-        case .collabTool:
-            self = .collabTool
-        case .command:
-            self = .command
-        case .dynamicTool:
-            self = .dynamicTool
-        case .fileEdit:
-            self = .fileEdit
-        case .mcp:
-            self = .mcp
+            case .collabTool:
+                self = .collabTool
+            case .command:
+                self = .command
+            case .dynamicTool:
+                self = .dynamicTool
+            case .fileEdit:
+                self = .fileEdit
+            case .mcp:
+                self = .mcp
         }
     }
 }
@@ -337,19 +337,19 @@ public struct TurnTimelineViewportState: Sendable, Equatable {
     }
 }
 
-extension TurnTimelineViewportState.ScrollActivityPhase {
-    public init(_ phase: CodexThread.RecentTurns.ScrollActivityPhase) {
+public extension TurnTimelineViewportState.ScrollActivityPhase {
+    init(_ phase: CodexThread.RecentTurns.ScrollActivityPhase) {
         switch phase {
-        case .idle:
-            self = .idle
-        case .tracking:
-            self = .tracking
-        case .interacting:
-            self = .interacting
-        case .decelerating:
-            self = .decelerating
-        case .animating:
-            self = .animating
+            case .idle:
+                self = .idle
+            case .tracking:
+                self = .tracking
+            case .interacting:
+                self = .interacting
+            case .decelerating:
+                self = .decelerating
+            case .animating:
+                self = .animating
         }
     }
 }
@@ -384,7 +384,6 @@ public struct TurnTimelineTokenSummary: Sendable, Equatable {
             modelContextWindow: tokenUsage.modelContextWindow
         )
     }
-
 }
 
 public enum TurnTimelineIntent: Sendable, Equatable {

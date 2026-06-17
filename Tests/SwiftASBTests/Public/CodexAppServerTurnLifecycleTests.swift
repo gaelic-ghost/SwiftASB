@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @Test("runs initialize, thread/start, and turn/start through the public client")
@@ -54,19 +54,14 @@ extension CodexAppServerTests {
             "Hello from SwiftASB",
             effort: .medium,
             model: "gpt-5.4",
-            permissions: .init(
-                id: ":workspace",
-                modifications: [
-                    .init(additionalWritableRoot: "/tmp/turn-fixtures"),
-                ]
-            ),
+            permissions: .workspace,
             summary: .concise
         )
 
         #expect(turnHandle.threadID == thread.id)
         #expect(turnHandle.turn.id == "turn-123")
         #expect(turnHandle.turn.status == .inProgress)
-        #expect(turnHandle.turn.startedAt == 1713350002)
+        #expect(turnHandle.turn.startedAt == 1_713_350_002)
 
         let firstEventTask = Task {
             try await turnEvents(from: turnHandle.events, count: 9)
@@ -119,99 +114,99 @@ extension CodexAppServerTests {
         #expect(receivedEvents.count == 9)
 
         switch receivedEvents[0] {
-        case let .started(started):
-            #expect(started.threadID == thread.id)
-            #expect(started.turn.id == turnHandle.turn.id)
-            #expect(started.turn.status == .inProgress)
-        default:
-            Issue.record("Expected the first streamed event to be .started.")
+            case let .started(started):
+                #expect(started.threadID == thread.id)
+                #expect(started.turn.id == turnHandle.turn.id)
+                #expect(started.turn.status == .inProgress)
+            default:
+                Issue.record("Expected the first streamed event to be .started.")
         }
 
         switch receivedEvents[1] {
-        case let .itemStarted(itemStarted):
-            #expect(itemStarted.threadID == thread.id)
-            #expect(itemStarted.turnID == turnHandle.turn.id)
-            #expect(itemStarted.item.id == "item-plan-1")
-            #expect(itemStarted.item.kind == .plan)
-            #expect(itemStarted.item.text == nil)
-        default:
-            Issue.record("Expected the second streamed event to be .itemStarted.")
+            case let .itemStarted(itemStarted):
+                #expect(itemStarted.threadID == thread.id)
+                #expect(itemStarted.turnID == turnHandle.turn.id)
+                #expect(itemStarted.item.id == "item-plan-1")
+                #expect(itemStarted.item.kind == .plan)
+                #expect(itemStarted.item.text == nil)
+            default:
+                Issue.record("Expected the second streamed event to be .itemStarted.")
         }
 
         switch receivedEvents[2] {
-        case let .planUpdated(update):
-            #expect(update.threadID == thread.id)
-            #expect(update.turnID == turnHandle.turn.id)
-            #expect(update.explanation == "Map richer progress notifications.")
-            #expect(update.plan.count == 2)
-            #expect(update.plan.first?.status == .inProgress)
-            #expect(update.plan.last?.status == .pending)
-        default:
-            Issue.record("Expected the third streamed event to be .planUpdated.")
+            case let .planUpdated(update):
+                #expect(update.threadID == thread.id)
+                #expect(update.turnID == turnHandle.turn.id)
+                #expect(update.explanation == "Map richer progress notifications.")
+                #expect(update.plan.count == 2)
+                #expect(update.plan.first?.status == .inProgress)
+                #expect(update.plan.last?.status == .pending)
+            default:
+                Issue.record("Expected the third streamed event to be .planUpdated.")
         }
 
         switch receivedEvents[3] {
-        case let .planDelta(delta):
-            #expect(delta.threadID == thread.id)
-            #expect(delta.turnID == turnHandle.turn.id)
-            #expect(delta.itemID == "item-plan-1")
-            #expect(delta.delta == "Stream partial plan text")
-        default:
-            Issue.record("Expected the fourth streamed event to be .planDelta.")
+            case let .planDelta(delta):
+                #expect(delta.threadID == thread.id)
+                #expect(delta.turnID == turnHandle.turn.id)
+                #expect(delta.itemID == "item-plan-1")
+                #expect(delta.delta == "Stream partial plan text")
+            default:
+                Issue.record("Expected the fourth streamed event to be .planDelta.")
         }
 
         switch receivedEvents[4] {
-        case let .agentMessageDelta(delta):
-            #expect(delta.threadID == thread.id)
-            #expect(delta.turnID == turnHandle.turn.id)
-            #expect(delta.itemID == "item-agent-1")
-            #expect(delta.delta == "Working on it")
-        default:
-            Issue.record("Expected the fifth streamed event to be .agentMessageDelta.")
+            case let .agentMessageDelta(delta):
+                #expect(delta.threadID == thread.id)
+                #expect(delta.turnID == turnHandle.turn.id)
+                #expect(delta.itemID == "item-agent-1")
+                #expect(delta.delta == "Working on it")
+            default:
+                Issue.record("Expected the fifth streamed event to be .agentMessageDelta.")
         }
 
         switch receivedEvents[5] {
-        case let .reasoningTextDelta(delta):
-            #expect(delta.threadID == thread.id)
-            #expect(delta.turnID == turnHandle.turn.id)
-            #expect(delta.itemID == "item-reasoning-1")
-            #expect(delta.contentIndex == 0)
-            #expect(delta.delta == "thinking...")
-        default:
-            Issue.record("Expected the sixth streamed event to be .reasoningTextDelta.")
+            case let .reasoningTextDelta(delta):
+                #expect(delta.threadID == thread.id)
+                #expect(delta.turnID == turnHandle.turn.id)
+                #expect(delta.itemID == "item-reasoning-1")
+                #expect(delta.contentIndex == 0)
+                #expect(delta.delta == "thinking...")
+            default:
+                Issue.record("Expected the sixth streamed event to be .reasoningTextDelta.")
         }
 
         switch receivedEvents[6] {
-        case let .reasoningSummaryTextDelta(delta):
-            #expect(delta.threadID == thread.id)
-            #expect(delta.turnID == turnHandle.turn.id)
-            #expect(delta.itemID == "item-reasoning-1")
-            #expect(delta.summaryIndex == 0)
-            #expect(delta.delta == "Summarizing the approach.")
-        default:
-            Issue.record("Expected the seventh streamed event to be .reasoningSummaryTextDelta.")
+            case let .reasoningSummaryTextDelta(delta):
+                #expect(delta.threadID == thread.id)
+                #expect(delta.turnID == turnHandle.turn.id)
+                #expect(delta.itemID == "item-reasoning-1")
+                #expect(delta.summaryIndex == 0)
+                #expect(delta.delta == "Summarizing the approach.")
+            default:
+                Issue.record("Expected the seventh streamed event to be .reasoningSummaryTextDelta.")
         }
 
         switch receivedEvents[7] {
-        case let .itemCompleted(itemCompleted):
-            #expect(itemCompleted.threadID == thread.id)
-            #expect(itemCompleted.turnID == turnHandle.turn.id)
-            #expect(itemCompleted.item.id == "item-agent-1")
-            #expect(itemCompleted.item.kind == .agentMessage)
-            #expect(itemCompleted.item.text == "Done.")
-            #expect(itemCompleted.item.status == "completed")
-        default:
-            Issue.record("Expected the eighth streamed event to be .itemCompleted.")
+            case let .itemCompleted(itemCompleted):
+                #expect(itemCompleted.threadID == thread.id)
+                #expect(itemCompleted.turnID == turnHandle.turn.id)
+                #expect(itemCompleted.item.id == "item-agent-1")
+                #expect(itemCompleted.item.kind == .agentMessage)
+                #expect(itemCompleted.item.text == "Done.")
+                #expect(itemCompleted.item.status == "completed")
+            default:
+                Issue.record("Expected the eighth streamed event to be .itemCompleted.")
         }
 
         switch receivedEvents[8] {
-        case let .completed(completion):
-            #expect(completion.threadID == thread.id)
-            #expect(completion.turn.id == turnHandle.turn.id)
-            #expect(completion.turn.status == CodexAppServer.TurnStatus.completed)
-            #expect(completion.turn.completedAt == 1713350005)
-        default:
-            Issue.record("Expected the ninth streamed event to be .completed.")
+            case let .completed(completion):
+                #expect(completion.threadID == thread.id)
+                #expect(completion.turn.id == turnHandle.turn.id)
+                #expect(completion.turn.status == CodexAppServer.TurnStatus.completed)
+                #expect(completion.turn.completedAt == 1_713_350_005)
+            default:
+                Issue.record("Expected the ninth streamed event to be .completed.")
         }
 
         let recordedMethods = await transport.recordedMethods
@@ -504,5 +499,4 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
-
 }

@@ -12,6 +12,16 @@ public struct ThreadSidebarSnapshot: Sendable, Equatable {
     public var isLoading: Bool
     public var errorDescription: String?
 
+    /// All visible items in renderer order.
+    public var items: [ThreadSidebarItem] {
+        sections.flatMap(\.items)
+    }
+
+    /// True when there is no visible thread row.
+    public var isEmpty: Bool {
+        items.isEmpty
+    }
+
     public init(
         sections: [ThreadSidebarSection] = [],
         selection: ThreadSelectionState = .init(),
@@ -22,16 +32,6 @@ public struct ThreadSidebarSnapshot: Sendable, Equatable {
         self.selection = selection
         self.isLoading = isLoading
         self.errorDescription = errorDescription
-    }
-
-    /// All visible items in renderer order.
-    public var items: [ThreadSidebarItem] {
-        sections.flatMap(\.items)
-    }
-
-    /// True when there is no visible thread row.
-    public var isEmpty: Bool {
-        items.isEmpty
     }
 
     /// Projects the current app-wide library companion into a sidebar snapshot.
@@ -73,6 +73,7 @@ public struct ThreadSidebarSnapshot: Sendable, Equatable {
         from threads: [CodexAppServer.Library.ThreadSnapshot]
     ) -> [ThreadSidebarSection] {
         guard !threads.isEmpty else { return [] }
+
         return [
             ThreadSidebarSection(
                 id: ThreadSidebarSection.defaultSectionID,
@@ -237,20 +238,20 @@ public enum ThreadSidebarSourceBadge: Sendable, Equatable {
 
     public init(source: CodexAppServer.ThreadSource) {
         switch source {
-        case .appServer:
-            self = .appServer
-        case .cli:
-            self = .cli
-        case .exec:
-            self = .exec
-        case .vscode:
-            self = .vscode
-        case let .custom(label):
-            self = .custom(label)
-        case let .subAgent(source):
-            self = .subAgent(kind: source.kind.rawValue)
-        case .unknown:
-            self = .unknown
+            case .appServer:
+                self = .appServer
+            case .cli:
+                self = .cli
+            case .exec:
+                self = .exec
+            case .vscode:
+                self = .vscode
+            case let .custom(label):
+                self = .custom(label)
+            case let .subAgent(source):
+                self = .subAgent(kind: source.kind.rawValue)
+            case .unknown:
+                self = .unknown
         }
     }
 }
@@ -277,14 +278,14 @@ public enum ThreadSidebarActivityStatus: Sendable, Equatable {
             self = .waitingOnUserInput
         } else {
             switch thread.status.type {
-            case .active:
-                self = .active
-            case .idle:
-                self = .idle
-            case .notLoaded:
-                self = .notLoaded
-            case .systemError:
-                self = .systemError
+                case .active:
+                    self = .active
+                case .idle:
+                    self = .idle
+                case .notLoaded:
+                    self = .notLoaded
+                case .systemError:
+                    self = .systemError
             }
         }
     }

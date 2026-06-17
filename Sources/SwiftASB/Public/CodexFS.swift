@@ -6,12 +6,6 @@ import Foundation
 /// reading local disk from the Swift client process. That keeps sandboxed apps
 /// dependent on Codex-owned permissions and path handling.
 public struct CodexFS: Sendable {
-    private let appServer: CodexAppServer
-
-    init(appServer: CodexAppServer) {
-        self.appServer = appServer
-    }
-
     /// Request used to inspect app-server-owned filesystem metadata for an absolute path.
     public struct MetadataRequest: Sendable, Equatable {
         public var path: String
@@ -180,6 +174,11 @@ public struct CodexFS: Sendable {
             )
         }
 
+        private static func normalizedSearchTerm(_ searchTerm: String?) -> String? {
+            let normalized = searchTerm?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return normalized?.isEmpty == false ? normalized : nil
+        }
+
         /// Returns the same query with a normalized result limit.
         public func limited(to limit: Int) -> Self {
             .init(
@@ -226,11 +225,6 @@ public struct CodexFS: Sendable {
                 includedKinds: includedKinds,
                 includesHiddenEntries: includesHiddenEntries
             )
-        }
-
-        private static func normalizedSearchTerm(_ searchTerm: String?) -> String? {
-            let normalized = searchTerm?.trimmingCharacters(in: .whitespacesAndNewlines)
-            return normalized?.isEmpty == false ? normalized : nil
         }
     }
 
@@ -302,8 +296,6 @@ public struct CodexFS: Sendable {
             public let value: Int
         }
 
-        public var id: String { path }
-
         public let depth: Int
         public let fileName: String
         public let kind: Kind
@@ -318,6 +310,14 @@ public struct CodexFS: Sendable {
         public let rankingReasons: [RankingReason]
         public let relativePath: String
         public let score: Int?
+
+        public var id: String { path }
+    }
+
+    private let appServer: CodexAppServer
+
+    init(appServer: CodexAppServer) {
+        self.appServer = appServer
     }
 
     /// Reads app-server-owned filesystem metadata for an absolute path.
@@ -362,17 +362,17 @@ public struct CodexFS: Sendable {
 
         let sortedHits = hits.sorted { lhs, rhs in
             switch (lhs.score, rhs.score) {
-            case let (left?, right?) where left != right:
-                return left > right
-            case (_?, nil):
-                return true
-            case (nil, _?):
-                return false
-            default:
-                if lhs.depth != rhs.depth {
-                    return lhs.depth < rhs.depth
-                }
-                return lhs.relativePath.localizedStandardCompare(rhs.relativePath) == .orderedAscending
+                case let (left?, right?) where left != right:
+                    return left > right
+                case (_?, nil):
+                    return true
+                case (nil, _?):
+                    return false
+                default:
+                    if lhs.depth != rhs.depth {
+                        return lhs.depth < rhs.depth
+                    }
+                    return lhs.relativePath.localizedStandardCompare(rhs.relativePath) == .orderedAscending
             }
         }
 
@@ -451,8 +451,7 @@ private extension CodexFS {
             }
 
             if query.includedKinds.contains(kind),
-               query.searchTerm == nil || match != nil
-            {
+               query.searchTerm == nil || match != nil {
                 hits.append(
                     .init(
                         depth: depth,
@@ -470,8 +469,7 @@ private extension CodexFS {
             }
 
             if entry.kind == .directory,
-               depth < query.maximumDepth
-            {
+               depth < query.maximumDepth {
                 try await collectDiscoveryHits(
                     query: query,
                     directoryPath: childPath,
@@ -485,6 +483,7 @@ private extension CodexFS {
 
     func appendingPathComponent(_ component: String, to path: String) -> String {
         guard !path.isEmpty else { return component }
+
         return path.hasSuffix("/") ? path + component : path + "/" + component
     }
 
@@ -626,6 +625,7 @@ private extension CodexFS {
         }
         let initials = words.compactMap(\.first)
         guard !initials.isEmpty else { return false }
+
         return String(initials).lowercased().hasPrefix(query)
     }
 
@@ -634,12 +634,12 @@ private extension CodexFS {
         var penalty = 0
         for component in components {
             switch component {
-            case ".build", "build", "deriveddata", ".swiftpm":
-                penalty += 80
-            case "debug", "release", "checkouts", "artifacts":
-                penalty += 25
-            default:
-                continue
+                case ".build", "build", "deriveddata", ".swiftpm":
+                    penalty += 80
+                case "debug", "release", "checkouts", "artifacts":
+                    penalty += 25
+                default:
+                    continue
             }
         }
         return penalty
@@ -667,12 +667,12 @@ private extension CodexFS {
 private extension CodexFS.FileDiscoveryHit.Kind {
     init(_ entryKind: CodexFS.DirectoryEntry.Kind) {
         switch entryKind {
-        case .directory:
-            self = .directory
-        case .file:
-            self = .file
-        case .other:
-            self = .other
+            case .directory:
+                self = .directory
+            case .file:
+                self = .file
+            case .other:
+                self = .other
         }
     }
 }

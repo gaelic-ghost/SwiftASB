@@ -1,7 +1,6 @@
 import ASBPresentation
 import Testing
 
-@Suite("Agenda and dashboard presentation")
 struct AgendaDashboardPresentationTests {
     @Test("agenda snapshot exposes goal, current plan, and proposed plan")
     func agendaSnapshotCarriesGoalAndPlan() {

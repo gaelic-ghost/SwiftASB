@@ -1,8 +1,7 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
-@Suite("SwiftASB feature operation events")
 struct SwiftASBFeatureOperationEventTests {
     @Test("feature operation event carries mutation metadata")
     func featureOperationEventCarriesMutationMetadata() {

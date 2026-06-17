@@ -77,7 +77,6 @@ public extension CodexAppServer {
         case clear
         case replace(String)
     }
-
 }
 
 extension CodexAppServer.ThreadMetadataUpdateRequest {
@@ -102,12 +101,12 @@ extension CodexProtocolThreadMetadataUpdateParams.GitInfo {
 extension CodexProtocolThreadMetadataUpdateParams.FieldUpdate {
     init(_ update: CodexAppServer.ThreadMetadataFieldUpdate) {
         switch update {
-        case .unchanged:
-            self = .unchanged
-        case .clear:
-            self = .clear
-        case let .replace(value):
-            self = .replace(value)
+            case .unchanged:
+                self = .unchanged
+            case .clear:
+                self = .clear
+            case let .replace(value):
+                self = .replace(value)
         }
     }
 }

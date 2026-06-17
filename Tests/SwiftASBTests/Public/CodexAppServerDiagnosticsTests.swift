@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import SwiftASB
+import Testing
 
 extension CodexAppServerTests {
     @MainActor
@@ -63,39 +63,39 @@ extension CodexAppServerTests {
         }
 
         switch receivedThreadEvents[0] {
-        case let .diagnostic(.warning(warning)):
-            #expect(warning.threadID == thread.id)
-            #expect(warning.message == "Runtime configuration is using a fallback.")
-        default:
-            Issue.record("Expected the first thread diagnostic to be a runtime warning.")
+            case let .diagnostic(.warning(warning)):
+                #expect(warning.threadID == thread.id)
+                #expect(warning.message == "Runtime configuration is using a fallback.")
+            default:
+                Issue.record("Expected the first thread diagnostic to be a runtime warning.")
         }
 
         switch receivedThreadEvents[1] {
-        case let .diagnostic(.guardianWarning(warning)):
-            #expect(warning.threadID == thread.id)
-            #expect(warning.message == "Guardian flagged this session for review.")
-        default:
-            Issue.record("Expected the second thread diagnostic to be a guardian warning.")
+            case let .diagnostic(.guardianWarning(warning)):
+                #expect(warning.threadID == thread.id)
+                #expect(warning.message == "Guardian flagged this session for review.")
+            default:
+                Issue.record("Expected the second thread diagnostic to be a guardian warning.")
         }
 
         switch receivedThreadEvents[2] {
-        case let .diagnostic(.modelRerouted(reroute)):
-            #expect(reroute.threadID == thread.id)
-            #expect(reroute.turnID == turnHandle.turn.id)
-            #expect(reroute.fromModel == "gpt-5.4")
-            #expect(reroute.toModel == "gpt-5.4-safe")
-            #expect(reroute.reason == CodexModelReroute.Reason.highRiskCyberActivity)
-        default:
-            Issue.record("Expected the third thread diagnostic to be a model reroute.")
+            case let .diagnostic(.modelRerouted(reroute)):
+                #expect(reroute.threadID == thread.id)
+                #expect(reroute.turnID == turnHandle.turn.id)
+                #expect(reroute.fromModel == "gpt-5.4")
+                #expect(reroute.toModel == "gpt-5.4-safe")
+                #expect(reroute.reason == CodexModelReroute.Reason.highRiskCyberActivity)
+            default:
+                Issue.record("Expected the third thread diagnostic to be a model reroute.")
         }
 
         switch receivedThreadEvents[3] {
-        case let .diagnostic(.modelVerification(verification)):
-            #expect(verification.threadID == thread.id)
-            #expect(verification.turnID == turnHandle.turn.id)
-            #expect(verification.verifications == [CodexModelVerification.trustedAccessForCyber])
-        default:
-            Issue.record("Expected the fourth thread diagnostic to be a model verification.")
+            case let .diagnostic(.modelVerification(verification)):
+                #expect(verification.threadID == thread.id)
+                #expect(verification.turnID == turnHandle.turn.id)
+                #expect(verification.verifications == [CodexModelVerification.trustedAccessForCyber])
+            default:
+                Issue.record("Expected the fourth thread diagnostic to be a model verification.")
         }
 
         let receivedTurnEvents = try await turnEventsTask.value
@@ -106,20 +106,20 @@ extension CodexAppServerTests {
         }
 
         switch receivedTurnEvents[0] {
-        case let .diagnostic(.modelRerouted(reroute)):
-            #expect(reroute.threadID == thread.id)
-            #expect(reroute.turnID == turnHandle.turn.id)
-        default:
-            Issue.record("Expected the first turn diagnostic to be a model reroute.")
+            case let .diagnostic(.modelRerouted(reroute)):
+                #expect(reroute.threadID == thread.id)
+                #expect(reroute.turnID == turnHandle.turn.id)
+            default:
+                Issue.record("Expected the first turn diagnostic to be a model reroute.")
         }
 
         switch receivedTurnEvents[1] {
-        case let .diagnostic(.modelVerification(verification)):
-            #expect(verification.threadID == thread.id)
-            #expect(verification.turnID == turnHandle.turn.id)
-            #expect(verification.verifications == [CodexModelVerification.trustedAccessForCyber])
-        default:
-            Issue.record("Expected the second turn diagnostic to be a model verification.")
+            case let .diagnostic(.modelVerification(verification)):
+                #expect(verification.threadID == thread.id)
+                #expect(verification.turnID == turnHandle.turn.id)
+                #expect(verification.verifications == [CodexModelVerification.trustedAccessForCyber])
+            default:
+                Issue.record("Expected the second turn diagnostic to be a model verification.")
         }
 
         await waitForObservableState {
@@ -132,19 +132,19 @@ extension CodexAppServerTests {
         }
 
         switch dashboard.latestDiagnostic {
-        case let .modelVerification(verification):
-            #expect(verification.threadID == thread.id)
-            #expect(verification.turnID == turnHandle.turn.id)
-        default:
-            Issue.record("Expected the thread dashboard to retain the latest model verification diagnostic.")
+            case let .modelVerification(verification):
+                #expect(verification.threadID == thread.id)
+                #expect(verification.turnID == turnHandle.turn.id)
+            default:
+                Issue.record("Expected the thread dashboard to retain the latest model verification diagnostic.")
         }
 
         switch minimap.latestDiagnostic {
-        case let .modelVerification(verification):
-            #expect(verification.threadID == thread.id)
-            #expect(verification.turnID == turnHandle.turn.id)
-        default:
-            Issue.record("Expected the turn minimap to retain the latest model verification diagnostic.")
+            case let .modelVerification(verification):
+                #expect(verification.threadID == thread.id)
+                #expect(verification.turnID == turnHandle.turn.id)
+            default:
+                Issue.record("Expected the turn minimap to retain the latest model verification diagnostic.")
         }
 
         await client.stop()
@@ -180,11 +180,11 @@ extension CodexAppServerTests {
         #expect(appDiagnostics.count == 1)
 
         switch appDiagnostics.first {
-        case let .warning(warning):
-            #expect(warning.threadID == nil)
-            #expect(warning.message == "Global configuration warning.")
-        default:
-            Issue.record("Expected an app-wide runtime warning diagnostic.")
+            case let .warning(warning):
+                #expect(warning.threadID == nil)
+                #expect(warning.message == "Global configuration warning.")
+            default:
+                Issue.record("Expected an app-wide runtime warning diagnostic.")
         }
 
         await client.stop()
@@ -220,13 +220,13 @@ extension CodexAppServerTests {
         #expect(appDiagnostics.count == 1)
 
         switch appDiagnostics.first {
-        case let .mcpServerStatusChanged(diagnostic):
-            #expect(diagnostic.name == "calendar")
-            #expect(diagnostic.status == .ready)
-            #expect(appDiagnostics.first?.threadID == nil)
-            #expect(appDiagnostics.first?.turnID == nil)
-        default:
-            Issue.record("Expected an app-wide MCP server status diagnostic.")
+            case let .mcpServerStatusChanged(diagnostic):
+                #expect(diagnostic.name == "calendar")
+                #expect(diagnostic.status == .ready)
+                #expect(appDiagnostics.first?.threadID == nil)
+                #expect(appDiagnostics.first?.turnID == nil)
+            default:
+                Issue.record("Expected an app-wide MCP server status diagnostic.")
         }
 
         await client.stop()
@@ -267,5 +267,4 @@ extension CodexAppServerTests {
 
         await client.stop()
     }
-
 }

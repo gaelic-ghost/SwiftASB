@@ -32,8 +32,7 @@ public struct ASBDashboardPanel: View {
             }
 
             if let latestDiagnosticDescription = snapshot.latestDiagnosticDescription,
-               !latestDiagnosticDescription.isEmpty
-            {
+               !latestDiagnosticDescription.isEmpty {
                 ASBDiagnosticMessage(latestDiagnosticDescription)
             }
         }

@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 extension CodexAppServer {
-    internal enum LibraryEvent: Sendable, Equatable {
+    enum LibraryEvent: Equatable {
         case appSnapshotsChanged
         case threadChanged(threadID: String)
         case turnCompleted(threadID: String)
@@ -24,6 +24,12 @@ public extension CodexAppServer {
         public var modelProviders: [String]?
         public var searchTerm: String?
         public var sortedBy: Library.SortedBy
+
+        var canMarkMissingThreadsRemoved: Bool {
+            currentDirectoryPath == nil
+                && modelProviders?.isEmpty != false
+                && searchTerm == nil
+        }
 
         /// Creates a thread-list query descriptor.
         ///
@@ -102,6 +108,13 @@ public extension CodexAppServer {
                 searchTerm: searchTerm,
                 sortedBy: sortedBy
             )
+        }
+
+        private static func normalizedSearchTerm(_ searchTerm: String?) -> String? {
+            guard let searchTerm else { return nil }
+
+            let trimmed = searchTerm.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
         }
 
         /// Returns the same query with a normalized page or local result limit.
@@ -194,7 +207,7 @@ public extension CodexAppServer {
             )
         }
 
-        internal func threadListRequest(
+        func threadListRequest(
             archived archiveFilter: Bool,
             cursor: String? = nil
         ) -> CodexAppServer.ThreadListRequest {
@@ -208,18 +221,6 @@ public extension CodexAppServer {
                 currentDirectoryPath: currentDirectoryPath,
                 searchTerm: searchTerm
             )
-        }
-
-        internal var canMarkMissingThreadsRemoved: Bool {
-            currentDirectoryPath == nil
-                && modelProviders?.isEmpty != false
-                && searchTerm == nil
-        }
-
-        private static func normalizedSearchTerm(_ searchTerm: String?) -> String? {
-            guard let searchTerm else { return nil }
-            let trimmed = searchTerm.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? nil : trimmed
         }
     }
 }
@@ -299,24 +300,24 @@ public extension CodexAppServer {
             case nameAscending
             case nameDescending
 
-            internal var appServerSort: (
+            var appServerSort: (
                 key: CodexAppServer.ThreadListSortKey,
                 direction: CodexAppServer.ThreadListSortDirection
             ) {
                 switch self {
-                case .createdNewestFirst:
-                    (.createdAt, .desc)
-                case .createdOldestFirst:
-                    (.createdAt, .asc)
-                case .updatedNewestFirst,
-                     .selectedNewestFirst,
-                     .turnFinishedNewestFirst,
-                     .turnFinishedOldestFirst,
-                     .nameAscending,
-                     .nameDescending:
-                    (.updatedAt, .desc)
-                case .updatedOldestFirst:
-                    (.updatedAt, .asc)
+                    case .createdNewestFirst:
+                        (.createdAt, .desc)
+                    case .createdOldestFirst:
+                        (.createdAt, .asc)
+                    case .updatedNewestFirst,
+                         .selectedNewestFirst,
+                         .turnFinishedNewestFirst,
+                         .turnFinishedOldestFirst,
+                         .nameAscending,
+                         .nameDescending:
+                        (.updatedAt, .desc)
+                    case .updatedOldestFirst:
+                        (.updatedAt, .asc)
                 }
             }
         }
@@ -381,6 +382,7 @@ public extension CodexAppServer {
         public var selectedThreadID: String? {
             didSet {
                 guard selectedThreadID != oldValue else { return }
+
                 if let selectedThreadID {
                     recordSelection(threadID: selectedThreadID)
                 }
@@ -388,50 +390,24 @@ public extension CodexAppServer {
                 scheduleSelectedGitStatusRefresh()
             }
         }
+
         public var groupedBy: GroupedBy {
             didSet {
                 applyVisibleState()
             }
         }
+
         public var sortedBy: SortedBy {
             didSet {
                 query.sortedBy = sortedBy
                 applyVisibleState()
             }
         }
+
         public private(set) var unarchivedThreads: [ThreadSnapshot]
         public private(set) var worktreeGroups: [ThreadGroup]
         public private(set) var snapshotCurrentDirectoryPaths: [String]?
         public private(set) var snapshotPhase: SnapshotPhase
-
-        public var isLoadingLocalSnapshot: Bool {
-            phase == .loadingLocalSnapshot
-        }
-
-        public var isReconciling: Bool {
-            phase == .reconcilingUnarchived || phase == .reconcilingArchived
-        }
-
-        public var isLoadingAppSnapshots: Bool {
-            snapshotPhase == .loading
-        }
-
-        public var selectedThread: ThreadSnapshot? {
-            guard let selectedThreadID else { return nil }
-            return allThreads.first { $0.id == selectedThreadID }
-        }
-
-        public var selectedWorktree: CodexWorkspace.WorktreeSnapshot? {
-            selectedThread?.worktree
-        }
-
-        public var selectedRepository: CodexWorkspace.RepositoryInfo? {
-            selectedThread?.worktree.repository
-        }
-
-        public var selectedGitStatus: CodexWorkspace.GitStatusSnapshot? {
-            selectedWorktree.flatMap { gitStatusByWorktreeID[$0.id] }
-        }
 
         @ObservationIgnored
         private let appServer: CodexAppServer
@@ -475,39 +451,69 @@ public extension CodexAppServer {
         @ObservationIgnored
         private var gitStatusTask: Task<Void, Never>?
 
-        internal init(
+        public var isLoadingLocalSnapshot: Bool {
+            phase == .loadingLocalSnapshot
+        }
+
+        public var isReconciling: Bool {
+            phase == .reconcilingUnarchived || phase == .reconcilingArchived
+        }
+
+        public var isLoadingAppSnapshots: Bool {
+            snapshotPhase == .loading
+        }
+
+        public var selectedThread: ThreadSnapshot? {
+            guard let selectedThreadID else { return nil }
+
+            return allThreads.first { $0.id == selectedThreadID }
+        }
+
+        public var selectedWorktree: CodexWorkspace.WorktreeSnapshot? {
+            selectedThread?.worktree
+        }
+
+        public var selectedRepository: CodexWorkspace.RepositoryInfo? {
+            selectedThread?.worktree.repository
+        }
+
+        public var selectedGitStatus: CodexWorkspace.GitStatusSnapshot? {
+            selectedWorktree.flatMap { gitStatusByWorktreeID[$0.id] }
+        }
+
+        init(
             appServer: CodexAppServer,
             configuration: Configuration,
             initialThreads: [ThreadSnapshot]
         ) {
             self.appServer = appServer
-            self.allThreads = initialThreads
-            self.archivedThreads = []
-            self.configuredHookListCurrentDirectoryPaths = configuration.hookListCurrentDirectoryPaths
-            self.featurePolicy = configuration.featurePolicy
-            self.gitStatusByWorktreeID = [:]
-            self.groups = []
-            self.groupedBy = configuration.groupedBy
-            self.hookListSnapshot = nil
-            self.lastReconciledAt = nil
-            self.lastGitStatusReadAt = nil
-            self.lastSnapshotsReadAt = nil
-            self.latestGitStatusErrorDescription = nil
-            self.latestSnapshotErrorDescription = nil
-            self.latestErrorDescription = nil
-            self.maxPagesPerArchiveState = configuration.maxPagesPerArchiveState
-            self.mcpServers = []
-            self.mcpServerNextCursor = nil
-            self.modelCapabilities = nil
-            self.phase = .idle
-            self.query = configuration.query
-            self.removedThreads = []
-            self.selectedThreadID = nil
-            self.snapshotCurrentDirectoryPaths = nil
-            self.snapshotPhase = .idle
-            self.sortedBy = configuration.sortedBy
-            self.unarchivedThreads = []
-            self.worktreeGroups = []
+            allThreads = initialThreads
+            archivedThreads = []
+            configuredHookListCurrentDirectoryPaths = configuration.hookListCurrentDirectoryPaths
+            featurePolicy = configuration.featurePolicy
+            gitStatusByWorktreeID = [:]
+            groups = []
+            groupedBy = configuration.groupedBy
+            hookListSnapshot = nil
+            lastReconciledAt = nil
+            lastGitStatusReadAt = nil
+            lastSnapshotsReadAt = nil
+            latestGitStatusErrorDescription = nil
+            latestSnapshotErrorDescription = nil
+            latestErrorDescription = nil
+            maxPagesPerArchiveState = configuration.maxPagesPerArchiveState
+            mcpServers = []
+            mcpServerNextCursor = nil
+            modelCapabilities = nil
+            phase = .idle
+            query = configuration.query
+            removedThreads = []
+            selectedThreadID = nil
+            snapshotCurrentDirectoryPaths = nil
+            snapshotPhase = .idle
+            sortedBy = configuration.sortedBy
+            unarchivedThreads = []
+            worktreeGroups = []
             applyVisibleState()
 
             if configuration.reconcilesOnCreation {
@@ -524,6 +530,183 @@ public extension CodexAppServer {
             refreshTask?.cancel()
             snapshotTask?.cancel()
             gitStatusTask?.cancel()
+        }
+
+        private static func sort(
+            _ threads: [ThreadSnapshot],
+            by sortedBy: SortedBy,
+            selectionOrderByThreadID: [String: Int]
+        ) -> [ThreadSnapshot] {
+            threads.sorted { lhs, rhs in
+                switch sortedBy {
+                    case .updatedNewestFirst:
+                        newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
+                    case .updatedOldestFirst:
+                        oldest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
+                    case .createdNewestFirst:
+                        newest(lhs.createdAt, rhs.createdAt, lhs.id, rhs.id)
+                    case .createdOldestFirst:
+                        oldest(lhs.createdAt, rhs.createdAt, lhs.id, rhs.id)
+                    case .selectedNewestFirst:
+                        compareSelection(
+                            lhs,
+                            rhs,
+                            selectionOrderByThreadID: selectionOrderByThreadID
+                        )
+                    case .turnFinishedNewestFirst:
+                        newest(
+                            lhs.lastCompletedTurnAt ?? Int.min,
+                            rhs.lastCompletedTurnAt ?? Int.min,
+                            lhs.id,
+                            rhs.id
+                        )
+                    case .turnFinishedOldestFirst:
+                        oldest(
+                            lhs.lastCompletedTurnAt ?? Int.max,
+                            rhs.lastCompletedTurnAt ?? Int.max,
+                            lhs.id,
+                            rhs.id
+                        )
+                    case .nameAscending:
+                        compareNames(lhs, rhs, ascending: true)
+                    case .nameDescending:
+                        compareNames(lhs, rhs, ascending: false)
+                }
+            }
+        }
+
+        private static func groups(
+            from threads: [ThreadSnapshot],
+            groupedBy: GroupedBy
+        ) -> [ThreadGroup] {
+            guard groupedBy != .none else {
+                return []
+            }
+
+            let grouped = Dictionary(grouping: threads) { thread in
+                switch groupedBy {
+                    case .none:
+                        ""
+                    case .cwd:
+                        thread.currentDirectoryPath
+                    case .repository:
+                        thread.projectInfo.id
+                }
+            }
+
+            return grouped
+                .map { key, threads in
+                    let projectInfo = projectInfo(
+                        forGroupID: key,
+                        threads: threads,
+                        groupedBy: groupedBy
+                    )
+                    return ThreadGroup(
+                        id: key,
+                        projectInfo: projectInfo,
+                        title: projectInfo?.displayName ?? "Unknown Project",
+                        threads: threads
+                    )
+                }
+                .sorted { lhs, rhs in
+                    lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+                }
+        }
+
+        private static func projectInfo(
+            forGroupID id: String,
+            threads: [ThreadSnapshot],
+            groupedBy: GroupedBy
+        ) -> CodexWorkspace.ProjectInfo? {
+            guard groupedBy != .none else {
+                return nil
+            }
+            guard groupedBy == .repository else {
+                return .init(currentDirectoryPath: id)
+            }
+            guard let representative = threads.first else {
+                return .init(currentDirectoryPath: id)
+            }
+            guard representative.projectInfo.identitySource == .gitOrigin else {
+                return representative.projectInfo
+            }
+
+            let repositories = threads.map(\.projectInfo.repository)
+            let branch = commonValue(repositories.map { $0?.branch })
+            let sha = commonValue(repositories.map { $0?.sha })
+            return .init(
+                currentDirectoryPath: representative.currentDirectoryPath,
+                repository: .init(
+                    originURL: id,
+                    branch: branch,
+                    sha: sha
+                )
+            )
+        }
+
+        private static func newest(
+            _ lhsValue: Int,
+            _ rhsValue: Int,
+            _ lhsID: String,
+            _ rhsID: String
+        ) -> Bool {
+            if lhsValue == rhsValue {
+                lhsID < rhsID
+            } else {
+                lhsValue > rhsValue
+            }
+        }
+
+        private static func oldest(
+            _ lhsValue: Int,
+            _ rhsValue: Int,
+            _ lhsID: String,
+            _ rhsID: String
+        ) -> Bool {
+            if lhsValue == rhsValue {
+                lhsID < rhsID
+            } else {
+                lhsValue < rhsValue
+            }
+        }
+
+        private static func compareNames(
+            _ lhs: ThreadSnapshot,
+            _ rhs: ThreadSnapshot,
+            ascending: Bool
+        ) -> Bool {
+            let lhsName = lhs.name ?? lhs.preview
+            let rhsName = rhs.name ?? rhs.preview
+            let comparison = lhsName.localizedStandardCompare(rhsName)
+            if comparison == .orderedSame {
+                return newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
+            }
+            return ascending
+                ? comparison == .orderedAscending
+                : comparison == .orderedDescending
+        }
+
+        private static func compareSelection(
+            _ lhs: ThreadSnapshot,
+            _ rhs: ThreadSnapshot,
+            selectionOrderByThreadID: [String: Int]
+        ) -> Bool {
+            let lhsOrder = selectionOrderByThreadID[lhs.id]
+            let rhsOrder = selectionOrderByThreadID[rhs.id]
+
+            switch (lhsOrder, rhsOrder) {
+                case let (lhsOrder?, rhsOrder?):
+                    if lhsOrder == rhsOrder {
+                        return newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
+                    }
+                    return lhsOrder > rhsOrder
+                case (_?, nil):
+                    return true
+                case (nil, _?):
+                    return false
+                case (nil, nil):
+                    return newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
+            }
         }
 
         public func refresh() async {
@@ -583,42 +766,6 @@ public extension CodexAppServer {
                 pendingAppSnapshotRefresh = false
                 await loadAppSnapshotsOnce()
             } while pendingAppSnapshotRefresh
-        }
-
-        private func loadAppSnapshotsOnce() async {
-            snapshotPhase = .loading
-            latestSnapshotErrorDescription = nil
-
-            let hookCurrentDirectoryPaths = resolvedHookListCurrentDirectoryPaths()
-            snapshotCurrentDirectoryPaths = hookCurrentDirectoryPaths
-
-            let snapshot = await appServer.readAppInventorySnapshot(
-                .init(
-                    hookListCurrentDirectoryPaths: hookCurrentDirectoryPaths,
-                    includesExtensions: false
-                )
-            )
-
-            if let capabilities = snapshot.modelCapabilities {
-                modelCapabilities = capabilities
-            }
-
-            if let page = snapshot.mcpServerStatusPage {
-                mcpServers = page.servers.map { status in
-                    .init(status: status, scope: .global)
-                }
-                mcpServerNextCursor = page.nextCursor
-            }
-
-            if let hookListSnapshot = snapshot.hookListSnapshot {
-                self.hookListSnapshot = hookListSnapshot
-            }
-
-            lastSnapshotsReadAt = snapshot.succeededCompletely ? Date() : lastSnapshotsReadAt
-            latestSnapshotErrorDescription = snapshot.succeededCompletely
-                ? nil
-                : snapshot.errorDescriptions.joined(separator: "\n")
-            snapshotPhase = .idle
         }
 
         public func selectThread(_ threadID: String?) {
@@ -683,6 +830,42 @@ public extension CodexAppServer {
                 .filter { $0.worktree.repository?.originURL == originURL }
         }
 
+        private func loadAppSnapshotsOnce() async {
+            snapshotPhase = .loading
+            latestSnapshotErrorDescription = nil
+
+            let hookCurrentDirectoryPaths = resolvedHookListCurrentDirectoryPaths()
+            snapshotCurrentDirectoryPaths = hookCurrentDirectoryPaths
+
+            let snapshot = await appServer.readAppInventorySnapshot(
+                .init(
+                    hookListCurrentDirectoryPaths: hookCurrentDirectoryPaths,
+                    includesExtensions: false
+                )
+            )
+
+            if let capabilities = snapshot.modelCapabilities {
+                modelCapabilities = capabilities
+            }
+
+            if let page = snapshot.mcpServerStatusPage {
+                mcpServers = page.servers.map { status in
+                    .init(status: status, scope: .global)
+                }
+                mcpServerNextCursor = page.nextCursor
+            }
+
+            if let hookListSnapshot = snapshot.hookListSnapshot {
+                self.hookListSnapshot = hookListSnapshot
+            }
+
+            lastSnapshotsReadAt = snapshot.succeededCompletely ? Date() : lastSnapshotsReadAt
+            latestSnapshotErrorDescription = snapshot.succeededCompletely
+                ? nil
+                : snapshot.errorDescriptions.joined(separator: "\n")
+            snapshotPhase = .idle
+        }
+
         private func refreshArchiveScope(_ archived: Bool) async {
             if isReconciling || isLoadingLocalSnapshot {
                 return
@@ -720,6 +903,7 @@ public extension CodexAppServer {
         private func startEventTask() {
             eventTask = Task { [weak self] in
                 guard let self else { return }
+
                 let events = await appServer.libraryEvents()
                 for await event in events {
                     if Task.isCancelled {
@@ -791,6 +975,7 @@ public extension CodexAppServer {
 
         private func clearSelectionIfThreadDisappeared() {
             guard let selectedThreadID else { return }
+
             if !allThreads.contains(where: { $0.id == selectedThreadID && $0.state != .removed }) {
                 self.selectedThreadID = nil
             }
@@ -817,186 +1002,6 @@ public extension CodexAppServer {
                 by: sortedBy,
                 selectionOrderByThreadID: selectionOrderByThreadID
             )
-        }
-
-        private static func sort(
-            _ threads: [ThreadSnapshot],
-            by sortedBy: SortedBy,
-            selectionOrderByThreadID: [String: Int]
-        ) -> [ThreadSnapshot] {
-            threads.sorted { lhs, rhs in
-                switch sortedBy {
-                case .updatedNewestFirst:
-                    newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
-                case .updatedOldestFirst:
-                    oldest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
-                case .createdNewestFirst:
-                    newest(lhs.createdAt, rhs.createdAt, lhs.id, rhs.id)
-                case .createdOldestFirst:
-                    oldest(lhs.createdAt, rhs.createdAt, lhs.id, rhs.id)
-                case .selectedNewestFirst:
-                    compareSelection(
-                        lhs,
-                        rhs,
-                        selectionOrderByThreadID: selectionOrderByThreadID
-                    )
-                case .turnFinishedNewestFirst:
-                    newest(
-                        lhs.lastCompletedTurnAt ?? Int.min,
-                        rhs.lastCompletedTurnAt ?? Int.min,
-                        lhs.id,
-                        rhs.id
-                    )
-                case .turnFinishedOldestFirst:
-                    oldest(
-                        lhs.lastCompletedTurnAt ?? Int.max,
-                        rhs.lastCompletedTurnAt ?? Int.max,
-                        lhs.id,
-                        rhs.id
-                    )
-                case .nameAscending:
-                    compareNames(lhs, rhs, ascending: true)
-                case .nameDescending:
-                    compareNames(lhs, rhs, ascending: false)
-                }
-            }
-        }
-
-        private static func groups(
-            from threads: [ThreadSnapshot],
-            groupedBy: GroupedBy
-        ) -> [ThreadGroup] {
-            guard groupedBy != .none else {
-                return []
-            }
-
-            let grouped = Dictionary(grouping: threads) { thread in
-                switch groupedBy {
-                case .none:
-                    ""
-                case .cwd:
-                    thread.currentDirectoryPath
-                case .repository:
-                    thread.projectInfo.id
-                }
-            }
-
-            return grouped
-                .map { key, threads in
-                    let projectInfo = projectInfo(
-                        forGroupID: key,
-                        threads: threads,
-                        groupedBy: groupedBy
-                    )
-                    return ThreadGroup(
-                        id: key,
-                        projectInfo: projectInfo,
-                        title: projectInfo?.displayName ?? "Unknown Project",
-                        threads: threads
-                    )
-                }
-                .sorted { lhs, rhs in
-                    lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
-                }
-        }
-
-        private static func projectInfo(
-            forGroupID id: String,
-            threads: [ThreadSnapshot],
-            groupedBy: GroupedBy
-        ) -> CodexWorkspace.ProjectInfo? {
-            guard groupedBy != .none else {
-                return nil
-            }
-
-            guard groupedBy == .repository else {
-                return .init(currentDirectoryPath: id)
-            }
-
-            guard let representative = threads.first else {
-                return .init(currentDirectoryPath: id)
-            }
-
-            guard representative.projectInfo.identitySource == .gitOrigin else {
-                return representative.projectInfo
-            }
-
-            let repositories = threads.map(\.projectInfo.repository)
-            let branch = commonValue(repositories.map { $0?.branch })
-            let sha = commonValue(repositories.map { $0?.sha })
-            return .init(
-                currentDirectoryPath: representative.currentDirectoryPath,
-                repository: .init(
-                    originURL: id,
-                    branch: branch,
-                    sha: sha
-                )
-            )
-        }
-
-        private static func newest(
-            _ lhsValue: Int,
-            _ rhsValue: Int,
-            _ lhsID: String,
-            _ rhsID: String
-        ) -> Bool {
-            if lhsValue == rhsValue {
-                lhsID < rhsID
-            } else {
-                lhsValue > rhsValue
-            }
-        }
-
-        private static func oldest(
-            _ lhsValue: Int,
-            _ rhsValue: Int,
-            _ lhsID: String,
-            _ rhsID: String
-        ) -> Bool {
-            if lhsValue == rhsValue {
-                lhsID < rhsID
-            } else {
-                lhsValue < rhsValue
-            }
-        }
-
-        private static func compareNames(
-            _ lhs: ThreadSnapshot,
-            _ rhs: ThreadSnapshot,
-            ascending: Bool
-        ) -> Bool {
-            let lhsName = lhs.name ?? lhs.preview
-            let rhsName = rhs.name ?? rhs.preview
-            let comparison = lhsName.localizedStandardCompare(rhsName)
-            if comparison == .orderedSame {
-                return newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
-            }
-            return ascending
-                ? comparison == .orderedAscending
-                : comparison == .orderedDescending
-        }
-
-        private static func compareSelection(
-            _ lhs: ThreadSnapshot,
-            _ rhs: ThreadSnapshot,
-            selectionOrderByThreadID: [String: Int]
-        ) -> Bool {
-            let lhsOrder = selectionOrderByThreadID[lhs.id]
-            let rhsOrder = selectionOrderByThreadID[rhs.id]
-
-            switch (lhsOrder, rhsOrder) {
-            case let (lhsOrder?, rhsOrder?):
-                if lhsOrder == rhsOrder {
-                    return newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
-                }
-                return lhsOrder > rhsOrder
-            case (_?, nil):
-                return true
-            case (nil, _?):
-                return false
-            case (nil, nil):
-                return newest(lhs.updatedAt, rhs.updatedAt, lhs.id, rhs.id)
-            }
         }
     }
 }
@@ -1065,15 +1070,16 @@ extension CodexAppServer.Library.ThreadSnapshot {
 private extension CodexAppServer.Library.ThreadSnapshot.State {
     init(_ localState: ThreadHistoryStore.LocalState) {
         switch localState {
-        case .available:
-            self = .available
-        case .removed:
-            self = .removed
+            case .available:
+                self = .available
+            case .removed:
+                self = .removed
         }
     }
 }
 
 private func commonValue(_ values: [String?]) -> String? {
     guard let first = values.first else { return nil }
+
     return values.allSatisfy { $0 == first } ? first : nil
 }
