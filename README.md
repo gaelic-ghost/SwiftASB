@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.5` is the current and latest release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.8.0` is the current and latest release.
 
 ### What This Project Is
 
@@ -38,7 +38,7 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.7.5"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.8.0"),
 ```
 
 Then add the library product to your target dependencies:
