@@ -13,6 +13,7 @@ struct CodexAppServerProtocolTests {
             params: CodexWireInitializeParams(
                 capabilities: CodexWireInitializeCapabilities(
                     experimentalAPI: true,
+                    mcpServerOpenaiFormElicitation: nil,
                     optOutNotificationMethods: ["thread/started"],
                     requestAttestation: nil
                 ),
@@ -213,6 +214,7 @@ struct CodexAppServerProtocolTests {
                 mockExperimentalField: nil,
                 model: "gpt-5.4",
                 modelProvider: "openai",
+                multiAgentMode: nil,
                 permissions: ":workspace",
                 personality: .friendly,
                 runtimeWorkspaceRoots: nil,
@@ -930,6 +932,7 @@ struct CodexAppServerProtocolTests {
                     ),
                 ],
                 model: "gpt-5.4",
+                multiAgentMode: nil,
                 outputSchema: .object(["type": .string("object")]),
                 permissions: nil,
                 personality: .pragmatic,

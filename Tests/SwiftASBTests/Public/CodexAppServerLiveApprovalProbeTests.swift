@@ -283,6 +283,7 @@ extension CodexAppServerLiveIntegrationTests {
                 params: CodexWireInitializeParams(
                     capabilities: CodexWireInitializeCapabilities(
                         experimentalAPI: nil,
+                        mcpServerOpenaiFormElicitation: nil,
                         optOutNotificationMethods: [
                             "account/rateLimits/updated",
                             "hook/completed",
@@ -332,6 +333,7 @@ extension CodexAppServerLiveIntegrationTests {
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,
+                    multiAgentMode: nil,
                     permissions: nil,
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
@@ -378,6 +380,7 @@ extension CodexAppServerLiveIntegrationTests {
                         ),
                     ],
                     model: nil,
+                    multiAgentMode: nil,
                     outputSchema: nil,
                     permissions: nil,
                     personality: nil,
@@ -474,6 +477,7 @@ extension CodexAppServerLiveIntegrationTests {
                 params: CodexWireInitializeParams(
                     capabilities: CodexWireInitializeCapabilities(
                         experimentalAPI: nil,
+                        mcpServerOpenaiFormElicitation: nil,
                         optOutNotificationMethods: [
                             "account/rateLimits/updated",
                             "hook/completed",
@@ -523,6 +527,7 @@ extension CodexAppServerLiveIntegrationTests {
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,
+                    multiAgentMode: nil,
                     permissions: nil,
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
@@ -569,6 +574,7 @@ extension CodexAppServerLiveIntegrationTests {
                         ),
                     ],
                     model: nil,
+                    multiAgentMode: nil,
                     outputSchema: nil,
                     permissions: nil,
                     personality: nil,

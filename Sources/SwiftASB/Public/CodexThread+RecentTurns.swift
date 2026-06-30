@@ -371,6 +371,7 @@ public extension CodexThread {
                      CodexTurnItem.Kind.imageGeneration.rawValue,
                      CodexTurnItem.Kind.imageView.rawValue,
                      CodexTurnItem.Kind.mcpToolCall.rawValue,
+                     CodexTurnItem.Kind.sleep.rawValue,
                      CodexTurnItem.Kind.webSearch.rawValue:
                     true
                 case CodexTurnItem.Kind.agentMessage.rawValue,

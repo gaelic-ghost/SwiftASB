@@ -753,6 +753,7 @@ additions are recorded in the ledger sections below.
 - `CodexTurnItem.Kind.mcpToolCall` - `case mcpToolCall` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnItem.Kind.plan` - `case plan` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnItem.Kind.reasoning` - `case reasoning` - Sources/SwiftASB/Public/CodexTurnHandle.swift
+- `CodexTurnItem.Kind.sleep` - `case sleep` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnItem.Kind.subAgentActivity` - `case subAgentActivity` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnItem.Kind.userMessage` - `case userMessage` - Sources/SwiftASB/Public/CodexTurnHandle.swift
 - `CodexTurnItem.Kind.webSearch` - `case webSearch` - Sources/SwiftASB/Public/CodexTurnHandle.swift

@@ -468,6 +468,7 @@ public struct CodexTurnItem: Sendable, Equatable {
         case mcpToolCall
         case plan
         case reasoning
+        case sleep
         case subAgentActivity
         case userMessage
         case webSearch

@@ -60,7 +60,7 @@ Check your Codex version:
 ```bash
 codex --version
 ```
-*Note: SwiftASB currently supports the reviewed current Codex CLI minor release, `0.140.x`, and the latest prior minor, `0.139.x`, when that prior runtime remains compatible. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
+*Note: SwiftASB currently supports the reviewed current Codex CLI minor release, `0.142.x`, and the latest prior minor, `0.141.x`, when that prior runtime remains compatible. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
 
 Add the Socket Marketplace to Codex and enable the SwiftASB Skills Plugin:
 

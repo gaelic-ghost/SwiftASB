@@ -96,6 +96,7 @@ struct CodexAppServerLiveIntegrationTests {
                 params: CodexWireInitializeParams(
                     capabilities: CodexWireInitializeCapabilities(
                         experimentalAPI: nil,
+                        mcpServerOpenaiFormElicitation: nil,
                         optOutNotificationMethods: [
                             "account/rateLimits/updated",
                             "hook/completed",
@@ -148,6 +149,7 @@ struct CodexAppServerLiveIntegrationTests {
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,
+                    multiAgentMode: nil,
                     permissions: nil,
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
@@ -201,7 +203,7 @@ struct CodexAppServerLiveIntegrationTests {
             let diagnostics = try await client.cliExecutableDiagnostics()
             #expect(diagnostics.resolvedExecutablePath == harness.codexExecutableURL.path)
             #expect(diagnostics.versionString.contains("codex-cli"))
-            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.140.x plus 0.139.x when feasible"))
+            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.142.x plus 0.141.x when feasible"))
 
             await client.stop()
         } catch {
@@ -243,6 +245,7 @@ struct CodexAppServerLiveIntegrationTests {
                 params: CodexWireInitializeParams(
                     capabilities: CodexWireInitializeCapabilities(
                         experimentalAPI: nil,
+                        mcpServerOpenaiFormElicitation: nil,
                         optOutNotificationMethods: [
                             "account/rateLimits/updated",
                             "hook/completed",
@@ -295,6 +298,7 @@ struct CodexAppServerLiveIntegrationTests {
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,
+                    multiAgentMode: nil,
                     permissions: nil,
                     personality: nil,
                     runtimeWorkspaceRoots: nil,
@@ -341,6 +345,7 @@ struct CodexAppServerLiveIntegrationTests {
                         ),
                     ],
                     model: nil,
+                    multiAgentMode: nil,
                     outputSchema: nil,
                     permissions: nil,
                     personality: nil,

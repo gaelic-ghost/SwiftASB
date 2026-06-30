@@ -59,6 +59,8 @@ extension CodexTurnItem.Kind {
                 self = .plan
             case .reasoning:
                 self = .reasoning
+            case .sleep:
+                self = .sleep
             case .subAgentActivity:
                 self = .subAgentActivity
             case .userMessage:
@@ -136,6 +138,7 @@ extension CodexAppServer.InitializeRequest {
         CodexWireInitializeParams(
             capabilities: CodexWireInitializeCapabilities(
                 experimentalAPI: capabilities.experimentalAPI,
+                mcpServerOpenaiFormElicitation: nil,
                 optOutNotificationMethods: capabilities.optOutNotificationMethods,
                 requestAttestation: nil
             ),
@@ -164,6 +167,7 @@ extension CodexAppServer.ThreadStartRequest {
             mockExperimentalField: nil,
             model: model,
             modelProvider: modelProvider,
+            multiAgentMode: nil,
             permissions: permissions?.wireValue,
             personality: personality?.wireValue,
             runtimeWorkspaceRoots: nil,
@@ -235,6 +239,7 @@ extension CodexAppServer.TurnStartRequest {
             environments: nil,
             input: input.map(\.wireValue),
             model: model,
+            multiAgentMode: nil,
             outputSchema: outputSchema?.wireValue,
             permissions: permissions?.wireValue,
             personality: personality?.wireValue,
