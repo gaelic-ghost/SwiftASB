@@ -220,6 +220,49 @@ extension CodexAppServerTests {
         await client.stop()
     }
 
+    @Test("maps sleep turn items into the public item kind")
+    func mapsSleepTurnItemsIntoPublicItemKind() async throws {
+        let transport = FakeCodexAppServerTransport()
+        let client = CodexAppServer(transport: transport)
+
+        try await client.start()
+        _ = try await client.initialize(
+            .init(
+                clientInfo: .init(
+                    name: "SwiftASBTests",
+                    title: "SwiftASB Tests",
+                    version: "0.1.0"
+                )
+            )
+        )
+        let thread = try await client.startThread()
+        let turnHandle = try await thread.startTextTurn("Wait briefly")
+
+        let eventTask = Task {
+            try await turnEvents(from: turnHandle.events, count: 1)
+        }
+
+        await transport.emitItemStarted(
+            threadID: thread.id,
+            turnID: turnHandle.turn.id,
+            itemID: "item-sleep-1",
+            item: [
+                "id": "item-sleep-1",
+                "type": "sleep",
+            ]
+        )
+
+        let receivedEvents = try await eventTask.value
+        switch receivedEvents.first {
+            case let .itemStarted(itemStarted):
+                #expect(itemStarted.item.kind == .sleep)
+            default:
+                Issue.record("Expected sleep item to map through .itemStarted.")
+        }
+
+        await client.stop()
+    }
+
     @Test("starts planning turns through collaboration mode")
     func startsPlanningTurnsThroughCollaborationMode() async throws {
         let transport = FakeCodexAppServerTransport()

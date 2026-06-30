@@ -30,8 +30,8 @@ struct CodexCLIExecutableResolver {
         let patch: Int
 
         private static let regex = try! NSRegularExpression(pattern: #"(\d+)\.(\d+)\.(\d+)"#)
-        static let oldestSupportedPublicRelease = Version(major: 0, minor: 139, patch: 0)
-        static let latestSupportedPublicRelease = Version(major: 0, minor: 140, patch: 0)
+        static let oldestSupportedPublicRelease = Version(major: 0, minor: 141, patch: 0)
+        static let latestSupportedPublicRelease = Version(major: 0, minor: 142, patch: 0)
 
         static var documentedWindowDescription: String {
             let oldest = oldestSupportedPublicRelease

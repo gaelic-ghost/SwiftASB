@@ -23,7 +23,7 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.7.5` is the current and latest release.
+SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.8.0` is the current and latest release.
 
 ### What This Project Is
 
@@ -38,7 +38,7 @@ I built SwiftASB because I saw so many others building and forking existing Apps
 Add SwiftASB to your `Package.swift` dependencies:
 
 ```swift
-.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.7.5"),
+.package(url: "https://github.com/gaelic-ghost/SwiftASB", from: "1.8.0"),
 ```
 
 Then add the library product to your target dependencies:
@@ -60,7 +60,7 @@ Check your Codex version:
 ```bash
 codex --version
 ```
-*Note: SwiftASB currently supports the reviewed current Codex CLI minor release, `0.140.x`, and the latest prior minor, `0.139.x`, when that prior runtime remains compatible. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
+*Note: SwiftASB currently supports the reviewed current Codex CLI minor release, `0.142.x`, and the latest prior minor, `0.141.x`, when that prior runtime remains compatible. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
 
 Add the Socket Marketplace to Codex and enable the SwiftASB Skills Plugin:
 

@@ -52,8 +52,8 @@ Current policy:
 - support the reviewed current public Codex CLI minor release
 - also support the latest prior public Codex CLI minor release when it remains
   compatible with SwiftASB's shipped public API and validation surface
-- current reviewed minor release: `0.140.x`
-- latest prior minor supported for this release: `0.139.x`
+- current reviewed minor release: `0.142.x`
+- latest prior minor supported for this release: `0.141.x`
 - widen beyond current-plus-prior only after the latest generated-wire and
   public API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
@@ -116,6 +116,7 @@ belongs in the release boundary:
 | Agent-message and plan deltas | `CodexTurnEvent.agentMessageDelta`, `.planDelta` | These are part of the intended interactive turn stream. |
 | Reasoning deltas | `CodexTurnEvent.reasoningSummaryPartAdded`, `.reasoningSummaryTextDelta`, `.reasoningTextDelta` | These are public because they are already part of the meaningful supported turn stream. |
 | Sub-agent activity turn items | `CodexTurnItem.Kind.subAgentActivity` | v0.140 adds this item type to the thread-item union. SwiftASB exposes it as an item kind so existing item-start, item-complete, and stored-turn surfaces can preserve the app-server classification without a separate sub-agent activity API. |
+| Sleep turn items | `CodexTurnItem.Kind.sleep` | v0.142 adds this item type to the thread-item union. SwiftASB exposes it as an item kind so existing item-start, item-complete, and stored-turn surfaces can preserve the app-server classification without a separate sleep API. |
 | Server-request resolution notifications | `CodexTurnEvent.serverRequestResolved`, `CodexThreadEvent.serverRequestResolved` | These are public because request cleanup is part of the supported interactive lifecycle. |
 | Approval request families | `CodexTurnEvent.approvalRequested`, `CodexThreadEvent.approvalRequested` | These are protocol-level server requests rather than generated notifications, but they are part of the supported public lifecycle. |
 | Elicitation request families | `CodexTurnEvent.elicitationRequested`, `CodexThreadEvent.elicitationRequested` | These are also protocol-level server requests and part of the supported public lifecycle. |
@@ -202,7 +203,8 @@ Remaining gap inside the observable-only slice:
 | Family | Why it remains internal |
 | --- | --- |
 | MCP tool-call progress notifications | `Internal-only for now`: the current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
-| External-agent config import completed notifications | Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
+| External-agent config import completed notifications | `v0.142.4` gives this family a typed internal generated shape. Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
+| Deprecated multi-agent mode fields | `v0.142.4` carries deprecated `multiAgentMode` fields on thread and turn start surfaces for compatibility. SwiftASB keeps them internal and continues to model user-facing proactive behavior through supported reasoning-effort and lifecycle controls. |
 | Guardian denied-action approval endpoint | Generated internally because it appears in v0.124, but it needs a real guardian workflow model before it becomes public. |
 | Raw response item completed notifications | Too low-level and transport-adjacent for the current public lifecycle boundary. |
 | Context compacted notifications | Interesting for diagnostics, but still not surfaced as a first-class public event; consumers currently see compaction through `Dashboard` and `Minimap` state plus explicit `compactContext()` control. |

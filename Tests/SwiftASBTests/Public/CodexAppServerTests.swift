@@ -93,8 +93,8 @@ struct CodexAppServerTests {
                 launchArgumentsPrefix: [],
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
-                versionString: "codex-cli 0.140.0",
-                compatibility: .supported(documentedWindow: "0.140.x plus 0.139.x when feasible")
+                versionString: "codex-cli 0.142.4",
+                compatibility: .supported(documentedWindow: "0.142.x plus 0.141.x when feasible")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -104,8 +104,8 @@ struct CodexAppServerTests {
         let diagnostics = try await client.cliExecutableDiagnostics()
         #expect(diagnostics.source == .homebrewAppleSilicon)
         #expect(diagnostics.resolvedExecutablePath == "/opt/homebrew/bin/codex")
-        #expect(diagnostics.versionString == "codex-cli 0.140.0")
-        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.140.x plus 0.139.x when feasible"))
+        #expect(diagnostics.versionString == "codex-cli 0.142.4")
+        #expect(diagnostics.compatibility == .supported(documentedWindow: "0.142.x plus 0.141.x when feasible"))
 
         await client.stop()
     }
@@ -118,8 +118,8 @@ struct CodexAppServerTests {
                 launchArgumentsPrefix: [],
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
-                versionString: "codex-cli 0.140.0",
-                compatibility: .supported(documentedWindow: "0.140.x plus 0.139.x when feasible")
+                versionString: "codex-cli 0.142.4",
+                compatibility: .supported(documentedWindow: "0.142.x plus 0.141.x when feasible")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -134,7 +134,7 @@ struct CodexAppServerTests {
             )
         )
 
-        #expect(startup.cliExecutableDiagnostics.versionString == "codex-cli 0.140.0")
+        #expect(startup.cliExecutableDiagnostics.versionString == "codex-cli 0.142.4")
         #expect(startup.initializeSession.codexHome == "/Users/galew/.codex")
         #expect(await transport.recordedMethods == ["initialize", "initialized"])
 
@@ -150,7 +150,7 @@ struct CodexAppServerTests {
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.140.x plus 0.139.x when feasible")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.142.x plus 0.141.x when feasible")
             )
         )
         let client = CodexAppServer(transport: transport)
@@ -160,7 +160,7 @@ struct CodexAppServerTests {
                 source: .homebrewAppleSilicon,
                 resolvedExecutablePath: "/opt/homebrew/bin/codex",
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.140.x plus 0.139.x when feasible")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.142.x plus 0.141.x when feasible")
             )
         )) {
             try await client.start(
@@ -187,7 +187,7 @@ struct CodexAppServerTests {
                 resolvedExecutableURL: URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
                 source: .homebrewAppleSilicon,
                 versionString: "codex-cli 0.128.0",
-                compatibility: .outsideDocumentedWindow(documentedWindow: "0.140.x plus 0.139.x when feasible")
+                compatibility: .outsideDocumentedWindow(documentedWindow: "0.142.x plus 0.141.x when feasible")
             )
         )
         let client = CodexAppServer(transport: transport)

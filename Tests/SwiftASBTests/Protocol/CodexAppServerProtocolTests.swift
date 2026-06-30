@@ -13,6 +13,7 @@ struct CodexAppServerProtocolTests {
             params: CodexWireInitializeParams(
                 capabilities: CodexWireInitializeCapabilities(
                     experimentalAPI: true,
+                    mcpServerOpenaiFormElicitation: nil,
                     optOutNotificationMethods: ["thread/started"],
                     requestAttestation: nil
                 ),
@@ -37,6 +38,7 @@ struct CodexAppServerProtocolTests {
 
         let capabilities = try #require(params["capabilities"] as? [String: Any])
         #expect(capabilities["experimentalApi"] as? Bool == true)
+        #expect(capabilities["mcpServerOpenaiFormElicitation"] == nil)
         #expect(capabilities["optOutNotificationMethods"] as? [String] == ["thread/started"])
     }
 
@@ -213,6 +215,7 @@ struct CodexAppServerProtocolTests {
                 mockExperimentalField: nil,
                 model: "gpt-5.4",
                 modelProvider: "openai",
+                multiAgentMode: nil,
                 permissions: ":workspace",
                 personality: .friendly,
                 runtimeWorkspaceRoots: nil,
@@ -235,6 +238,7 @@ struct CodexAppServerProtocolTests {
         #expect(params["cwd"] as? String == "/tmp/project")
         #expect(params["ephemeral"] as? Bool == true)
         #expect(params["model"] as? String == "gpt-5.4")
+        #expect(params["multiAgentMode"] == nil)
         #expect(params["sandbox"] as? String == "workspace-write")
         #expect(params["serviceTier"] as? String == "fast")
         #expect(params["sessionStartSource"] as? String == "clear")
@@ -930,6 +934,7 @@ struct CodexAppServerProtocolTests {
                     ),
                 ],
                 model: "gpt-5.4",
+                multiAgentMode: nil,
                 outputSchema: .object(["type": .string("object")]),
                 permissions: nil,
                 personality: .pragmatic,
@@ -951,6 +956,7 @@ struct CodexAppServerProtocolTests {
         #expect(params["cwd"] as? String == "/tmp/project")
         #expect(params["effort"] as? String == "medium")
         #expect(params["model"] as? String == "gpt-5.4")
+        #expect(params["multiAgentMode"] == nil)
         #expect(params["personality"] as? String == "pragmatic")
         #expect(params["serviceTier"] as? String == "flex")
         #expect(params["summary"] as? String == "concise")
