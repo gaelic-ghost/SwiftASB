@@ -112,7 +112,7 @@ lifecycle, SPI visibility, basic history hydration, first-pass reconciliation,
 or command-approval completion. Those slices now exist and shipped in the
 `v1.7.1` baseline.
 
-The next meaningful work after the `v1.8.0` patch release is to probe and deliberately shape the newly promoted
+The next meaningful work after the `v1.8.1` patch release is to probe and deliberately shape the newly promoted
 Codex CLI `0.143.x` wire families before widening public API further. The
 `v0.143.0` promotion refreshes the internal wire snapshot, moves the stored
 item paging wire route from `thread/turns/items/list` to `thread/items/list`,
@@ -907,7 +907,7 @@ workflow earns them in a later feature release.
 #### Migration Notes
 
 - Existing `v0.9.x` consumers should update the SwiftPM dependency to
-  `from: "1.8.0"` once the tag is published.
+  `from: "1.8.1"` once the tag is published.
 - The v1 API surface has removed stale pre-v1 compatibility shims and phantom
   fields that no longer exist in the reviewed `v0.128.0` schema.
 - Same-thread overlapping turns are rejected client-side with
@@ -932,7 +932,7 @@ workflow earns them in a later feature release.
 
 - Keep an eye on future Swift Package Index builds after compatibility-window
   or DocC changes; the `v1.1.1` listing and documentation link are live, and
-  `v1.8.0` should be rechecked after the patch tag is indexed.
+  `v1.8.1` should be rechecked after the patch tag is indexed.
 - Add broader live server-request coverage for permissions and MCP elicitation
   if those become stronger public runtime guarantees.
 - Continue tuning recent companion cache calibration, richer file previews,
