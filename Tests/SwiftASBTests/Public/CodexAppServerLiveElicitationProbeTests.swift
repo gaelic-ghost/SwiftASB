@@ -84,6 +84,7 @@ extension CodexAppServerLiveIntegrationTests {
             let threadStartPayload = try protocolLayer.makeThreadStartRequest(
                 id: threadRequestID,
                 params: CodexWireThreadStartParams(
+                    allowProviderModelFallback: nil,
                     approvalPolicy: .enumeration(.never),
                     approvalsReviewer: nil,
                     baseInstructions: nil,
@@ -94,6 +95,7 @@ extension CodexAppServerLiveIntegrationTests {
                     environments: nil,
                     ephemeral: true,
                     experimentalRawEvents: nil,
+                    historyMode: nil,
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,
@@ -276,6 +278,7 @@ extension CodexAppServerLiveIntegrationTests {
             let threadStartPayload = try protocolLayer.makeThreadStartRequest(
                 id: threadRequestID,
                 params: CodexWireThreadStartParams(
+                    allowProviderModelFallback: nil,
                     approvalPolicy: .enumeration(.never),
                     approvalsReviewer: nil,
                     baseInstructions: nil,
@@ -286,6 +289,7 @@ extension CodexAppServerLiveIntegrationTests {
                     environments: nil,
                     ephemeral: true,
                     experimentalRawEvents: nil,
+                    historyMode: nil,
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,
@@ -468,6 +472,7 @@ extension CodexAppServerLiveIntegrationTests {
             let threadStartPayload = try protocolLayer.makeThreadStartRequest(
                 id: threadRequestID,
                 params: CodexWireThreadStartParams(
+                    allowProviderModelFallback: nil,
                     approvalPolicy: .enumeration(.onRequest),
                     approvalsReviewer: .user,
                     baseInstructions: nil,
@@ -478,6 +483,7 @@ extension CodexAppServerLiveIntegrationTests {
                     environments: nil,
                     ephemeral: true,
                     experimentalRawEvents: nil,
+                    historyMode: nil,
                     mockExperimentalField: nil,
                     model: "mock-model",
                     modelProvider: nil,

@@ -1078,7 +1078,7 @@ public actor CodexAppServer {
     /// does not carry enough information to safely reconcile whole-turn item
     /// ordering.
     public func listThreadTurnItems(_ request: ThreadTurnsItemsListRequest) async throws -> ThreadTurnsItemsPage {
-        try requireInitialized(for: "thread/turns/items/list")
+        try requireInitialized(for: "thread/items/list")
 
         let requestID = CodexRPCRequestID.generated()
 
@@ -1105,7 +1105,7 @@ public actor CodexAppServer {
                 nextCursor: response.nextCursor
             )
         } catch {
-            throw CodexAppServerError.wrap(error, operation: "thread/turns/items/list")
+            throw CodexAppServerError.wrap(error, operation: "thread/items/list")
         }
     }
 

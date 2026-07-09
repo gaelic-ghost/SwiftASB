@@ -1213,7 +1213,7 @@ actor FakeCodexAppServerTransport: CodexAppServerTransporting {
                         "nextCursor": "cursor-older",
                     ]
                 )
-            case "thread/turns/items/list":
+            case "thread/items/list":
                 return responsePayload(
                     id: id,
                     result: threadTurnsItemsListResult ?? [

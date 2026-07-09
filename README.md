@@ -60,7 +60,7 @@ Check your Codex version:
 ```bash
 codex --version
 ```
-*Note: SwiftASB currently supports the reviewed current Codex CLI minor release, `0.142.x`, and the latest prior minor, `0.141.x`, when that prior runtime remains compatible. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
+*Note: SwiftASB currently supports the reviewed current Codex CLI minor release, `0.143.x`, and the latest prior minor, `0.142.x`, when that prior runtime remains compatible. This narrow reviewed window will be revised once the app-server schema stabilizes or Codex CLI reaches a v1.x.x release.*
 
 Add the Socket Marketplace to Codex and enable the SwiftASB Skills Plugin:
 
@@ -174,8 +174,4 @@ Agent-facing maintainer guidance lives in [AGENTS.md](./AGENTS.md).
 
 ## License
 
-SwiftASB is licensed under the PolyForm Noncommercial License 1.0.0 for future public versions. See [LICENSE](./LICENSE), [NOTICE](./NOTICE), and [COMMERCIAL-USE.md](./COMMERCIAL-USE.md).
-
-Commercial use is not licensed by the public license. See [COMMERCIAL-USE.md](./COMMERCIAL-USE.md) for the current commercial-use policy and contact path.
-
-SwiftASB versions published before the PolyForm Noncommercial change remain available under the license terms that applied to those versions. The historical Apache License 2.0 text is preserved in [LICENSE-HISTORICAL-APACHE-2.0](./LICENSE-HISTORICAL-APACHE-2.0).
+SwiftASB is licensed under the Apache License 2.0. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).

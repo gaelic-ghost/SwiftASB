@@ -227,6 +227,7 @@ public struct CodexExtensions: Sendable {
         public enum SourceKind: String, Sendable, Equatable {
             case git
             case local
+            case npm
             case remote
         }
 
@@ -720,6 +721,8 @@ extension CodexExtensions.PluginSummary.SourceKind {
                 self = .git
             case .local:
                 self = .local
+            case .npm:
+                self = .npm
             case .remote:
                 self = .remote
         }

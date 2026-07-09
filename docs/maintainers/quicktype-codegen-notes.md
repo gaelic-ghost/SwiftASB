@@ -71,20 +71,22 @@ inspecting upstream schema changes or quicktype regressions.
 ## Current generated batch
 
 The default generated batch currently stages against the local experimental
-`v0.142.4` schema dump:
+`v0.143.0` schema dump:
 
-- `SCHEMA_VERSION=v0.142.4`
+- `SCHEMA_VERSION=v0.143.0`
 - promoted output:
   `Sources/SwiftASB/Generated/CodexWire/Latest/CodexLifecycleV2Batch+JSONValue.swift`
 
 The promoted `Latest` snapshot is intentionally not swapped blindly just
-because staging generation succeeds. The current `v0.142.4` staging pass is a
+because staging generation succeeds. The current `v0.143.0` staging pass is a
 good example of that boundary discipline: SwiftASB promoted the generated wire
-delta internally, accepted broader generated `Sendable` coverage, exposed the
-new `sleep` turn-item kind, kept deprecated multi-agent mode fields internal for
-compatibility, and typed external-agent config import completion internally
-without adding new public request or action surfaces. Promote generated changes
-only after classifying public, observable-only, internal, and removed effects.
+delta internally, routed the stored item-list API through the renamed
+`thread/items/list` method while keeping the public request shape stable,
+mapped the new npm plugin source kind for inventory display, kept new
+thread-start fallback/history fields internal, and preserved source
+compatibility for SwiftASB's older `.onFailure` approval policy after the
+upstream wire enum removed `on-failure`. Promote generated changes only after
+classifying public, observable-only, internal, and removed effects.
 
 ## Compatibility Shim Policy
 

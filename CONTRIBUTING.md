@@ -172,8 +172,6 @@ Record settled decisions in `ROADMAP.md`, DocC, maintainer docs, or this guide s
 
 ## License and Contribution Terms
 
-Unless a contribution explicitly says otherwise in writing, contributions to SwiftASB are made under the PolyForm Noncommercial License 1.0.0 terms in [LICENSE](./LICENSE). The root legal-notice surface lives in [NOTICE](./NOTICE).
+Unless a contribution explicitly says otherwise in writing, contributions to SwiftASB are made under the Apache License 2.0 terms in [LICENSE](./LICENSE). The root legal-notice surface lives in [NOTICE](./NOTICE).
 
-Commercial use is not licensed by the public license. See [COMMERCIAL-USE.md](./COMMERCIAL-USE.md) for the current commercial-use policy and contact path.
-
-Do not submit contributions unless you have the right to license them under these terms and understand Gale may offer separate commercial licenses for SwiftASB.
+Do not submit contributions unless you have the right to license them under these terms.

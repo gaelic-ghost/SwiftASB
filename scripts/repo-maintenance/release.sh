@@ -273,7 +273,8 @@ defer_remote_ci_if_requested() {
   log "Remote CI mode is defer, so release.sh is pausing after local validation, branch push, PR creation, and initial check discovery."
   log "Release is not complete yet. Let GitHub finish CI for PR #$pr_number, then continue from branch $branch_name with:"
   log "  bash scripts/repo-maintenance/release.sh --mode standard --version $RELEASE_TAG"
-  log "Codex should use a native thread Timer/Wakeup or heartbeat automation for this wait when available, then resume by checking $pr_url and rerunning the command above instead of leaving a shell script open to poll GitHub."
+  log "Codex should create a same-thread heartbeat automation for this wait when available, then resume by checking $pr_url and rerunning the command above instead of leaving a shell script open to poll GitHub."
+  log "The heartbeat should also wait for review-bot status contexts such as CodeRabbit to finish before merging; pending review contexts are not a clean merge signal."
   return 0
 }
 
@@ -399,11 +400,7 @@ create_github_release() {
 
   if [ "$REPO_MAINTENANCE_DRY_RUN" = "true" ]; then
     prerelease_flag="$(github_release_create_prerelease_flag "$RELEASE_TAG")"
-    if notes_file="$(github_release_notes_file "$RELEASE_TAG")"; then
-      log "Would create a GitHub release for $RELEASE_TAG with gh release create --verify-tag --notes-file $notes_file${prerelease_flag:+ $prerelease_flag}."
-    else
-      log "Would create a GitHub release for $RELEASE_TAG with gh release create --verify-tag --generate-notes${prerelease_flag:+ $prerelease_flag}."
-    fi
+    log "Would create a GitHub release for $RELEASE_TAG with gh release create --verify-tag${prerelease_flag:+ $prerelease_flag}."
     return 0
   fi
 
@@ -414,14 +411,8 @@ create_github_release() {
   fi
 
   prerelease_flag="$(github_release_create_prerelease_flag "$RELEASE_TAG")"
-  if notes_file="$(github_release_notes_file "$RELEASE_TAG")"; then
-    # shellcheck disable=SC2086
-    gh release create "$RELEASE_TAG" --verify-tag --notes-file "$notes_file" $prerelease_flag
-  else
-    warn "No release notes found at docs/releases/$RELEASE_TAG.md or docs/releases/${RELEASE_TAG#v}.md; falling back to GitHub-generated notes."
-    # shellcheck disable=SC2086
-    gh release create "$RELEASE_TAG" --verify-tag --generate-notes $prerelease_flag
-  fi
+  # shellcheck disable=SC2086
+  gh release create "$RELEASE_TAG" --verify-tag --generate-notes $prerelease_flag
   log "Created GitHub release $RELEASE_TAG."
   wait_for_github_release "$RELEASE_TAG"
   verify_github_release_prerelease_metadata "$RELEASE_TAG"
