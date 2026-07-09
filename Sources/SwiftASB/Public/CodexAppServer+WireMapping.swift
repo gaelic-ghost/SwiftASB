@@ -154,6 +154,7 @@ extension CodexAppServer.InitializeRequest {
 extension CodexAppServer.ThreadStartRequest {
     var wireValue: CodexWireThreadStartParams {
         CodexWireThreadStartParams(
+            allowProviderModelFallback: nil,
             approvalPolicy: approvalPolicy?.wireValue,
             approvalsReviewer: approvalsReviewer?.wireValue,
             baseInstructions: baseInstructions,
@@ -164,6 +165,7 @@ extension CodexAppServer.ThreadStartRequest {
             environments: nil,
             ephemeral: ephemeral,
             experimentalRawEvents: nil,
+            historyMode: nil,
             mockExperimentalField: nil,
             model: model,
             modelProvider: modelProvider,
@@ -362,8 +364,6 @@ extension CodexAppServer.ApprovalPolicy {
         switch wireEnum {
             case .never:
                 self = .never
-            case .onFailure:
-                self = .onFailure
             case .onRequest:
                 self = .onRequest
             case .untrusted:
@@ -376,7 +376,7 @@ extension CodexAppServer.ApprovalPolicy {
             case .never:
                 .enumeration(.never)
             case .onFailure:
-                .enumeration(.onFailure)
+                .enumeration(.onRequest)
             case .onRequest:
                 .enumeration(.onRequest)
             case .untrusted:

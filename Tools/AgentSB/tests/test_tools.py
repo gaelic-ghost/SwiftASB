@@ -6,7 +6,7 @@ from agentsb.tools import inspect_repo
 def test_inspect_repo_reads_swiftasb_facts(repo_root):
     facts = inspect_repo(repo_root)
 
-    assert facts["reviewed_codex_cli_window"]["window"] == "0.142.x plus 0.141.x when feasible"
+    assert facts["reviewed_codex_cli_window"]["window"] == "0.143.x plus 0.142.x when feasible"
     assert any(
         item["name"] == "CodexLifecycleV2Batch+JSONValue.swift"
         for item in facts["promoted_wire_files"]

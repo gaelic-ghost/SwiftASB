@@ -320,6 +320,7 @@ extension CodexAppServerLiveIntegrationTests {
             let threadStartPayload = try protocolLayer.makeThreadStartRequest(
                 id: threadRequestID,
                 params: CodexWireThreadStartParams(
+                    allowProviderModelFallback: nil,
                     approvalPolicy: .enumeration(.untrusted),
                     approvalsReviewer: .user,
                     baseInstructions: nil,
@@ -330,6 +331,7 @@ extension CodexAppServerLiveIntegrationTests {
                     environments: nil,
                     ephemeral: true,
                     experimentalRawEvents: nil,
+                    historyMode: nil,
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,
@@ -514,6 +516,7 @@ extension CodexAppServerLiveIntegrationTests {
             let threadStartPayload = try protocolLayer.makeThreadStartRequest(
                 id: threadRequestID,
                 params: CodexWireThreadStartParams(
+                    allowProviderModelFallback: nil,
                     approvalPolicy: .enumeration(.untrusted),
                     approvalsReviewer: .user,
                     baseInstructions: nil,
@@ -524,6 +527,7 @@ extension CodexAppServerLiveIntegrationTests {
                     environments: nil,
                     ephemeral: true,
                     experimentalRawEvents: nil,
+                    historyMode: nil,
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,

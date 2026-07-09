@@ -202,6 +202,7 @@ struct CodexAppServerProtocolTests {
         let payload = try protocolLayer.makeThreadStartRequest(
             id: .string("thread-1"),
             params: CodexWireThreadStartParams(
+                allowProviderModelFallback: nil,
                 approvalPolicy: .enumeration(.onRequest),
                 approvalsReviewer: .user,
                 baseInstructions: "Be concise.",
@@ -212,6 +213,7 @@ struct CodexAppServerProtocolTests {
                 environments: nil,
                 ephemeral: true,
                 experimentalRawEvents: nil,
+                historyMode: nil,
                 mockExperimentalField: nil,
                 model: "gpt-5.4",
                 modelProvider: "openai",
@@ -234,9 +236,11 @@ struct CodexAppServerProtocolTests {
         #expect(object["id"] as? String == "thread-1")
 
         let params = try #require(object["params"] as? [String: Any])
+        #expect(params["allowProviderModelFallback"] == nil)
         #expect(params["baseInstructions"] as? String == "Be concise.")
         #expect(params["cwd"] as? String == "/tmp/project")
         #expect(params["ephemeral"] as? Bool == true)
+        #expect(params["historyMode"] == nil)
         #expect(params["model"] as? String == "gpt-5.4")
         #expect(params["multiAgentMode"] == nil)
         #expect(params["sandbox"] as? String == "workspace-write")
@@ -484,7 +488,7 @@ struct CodexAppServerProtocolTests {
         let payload = try protocolLayer.makeThreadResumeRequest(
             id: .string("thread-resume-1"),
             params: .init(
-                approvalPolicy: .enumeration(.onFailure),
+                approvalPolicy: .enumeration(.onRequest),
                 approvalsReviewer: .guardianSubagent,
                 baseInstructions: "Carry forward the working style.",
                 config: ["temperature": .double(0.15)],
@@ -588,7 +592,7 @@ struct CodexAppServerProtocolTests {
         #expect(params["threadId"] as? String == "thread-123")
     }
 
-    @Test("encodes thread/turns/items/list requests with the expected method and params payload")
+    @Test("encodes thread/items/list requests with the expected method and params payload")
     func encodesThreadTurnsItemsListRequest() throws {
         let payload = try protocolLayer.makeThreadTurnsItemsListRequest(
             id: .string("thread-turns-items-list-1"),
@@ -603,7 +607,7 @@ struct CodexAppServerProtocolTests {
 
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
         #expect(object["jsonrpc"] == nil)
-        #expect(object["method"] as? String == "thread/turns/items/list")
+        #expect(object["method"] as? String == "thread/items/list")
         #expect(object["id"] as? String == "thread-turns-items-list-1")
 
         let params = try #require(object["params"] as? [String: Any])
@@ -908,7 +912,7 @@ struct CodexAppServerProtocolTests {
             id: .string("turn-1"),
             params: CodexWireTurnStartParams(
                 additionalContext: nil,
-                approvalPolicy: .enumeration(.onFailure),
+                approvalPolicy: .enumeration(.onRequest),
                 approvalsReviewer: .guardianSubagent,
                 clientUserMessageID: nil,
                 collaborationMode: .init(

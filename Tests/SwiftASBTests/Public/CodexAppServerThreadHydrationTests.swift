@@ -413,7 +413,7 @@ extension CodexAppServerTests {
         #expect(page.items.first?.kind == .commandExecution)
         #expect(page.items.first?.command == "swift test")
 
-        let payloads = await transport.requestPayloads(for: "thread/turns/items/list")
+        let payloads = await transport.requestPayloads(for: "thread/items/list")
         let payload = try #require(payloads.first)
         let object = try #require(try JSONSerialization.jsonObject(with: payload) as? [String: Any])
         let params = try #require(object["params"] as? [String: Any])

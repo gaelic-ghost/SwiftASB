@@ -130,6 +130,7 @@ struct CodexAppServerLiveIntegrationTests {
             let threadStartPayload = try protocolLayer.makeThreadStartRequest(
                 id: threadRequestID,
                 params: CodexWireThreadStartParams(
+                    allowProviderModelFallback: nil,
                     approvalPolicy: .enumeration(.never),
                     approvalsReviewer: nil,
                     baseInstructions: nil,
@@ -146,6 +147,7 @@ struct CodexAppServerLiveIntegrationTests {
                     environments: nil,
                     ephemeral: true,
                     experimentalRawEvents: nil,
+                    historyMode: nil,
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,
@@ -203,7 +205,7 @@ struct CodexAppServerLiveIntegrationTests {
             let diagnostics = try await client.cliExecutableDiagnostics()
             #expect(diagnostics.resolvedExecutablePath == harness.codexExecutableURL.path)
             #expect(diagnostics.versionString.contains("codex-cli"))
-            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.142.x plus 0.141.x when feasible"))
+            #expect(diagnostics.compatibility == .supported(documentedWindow: "0.143.x plus 0.142.x when feasible"))
 
             await client.stop()
         } catch {
@@ -279,6 +281,7 @@ struct CodexAppServerLiveIntegrationTests {
             let threadStartPayload = try protocolLayer.makeThreadStartRequest(
                 id: threadRequestID,
                 params: CodexWireThreadStartParams(
+                    allowProviderModelFallback: nil,
                     approvalPolicy: .enumeration(.never),
                     approvalsReviewer: nil,
                     baseInstructions: nil,
@@ -295,6 +298,7 @@ struct CodexAppServerLiveIntegrationTests {
                     environments: nil,
                     ephemeral: true,
                     experimentalRawEvents: nil,
+                    historyMode: nil,
                     mockExperimentalField: nil,
                     model: nil,
                     modelProvider: nil,

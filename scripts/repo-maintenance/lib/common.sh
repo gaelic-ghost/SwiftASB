@@ -83,23 +83,6 @@ github_release_create_prerelease_flag() {
   fi
 }
 
-github_release_notes_file() {
-  tag_name="$1"
-  release_version="${tag_name#v}"
-
-  for candidate in \
-    "$REPO_ROOT/docs/releases/$tag_name.md" \
-    "$REPO_ROOT/docs/releases/$release_version.md"
-  do
-    if [ -f "$candidate" ]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-
-  return 1
-}
-
 verify_github_release_prerelease_metadata() {
   tag_name="$1"
   expected_value="$(expected_github_prerelease_value "$tag_name")"

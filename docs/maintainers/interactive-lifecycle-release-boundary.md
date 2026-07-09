@@ -52,8 +52,8 @@ Current policy:
 - support the reviewed current public Codex CLI minor release
 - also support the latest prior public Codex CLI minor release when it remains
   compatible with SwiftASB's shipped public API and validation surface
-- current reviewed minor release: `0.142.x`
-- latest prior minor supported for this release: `0.141.x`
+- current reviewed minor release: `0.143.x`
+- latest prior minor supported for this release: `0.142.x`
 - widen beyond current-plus-prior only after the latest generated-wire and
   public API boundaries have caught up with the current app-server shape
 - reassess this policy when Codex reaches a future major-version release
@@ -203,8 +203,11 @@ Remaining gap inside the observable-only slice:
 | Family | Why it remains internal |
 | --- | --- |
 | MCP tool-call progress notifications | `Internal-only for now`: the current public surface already covers MCP activity at the summary level through `Minimap.callSnapshots` and `Dashboard.mcpCallingStatus`; richer MCP progress remains internal until a stronger public model is chosen. |
-| External-agent config import completed notifications | `v0.142.4` gives this family a typed internal generated shape. Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
-| Deprecated multi-agent mode fields | `v0.142.4` carries deprecated `multiAgentMode` fields on thread and turn start surfaces for compatibility. SwiftASB keeps them internal and continues to model user-facing proactive behavior through supported reasoning-effort and lifecycle controls. |
+| External-agent config import completed notifications | `v0.143.0` gives this family a typed internal generated shape. Useful when the app grows external-agent configuration surfaces; not part of the current lifecycle API. |
+| Deprecated multi-agent mode fields | `v0.143.0` carries deprecated `multiAgentMode` fields on thread and turn start surfaces for compatibility. SwiftASB keeps them internal and continues to model user-facing proactive behavior through supported reasoning-effort and lifecycle controls. |
+| Thread-start fallback/history fields | `v0.143.0` adds `allowProviderModelFallback` and `historyMode` to thread-start params. SwiftASB leaves both nil until there is a public workflow for model fallback or thread-history startup modes. |
+| Thread item paging route rename | `v0.143.0` renames the stored item paging wire route to `thread/items/list` and makes `turnId` optional. SwiftASB keeps the existing public turn-item paging request focused on a required turn id while using the renamed wire route internally. |
+| NPM plugin-source metadata | `v0.143.0` adds npm plugin source fields and an npm source kind. SwiftASB maps the source kind for inventory display but keeps package, registry, and version metadata internal until extension management owns that full workflow. |
 | Guardian denied-action approval endpoint | Generated internally because it appears in v0.124, but it needs a real guardian workflow model before it becomes public. |
 | Raw response item completed notifications | Too low-level and transport-adjacent for the current public lifecycle boundary. |
 | Context compacted notifications | Interesting for diagnostics, but still not surfaced as a first-class public event; consumers currently see compaction through `Dashboard` and `Minimap` state plus explicit `compactContext()` control. |
