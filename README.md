@@ -23,7 +23,11 @@ Listen to the SwiftASB Codex apps promo clip:
 
 ### Status
 
-SwiftASB is actively maintained and supported by Gale. Our current API is v1, and `v1.8.1` is the current and latest release.
+SwiftASB is shelved indefinitely, along with other projects made possible by automations I can no longer afford to run. $100/mo is too rich for my (chronically unemployed) blood.
+
+I was considering morphing this into a Swift ACP lib, which would make more sense now that the ecosystem has evolved a bit more, but I cannot support anything like that, either, doing everything solo with no income for two-and-a-half years now.
+
+The current API is v1, and `v1.8.1` is the current and latest release.
 
 ### What This Project Is
 
